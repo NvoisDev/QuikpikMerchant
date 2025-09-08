@@ -7980,13 +7980,20 @@ Write a professional, sales-focused description that highlights the key benefits
         await storage.updateUser(userId, { stripeCustomerId });
       }
       
-      // Create subscription
-      const subscription = await createSubscription(stripeCustomerId, priceId);
+      // For demo purposes, activate subscription immediately
+      // In production, this would require actual payment processing
+      console.log(`🎯 Demo Mode: Activating subscription immediately for user: ${user.email}`);
+      
+      // Update user subscription status in database
+      await storage.updateUser(userId, {
+        stripeSubscriptionId: 'demo_subscription_' + Date.now(),
+        subscriptionStatus: 'active'
+      });
       
       res.json({
-        subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
-        status: subscription.status
+        subscriptionId: 'demo_subscription_' + Date.now(),
+        status: 'active',
+        message: 'Subscription activated successfully (demo mode)'
       });
 
     } catch (error) {
@@ -12953,11 +12960,28 @@ https://quikpik.app`;
         return res.status(404).json({ error: 'User not found' });
       }
       
-      // Get subscription data from Stripe
-      const subscriptionData = await getUserSubscription(
-        user.stripeCustomerId || '', 
-        user.stripeSubscriptionId
-      );
+      // Handle demo subscriptions
+      let subscriptionData;
+      if (user.stripeSubscriptionId?.startsWith('demo_subscription_')) {
+        // Demo mode - return premium features
+        subscriptionData = {
+          tier: 'premium',
+          status: 'active',
+          productLimit: -1,
+          teamMembers: -1,
+          features: {
+            whatsappIntegration: 'full',
+            marketplaceAccess: true,
+            support: 'priority'
+          }
+        };
+      } else {
+        // Real Stripe subscription
+        subscriptionData = await getUserSubscription(
+          user.stripeCustomerId || '', 
+          user.stripeSubscriptionId
+        );
+      }
       
       // Get product count safely 
       let productCount = 0;
