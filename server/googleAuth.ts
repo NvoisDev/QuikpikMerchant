@@ -126,6 +126,67 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
   }
 }
 
+// New auth middleware that allows both wholesalers and retailers (for subscriptions, etc.)
+export const requireAnyAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Enhanced session debugging
+    const sessionUser = (req.session as any)?.user;
+    const sessionUserId = (req.session as any)?.userId;
+    
+    console.log('🔍 Auth Debug (Any Role):', {
+      sessionExists: !!req.session,
+      sessionId: req.sessionID?.substring(0, 8),
+      sessionUser: sessionUser ? 'present' : 'missing',
+      sessionUserId: sessionUserId ? 'present' : 'missing',
+      url: req.url
+    });
+    
+    if (sessionUser && sessionUser.id) {
+      const user = await storage.getUser(sessionUser.id);
+      if (user) {
+        console.log(`✅ Auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
+        req.user = user;
+        return next();
+      }
+    }
+
+    // Check for legacy session userId (fallback)
+    if (sessionUserId) {
+      const user = await storage.getUser(sessionUserId);
+      if (user) {
+        console.log(`✅ Legacy auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
+        req.user = user;
+        
+        // Update session for consistency
+        (req.session as any).user = user;
+        return next();
+      }
+    }
+
+    // Check for Replit OAuth session (Passport.js integration)
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      const user = req.user as any;
+      console.log(`✅ OAuth auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
+      return next();
+    }
+
+    console.log('🔄 Session exists but user data missing - session may have expired');
+    
+    return res.status(401).json({
+      error: 'Authentication required',
+      sessionExists: !!req.session,
+      sessionId: req.sessionID?.substring(0, 8)
+    });
+    
+  } catch (error) {
+    console.error('❌ Auth error:', error);
+    return res.status(500).json({ 
+      error: 'Authentication error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Enhanced session debugging

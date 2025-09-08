@@ -6,7 +6,7 @@ import { performanceMiddleware } from "./middleware/performance";
 import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
+import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders } from "@shared/schema";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -7951,7 +7951,7 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // NEW: Create Stripe customer and subscription
-  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
+  app.post('/api/subscription/create', requireAnyAuth, async (req: any, res) => {
     try {
       const { createOrUpdateStripeCustomer, createSubscription } = await import('./stripe-subscription');
       const { priceId } = req.body;
@@ -12950,7 +12950,7 @@ https://quikpik.app`;
   });
 
   // NEW: Subscription status endpoint using proper Stripe data
-  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
+  app.get('/api/subscription/status', requireAnyAuth, async (req: any, res) => {
     try {
       const { getUserSubscription } = await import('./stripe-subscription');
       const userId = req.user.id || req.user.claims?.sub;
