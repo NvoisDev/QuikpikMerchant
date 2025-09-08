@@ -327,43 +327,61 @@ export async function createCheckoutSession(stripeCustomerId: string, priceId: s
   }
 }
 
-// Get all available plans with current pricing (improved with better filtering)
+// Get all available plans with current pricing (hybrid approach: hardcoded IDs + metadata)
 export async function getAvailablePlans() {
   try {
-    // Get all products first, then their prices
-    const products = await stripe.products.list({
-      active: true
+    console.log('🔍 Fetching available plans...');
+    
+    // Get all prices with product expansion to avoid separate API calls
+    const prices = await stripe.prices.list({
+      active: true,
+      expand: ['data.product'],
+      type: 'recurring'
     });
+
+    console.log(`🔍 Found ${prices.data.length} active recurring prices`);
 
     const availablePlans = [];
     
-    for (const product of products.data) {
-      // Filter products by metadata instead of hardcoded IDs
-      const tier = product.metadata?.tier;
-      if (tier && ['free', 'standard', 'premium'].includes(tier)) {
-        
-        // Get active prices for this product
-        const prices = await stripe.prices.list({
-          product: product.id,
-          active: true,
-          type: 'recurring'
-        });
-
-        if (prices.data.length > 0) {
-          const price = prices.data[0]; // Take the first active price
-          
-          availablePlans.push({
-            id: product.id,
-            name: product.name || 'Unknown Plan',
-            description: product.description || '',
-            priceId: price.id,
-            amount: price.unit_amount || 0,
-            currency: price.currency,
-            interval: price.recurring?.interval || 'month',
-            metadata: product.metadata,
-            tier: tier
-          });
+    for (const price of prices.data) {
+      const product = price.product as Stripe.Product;
+      
+      console.log(`🔍 Checking product: ${product.id} - ${product.name}, metadata:`, product.metadata);
+      
+      // Support both approaches: hardcoded product IDs and metadata filtering
+      const isSubscriptionProduct = Object.values(STRIPE_PRODUCTS).includes(product.id) || 
+                                   (product.metadata?.tier && ['free', 'standard', 'premium'].includes(product.metadata.tier));
+      
+      if (isSubscriptionProduct) {
+        // Determine tier from metadata or product name/ID
+        let tier = product.metadata?.tier;
+        if (!tier) {
+          // Fallback: determine tier from product name or ID
+          const name = product.name?.toLowerCase() || '';
+          if (name.includes('premium') || product.id === STRIPE_PRODUCTS.PREMIUM) {
+            tier = 'premium';
+          } else if (name.includes('standard') || product.id === STRIPE_PRODUCTS.STANDARD) {
+            tier = 'standard';
+          } else {
+            tier = 'free';
+          }
         }
+        
+        console.log(`✅ Adding plan: ${product.name} (${tier}) - Price: ${price.id}`);
+        
+        availablePlans.push({
+          id: product.id,
+          name: product.name || 'Unknown Plan',
+          description: product.description || '',
+          priceId: price.id,
+          amount: price.unit_amount || 0,
+          currency: price.currency,
+          interval: price.recurring?.interval || 'month',
+          metadata: product.metadata,
+          tier: tier
+        });
+      } else {
+        console.log(`⏭️ Skipping non-subscription product: ${product.name}`);
       }
     }
 
@@ -371,6 +389,7 @@ export async function getAvailablePlans() {
     const tierOrder = { 'free': 0, 'standard': 1, 'premium': 2 };
     availablePlans.sort((a, b) => tierOrder[a.tier as keyof typeof tierOrder] - tierOrder[b.tier as keyof typeof tierOrder]);
 
+    console.log(`✅ Final plans count: ${availablePlans.length}`);
     return availablePlans;
 
   } catch (error) {

@@ -7943,10 +7943,39 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const { getAvailablePlans } = await import('./stripe-subscription');
       const plans = await getAvailablePlans();
+      console.log('🔍 DEBUG: Found plans:', JSON.stringify(plans, null, 2));
       res.json({ plans });
     } catch (error) {
       console.error('❌ Failed to get plans:', error);
       res.status(500).json({ error: 'Failed to get subscription plans' });
+    }
+  });
+
+  // DEBUG: Endpoint to check Stripe products
+  app.get('/api/debug/stripe-products', async (req, res) => {
+    try {
+      const { stripe } = await import('./stripe-subscription');
+      
+      const products = await stripe.products.list({ active: true });
+      const prices = await stripe.prices.list({ active: true });
+      
+      res.json({
+        products: products.data.map(p => ({
+          id: p.id,
+          name: p.name,
+          metadata: p.metadata
+        })),
+        prices: prices.data.map(p => ({
+          id: p.id,
+          product: p.product,
+          amount: p.unit_amount,
+          currency: p.currency,
+          metadata: p.metadata
+        }))
+      });
+    } catch (error) {
+      console.error('❌ Debug error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
