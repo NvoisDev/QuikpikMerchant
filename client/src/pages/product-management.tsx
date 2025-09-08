@@ -137,13 +137,10 @@ export default function ProductManagement() {
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [upgradeReason, setUpgradeReason] = useState<"product_limit" | "edit_limit" | "general">("general");
   
   // Subscription system removed - defaulting to premium access
   const canCreateProduct = true;
   const hookCanEditProduct = true;
-  const currentTier = 'premium';
   
   // Create a custom canEditProduct that requires proper authentication
   const canEditProduct = (editCount: number) => {
@@ -847,29 +844,17 @@ export default function ProductManagement() {
       canEdit: canEditProduct(product.editCount || 0)
     });
     
-    // Enhanced edit permission check with better logic
-    const editCount = product.editCount || 0;
-    const canEditBasedOnSubscription = canEditProduct(editCount);
-    
-    // Premium users always get unlimited edits
-    const finalCanEdit = isPremiumUser || canEditBasedOnSubscription;
+    // Premium access - unlimited edits
+    const finalCanEdit = true;
     
     console.log('🔍 Edit Permission Check:', {
       productId: product.id,
       productName: product.name,
-      isPremiumUser,
-      currentEditCount: editCount,
       authUser: !!user,
-      canEditFromHook: canEditBasedOnSubscription,
       finalDecision: finalCanEdit
     });
     
-    if (!finalCanEdit) {
-      console.log('❌ Edit blocked due to subscription limits');
-      setUpgradeReason("edit_limit");
-      setUpgradeModalOpen(true);
-      return;
-    }
+    // Premium access - always allow editing
     
     console.log('✅ Edit permission granted, opening dialog...');
     console.log('📝 Setting editing product:', product);

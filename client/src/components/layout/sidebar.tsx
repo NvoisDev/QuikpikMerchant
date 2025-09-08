@@ -41,10 +41,10 @@ const navigation = [
 
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   // Subscription navigation removed
-  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, premiumOnly: true, tabName: "analytics" },
-  { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: true, tabName: "advertising" },
-  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
-  { name: "Team Management", href: "/team-management", icon: Contact, premiumOnly: true, tabName: "team-management" },
+  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, tabName: "analytics" },
+  { name: "Advertising", href: "/advertising", icon: Megaphone, tabName: "advertising" },
+  { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace" },
+  { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
@@ -109,24 +109,6 @@ export default function Sidebar() {
           {navigation.map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
-            const isPremiumFeature = item.premiumOnly;
-            const hasPremiumAccess = !isPremiumFeature || currentTier === 'premium';
-            
-            // Show premium lock for premium features without access
-            if (isPremiumFeature && !hasPremiumAccess) {
-              return (
-                <div key={item.name} className="px-6 py-2">
-                  <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed relative">
-                    <IconComponent className="mr-3 h-5 w-5" />
-                    <span className="flex-1">{item.name}</span>
-                    <div className="flex items-center space-x-1 ml-2">
-                      <Crown className="h-3 w-3" />
-                      <Lock className="h-3 w-3" />
-                    </div>
-                  </div>
-                </div>
-              );
-            }
             
             return (
               <Link key={item.name} href={item.href}>
@@ -147,9 +129,6 @@ export default function Sidebar() {
                     )} 
                   />
                   <span className="flex-1">{item.name}</span>
-                  {isPremiumFeature && (
-                    <Crown className="h-3 w-3 text-yellow-500 ml-2 flex-shrink-0" />
-                  )}
                 </div>
               </Link>
             );

@@ -135,44 +135,16 @@ export default function ProductCard({
   // Check if product is locked
   const isLocked = product.status === 'locked';
 
-  // Get edit limit information based on subscription tier
+  // Premium access - unlimited edits
   const getEditLimitInfo = () => {
     const currentEdits = product.editCount || 0;
-
-    switch (tier) {
-      case "free":
-        return {
-          limit: 3,
-          current: currentEdits,
-          showCounter: true,
-          disabled: currentEdits >= 3,
-          label: `${currentEdits}/3 edits`
-        };
-      case "standard":
-        return {
-          limit: -1, // unlimited
-          current: currentEdits,
-          showCounter: false, // Hide counter for standard (unlimited edits)
-          disabled: false,
-          label: "Unlimited edits"
-        };
-      case "premium":
-        return {
-          limit: -1, // unlimited
-          current: currentEdits,
-          showCounter: false, // Hide counter for premium
-          disabled: false,
-          label: "Unlimited edits"
-        };
-      default:
-        return {
-          limit: 3,
-          current: currentEdits,
-          showCounter: true,
-          disabled: currentEdits >= 3,
-          label: `${currentEdits}/3 edits`
-        };
-    }
+    return {
+      limit: -1, // unlimited
+      current: currentEdits,
+      showCounter: false, // Hide counter for premium
+      disabled: false,
+      label: "Unlimited edits"
+    };
   };
 
   const editInfo = getEditLimitInfo();

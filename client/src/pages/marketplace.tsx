@@ -91,10 +91,10 @@ export default function Marketplace() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [ratingFilter, setRatingFilter] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  // Upgrade modal removed
 
   // Check if user has premium access to marketplace
-  const hasMarketplaceAccess = currentTier === 'premium';
+  const hasMarketplaceAccess = true; // Premium access enabled
 
   const { data: products = [], isLoading: productsLoading } = useQuery<MarketplaceProduct[]>({
     queryKey: ["/api/marketplace/products", searchQuery, selectedCategory, sortBy, selectedLocation, priceRange, ratingFilter],
@@ -221,7 +221,6 @@ export default function Marketplace() {
             </div>
 
             <Button 
-              onClick={() => setUpgradeModalOpen(true)}
               className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-8 py-3"
             >
               <Crown className="w-4 h-4 mr-2" />
@@ -229,13 +228,6 @@ export default function Marketplace() {
             </Button>
           </CardContent>
         </Card>
-
-        <SubscriptionUpgradeModal 
-          isOpen={upgradeModalOpen}
-          onOpenChange={setUpgradeModalOpen}
-          currentTier={currentTier}
-          feature="marketplace access"
-        />
       </div>
     );
   }

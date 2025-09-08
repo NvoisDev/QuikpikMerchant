@@ -84,7 +84,6 @@ export default function CustomerGroups() {
   const [editingMember, setEditingMember] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [upgradeReason, setUpgradeReason] = useState<"customer_group_limit" | "general">("general");
   
   // Fetch group members when manage dialog opens
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery({
@@ -363,7 +362,6 @@ export default function CustomerGroups() {
 
   const handleCreateGroupClick = () => {
     if (!canCreateGroup()) {
-      setUpgradeReason("customer_group_limit");
       setShowUpgradeModal(true);
       return;
     }
@@ -1607,10 +1605,8 @@ Mike Johnson, 07444 555666`}
       </Dialog>
 
       {/* Subscription Upgrade Modal */}
-      <SubscriptionUpgradeModal 
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
-        reason={upgradeReason}
       />
     </div>
   );

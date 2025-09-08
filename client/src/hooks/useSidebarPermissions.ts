@@ -76,7 +76,7 @@ export function getTabNameFromPath(path: string): string {
     'advertising': 'advertising',
     'marketplace': 'marketplace',
     'team-management': 'team-management',
-    'subscription': 'subscription',
+    // Subscription removed
     'settings': 'settings',
   };
   

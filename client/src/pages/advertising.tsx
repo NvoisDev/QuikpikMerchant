@@ -136,7 +136,7 @@ export default function Advertising() {
   });
 
   // Check if user has access to advertising features
-  const hasAdvancedAccess = currentTier === 'premium';
+  const hasAdvancedAccess = true; // Premium access enabled
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
