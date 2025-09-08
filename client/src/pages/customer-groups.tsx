@@ -1197,29 +1197,20 @@ export default function CustomerGroups() {
           <Form {...bulkAddForm}>
             <form onSubmit={bulkAddForm.handleSubmit(onBulkAddMembers)} className="space-y-4">
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleSelectFromContacts()}
-                    className="w-full sm:flex-1"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Phone Contacts
-                  </Button>
+                <div className="flex justify-center">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => handleBulkImportContacts()}
-                    className="w-full sm:flex-1"
+                    className="w-full sm:w-auto"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    Import File
+                    Import File (CSV/vCard)
                   </Button>
                 </div>
                 
                 <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                  Import contacts from your address book or type multiple contacts below.
+                  Import contacts from CSV/vCard files or type multiple contacts below.
                 </div>
               </div>
 

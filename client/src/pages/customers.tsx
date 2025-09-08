@@ -2127,26 +2127,12 @@ export default function Customers() {
               <div className="text-center py-8">
                 <ContactRound className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Import from Your Contacts
+                  Import Contacts
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Access your phone's contact list to quickly add customers without typing.
+                  Quickly add multiple customers by pasting contact information.
                 </p>
                 <div className="space-y-3">
-                  <Button onClick={handleImportContacts} className="w-full">
-                    <Smartphone className="mr-2 h-4 w-4" />
-                    Access Phone Contacts
-                  </Button>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
-                    </div>
-                  </div>
-                  
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Paste Contact List</Label>
                     <Textarea
