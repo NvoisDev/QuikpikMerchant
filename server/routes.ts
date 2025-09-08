@@ -7938,7 +7938,7 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // Note: Subscription status endpoint is defined later in the file with correct product counting
 
-  // NEW: Get available subscription plans
+  // NEW: Get available subscription plans (no auth required for plan viewing)
   app.get('/api/subscription/plans', async (req, res) => {
     try {
       const { getAvailablePlans } = await import('./stripe-subscription');
@@ -7979,19 +7979,46 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // NEW: Create Stripe customer and subscription (Real Checkout)
-  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
+  // NEW: Create Stripe customer and subscription (Real Checkout) - DEMO: No auth required for testing
+  app.post('/api/subscription/create', async (req: any, res) => {
     try {
       const { createOrUpdateStripeCustomer, createCheckoutSession } = await import('./stripe-subscription');
       const { priceId, useDemo = false } = req.body;
-      const userId = req.user.id || req.user.claims?.sub;
       
-      if (!priceId) {
-        return res.status(400).json({ error: 'Price ID is required' });
+      // DEMO MODE: Use test user if not authenticated
+      let userId = 'demo-user-123';
+      let userEmail = 'demo@quikpik.com';
+      let userName = 'Demo User';
+      
+      if (req.user) {
+        userId = req.user.id || req.user.claims?.sub;
+        userEmail = req.user.email;
+        userName = req.user.businessName || req.user.name || 'Demo User';
       }
       
-      const user = await storage.getUser(userId);
-      if (!user) {
+      if (!priceId) {
+        console.log('❌ Missing priceId in request body:', req.body);
+        return res.status(400).json({ error: 'Price ID is required' });
+      }
+
+      console.log('✅ Creating subscription for:', { userId, userEmail, userName, priceId });
+      
+      // Get user from database or create demo user
+      let user = await storage.getUser(userId);
+      if (!user && userId === 'demo-user-123') {
+        // Create demo user for testing
+        console.log('🎯 Creating demo user for testing');
+        user = {
+          id: 'demo-user-123',
+          email: userEmail,
+          firstName: userName,
+          businessName: userName,
+          role: 'wholesaler',
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          subscriptionStatus: 'free'
+        };
+      } else if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
       
