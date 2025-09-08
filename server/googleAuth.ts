@@ -8,6 +8,11 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
 
 // Flexible redirect URI system for different environments
 const getRedirectUri = () => {
+  // Use Replit dev domain for development
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/google/callback`;
+  }
+  
   // HARDCODE for production deployment until environment variables work
   // This forces quikpik.app domain for all production deployments
   if (process.env.NODE_ENV === 'production' || 
