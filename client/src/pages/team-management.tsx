@@ -44,12 +44,12 @@ const teamMemberSchema = z.object({
 
 type TeamMemberFormData = z.infer<typeof teamMemberSchema>;
 
-function getSubscriptionLimit(tier: string): number {
+function getTeamLimit(tier: string): number {
   switch (tier) {
     case 'free': return 0;
     case 'standard': return 2;
     case 'premium': return 5;
-    default: return 0;
+    default: return 5; // Default to premium limit
   }
 }
 
@@ -82,8 +82,10 @@ function getStatusBadgeVariant(status: string) {
 export default function TeamManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { subscription } = useSubscription();
-  const { currentTier: simpleTier, isActive: simpleIsActive } = useSimpleSubscription();
+  // Subscription system removed
+  // Subscription system removed - defaulting to premium tier
+  const simpleTier = 'premium';
+  const simpleIsActive = true;
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedMemberForRoleEdit, setSelectedMemberForRoleEdit] = useState<TeamMember | null>(null);
@@ -195,8 +197,8 @@ export default function TeamManagement() {
     },
   });
 
-  // Using simpleTier from useSimpleSubscription for accurate current plan data
-  const teamLimit = getSubscriptionLimit(simpleTier);
+  // Using premium tier as default
+  const teamLimit = getTeamLimit(simpleTier);
   const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
   const canAddMembers = currentTeamCount < teamLimit;
 

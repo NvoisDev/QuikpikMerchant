@@ -40,7 +40,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
 
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
-  { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
+  // Subscription navigation removed
   { name: "Business Performance", href: "/business-performance", icon: TrendingUp, premiumOnly: true, tabName: "analytics" },
   { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: true, tabName: "advertising" },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
@@ -52,7 +52,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { currentTier } = useSubscription();
+  // Subscription system removed
   const { checkTabAccess } = useSidebarPermissions();
 
   const handleLogout = () => {

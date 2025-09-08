@@ -140,7 +140,10 @@ export default function ProductManagement() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<"product_limit" | "edit_limit" | "general">("general");
   
-  const { canCreateProduct, canEditProduct: hookCanEditProduct, currentTier } = useSubscription();
+  // Subscription system removed - defaulting to premium access
+  const canCreateProduct = true;
+  const hookCanEditProduct = true;
+  const currentTier = 'premium';
   
   // Create a custom canEditProduct that requires proper authentication
   const canEditProduct = (editCount: number) => {

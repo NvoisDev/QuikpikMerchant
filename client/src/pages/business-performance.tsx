@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 
 export default function BusinessPerformance() {
-  const { isPremium, currentTier, subscription, refetch } = useSubscription();
+  // Subscription system removed - defaulting to premium access
+  const isPremium = true;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
@@ -50,11 +51,10 @@ export default function BusinessPerformance() {
     onSuccess: () => {
       toast({
         title: "Authentication Recovered",
-        description: "Your session has been restored. Refreshing your subscription status...",
+        description: "Your session has been restored.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      refetch();
+      // Subscription queries removed
     },
     onError: (error) => {
       toast({
@@ -106,7 +106,7 @@ export default function BusinessPerformance() {
             </Link>
             <Button 
               variant="outline" 
-              onClick={() => refetch()} 
+              onClick={() => window.location.reload()} 
               size="lg"
               className="w-full sm:w-auto"
             >

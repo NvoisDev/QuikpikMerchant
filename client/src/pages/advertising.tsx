@@ -65,7 +65,7 @@ interface SEOPage {
 
 export default function Advertising() {
   const { user } = useAuth();
-  const { currentTier } = useSubscription();
+  // Subscription system removed
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("campaigns");
   const [newCampaignOpen, setNewCampaignOpen] = useState(false);

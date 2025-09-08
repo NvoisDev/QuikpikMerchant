@@ -209,7 +209,7 @@ export default function Campaigns() {
   };
   const { user } = useAuth();
   const { toast } = useToast();
-  const { subscription, isLoading: subscriptionLoading } = useSubscription();
+  // Subscription system removed
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);

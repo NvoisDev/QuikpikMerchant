@@ -81,7 +81,7 @@ const locations = [
 
 export default function Marketplace() {
   const { user } = useAuth();
-  const { currentTier } = useSubscription();
+  // Subscription system removed
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [viewMode, setViewMode] = useState<"featured" | "products" | "wholesalers">("featured");
