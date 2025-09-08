@@ -33,7 +33,8 @@ export async function initializeStripeProducts() {
           productLimit: '3',
           teamMembers: '1',
           whatsappIntegration: 'basic',
-          support: 'email'
+          support: 'email',
+          tier: 'free'
         }
       });
     }
@@ -79,7 +80,8 @@ export async function initializeStripeProducts() {
           productLimit: '50',
           teamMembers: '3',
           whatsappIntegration: 'advanced',
-          support: 'priority'
+          support: 'priority',
+          tier: 'standard'
         }
       });
     }
@@ -125,7 +127,8 @@ export async function initializeStripeProducts() {
           teamMembers: '-1', // Unlimited
           whatsappIntegration: 'full',
           marketplaceAccess: 'true',
-          support: 'priority'
+          support: 'priority',
+          tier: 'premium'
         }
       });
     }
@@ -292,7 +295,7 @@ export async function getAvailablePlans() {
           currency: price.currency,
           interval: price.recurring?.interval || 'month',
           metadata: product.metadata,
-          tier: product.metadata.tier || 'free'
+          tier: price.metadata?.tier || product.metadata?.tier || 'free'
         });
       }
     }
