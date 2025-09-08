@@ -16132,8 +16132,8 @@ The Quikpik Team
           quantity: 1,
         }],
         mode: 'subscription',
-        success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription/cancelled`,
+        success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
         metadata: {
           userId: userId
         }

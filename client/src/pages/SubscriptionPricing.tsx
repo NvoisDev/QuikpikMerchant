@@ -40,6 +40,34 @@ export default function SubscriptionPricing() {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Handle success/cancel URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isSuccess = urlParams.get('success') === 'true';
+    const isCancelled = urlParams.get('cancelled') === 'true';
+    
+    if (isSuccess) {
+      toast({
+        title: "🎉 Payment Successful!",
+        description: "Your subscription has been upgraded successfully. Welcome to your new plan!",
+        variant: "default",
+      });
+      // Clean the URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Refresh subscription data
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/plan-limits'] });
+    } else if (isCancelled) {
+      toast({
+        title: "Payment Cancelled",
+        description: "Your subscription upgrade was cancelled. No charges were made.",
+        variant: "default",
+      });
+      // Clean the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [toast, queryClient]);
+
   // Get available plans
   const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['/api/subscriptions/plans'],
