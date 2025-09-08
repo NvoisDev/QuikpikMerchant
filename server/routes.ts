@@ -8018,7 +8018,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // Customer-specific products endpoint for easy access - PRODUCTION SAFE VERSION
+  // Customer-specific products endpoint for easy access - SUBSCRIPTION FEATURE GATED VERSION
   app.get('/api/customer-products/:wholesalerId', async (req, res) => {
     let wholesalerId = '';
     try {
@@ -8026,19 +8026,30 @@ Write a professional, sales-focused description that highlights the key benefits
       console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
       
-      // Add immediate response for testing
-      console.log(`⚡ TESTING: Endpoint reached successfully`);
-      
       if (!wholesalerId) {
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
       
-      // Use direct SQL query with better error handling
-      console.log('🔍 Executing optimized SQL query...');
+      // 🔒 SUBSCRIPTION FEATURE GATING: Check wholesaler's subscription limits
+      console.log('🔍 Checking wholesaler subscription limits...');
+      const limits = await getUserPlanLimits(wholesalerId);
+      const productLimit = limits.products;
+      
+      console.log(`🏷️ Wholesaler ${wholesalerId} subscription limits:`, {
+        plan: limits.planName,
+        productLimit: productLimit === -1 ? 'unlimited' : productLimit,
+        isUnlimited: productLimit === -1
+      });
+      
+      // Use direct SQL query with subscription-based limits
+      console.log('🔍 Executing subscription-limited SQL query...');
       const queryStart = Date.now();
       
       try {
-        // Complete query with promotional fields INCLUDING image_url
+        // 🎯 CRITICAL: Apply subscription limits to customer-visible products
+        // Customers should only see products within the wholesaler's subscription tier
+        const limitClause = productLimit === -1 ? '' : `LIMIT ${productLimit}`;
+        
         const result = await db.execute(sql`
           SELECT p.id, p.name, p.description, p.price, p.currency, p.moq, p.stock,
                  p.image_url, p.images, p.category, p.status, p.wholesaler_id, p.created_at,
@@ -8049,8 +8060,8 @@ Write a professional, sales-focused description that highlights the key benefits
                  'Surulere Foods Wholesale' as business_name
           FROM products p
           WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
-          ORDER BY p.id DESC
-          LIMIT 20
+          ORDER BY p.created_at DESC
+          ${productLimit === -1 ? sql`` : sql`LIMIT ${productLimit}`}
         `);
         
         const rows = result.rows as any[];
