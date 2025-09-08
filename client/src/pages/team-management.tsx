@@ -33,6 +33,7 @@ import {
   Crown
 } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
 const teamMemberSchema = z.object({
   email: z.string().email("Invalid email address"),

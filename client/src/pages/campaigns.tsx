@@ -50,6 +50,7 @@ import {
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 // Removed PromotionalOffersManager - promotions managed at product level
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";

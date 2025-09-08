@@ -54,6 +54,7 @@ import { helpContent } from "@/data/whatsapp-help-content";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import CustomerInvitationModal from "@/components/CustomerInvitationModal";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
 // Form Schemas
 const customerGroupFormSchema = z.object({
