@@ -338,17 +338,20 @@ export default function TeamManagement() {
           <DialogTrigger asChild>
             <Button 
               onClick={() => {
-                // Only show upgrade modal if user is on free plan
-                if (simpleTier === 'free') {
+                // Show upgrade modal if user can't add members
+                if (!canAddMembers) {
                   setShowUpgradeModal(true);
                 }
               }}
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={simpleTier === 'free'}
+              className={canAddMembers ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}
+              disabled={!canAddMembers}
             >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Team Member
-              {!canAddMembers && <Lock className="h-4 w-4 ml-2" />}
+              {!canAddMembers ? (
+                <Crown className="h-4 w-4 mr-2" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-2" />
+              )}
+              {!canAddMembers ? "Upgrade Required" : "Invite Team Member"}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
@@ -487,6 +490,7 @@ export default function TeamManagement() {
                 variant="outline"
                 className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full sm:w-auto"
               >
+                <Crown className="h-4 w-4 mr-2" />
                 Upgrade to Add Team Members
               </Button>
             )}
