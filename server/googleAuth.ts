@@ -128,8 +128,17 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Simple session check - same logic that works for GET requests
+    // Enhanced session debugging
     const sessionUser = (req.session as any)?.user;
+    const sessionUserId = (req.session as any)?.userId;
+    
+    console.log('🔍 Auth Debug:', {
+      sessionExists: !!req.session,
+      sessionId: req.sessionID?.substring(0, 8),
+      sessionUser: sessionUser ? 'present' : 'missing',
+      sessionUserId: sessionUserId ? 'present' : 'missing',
+      url: req.url
+    });
     
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);

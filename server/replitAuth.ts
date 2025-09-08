@@ -31,11 +31,17 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // Add error handling for session store
+  sessionStore.on('error', (error) => {
+    console.error('Session store error:', error);
+  });
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: true, // Save sessions on every request for POST consistency
-    saveUninitialized: true, // Initialize empty sessions for proper sharing
+    resave: false, // Don't save unchanged sessions
+    saveUninitialized: false, // Don't save empty sessions
     rolling: true, // Reset expiry on each request
     cookie: {
       httpOnly: true,
