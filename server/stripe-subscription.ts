@@ -229,9 +229,30 @@ export async function getUserSubscription(stripeCustomerId: string, stripeSubscr
   }
 }
 
-// Create or update Stripe customer
+// Create or update Stripe customer (with duplicate check)
 export async function createOrUpdateStripeCustomer(userId: string, email: string, name?: string) {
   try {
+    // First, check if customer already exists
+    const existingCustomers = await stripe.customers.list({
+      email: email,
+      limit: 1
+    });
+
+    if (existingCustomers.data.length > 0) {
+      const existingCustomer = existingCustomers.data[0];
+      console.log(`✅ Found existing Stripe customer: ${existingCustomer.id} for user: ${userId}`);
+      
+      // Update metadata if needed
+      if (existingCustomer.metadata.userId !== userId) {
+        await stripe.customers.update(existingCustomer.id, {
+          metadata: { userId }
+        });
+      }
+      
+      return existingCustomer;
+    }
+
+    // Create new customer only if none exists
     const customerData: Stripe.CustomerCreateParams = {
       email,
       metadata: { userId },
@@ -243,11 +264,11 @@ export async function createOrUpdateStripeCustomer(userId: string, email: string
 
     const customer = await stripe.customers.create(customerData);
     
-    console.log(`✅ Created Stripe customer: ${customer.id} for user: ${userId}`);
+    console.log(`✅ Created new Stripe customer: ${customer.id} for user: ${userId}`);
     return customer;
 
   } catch (error) {
-    console.error('❌ Failed to create Stripe customer:', error);
+    console.error('❌ Failed to create/update Stripe customer:', error);
     throw error;
   }
 }
@@ -273,6 +294,14 @@ export async function createSubscription(stripeCustomerId: string, priceId: stri
 // Create Stripe Checkout Session for subscription
 export async function createCheckoutSession(stripeCustomerId: string, priceId: string, userId: string) {
   try {
+    // Get the price to determine the tier
+    const price = await stripe.prices.retrieve(priceId, {
+      expand: ['product']
+    });
+    
+    const product = price.product as Stripe.Product;
+    const tier = product.metadata?.tier || 'standard';
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
@@ -285,7 +314,8 @@ export async function createCheckoutSession(stripeCustomerId: string, priceId: s
       cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?upgrade=cancelled`,
       metadata: {
         userId: userId,
-        priceId: priceId
+        priceId: priceId,
+        tier: tier // Include tier for webhook processing
       }
     });
 
@@ -297,35 +327,49 @@ export async function createCheckoutSession(stripeCustomerId: string, priceId: s
   }
 }
 
-// Get all available plans with current pricing
+// Get all available plans with current pricing (improved with better filtering)
 export async function getAvailablePlans() {
   try {
-    // Get all prices for our products
-    const prices = await stripe.prices.list({
-      active: true,
-      expand: ['data.product']
+    // Get all products first, then their prices
+    const products = await stripe.products.list({
+      active: true
     });
 
     const availablePlans = [];
     
-    for (const price of prices.data) {
-      const product = price.product as Stripe.Product;
-      
-      // Only include our subscription products
-      if (Object.values(STRIPE_PRODUCTS).includes(product.id)) {
-        availablePlans.push({
-          id: product.id,
-          name: product.name || 'Unknown Plan',
-          description: product.description || '',
-          priceId: price.id,
-          amount: price.unit_amount || 0,
-          currency: price.currency,
-          interval: price.recurring?.interval || 'month',
-          metadata: product.metadata,
-          tier: price.metadata?.tier || product.metadata?.tier || 'free'
+    for (const product of products.data) {
+      // Filter products by metadata instead of hardcoded IDs
+      const tier = product.metadata?.tier;
+      if (tier && ['free', 'standard', 'premium'].includes(tier)) {
+        
+        // Get active prices for this product
+        const prices = await stripe.prices.list({
+          product: product.id,
+          active: true,
+          type: 'recurring'
         });
+
+        if (prices.data.length > 0) {
+          const price = prices.data[0]; // Take the first active price
+          
+          availablePlans.push({
+            id: product.id,
+            name: product.name || 'Unknown Plan',
+            description: product.description || '',
+            priceId: price.id,
+            amount: price.unit_amount || 0,
+            currency: price.currency,
+            interval: price.recurring?.interval || 'month',
+            metadata: product.metadata,
+            tier: tier
+          });
+        }
       }
     }
+
+    // Sort by tier priority (free, standard, premium)
+    const tierOrder = { 'free': 0, 'standard': 1, 'premium': 2 };
+    availablePlans.sort((a, b) => tierOrder[a.tier as keyof typeof tierOrder] - tierOrder[b.tier as keyof typeof tierOrder]);
 
     return availablePlans;
 

@@ -39,48 +39,90 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
       
       const userId = session?.metadata?.userId;
-      // Handle all possible tier metadata field names for maximum compatibility
-      const tier = session?.metadata?.targetTier || 
-                   session?.metadata?.tier || 
-                   session?.metadata?.planId;
+      const tier = session?.metadata?.tier;
       
-      if (userId && tier) {
-        console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
+      // Handle subscription checkout
+      if (userId && tier && session.mode === 'subscription') {
+        console.log(`🔄 Processing subscription upgrade: ${userId} → ${tier}`);
         
-        const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+        // Get the subscription ID from the session
+        const subscriptionId = session.subscription;
         
         await storage.updateUser(userId, {
-          subscriptionTier: tier,
-          subscriptionStatus: 'active',
-          productLimit: productLimit,
-          subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          stripeSubscriptionId: subscriptionId,
+          subscriptionStatus: 'active'
         });
         
-        console.log(`✅ Upgraded ${userId} to ${tier} successfully`);
-        
-        // Log upgrade success with timestamp for debugging
-        console.log(`📈 SUBSCRIPTION UPGRADE COMPLETED:`, {
-          userId,
-          tier,
-          productLimit,
-          timestamp: new Date().toISOString(),
-          eventType: 'checkout.session.completed'
-        });
+        console.log(`✅ Subscription activated for ${userId}: ${subscriptionId}`);
         
         return res.json({
           received: true,
-          message: `Subscription upgraded to ${tier}`,
+          message: `Subscription activated for ${tier}`,
           userId: userId,
           tier: tier,
-          productLimit: productLimit
+          subscriptionId: subscriptionId
         });
       } else {
-        console.log(`❌ Missing metadata: userId=${userId}, tier=${tier}`);
+        console.log(`❌ Missing metadata or not a subscription: userId=${userId}, tier=${tier}, mode=${session?.mode}`);
         return res.status(400).json({ 
-          error: 'Missing user or plan metadata',
+          error: 'Missing subscription metadata',
           receivedMetadata: session?.metadata 
         });
       }
+    }
+
+    // Handle subscription lifecycle events
+    if (event.type === 'customer.subscription.created') {
+      const subscription = event.data?.object;
+      console.log(`✅ Subscription created: ${subscription.id}`);
+      
+      // The subscription is already handled by checkout.session.completed
+      return res.json({ received: true, message: 'Subscription created' });
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data?.object;
+      console.log(`🔄 Subscription updated: ${subscription.id}`);
+      
+      // Find user by Stripe subscription ID and update status
+      try {
+        const allUsers = await storage.getAllUsers();
+        const user = allUsers.find(u => u.stripeSubscriptionId === subscription.id);
+        
+        if (user) {
+          await storage.updateUser(user.id, {
+            subscriptionStatus: subscription.status
+          });
+          console.log(`✅ Updated subscription status for user ${user.id}: ${subscription.status}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating subscription: ${error}`);
+      }
+      
+      return res.json({ received: true, message: 'Subscription updated' });
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data?.object;
+      console.log(`❌ Subscription cancelled: ${subscription.id}`);
+      
+      // Find user by Stripe subscription ID and cancel subscription
+      try {
+        const allUsers = await storage.getAllUsers();
+        const user = allUsers.find(u => u.stripeSubscriptionId === subscription.id);
+        
+        if (user) {
+          await storage.updateUser(user.id, {
+            subscriptionStatus: 'cancelled',
+            stripeSubscriptionId: null
+          });
+          console.log(`✅ Cancelled subscription for user ${user.id}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error cancelling subscription: ${error}`);
+      }
+      
+      return res.json({ received: true, message: 'Subscription cancelled' });
     }
 
     if (event.type === 'payment_intent.succeeded') {

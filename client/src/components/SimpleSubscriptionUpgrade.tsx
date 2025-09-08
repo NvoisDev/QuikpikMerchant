@@ -190,7 +190,7 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Choose Your Plan</h2>
-        <p className="text-gray-600">Powered by Stripe - Real subscription management</p>
+        <p className="text-gray-600">Secure payments powered by Stripe - Test with card 4242 4242 4242 4242</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
