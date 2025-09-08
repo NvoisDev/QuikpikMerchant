@@ -12843,55 +12843,6 @@ https://quikpik.app`;
     }
   });
 
-  // TEST ENDPOINT: Test subscription upgrade without auth (development only)
-  app.post('/api/test/subscription-upgrade', async (req: any, res) => {
-    console.log(`🧪 TEST ENDPOINT CALLED: ${req.method} ${req.path}`);
-    
-    // Only allow in development environment
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: "Not found" });
-    }
-
-    try {
-      const { userId, planId } = req.body;
-      console.log(`🧪 TEST: Upgrading user ${userId} to ${planId}`);
-
-      // Simulate the same logic as the real endpoint
-      const isTestMode = process.env.NODE_ENV !== 'production' || 
-                        process.env.REPL_ID || 
-                        process.argv.includes('--test');
-      
-      console.log(`🧪 TEST: isTestMode = ${isTestMode}, NODE_ENV = ${process.env.NODE_ENV}, REPL_ID = ${!!process.env.REPL_ID}`);
-
-      if (isTestMode) {
-        await storage.updateUserSubscription(userId, {
-          tier: planId,
-          status: 'active',
-          productLimit: -1,
-          subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
-        
-        console.log(`✅ TEST: Successfully upgraded user ${userId} to ${planId}`);
-        
-        return res.json({ 
-          success: true,
-          message: `Test upgrade successful: ${userId} → ${planId}`,
-          testMode: true
-        });
-      } else {
-        return res.json({
-          success: false,
-          message: "Test mode not active",
-          testMode: false,
-          env: process.env.NODE_ENV,
-          replId: !!process.env.REPL_ID
-        });
-      }
-    } catch (error: any) {
-      console.error('❌ TEST: Subscription upgrade error:', error);
-      res.status(500).json({ error: 'Test upgrade failed: ' + error.message });
-    }
-  });
 
   // SECURITY FIX: Remove hardcoded fallback that was causing data leaks
   app.post('/api/auth/quick-login', async (req: any, res) => {
