@@ -270,6 +270,33 @@ export async function createSubscription(stripeCustomerId: string, priceId: stri
   }
 }
 
+// Create Stripe Checkout Session for subscription
+export async function createCheckoutSession(stripeCustomerId: string, priceId: string, userId: string) {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      payment_method_types: ['card'],
+      line_items: [{
+        price: priceId,
+        quantity: 1,
+      }],
+      mode: 'subscription',
+      success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?upgrade=success`,
+      cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?upgrade=cancelled`,
+      metadata: {
+        userId: userId,
+        priceId: priceId
+      }
+    });
+
+    return session;
+
+  } catch (error) {
+    console.error('❌ Failed to create checkout session:', error);
+    throw error;
+  }
+}
+
 // Get all available plans with current pricing
 export async function getAvailablePlans() {
   try {

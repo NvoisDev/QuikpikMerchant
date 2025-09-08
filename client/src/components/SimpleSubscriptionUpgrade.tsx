@@ -111,19 +111,29 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
 
       // Create subscription with proper Stripe flow
       const response = await apiRequest("POST", "/api/subscription/create", {
-        priceId: formattedPlan.priceId
+        priceId: formattedPlan.priceId,
+        useDemo: false // Set to true for demo mode, false for real Stripe checkout
       });
       
       if (response.ok) {
-        const { subscriptionId, clientSecret, status } = await response.json();
+        const { subscriptionId, clientSecret, status, checkoutUrl, message } = await response.json();
         
         if (status === 'active') {
-          // Subscription is immediately active (free tier or no payment required)
+          // Demo mode - subscription is immediately active
           toast({
             title: "Plan upgraded successfully!",
             description: `Welcome to ${formattedPlan.name}`,
           });
           onUpgradeSuccess?.();
+        } else if (checkoutUrl) {
+          // Real Stripe checkout - redirect to payment
+          toast({
+            title: "Redirecting to checkout...",
+            description: "Complete your payment to activate your subscription",
+          });
+          
+          // Redirect to Stripe checkout
+          window.location.href = checkoutUrl;
         } else if (clientSecret) {
           // Payment required - show success and let user know subscription is pending
           toast({
@@ -131,8 +141,6 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
             description: "Your Premium subscription is pending payment confirmation",
           });
           
-          // For now, show success since subscription was created successfully
-          // In production, you'd implement Stripe Elements for payment
           onUpgradeSuccess?.();
         } else {
           throw new Error("Unexpected subscription status");

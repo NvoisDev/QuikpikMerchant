@@ -7950,11 +7950,11 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // NEW: Create Stripe customer and subscription
+  // NEW: Create Stripe customer and subscription (Real Checkout)
   app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
     try {
-      const { createOrUpdateStripeCustomer, createSubscription } = await import('./stripe-subscription');
-      const { priceId } = req.body;
+      const { createOrUpdateStripeCustomer, createCheckoutSession } = await import('./stripe-subscription');
+      const { priceId, useDemo = false } = req.body;
       const userId = req.user.id || req.user.claims?.sub;
       
       if (!priceId) {
@@ -7980,21 +7980,33 @@ Write a professional, sales-focused description that highlights the key benefits
         await storage.updateUser(userId, { stripeCustomerId });
       }
       
-      // For demo purposes, activate subscription immediately
-      // In production, this would require actual payment processing
-      console.log(`🎯 Demo Mode: Activating subscription immediately for user: ${user.email}`);
-      
-      // Update user subscription status in database
-      await storage.updateUser(userId, {
-        stripeSubscriptionId: 'demo_subscription_' + Date.now(),
-        subscriptionStatus: 'active'
-      });
-      
-      res.json({
-        subscriptionId: 'demo_subscription_' + Date.now(),
-        status: 'active',
-        message: 'Subscription activated successfully (demo mode)'
-      });
+      // Check if demo mode or real checkout
+      if (useDemo) {
+        console.log(`🎯 Demo Mode: Activating subscription immediately for user: ${user.email}`);
+        
+        // Update user subscription status in database
+        await storage.updateUser(userId, {
+          stripeSubscriptionId: 'demo_subscription_' + Date.now(),
+          subscriptionStatus: 'active'
+        });
+        
+        res.json({
+          subscriptionId: 'demo_subscription_' + Date.now(),
+          status: 'active',
+          message: 'Subscription activated successfully (demo mode)'
+        });
+      } else {
+        // Real Stripe checkout
+        console.log(`💳 Creating real Stripe checkout for user: ${user.email}`);
+        
+        const session = await createCheckoutSession(stripeCustomerId, priceId, userId);
+        
+        res.json({
+          checkoutUrl: session.url,
+          sessionId: session.id,
+          message: 'Redirecting to Stripe checkout...'
+        });
+      }
 
     } catch (error) {
       console.error('❌ Failed to create subscription:', error);
