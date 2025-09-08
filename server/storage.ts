@@ -79,6 +79,7 @@ export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, role?: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]>;
   createUser(user: Partial<UpsertUser>): Promise<User>;
   updateUser(id: string, updates: Partial<UpsertUser>): Promise<User>;
@@ -449,6 +450,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(and(...conditions));
+      
+    return user;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.stripeCustomerId, stripeCustomerId));
       
     return user;
   }
