@@ -3173,7 +3173,14 @@ The Quikpik Team`
       // Create or update user in database
       const user = await createOrUpdateUser(googleUser);
       
-      // Set user session with enhanced session data
+      // Set user session in passport format for compatibility
+      (req.session as any).passport = {
+        user: {
+          sub: user.id,
+          email: user.email,
+          claims: user
+        }
+      };
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
