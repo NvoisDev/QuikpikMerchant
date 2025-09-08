@@ -130,11 +130,8 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   
-  // Subscription fields
-  subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'standard', 'premium'
-  subscriptionStatus: varchar("subscription_status").default("inactive"), // 'active', 'inactive', 'canceled'
-  subscriptionEndsAt: timestamp("subscription_ends_at"),
-  productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
+  // Subscription fields - Driven by Stripe webhooks only
+  subscriptionStatus: varchar("subscription_status").default("inactive"), // 'active', 'inactive', 'canceled', 'past_due' - Updated via webhooks only
   
   // WhatsApp Integration - Simple Setup
   // WhatsApp Business API credentials (user's own)
