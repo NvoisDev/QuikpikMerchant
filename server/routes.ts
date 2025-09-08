@@ -12786,7 +12786,12 @@ https://quikpik.app`;
       }
 
       // For testing - simulate successful upgrade instead of using Stripe
-      if (!process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development') {
+      // Check for development environment more reliably
+      const isDevelopment = process.env.NODE_ENV === 'development' || 
+                           process.argv.includes('--development') || 
+                           !process.env.REPL_ID;
+      
+      if (!process.env.STRIPE_SECRET_KEY || isDevelopment) {
         // Simulate instant upgrade for testing
         await storage.updateUserSubscription(userId, {
           tier: planId,
