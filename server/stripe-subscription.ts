@@ -21,74 +21,141 @@ export async function initializeStripeProducts() {
     console.log('🔧 Initializing Stripe products and prices...');
     
     // Create or update Free Plan ($0/month)
-    const freeProduct = await stripe.products.upsert({
-      id: STRIPE_PRODUCTS.FREE,
-      name: 'Free Plan',
-      description: 'Basic features for getting started',
-      metadata: {
-        productLimit: '3',
-        teamMembers: '1',
-        whatsappIntegration: 'basic',
-        support: 'email'
-      }
-    });
+    let freeProduct;
+    try {
+      freeProduct = await stripe.products.retrieve(STRIPE_PRODUCTS.FREE);
+    } catch {
+      freeProduct = await stripe.products.create({
+        id: STRIPE_PRODUCTS.FREE,
+        name: 'Free Plan',
+        description: 'Basic features for getting started',
+        metadata: {
+          productLimit: '3',
+          teamMembers: '1',
+          whatsappIntegration: 'basic',
+          support: 'email'
+        }
+      });
+    }
 
-    const freePrice = await stripe.prices.create({
-      product: STRIPE_PRODUCTS.FREE,
-      unit_amount: 0, // $0
-      currency: 'gbp',
-      recurring: { interval: 'month' },
-      metadata: {
-        tier: 'free'
-      }
-    });
+    // Create prices (only if they don't exist)
+    let freePrice;
+    try {
+      const existingPrices = await stripe.prices.list({
+        product: STRIPE_PRODUCTS.FREE,
+        active: true
+      });
+      freePrice = existingPrices.data[0] || await stripe.prices.create({
+        product: STRIPE_PRODUCTS.FREE,
+        unit_amount: 0, // $0
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'free'
+        }
+      });
+    } catch (error) {
+      freePrice = await stripe.prices.create({
+        product: STRIPE_PRODUCTS.FREE,
+        unit_amount: 0, // $0
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'free'
+        }
+      });
+    }
 
     // Create or update Standard Plan
-    const standardProduct = await stripe.products.upsert({
-      id: STRIPE_PRODUCTS.STANDARD,
-      name: 'Standard Plan', 
-      description: 'Enhanced features for growing businesses',
-      metadata: {
-        productLimit: '50',
-        teamMembers: '3',
-        whatsappIntegration: 'advanced',
-        support: 'priority'
-      }
-    });
+    let standardProduct;
+    try {
+      standardProduct = await stripe.products.retrieve(STRIPE_PRODUCTS.STANDARD);
+    } catch {
+      standardProduct = await stripe.products.create({
+        id: STRIPE_PRODUCTS.STANDARD,
+        name: 'Standard Plan', 
+        description: 'Enhanced features for growing businesses',
+        metadata: {
+          productLimit: '50',
+          teamMembers: '3',
+          whatsappIntegration: 'advanced',
+          support: 'priority'
+        }
+      });
+    }
 
-    const standardPrice = await stripe.prices.create({
-      product: STRIPE_PRODUCTS.STANDARD,
-      unit_amount: 999, // £9.99
-      currency: 'gbp',
-      recurring: { interval: 'month' },
-      metadata: {
-        tier: 'standard'
-      }
-    });
+    let standardPrice;
+    try {
+      const existingPrices = await stripe.prices.list({
+        product: STRIPE_PRODUCTS.STANDARD,
+        active: true
+      });
+      standardPrice = existingPrices.data[0] || await stripe.prices.create({
+        product: STRIPE_PRODUCTS.STANDARD,
+        unit_amount: 999, // £9.99
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'standard'
+        }
+      });
+    } catch (error) {
+      standardPrice = await stripe.prices.create({
+        product: STRIPE_PRODUCTS.STANDARD,
+        unit_amount: 999, // £9.99
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'standard'
+        }
+      });
+    }
 
     // Create or update Premium Plan
-    const premiumProduct = await stripe.products.upsert({
-      id: STRIPE_PRODUCTS.PREMIUM,
-      name: 'Premium Plan',
-      description: 'All features including team management and marketplace access',
-      metadata: {
-        productLimit: '-1', // Unlimited
-        teamMembers: '-1', // Unlimited
-        whatsappIntegration: 'full',
-        marketplaceAccess: 'true',
-        support: 'priority'
-      }
-    });
+    let premiumProduct;
+    try {
+      premiumProduct = await stripe.products.retrieve(STRIPE_PRODUCTS.PREMIUM);
+    } catch {
+      premiumProduct = await stripe.products.create({
+        id: STRIPE_PRODUCTS.PREMIUM,
+        name: 'Premium Plan',
+        description: 'All features including team management and marketplace access',
+        metadata: {
+          productLimit: '-1', // Unlimited
+          teamMembers: '-1', // Unlimited
+          whatsappIntegration: 'full',
+          marketplaceAccess: 'true',
+          support: 'priority'
+        }
+      });
+    }
 
-    const premiumPrice = await stripe.prices.create({
-      product: STRIPE_PRODUCTS.PREMIUM,
-      unit_amount: 1999, // £19.99
-      currency: 'gbp',
-      recurring: { interval: 'month' },
-      metadata: {
-        tier: 'premium'
-      }
-    });
+    let premiumPrice;
+    try {
+      const existingPrices = await stripe.prices.list({
+        product: STRIPE_PRODUCTS.PREMIUM,
+        active: true
+      });
+      premiumPrice = existingPrices.data[0] || await stripe.prices.create({
+        product: STRIPE_PRODUCTS.PREMIUM,
+        unit_amount: 1999, // £19.99
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'premium'
+        }
+      });
+    } catch (error) {
+      premiumPrice = await stripe.prices.create({
+        product: STRIPE_PRODUCTS.PREMIUM,
+        unit_amount: 1999, // £19.99
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        metadata: {
+          tier: 'premium'
+        }
+      });
+    }
 
     console.log('✅ Stripe products initialized successfully');
     return {
@@ -203,25 +270,34 @@ export async function createSubscription(stripeCustomerId: string, priceId: stri
 // Get all available plans with current pricing
 export async function getAvailablePlans() {
   try {
-    const products = await stripe.products.list({
-      ids: Object.values(STRIPE_PRODUCTS),
-      expand: ['data.default_price']
+    // Get all prices for our products
+    const prices = await stripe.prices.list({
+      active: true,
+      expand: ['data.product']
     });
 
-    return products.data.map(product => {
-      const price = product.default_price as Stripe.Price;
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        priceId: price.id,
-        amount: price.unit_amount || 0,
-        currency: price.currency,
-        interval: price.recurring?.interval,
-        metadata: product.metadata,
-        tier: product.metadata.tier
-      };
-    });
+    const availablePlans = [];
+    
+    for (const price of prices.data) {
+      const product = price.product as Stripe.Product;
+      
+      // Only include our subscription products
+      if (Object.values(STRIPE_PRODUCTS).includes(product.id)) {
+        availablePlans.push({
+          id: product.id,
+          name: product.name || 'Unknown Plan',
+          description: product.description || '',
+          priceId: price.id,
+          amount: price.unit_amount || 0,
+          currency: price.currency,
+          interval: price.recurring?.interval || 'month',
+          metadata: product.metadata,
+          tier: product.metadata.tier || 'free'
+        });
+      }
+    }
+
+    return availablePlans;
 
   } catch (error) {
     console.error('❌ Failed to get available plans:', error);

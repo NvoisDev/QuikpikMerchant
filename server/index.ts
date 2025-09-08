@@ -53,6 +53,16 @@ app.use((req, res, next) => {
       console.error("❌ Server startup failed: Database connection could not be established");
       process.exit(1);
     }
+    
+    // Initialize Stripe products and prices
+    try {
+      const { initializeStripeProducts } = await import('./stripe-subscription.js');
+      await initializeStripeProducts();
+      console.log('✅ Stripe subscription products initialized');
+    } catch (error) {
+      console.error('⚠️ Stripe subscription initialization failed:', error);
+      // Don't fail server startup for Stripe issues in development
+    }
 
     // Lazy load heavy modules
     const { registerRoutes } = await import("./routes");
