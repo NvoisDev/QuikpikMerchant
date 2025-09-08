@@ -130,8 +130,11 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   
-  // Subscription fields - Driven by Stripe webhooks only
-  subscriptionStatus: varchar("subscription_status").default("inactive"), // 'active', 'inactive', 'canceled', 'past_due' - Updated via webhooks only
+  // Subscription fields - Clean implementation driven by Stripe webhooks only
+  subscriptionStatus: varchar("subscription_status").default("free"), // 'free', 'active', 'canceled', 'past_due', 'incomplete' - Updated via webhooks only
+  currentPlan: varchar("current_plan").default("free"), // 'free', 'standard', 'premium' - Updated via webhooks only
+  subscriptionPeriodStart: timestamp("subscription_period_start"), // Current period start date
+  subscriptionPeriodEnd: timestamp("subscription_period_end"), // Current period end date
   
   // WhatsApp Integration - Simple Setup
   // WhatsApp Business API credentials (user's own)
@@ -298,6 +301,52 @@ export const customerInvitationTokens = pgTable("customer_invitation_tokens", {
 });
 
 // Gamification: User badges and achievements tracking
+// Subscription plans table for managing Stripe products and prices
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // 'Free', 'Standard', 'Premium'
+  planId: varchar("plan_id").notNull().unique(), // 'free', 'standard', 'premium'
+  stripeProductId: varchar("stripe_product_id"), // Stripe product ID (null for free)
+  stripePriceId: varchar("stripe_price_id"), // Stripe price ID (null for free)
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(), // £0.00, £9.99, £19.99
+  currency: varchar("currency").default("GBP"),
+  description: text("description"),
+  features: jsonb("features").$type<string[]>().default([]), // Array of feature descriptions
+  limits: jsonb("limits").$type<{
+    products?: number; // Product limit (-1 for unlimited)
+    broadcasts?: number; // Broadcast limit per month (-1 for unlimited)
+    teamMembers?: number; // Team member limit (-1 for unlimited)
+    customGroups?: number; // Customer group limit (-1 for unlimited)
+  }>().default({}),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0), // Display order
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User subscriptions table for detailed subscription tracking
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.planId),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique(), // Null for free plan
+  status: varchar("status").notNull().default("active"), // 'active', 'canceled', 'past_due', 'incomplete'
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  canceledAt: timestamp("canceled_at"),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    userIdIdx: index("user_subscriptions_user_id_idx").on(table.userId),
+    stripeSubscriptionIdIdx: index("user_subscriptions_stripe_id_idx").on(table.stripeSubscriptionId),
+    statusIdx: index("user_subscriptions_status_idx").on(table.status),
+  };
+});
+
 export const userBadges = pgTable("user_badges", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -1362,5 +1411,29 @@ export const insertCustomerWholesalerRelationshipSchema = createInsertSchema(cus
 });
 export type InsertCustomerWholesalerRelationship = z.infer<typeof insertCustomerWholesalerRelationshipSchema>;
 export type CustomerWholesalerRelationship = typeof customerWholesalerRelationships.$inferSelect;
+
+// Subscription types
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+
+// User types
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+export type UpsertUser = Omit<InsertUser, 'createdAt' | 'updatedAt'> & {
+  id: string; // Make id required for upserts
+};
 
 
