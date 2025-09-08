@@ -32,7 +32,8 @@ import {
   Copy,
   ExternalLink,
   Settings,
-  Edit
+  Edit,
+  Crown
 } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
@@ -281,9 +282,10 @@ export default function TeamManagement() {
         
         {/* Upgrade Modal */}
         <SubscriptionUpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
+          open={showUpgradeModal}
+          onOpenChange={setShowUpgradeModal}
           currentPlan={simpleTier}
+          reason="team_member_limit"
         />
       </div>
     );
