@@ -36,6 +36,7 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
       try {
         const response = await apiRequest("GET", "/api/subscription/plans");
         const data = await response.json();
+        console.log('🐛 DEBUG: Loaded plans from API:', data.plans);
         setPlans(data.plans || []);
       } catch (error) {
         console.error("Failed to load plans:", error);
@@ -110,6 +111,12 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
       }
 
       // Create subscription with proper Stripe flow
+      console.log('🐛 DEBUG: Sending upgrade request with:', {
+        priceId: formattedPlan.priceId,
+        planName: formattedPlan.name,
+        fullPlan: formattedPlan
+      });
+      
       const response = await apiRequest("POST", "/api/subscription/create", {
         priceId: formattedPlan.priceId
       });
@@ -177,6 +184,7 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
   }
 
   const formattedPlans = plans.map(formatPlan);
+  console.log('🐛 DEBUG: Formatted plans:', formattedPlans);
 
   return (
     <div className="space-y-6">
