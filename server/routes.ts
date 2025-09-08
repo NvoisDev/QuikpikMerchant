@@ -3199,16 +3199,26 @@ The Quikpik Team`
         hasAddress: !!(user.streetAddress || user.city)
       });
       
-      // Check if this is a new user who needs to complete signup
-      if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
-        console.log(`👋 New user detected, redirecting to complete signup profile`);
-        // Redirect new users to complete their profile
-        res.redirect('/signup-complete');
-      } else {
-        // Redirect returning users with complete profiles to dashboard
-        console.log(`✅ Returning user with complete profile, redirecting to dashboard`);
-        res.redirect('/dashboard');
-      }
+      // CRITICAL: Save session before redirect to ensure persistence
+      req.session.save((err: any) => {
+        if (err) {
+          console.error('❌ Session save failed after Google auth:', err);
+          return res.redirect('/login?error=session_failed');
+        }
+        
+        console.log(`✅ Session saved successfully for ${user.email}`);
+        
+        // Check if this is a new user who needs to complete signup
+        if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
+          console.log(`👋 New user detected, redirecting to complete signup profile`);
+          // Redirect new users to complete their profile
+          res.redirect('/signup-complete');
+        } else {
+          // Redirect returning users with complete profiles to dashboard
+          console.log(`✅ Returning user with complete profile, redirecting to dashboard`);
+          res.redirect('/dashboard');
+        }
+      });
     } catch (error) {
       console.error('Google auth callback error:', error);
       res.redirect('/login?error=auth_failed');
