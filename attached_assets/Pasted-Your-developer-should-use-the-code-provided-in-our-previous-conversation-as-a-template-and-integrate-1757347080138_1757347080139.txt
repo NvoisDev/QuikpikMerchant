@@ -1,0 +1,56 @@
+Your developer should use the code provided in our previous conversation as a template and integrate it with a new createSubscription function that handles both free and paid plans.
+Here is the recommended code and features for each tier.
+Recommended Features for Tiers
+ * Free (£0.00): This tier is for getting wholesalers started and should be simple.
+   * Product Limit: Up to 10 products.
+   * Broadcasts: Up to 5 broadcasts per month.
+   * Dashboard Analytics: Basic sales and order metrics.
+   * Help & Support: Standard email support.
+ * Standard (£9.99): This tier is the workhorse of your platform.
+   * Product Limit: Up to 50 products.
+   * Broadcasts: Up to 25 broadcasts per month.
+   * Dashboard Analytics: Advanced analytics, including top-selling products and customer insights.
+   * Help & Support: Priority email support.
+ * Premium (£19.99): This is your highest-value tier.
+   * Product Limit: Unlimited products.
+   * Broadcasts: Unlimited broadcasts.
+   * Dashboard Analytics: All advanced analytics plus custom reports and business performance metrics.
+   * Help & Support: Priority email and phone support.
+Step-by-Step Code Guide
+The key is to use Stripe's createSubscription API directly on your backend. This code should be placed in your backend and connected to your API endpoint.
+// A single function to handle creating or upgrading a subscription
+export async function createSubscription(stripeCustomerId, priceId) {
+  try {
+    // Look for an existing subscription for this customer
+    const subscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'all', // Include canceled subscriptions
+    });
+
+    if (subscriptions.data.length > 0) {
+      // If a subscription exists, update it to the new price
+      const subscription = subscriptions.data[0];
+      const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+        proration_behavior: 'always_invoice', // Handle pro-rated billing
+        items: [{
+          id: subscription.items.data[0].id,
+          price: priceId, // Switch to the new plan's price ID
+        }],
+      });
+      return updatedSubscription;
+    } else {
+      // If no subscription exists, create a new one
+      const newSubscription = await stripe.subscriptions.create({
+        customer: stripeCustomerId,
+        items: [{ price: priceId }],
+        // For a Free plan, you can set a trial period
+        trial_period_days: priceId === 'free_plan_price_id' ? 30 : undefined,
+      });
+      return newSubscription;
+    }
+  } catch (error) {
+    console.error('❌ Failed to create or update subscription:', error);
+    throw error;
+  }
+}
+

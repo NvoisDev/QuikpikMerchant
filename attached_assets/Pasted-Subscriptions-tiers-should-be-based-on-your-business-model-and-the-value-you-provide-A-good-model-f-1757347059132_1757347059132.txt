@@ -1,0 +1,29 @@
+Subscriptions tiers should be based on your business model and the value you provide. A good model for a multi-wholesaler platform is to have tiers that unlock increasing levels of features or scale for wholesalers.
+ * Free: Unlimited, but limited features. This is a great way to onboard new wholesalers. Features could include limited product uploads (e.g., 5 products), basic dashboard analytics, and limited access to marketing tools.
+ * Standard: All of the Free features, with a step-up in capabilities. This tier could unlock unlimited products, advanced analytics, and full access to marketing tools.
+ * Premium: The top tier, with all the features of Standard plus premium benefits. These could include a dedicated account manager, priority customer support, or advanced reporting features.
+Now, for the guide to help your developer integrate Stripe Subscriptions, here is a step-by-step guide.
+Step 1: Stripe Product & Price Setup
+First, your developer needs to set up the subscription tiers in the Stripe Dashboard.
+ * Create Products: In the Stripe Dashboard, create three products: Free, Standard, and Premium.
+ * Create Prices: For each product, create a recurring price.
+   * Free: Create a price of $0.00 with a recurring interval (e.g., monthly).
+   * Standard & Premium: Create recurring prices for the cost of each tier.
+Step 2: Backend Logic
+This is the most critical part. Your backend will handle all of the communication with Stripe.
+ * Stripe Customer: When a user signs up, your backend should create a Stripe Customer object and store its ID in your database.
+ * Create Subscription Session: When a user selects a plan, your backend should use the Stripe Price ID to create a Stripe Checkout Session in subscription mode.
+   * Price ID: This is the key. The front end sends the Price ID, and the backend uses it to create the subscription.
+   * Success & Cancel URLs: These URLs redirect the user back to your site after payment is complete or canceled.
+ * Webhook Handler: This is how your backend stays in sync with Stripe.
+   * Your backend must have a public endpoint to receive webhooks from Stripe.
+   * It should specifically listen for the checkout.session.completed event to confirm a successful payment and subscription.
+   * Listen for customer.subscription.updated to handle subscription status changes (e.g., from trial to active, or from active to past due).
+Step 3: Front-end Logic
+The front end is responsible for guiding the user and displaying their subscription status.
+ * Pricing Page: Your pricing page should list the plans, but it should not have hardcoded prices. Instead, it should dynamically fetch the prices from your backend, which in turn gets them from Stripe.
+ * Upgrade/Downgrade Flow: When a user clicks to change their plan, the front end should send the new Price ID to your backend, which will then handle the subscription update with Stripe.
+Key Considerations
+ * Single Source of Truth: Your own database should only store the user's stripe_customer_id and the stripe_subscription_id. The subscription status, price, and plan details should always be fetched directly from Stripe via API calls or webhooks.
+ * Idempotency: When a user clicks a button, it's possible for duplicate requests to be sent. Your developer should use idempotency keys when creating Stripe objects to prevent duplicate charges.
+ * Access Control: The logic to enable or disable features should be based on the user's subscription status in your database. This information is updated by the webhooks, making your system reliable.
