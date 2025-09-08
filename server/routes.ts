@@ -3161,12 +3161,26 @@ The Quikpik Team`
 
   app.get('/api/auth/google/callback', async (req, res) => {
     try {
-      const { code } = req.query;
+      const { code, error, state } = req.query;
+      
+      console.log('🔄 OAuth callback received:', { 
+        hasCode: !!code, 
+        codeLength: code?.length, 
+        error: error || 'none',
+        state: state || 'none'
+      });
+      
+      if (error) {
+        console.log('❌ OAuth error from Google:', error);
+        return res.redirect('/login?error=oauth_denied');
+      }
       
       if (!code || typeof code !== 'string') {
-        return res.status(400).json({ error: 'Authorization code is required' });
+        console.log('❌ No authorization code provided');
+        return res.redirect('/login?error=no_code');
       }
 
+      console.log('🔄 Attempting to verify Google token...');
       // Verify Google token and get user info
       const googleUser = await verifyGoogleToken(code);
       
@@ -3211,8 +3225,19 @@ The Quikpik Team`
         }
       });
     } catch (error) {
-      console.error('Google auth callback error:', error);
-      res.redirect('/login?error=auth_failed');
+      console.error('❌ Google auth callback error:', error);
+      
+      // More specific error handling
+      if (error?.message?.includes('invalid_grant')) {
+        console.log('❌ Google token expired or invalid - user needs to try again');
+        res.redirect('/login?error=token_expired');
+      } else if (error?.message?.includes('Failed to verify')) {
+        console.log('❌ Google token verification failed');
+        res.redirect('/login?error=verification_failed');
+      } else {
+        console.log('❌ Generic auth error');
+        res.redirect('/login?error=auth_failed');
+      }
     }
   });
 
