@@ -137,7 +137,6 @@ export default function ProductCard({
 
   // Get edit limit information based on subscription tier
   const getEditLimitInfo = () => {
-    const tier = user?.subscriptionTier || "free";
     const currentEdits = product.editCount || 0;
 
     switch (tier) {

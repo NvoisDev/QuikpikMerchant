@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 
 const customerGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required"),
@@ -114,7 +113,6 @@ export default function CustomerGroups() {
   });
 
   // Fetch subscription status for limit checking
-  const { data: subscriptionStatus } = useQuery({
     queryKey: ["/api/subscription/status"],
     queryFn: async () => {
       const response = await fetch("/api/subscription/status", {
@@ -351,7 +349,6 @@ export default function CustomerGroups() {
 
   // Check if user can create more customer groups
   const canCreateGroup = () => {
-    if (!subscriptionStatus) return true; // Allow if status not loaded yet
     
     const currentCount = customerGroups.length;
     const limits = {
@@ -361,7 +358,6 @@ export default function CustomerGroups() {
       team_member: Infinity // Team members inherit parent company limits
     };
     
-    const limit = limits[subscriptionStatus.subscriptionTier as keyof typeof limits] || 2;
     return currentCount < limit;
   };
 
@@ -1615,7 +1611,6 @@ Mike Johnson, 07444 555666`}
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
         reason={upgradeReason}
-        currentPlan={subscriptionStatus?.subscriptionTier || "free"}
       />
     </div>
   );

@@ -1,6 +1,5 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/logo";

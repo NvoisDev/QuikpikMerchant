@@ -51,7 +51,6 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import CustomerInvitationModal from "@/components/CustomerInvitationModal";

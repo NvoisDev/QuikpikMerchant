@@ -54,15 +54,7 @@ app.use((req, res, next) => {
       process.exit(1);
     }
     
-    // Initialize Stripe products and prices
-    try {
-      const { initializeStripeProducts } = await import('./stripe-subscription.js');
-      await initializeStripeProducts();
-      console.log('✅ Stripe subscription products initialized');
-    } catch (error) {
-      console.error('⚠️ Stripe subscription initialization failed:', error);
-      // Don't fail server startup for Stripe issues in development
-    }
+    // Stripe subscription system removed
 
     // Lazy load heavy modules
     const { registerRoutes } = await import("./routes");
@@ -70,18 +62,7 @@ app.use((req, res, next) => {
     
     const server = await registerRoutes(app);
     
-    // Start standalone webhook server for Stripe webhooks
-    try {
-      const { startStandaloneWebhook } = await import("./standalone-webhook");
-      const webhookServer = startStandaloneWebhook();
-      console.log("🔗 Standalone webhook server started on port 5001");
-    } catch (error: any) {
-      if (error.code === 'EADDRINUSE') {
-        console.log("⚠️ Webhook server already running on port 5001");
-      } else {
-        console.error("⚠️ Failed to start webhook server:", error);
-      }
-    }
+    // Webhook server removed with subscription system
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

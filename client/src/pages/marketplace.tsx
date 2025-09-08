@@ -8,9 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, Star, Package, Filter, Grid, List, Users, TrendingUp, Award, Crown, Lock, Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {

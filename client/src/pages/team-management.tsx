@@ -13,9 +13,6 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
-import { useSimpleSubscription } from "@/hooks/useSimpleSubscription";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import TabPermissionsManager from "@/components/TabPermissionsManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 

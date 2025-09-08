@@ -502,7 +502,6 @@ export default function Settings() {
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Subscription</dt>
-                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.subscriptionTier || 'Free'}</dd>
                         </div>
                       </dl>
                     ) : (

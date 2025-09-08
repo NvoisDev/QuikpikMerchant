@@ -20,8 +20,6 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
-import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
@@ -840,7 +838,6 @@ export default function ProductManagement() {
     console.log('🔍 EDIT HANDLER DEBUG:', {
       productId: product.id,
       productName: product.name,
-      userSubscription: effectiveUser?.subscriptionTier,
       authUser: user,
       mockUser: !user ? "Using mock user for testing" : "Using real user",
       editCount: product.editCount,
@@ -848,7 +845,6 @@ export default function ProductManagement() {
     });
     
     // Enhanced edit permission check with better logic
-    const isPremiumUser = effectiveUser?.subscriptionTier === "premium";
     const editCount = product.editCount || 0;
     const canEditBasedOnSubscription = canEditProduct(editCount);
     
@@ -859,7 +855,6 @@ export default function ProductManagement() {
       productId: product.id,
       productName: product.name,
       isPremiumUser,
-      effectiveUserTier: effectiveUser?.subscriptionTier,
       currentEditCount: editCount,
       authUser: !!user,
       canEditFromHook: canEditBasedOnSubscription,
@@ -915,7 +910,6 @@ export default function ProductManagement() {
     console.log('🔍 DUPLICATE HANDLER DEBUG:', {
       productId: product.id,
       productName: product.name,
-      userSubscription: effectiveUser?.subscriptionTier,
       authUser: user,
       mockUser: !user ? "Using mock user for testing" : "Using real user"
     });

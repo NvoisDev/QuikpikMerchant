@@ -17,8 +17,6 @@ import RetailerInterface from "@/pages/retailer-interface";
 import Checkout from "@/pages/checkout";
 import Broadcasts from "@/pages/broadcasts";
 import CustomerGroups from "@/pages/customer-groups";
-import SubscriptionSettingsSimple from "@/pages/subscription-settings-simple";
-import SimpleSubscription from "@/pages/simple-subscription";
 import Settings from "@/pages/settings";
 import StripeSuccess from "@/pages/stripe-success";
 import Marketplace from "@/pages/marketplace";
@@ -49,7 +47,6 @@ import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
 import CustomerRegistrationRequests from "@/pages/customer-registration-requests";
-import UpgradeSuccess from "@/pages/upgrade-success";
 import AuthSuccess from "@/pages/auth-success";
 import SuperAdmin from "@/pages/super-admin";
 import { LoadingDemo } from "@/pages/loading-demo";
@@ -74,7 +71,6 @@ function PublicRoutes() {
       <Route path="/login" component={Login} />
       <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/advertising-preview" component={AdvertisingPreview} />
-      <Route path="/upgrade-success" component={UpgradeSuccess} />
       <Route path="/auth-success" component={AuthSuccess} />
       <Route path="/select-wholesaler" component={WholesalerSelection} />
       <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
@@ -110,9 +106,6 @@ function AuthenticatedRoutes() {
             <Route path="/customers" component={Customers} />
             <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
             <Route path="/orders" component={OrdersFresh} />
-            <Route path="/subscription" component={SubscriptionSettingsSimple} />
-            <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
-            <Route path="/simple-subscription" component={SimpleSubscription} />
             <Route path="/analytics" component={Analytics} />
             <Route path="/business-performance" component={BusinessPerformance} />
             <Route path="/business-performance/financials" component={Financials} />

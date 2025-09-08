@@ -28,7 +28,6 @@ import {
   Megaphone
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";

@@ -49,9 +49,7 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
-import { useSubscription } from "@/hooks/useSubscription";
 // Removed PromotionalOffersManager - promotions managed at product level
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";

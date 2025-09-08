@@ -136,16 +136,7 @@ import { quickOrderService } from "./services/quickOrderService";
 import { multiWholesalerService } from "./services/multiWholesalerService";
 import { db } from "./db";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
-import { 
-  SubscriptionLogger, 
-  logSubscriptionUpgrade, 
-  logSubscriptionDowngrade, 
-  logPaymentSuccess, 
-  logPaymentFailure, 
-  logManualOverride,
-  logProductUnlock,
-  logLimitReached 
-} from "./subscriptionLogger";
+// Subscription logging removed
 import { registerWebhookRoutes } from "./webhook-handler";
 import { getEmailDeliveryAddress } from "./utils/address-helper";
 
@@ -186,11 +177,6 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
   apiVersion: "2025-07-30.basil",
 }) : null;
 
-// Subscription price IDs for monthly plans in GBP
-const SUBSCRIPTION_PRICES = {
-  standard: 'price_1RieBnBLkKweDa5PCS7fdhWO', // £10.99/month
-  premium: 'price_1RieBnBLkKweDa5Py3yl0gTP'    // £19.99/month
-};
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -1153,8 +1139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
           
           await storage.updateUser(userId, {
-            subscriptionTier: tier,
-            subscriptionStatus: 'active',
             productLimit: productLimit,
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });
@@ -1205,8 +1189,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
           
           await storage.updateUser(userId, {
-            subscriptionTier: tier,
-            subscriptionStatus: 'active',
             productLimit: productLimit,
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });
@@ -3333,7 +3315,6 @@ The Quikpik Team`
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        subscriptionTier: user.subscriptionTier,
         businessName: user.businessName,
         isTeamMember: false
       };
@@ -3357,7 +3338,6 @@ The Quikpik Team`
           user: {
             id: user.id,
             email: user.email,
-            subscriptionTier: user.subscriptionTier
           }
         });
       });
@@ -3381,7 +3361,6 @@ The Quikpik Team`
         if (wholesalerInfo) {
           responseUser = {
             ...responseUser,
-            subscriptionTier: wholesalerInfo.subscriptionTier,
             businessName: wholesalerInfo.businessName,
             isTeamMember: true,
             role: 'team_member'
@@ -3392,8 +3371,6 @@ The Quikpik Team`
       console.log(`👤 Auth endpoint returning fresh user data for ${userId}:`, {
         id: responseUser.id,
         email: responseUser.email,
-        subscriptionTier: responseUser.subscriptionTier,
-        subscriptionStatus: responseUser.subscriptionStatus
       });
       
       res.json(responseUser);
@@ -3600,21 +3577,10 @@ The Quikpik Team`
       // Check product limit before creating
       const limitCheck = await storage.checkProductLimit(targetUserId);
       if (!limitCheck.canAdd) {
-        // Log limit reached event
-        await logLimitReached(
-          targetUserId,
-          'product_creation',
-          limitCheck.currentCount,
-          limitCheck.tier,
-          {
-            attemptedAction: 'create_product',
-            productName: req.body.name,
-            limit: limitCheck.limit
-          }
-        );
+        // Subscription logging removed
         
         return res.status(403).json({ 
-          message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan. Upgrade your subscription to add more products.`,
+          message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan.`,
           currentCount: limitCheck.currentCount,
           limit: limitCheck.limit,
           tier: limitCheck.tier
@@ -3663,18 +3629,7 @@ The Quikpik Team`
 
       // Check if product is locked due to subscription limits
       if (existingProduct.status === 'locked') {
-        // Log attempt to edit locked product
-        await logLimitReached(
-          targetUserId,
-          'locked_product_edit',
-          0,
-          'unknown',
-          {
-            attemptedAction: 'edit_locked_product',
-            productId: id,
-            productName: existingProduct.name
-          }
-        );
+        // Subscription logging removed
         
         return res.status(403).json({ 
           message: "This product is locked due to subscription limits. Upgrade your plan or delete other products to unlock it.",
@@ -7275,7 +7230,7 @@ This message was sent by Quikpik Merchant Platform
       // Check premium subscription for Business Performance access
       if (req.user.subscriptionTier !== 'premium') {
         return res.status(403).json({ 
-          error: 'Premium subscription required for Business Performance analytics',
+          error: 'Premium plan required for Business Performance analytics',
           required: 'premium'
         });
       }
@@ -7371,7 +7326,7 @@ This message was sent by Quikpik Merchant Platform
       // Check premium subscription for Business Performance access
       if (req.user.subscriptionTier !== 'premium') {
         return res.status(403).json({ 
-          error: 'Premium subscription required for Business Performance analytics',
+          error: 'Premium plan required for Business Performance analytics',
           required: 'premium'
         });
       }
@@ -7936,25 +7891,11 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // Note: Subscription status endpoint is defined later in the file with correct product counting
-
-  // NEW: Get available subscription plans (no auth required for plan viewing)
-  app.get('/api/subscription/plans', async (req, res) => {
-    try {
-      const { getAvailablePlans } = await import('./stripe-subscription');
-      const plans = await getAvailablePlans();
-      console.log('🔍 DEBUG: Found plans:', JSON.stringify(plans, null, 2));
-      res.json({ plans });
-    } catch (error) {
-      console.error('❌ Failed to get plans:', error);
-      res.status(500).json({ error: 'Failed to get subscription plans' });
-    }
-  });
+  // Note: Removed subscription system completely
 
   // DEBUG: Endpoint to check Stripe products
   app.get('/api/debug/stripe-products', async (req, res) => {
     try {
-      const { stripe } = await import('./stripe-subscription');
       
       const products = await stripe.products.list({ active: true });
       const prices = await stripe.prices.list({ active: true });
@@ -7980,170 +7921,8 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // NEW: Create Stripe customer and subscription (Real Checkout) - DEMO: No auth required for testing
-  app.post('/api/subscription/create', async (req: any, res) => {
-    try {
-      const { createOrUpdateStripeCustomer, createCheckoutSession } = await import('./stripe-subscription');
-      const { priceId, useDemo = false } = req.body;
-      
-      // DEMO MODE: Use test user if not authenticated
-      let userId = 'demo-user-123';
-      let userEmail = 'demo@quikpik.com';
-      let userName = 'Demo User';
-      
-      if (req.user) {
-        userId = req.user.id || req.user.claims?.sub;
-        userEmail = req.user.email;
-        userName = req.user.businessName || req.user.name || 'Demo User';
-      }
-      
-      if (!priceId) {
-        console.log('❌ Missing priceId in request body:', req.body);
-        return res.status(400).json({ error: 'Price ID is required' });
-      }
-
-      console.log('✅ Creating subscription for:', { userId, userEmail, userName, priceId });
-      
-      // Get user from database or create demo user
-      let user = await storage.getUser(userId);
-      if (!user && userId === 'demo-user-123') {
-        // Create demo user for testing
-        console.log('🎯 Creating demo user for testing');
-        user = {
-          id: 'demo-user-123',
-          email: userEmail,
-          firstName: userName,
-          businessName: userName,
-          role: 'wholesaler',
-          stripeCustomerId: null,
-          stripeSubscriptionId: null,
-          subscriptionStatus: 'free'
-        };
-      } else if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      // Create Stripe customer if needed
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await createOrUpdateStripeCustomer(
-          userId, 
-          user.email || '',
-          user.firstName || user.businessName
-        );
-        stripeCustomerId = customer.id;
-        
-        // Update user with Stripe customer ID
-        await storage.updateUser(userId, { stripeCustomerId });
-      }
-      
-      // Check if demo mode or real checkout
-      if (useDemo) {
-        console.log(`🎯 Demo Mode: Activating subscription immediately for user: ${user.email}`);
-        
-        // Update user subscription status in database
-        await storage.updateUser(userId, {
-          stripeSubscriptionId: 'demo_subscription_' + Date.now(),
-          subscriptionStatus: 'active'
-        });
-        
-        res.json({
-          subscriptionId: 'demo_subscription_' + Date.now(),
-          status: 'active',
-          message: 'Subscription activated successfully (demo mode)'
-        });
-      } else {
-        // Real Stripe checkout
-        console.log(`💳 Creating real Stripe checkout for user: ${user.email}`);
-        
-        const session = await createCheckoutSession(stripeCustomerId, priceId, userId);
-        
-        res.json({
-          checkoutUrl: session.url,
-          sessionId: session.id,
-          message: 'Redirecting to Stripe checkout...'
-        });
-      }
-
-    } catch (error) {
-      console.error('❌ Failed to create subscription:', error);
-      res.status(500).json({ error: 'Failed to create subscription' });
-    }
-  });
 
   // OLD: Keep old endpoint for compatibility - will be removed later
-  app.post('/api/subscription/OLD_create', requireAuth, async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe not configured" });
-    }
-
-    try {
-      const { planId, tier } = req.body;
-      const selectedTier = planId || tier; // Support both parameter names
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Define pricing and limits for each tier - use real Stripe price IDs
-      const tierConfig = {
-        standard: { 
-          priceId: 'price_1RieBnBLkKweDa5PCS7fdhWO', // Real Standard price ID from replit.md
-          productLimit: 10, 
-          price: 1099 // £10.99 in pence
-        }, 
-        premium: { 
-          priceId: 'price_1RieBnBLkKweDa5Py3yl0gTP', // Real Premium price ID from replit.md
-          productLimit: -1, 
-          price: 1999 // £19.99 in pence
-        }
-      };
-
-      if (!tierConfig[selectedTier as keyof typeof tierConfig]) {
-        return res.status(400).json({ message: "Invalid subscription tier" });
-      }
-
-      const config = tierConfig[selectedTier as keyof typeof tierConfig];
-
-      // Create or retrieve Stripe customer
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user.email!,
-          name: `${user.firstName} ${user.lastName}`,
-          metadata: {
-            userId: userId,
-            businessName: user.businessName || ''
-          }
-        });
-        customerId = customer.id;
-      }
-
-      // Create Stripe checkout session using real price IDs
-      const session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        payment_method_types: ['card'],
-        line_items: [{
-          price: config.priceId, // Use the real Stripe price ID
-          quantity: 1,
-        }],
-        mode: 'subscription',
-        success_url: `${req.protocol}://${req.get('host')}/subscription?success=true`,
-        cancel_url: `${req.protocol}://${req.get('host')}/subscription?canceled=true`,
-        metadata: {
-          userId: userId,
-          tier: selectedTier,
-          productLimit: config.productLimit.toString()
-        }
-      });
-
-      res.json({ subscriptionUrl: session.url });
-    } catch (error: any) {
-      console.error("Error creating subscription:", error);
-      res.status(500).json({ message: "Failed to create subscription: " + error.message });
-    }
-  });
 
   // Duplicate removed - subscription webhooks handled by /api/webhooks/stripe
 
@@ -8872,91 +8651,6 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // WhatsApp status endpoint for priority alert
   // Manual subscription refresh endpoint
-  app.post("/api/subscription/refresh", requireAuth, async (req: any, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ error: "Stripe not configured" });
-      }
-      
-      const userId = req.user.id;
-      const user = await storage.getUserById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      console.log(`🔄 Manual subscription refresh for user: ${userId}`);
-      
-      // Search for recent payment intents for this user
-      const paymentIntents = await stripe.paymentIntents.list({
-        limit: 10,
-      });
-      
-      let foundSubscription = null;
-      
-      for (const pi of paymentIntents.data) {
-        if (pi.metadata?.userId === userId && pi.status === 'succeeded') {
-          const tier = pi.metadata?.targetTier || pi.metadata?.tier;
-          if (tier) {
-            foundSubscription = { tier, paymentIntent: pi.id };
-            console.log(`📋 Found successful payment: ${pi.id} for tier: ${tier}`);
-            break;
-          }
-        }
-      }
-      
-      // Also check checkout sessions
-      if (!foundSubscription) {
-        const sessions = await stripe.checkout.sessions.list({
-          limit: 10,
-        });
-        
-        for (const session of sessions.data) {
-          if (session.metadata?.userId === userId && session.payment_status === 'paid') {
-            const tier = session.metadata?.targetTier || session.metadata?.tier;
-            if (tier) {
-              foundSubscription = { tier, session: session.id };
-              console.log(`📋 Found successful checkout: ${session.id} for tier: ${tier}`);
-              break;
-            }
-          }
-        }
-      }
-      
-      if (foundSubscription) {
-        const tier = foundSubscription.tier;
-        const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
-        
-        // Update user subscription
-        await storage.updateUser(userId, {
-          subscriptionTier: tier,
-          subscriptionStatus: 'active',
-          productLimit: productLimit,
-          subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        });
-        
-        console.log(`✅ Manual refresh complete: ${userId} → ${tier}`);
-        
-        res.json({
-          success: true,
-          message: `Subscription updated to ${tier}`,
-          tier,
-          productLimit,
-          source: foundSubscription.paymentIntent ? 'payment_intent' : 'checkout_session'
-        });
-      } else {
-        res.json({
-          success: false,
-          message: "No recent successful payments found",
-          currentTier: user.subscriptionTier || 'free'
-        });
-      }
-      
-    } catch (error: any) {
-      console.error("Error refreshing subscription:", error);
-      res.status(500).json({ error: "Failed to refresh subscription: " + error.message });
-    }
-  });
 
   app.get("/api/whatsapp/status", requireAuth, async (req: any, res) => {
     try {
@@ -10730,7 +10424,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
       // Check premium subscription for Business Performance access
       if (req.user.subscriptionTier !== 'premium') {
         return res.status(403).json({ 
-          error: 'Premium subscription required for Business Performance analytics',
+          error: 'Premium plan required for Business Performance analytics',
           required: 'premium'
         });
       }
@@ -12876,115 +12570,8 @@ https://quikpik.app`;
   // Duplicate removed - subscription management handled by /api/subscription/downgrade
 
   // Debug endpoint to check subscription data
-  app.get('/api/subscription/debug', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id || req.user.claims?.sub;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      console.log(`🐛 Debug subscription data for user ${userId}:`, {
-        id: user.id,
-        email: user.email,
-        subscriptionTier: user.subscriptionTier,
-        subscriptionStatus: user.subscriptionStatus,
-        stripeSubscriptionId: user.stripeSubscriptionId,
-        productLimit: user.productLimit,
-        subscriptionEndsAt: user.subscriptionEndsAt
-      });
-
-      res.json({
-        userId: user.id,
-        email: user.email,
-        subscriptionTier: user.subscriptionTier,
-        subscriptionStatus: user.subscriptionStatus,
-        stripeSubscriptionId: user.stripeSubscriptionId,
-        productLimit: user.productLimit,
-        subscriptionEndsAt: user.subscriptionEndsAt,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Debug subscription error:', error);
-      res.status(500).json({ error: "Failed to get debug data" });
-    }
-  });
 
   // Subscription upgrade endpoint (with proper authentication)
-  app.post('/api/subscription/upgrade', requireAuth, async (req: any, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ error: 'Payment processing unavailable' });
-      }
-
-      const { planId } = req.body;
-      const userId = req.user.id || req.user.claims?.sub;
-      const user = await storage.getUser(userId);
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      if (!planId || !['premium'].includes(planId)) {
-        return res.status(400).json({ error: 'Invalid plan ID' });
-      }
-
-      // For testing - simulate successful upgrade instead of using Stripe
-      // Use test mode in development OR when not in production environment
-      const isTestMode = process.env.NODE_ENV !== 'production' || 
-                        process.env.REPL_ID || // We're in Replit, use test mode
-                        process.argv.includes('--test');
-      
-      if (isTestMode) {
-        // Simulate instant upgrade for testing
-        await storage.updateUserSubscription(userId, {
-          tier: planId,
-          status: 'active',
-          productLimit: -1,
-          subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
-        
-        console.log(`✅ TEST MODE: Instantly upgraded user ${userId} to ${planId} (NODE_ENV: ${process.env.NODE_ENV}, REPL_ID: ${!!process.env.REPL_ID})`);
-        
-        res.json({ 
-          checkoutUrl: `https://quikpik.app/simple-subscription?success=true&plan=${planId}`,
-          testMode: true,
-          message: 'Instant upgrade for testing'
-        });
-        return;
-      }
-
-      // Create Stripe checkout session (production)
-      const session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        customer_email: user.email,
-        line_items: [{
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: `Quikpik ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            },
-            unit_amount: planId === 'premium' ? 1999 : 999, // £19.99 or £9.99
-            recurring: { interval: 'month' },
-          },
-          quantity: 1,
-        }],
-        success_url: `https://quikpik.app/simple-subscription?success=true&plan=${planId}`,
-        cancel_url: `https://quikpik.app/simple-subscription?canceled=true`,
-        metadata: {
-          userId: userId,
-          planId: planId,
-          tier: planId, // Add for webhook compatibility
-          targetTier: planId, // Add for webhook compatibility
-        },
-      });
-
-      res.json({ checkoutUrl: session.url });
-    } catch (error: any) {
-      console.error('❌ Subscription upgrade error:', error);
-      res.status(500).json({ error: 'Failed to create checkout session' });
-    }
-  });
 
 
   // SECURITY FIX: Remove hardcoded fallback that was causing data leaks
@@ -13018,430 +12605,16 @@ https://quikpik.app`;
   });
 
   // NEW: Subscription status endpoint using proper Stripe data
-  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
-    try {
-      const { getUserSubscription } = await import('./stripe-subscription');
-      const userId = req.user.id || req.user.claims?.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      // Handle demo subscriptions
-      let subscriptionData;
-      if (user.stripeSubscriptionId?.startsWith('demo_subscription_')) {
-        // Demo mode - return premium features
-        subscriptionData = {
-          tier: 'premium',
-          status: 'active',
-          productLimit: -1,
-          teamMembers: -1,
-          features: {
-            whatsappIntegration: 'full',
-            marketplaceAccess: true,
-            support: 'priority'
-          }
-        };
-      } else {
-        // Real Stripe subscription
-        subscriptionData = await getUserSubscription(
-          user.stripeCustomerId || '', 
-          user.stripeSubscriptionId
-        );
-      }
-      
-      // Get product count safely 
-      let productCount = 0;
-      try {
-        productCount = await storage.getUserProductCount(user.id);
-      } catch (error) {
-        console.log('⚠️ Could not get product count, defaulting to 0');
-        productCount = 0;
-      }
-
-      res.json({
-        tier: subscriptionData.tier,
-        status: subscriptionData.status,
-        productCount,
-        productLimit: subscriptionData.productLimit,
-        features: subscriptionData.features,
-        currentPeriodEnd: subscriptionData.currentPeriodEnd,
-        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd
-      });
-    } catch (error: any) {
-      console.error('❌ Error fetching subscription status:', error);
-      res.status(500).json({ error: 'Failed to fetch subscription status' });
-    }
-  });
 
   // Subscription audit log endpoints
-  app.get('/api/subscription/audit-logs', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id || req.user.claims?.sub;
-      
-      // Get subscription history for this user
-      const auditLogs = await SubscriptionLogger.getUserSubscriptionHistory(userId);
-      
-      res.json({
-        success: true,
-        logs: auditLogs,
-        count: auditLogs.length
-      });
-    } catch (error) {
-      console.error('Error fetching subscription audit logs:', error);
-      res.status(500).json({ error: "Failed to fetch subscription history" });
-    }
-  });
 
-  app.get('/api/subscription/stats', requireAuth, async (req: any, res) => {
-    try {
-      const { timeRange } = req.query;
-      
-      // Get subscription statistics
-      const stats = await SubscriptionLogger.getSubscriptionStats(timeRange as any || '30d');
-      
-      if (!stats) {
-        return res.status(500).json({ error: "Failed to generate subscription statistics" });
-      }
-      
-      res.json({
-        success: true,
-        timeRange: timeRange || '30d',
-        stats
-      });
-    } catch (error) {
-      console.error('Error fetching subscription stats:', error);
-      res.status(500).json({ error: "Failed to fetch subscription statistics" });
-    }
-  });
 
   // Universal plan change endpoint (handles both upgrades and downgrades)
-  app.post('/api/subscription/change-plan', requireAuth, async (req: any, res) => {
-    try {
-      const { targetTier } = req.body;
-      const userId = req.user.id || req.user.claims?.sub;
-      
-      console.log(`🔄 Plan change request: User ${userId} wants to change to ${targetTier}`);
-      
-      if (!targetTier) {
-        return res.status(400).json({ error: "Target tier is required" });
-      }
-
-      const validTiers = ['free', 'standard', 'premium'];
-      if (!validTiers.includes(targetTier)) {
-        return res.status(400).json({ error: "Invalid target tier" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Check if user is already on this tier
-      console.log(`🔍 Current tier: ${user.subscriptionTier}, Target tier: ${targetTier}`);
-      if (user.subscriptionTier === targetTier) {
-        console.log(`❌ User ${userId} already on ${targetTier} plan`);
-        return res.status(400).json({ error: `You are already on the ${targetTier} plan` });
-      }
-
-      // Determine if this is an upgrade or downgrade
-      const tierOrder = { free: 0, standard: 1, premium: 2 };
-      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
-      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
-      
-      const isUpgrade = targetTierOrder > currentTierOrder;
-      
-      if (isUpgrade) {
-        // For upgrades, redirect to Stripe checkout
-        if (!stripe) {
-          return res.status(500).json({ error: "Payment system not configured. Please contact support." });
-        }
-
-        // Create Stripe checkout session for the upgrade
-        const priceData = {
-          standard: {
-            unit_amount: 1099, // £10.99 in pence
-            currency: 'gbp',
-            product_data: {
-              name: 'Quikpik Standard Plan',
-              description: 'Up to 10 products, advanced features'
-            }
-          },
-          premium: {
-            unit_amount: 1999, // £19.99 in pence  
-            currency: 'gbp',
-            product_data: {
-              name: 'Quikpik Premium Plan',
-              description: 'Unlimited products, all premium features'
-            }
-          }
-        };
-
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items: [
-            {
-              price_data: priceData[targetTier as keyof typeof priceData],
-              quantity: 1,
-            },
-          ],
-          mode: 'payment',
-          success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}&session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
-          customer_email: user.email,
-          metadata: {
-            userId: userId,
-            targetTier: targetTier,
-            tier: targetTier, // Add for webhook compatibility
-            upgradeFromTier: user.subscriptionTier || 'free'
-          },
-        });
-
-        // Log the upgrade attempt
-        await logSubscriptionUpgrade(userId, user.subscriptionTier || 'free', targetTier, {
-          source: 'plan_change_modal',
-          stripeSessionId: session.id,
-          amount: priceData[targetTier as keyof typeof priceData].unit_amount / 100,
-          currency: 'gbp'
-        });
-
-        res.json({ 
-          url: session.url,
-          sessionId: session.id,
-          message: "Redirecting to payment..."
-        });
-      } else {
-        // For downgrades, handle immediately
-        let newProductLimit = 3;
-        switch (targetTier) {
-          case 'free':
-            newProductLimit = 3;
-            break;
-          case 'standard':
-            newProductLimit = 10;
-            break;
-          case 'premium':
-            newProductLimit = -1;
-            break;
-        }
-
-        // Update user subscription tier immediately
-        await storage.updateUser(userId, {
-          subscriptionTier: targetTier,
-          subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
-          productLimit: newProductLimit,
-          subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        });
-
-        // Log the downgrade
-        await logSubscriptionDowngrade(userId, user.subscriptionTier || 'free', targetTier, {
-          source: 'plan_change_modal',
-          reason: 'user_requested',
-          effectiveDate: new Date().toISOString()
-        });
-
-        console.log(`✅ Downgrade completed for user ${userId}: ${user.subscriptionTier} → ${targetTier}`);
-
-        res.json({
-          success: true,
-          subscriptionTier: targetTier,
-          subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
-          productLimit: newProductLimit,
-          message: `Successfully downgraded to ${targetTier} plan`
-        });
-      }
-    } catch (error) {
-      console.error('Plan change error:', error);
-      res.status(500).json({ error: "Failed to process plan change" });
-    }
-  });
 
   // Free downgrades (no payment required)
-  app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
-    try {
-      const { targetTier } = req.body;
-      const userId = req.user.id || req.user.claims?.sub;
-      
-      console.log(`🔽 Downgrade request: User ${userId} wants to downgrade to ${targetTier}`);
-      
-      if (!targetTier) {
-        return res.status(400).json({ error: "Target tier is required" });
-      }
-
-      const validTiers = ['free', 'standard', 'premium'];
-      if (!validTiers.includes(targetTier)) {
-        return res.status(400).json({ error: "Invalid target tier" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Check if this is actually a downgrade or if user is already on the target tier
-      const tierOrder = { free: 0, standard: 1, premium: 2 };
-      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
-      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
-
-      if (user.subscriptionTier === targetTier) {
-        return res.status(200).json({ 
-          success: true,
-          message: `You are already on the ${targetTier} plan`,
-          newTier: targetTier,
-          productLimit: user.productLimit || getProductLimit(targetTier),
-          status: user.subscriptionStatus || 'active',
-          alreadyOnPlan: true
-        });
-      }
-
-      if (targetTierOrder > currentTierOrder) {
-        return res.status(400).json({ error: "This is not a downgrade. Use upgrade endpoint instead." });
-      }
-
-      // Get new product limit for the target tier
-      let newProductLimit = 3;
-      switch (targetTier) {
-        case 'free':
-          newProductLimit = 3;
-          break;
-        case 'standard':
-          newProductLimit = 10;
-          break;
-        case 'premium':
-          newProductLimit = -1;
-          break;
-      }
-
-      // Cancel existing Stripe subscription if any
-      if (user.stripeSubscriptionId && user.subscriptionStatus === 'active') {
-        try {
-          await stripe!.subscriptions.cancel(user.stripeSubscriptionId);
-          console.log(`✅ Cancelled Stripe subscription: ${user.stripeSubscriptionId}`);
-        } catch (stripeError) {
-          console.error('Error cancelling Stripe subscription:', stripeError);
-        }
-      }
-
-      // Update user subscription to lower tier
-      await storage.updateUser(userId, {
-        subscriptionTier: targetTier,
-        subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
-        productLimit: newProductLimit,
-        subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        stripeSubscriptionId: targetTier === 'free' ? null : user.stripeSubscriptionId
-      });
-
-      console.log(`✅ Downgrade completed: User ${userId} is now on ${targetTier} plan`);
-
-      res.json({
-        success: true,
-        message: `Successfully downgraded to ${targetTier} plan`,
-        newTier: targetTier,
-        productLimit: newProductLimit,
-        status: targetTier === 'free' ? 'inactive' : 'active'
-      });
-
-    } catch (error) {
-      console.error('Downgrade error:', error);
-      res.status(500).json({ error: "Failed to downgrade plan" });
-    }
-  });
 
   // Original upgrade endpoint removed - using bypass version above
   /*
-  app.post('/api/subscription/upgrade', requireAuth, async (req: any, res) => {
-    try {
-      const { targetTier } = req.body;
-      const userId = req.user.id || req.user.claims?.sub;
-      
-      console.log(`🔼 Upgrade request: User ${userId} wants to upgrade to ${targetTier}`);
-      
-      if (!targetTier) {
-        return res.status(400).json({ error: "Target tier is required" });
-      }
-
-      const validTiers = ['standard', 'premium']; // Only paid tiers for upgrades
-      if (!validTiers.includes(targetTier)) {
-        return res.status(400).json({ error: "Invalid upgrade tier. Use free for downgrades." });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Check if this is actually an upgrade
-      const tierOrder = { free: 0, standard: 1, premium: 2 };
-      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
-      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
-
-      if (targetTierOrder <= currentTierOrder) {
-        return res.status(400).json({ error: "This is not an upgrade. Use downgrade endpoint instead." });
-      }
-
-      // Check if Stripe is configured
-      if (!stripe) {
-        console.error('Stripe not configured - STRIPE_SECRET_KEY missing');
-        return res.status(500).json({ error: "Payment system not configured. Please contact support." });
-      }
-
-      // Create Stripe checkout session for the upgrade
-      const priceData = {
-        standard: {
-          unit_amount: 1099, // £10.99 in pence
-          currency: 'gbp',
-          product_data: {
-            name: 'Quikpik Standard Plan',
-            description: 'Up to 10 products, advanced features'
-          }
-        },
-        premium: {
-          unit_amount: 1999, // £19.99 in pence  
-          currency: 'gbp',
-          product_data: {
-            name: 'Quikpik Premium Plan',
-            description: 'Unlimited products, all premium features'
-          }
-        }
-      };
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: priceData[targetTier as keyof typeof priceData],
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}`,
-        cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
-        customer_email: user.email,
-        metadata: {
-          userId: userId,
-          targetTier: targetTier,
-          tier: targetTier, // Add for webhook compatibility
-          upgradeFromTier: user.subscriptionTier
-        }
-      });
-
-      console.log(`✅ Created Stripe checkout session for ${targetTier} upgrade: ${session.id}`);
-      console.log(`🔗 Session metadata:`, JSON.stringify(session.metadata, null, 2));
-      console.log(`🔗 Webhook should receive upgrade request for user ${userId} to ${targetTier}`);
-
-      res.json({
-        success: true,
-        checkoutUrl: session.url,
-        sessionId: session.id,
-        message: `Redirecting to payment for ${targetTier} plan upgrade`
-      });
-
-    } catch (error) {
-      console.error('Upgrade error:', error);
-      res.status(500).json({ error: "Failed to create upgrade payment session" });
-    }
-  });
   */
 
   // REMOVED: Duplicate webhook handlers moved to beginning of route registration
@@ -13791,8 +12964,6 @@ https://quikpik.app`;
         firstName: firstName,
         lastName: lastName || '',
         role: 'wholesaler', // Team members are wholesaler role with limited permissions
-        subscriptionTier: 'team_member', // Special tier for team members
-        subscriptionStatus: 'active',
         businessName: '',
         businessDescription: '',
         businessPhone: '',
@@ -13995,7 +13166,6 @@ The Quikpik Team
         firstName: user.firstName,
         lastName: user.lastName,
         role: 'team_member',
-        subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
         businessName: wholesalerInfo?.businessName || user.businessName,
         isTeamMember: true,
         wholesalerId: teamMember?.wholesalerId || user.id
@@ -14010,7 +13180,6 @@ The Quikpik Team
           firstName: user.firstName,
           lastName: user.lastName,
           role: 'team_member',
-          subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
           businessName: wholesalerInfo?.businessName || user.businessName,
           isTeamMember: true
         }
@@ -14052,7 +13221,6 @@ The Quikpik Team
           firstName: user.firstName,
           lastName: user.lastName,
           role: 'team_member',
-          subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
           businessName: wholesalerInfo?.businessName || user.businessName,
           isTeamMember: true,
           wholesalerId: teamMember.wholesalerId
@@ -14067,7 +13235,6 @@ The Quikpik Team
             firstName: user.firstName,
             lastName: user.lastName,
             role: 'team_member',
-            subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
             businessName: wholesalerInfo?.businessName || user.businessName,
             isTeamMember: true
           }
@@ -14092,7 +13259,6 @@ The Quikpik Team
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        subscriptionTier: user.subscriptionTier,
         businessName: user.businessName,
         isTeamMember: false
       };
@@ -14106,7 +13272,6 @@ The Quikpik Team
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
-          subscriptionTier: user.subscriptionTier,
           businessName: user.businessName
         }
       });
@@ -14157,8 +13322,6 @@ The Quikpik Team
         firstName: firstName,
         lastName: lastName,
         role: 'wholesaler',
-        subscriptionTier: 'free',
-        subscriptionStatus: 'inactive',
         businessName: businessName,
         businessDescription: businessDescription,
         businessPhone: businessPhone,
@@ -14182,8 +13345,6 @@ The Quikpik Team
         firstName: firstName,
         lastName: lastName,
         role: 'wholesaler',
-        subscriptionTier: 'free',
-        subscriptionStatus: 'inactive',
         businessName: businessName,
         businessDescription: businessDescription,
         businessPhone: businessPhone,
@@ -14207,7 +13368,6 @@ The Quikpik Team
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
-        subscriptionTier: newUser.subscriptionTier,
         businessName: newUser.businessName
       };
 
@@ -16414,7 +15574,7 @@ The Quikpik Team
       // Check premium subscription for Business Performance access
       if (req.user.subscriptionTier !== 'premium') {
         return res.status(403).json({ 
-          error: 'Premium subscription required for Business Performance analytics',
+          error: 'Premium plan required for Business Performance analytics',
           required: 'premium'
         });
       }
