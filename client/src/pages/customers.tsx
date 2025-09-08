@@ -795,16 +795,16 @@ export default function Customers() {
       } else {
         // Fallback for unsupported browsers
         toast({
-          title: "Contact Import Not Supported",
-          description: "Your browser doesn't support contact import. Please add customers manually.",
-          variant: "destructive",
+          title: "Use Alternative Import Methods",
+          description: "Direct contact access isn't available on mobile. Use the 'Paste Contact List' option below or export contacts from your phone as CSV.",
+          variant: "default",
         });
       }
     } catch (error) {
       toast({
-        title: "Contact Access Denied",
-        description: "Unable to access contacts. Please add customers manually.",
-        variant: "destructive",
+        title: "Contact Access Unavailable",
+        description: "Contact access was denied or isn't available. Use the 'Paste Contact List' section below to import contacts.",
+        variant: "default",
       });
     }
   };
