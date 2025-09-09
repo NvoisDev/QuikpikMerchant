@@ -247,7 +247,7 @@ export default function SubscriptionPricing() {
   };
 
   const formatLimit = (limit: number) => {
-    return limit === -1 ? '∞' : limit.toString();
+    return limit === -1 ? 'Unlimited' : limit.toString();
   };
 
   const isCurrentPlan = (planId: string) => {

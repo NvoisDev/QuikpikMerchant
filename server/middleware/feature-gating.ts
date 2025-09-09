@@ -270,6 +270,17 @@ export async function getUserPlanLimits(userId: string) {
     const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
     const limits = plan?.limits || getDefaultLimits();
     
+    // 🐛 DEBUG: Log subscription data to identify Premium limits issue
+    console.log('🔍 DEBUG getUserPlanLimits:', {
+      userId,
+      currentPlan,
+      planExists: !!plan,
+      planLimits: plan?.limits,
+      finalLimits: limits,
+      isPremium: currentPlan === 'premium',
+      productsLimit: limits.products
+    });
+    
     // Get current usage counts
     const [productCount, broadcastCount, teamMemberCount] = await Promise.all([
       getCurrentProductCount(userId),
