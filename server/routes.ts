@@ -1140,6 +1140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
           
           await storage.updateUser(userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
             productLimit: productLimit,
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });
@@ -1190,6 +1192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
           
           await storage.updateUser(userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
             productLimit: productLimit,
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });

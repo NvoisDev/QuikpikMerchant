@@ -11,7 +11,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export function registerWebhookRoutes(app: Express) {
-  // Dedicated Stripe webhook handler - isolated from main routes
+  // DISABLED: This webhook handler is disabled to avoid conflicts with the main one in routes.ts
+  // The main webhook handler in routes.ts now handles all Stripe events
+  /*
   app.post('/api/webhooks/stripe', async (req, res) => {
     console.log(`🚀 STRIPE WEBHOOK EXECUTING at ${new Date().toISOString()}`);
     console.log(`📦 Event data:`, JSON.stringify(req.body, null, 2));
@@ -25,7 +27,7 @@ export function registerWebhookRoutes(app: Express) {
         console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
         
         const userId = session?.metadata?.userId;
-        const tier = session?.metadata?.targetTier || session?.metadata?.tier;
+        const tier = session?.metadata?.targetTier || session?.metadata?.tier || session?.metadata?.planId;
         
         if (userId && tier) {
           console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
@@ -63,7 +65,7 @@ export function registerWebhookRoutes(app: Express) {
         console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
         
         const userId = paymentIntent?.metadata?.userId;
-        const tier = paymentIntent?.metadata?.targetTier || paymentIntent?.metadata?.tier;
+        const tier = paymentIntent?.metadata?.targetTier || paymentIntent?.metadata?.tier || paymentIntent?.metadata?.planId;
         const orderType = paymentIntent?.metadata?.orderType;
         
         // Handle subscription upgrades
@@ -142,4 +144,5 @@ export function registerWebhookRoutes(app: Express) {
     console.log(`🧪 Body received:`, JSON.stringify(req.body, null, 2));
     res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
   });
+  */
 }
