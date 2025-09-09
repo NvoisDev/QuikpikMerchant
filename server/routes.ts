@@ -16316,7 +16316,9 @@ The Quikpik Team
   app.get('/api/subscriptions/plan-limits', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      console.log('🔍 DEBUG: plan-limits request for userId:', userId);
       const planLimits = await getUserPlanLimits(userId);
+      console.log('🔍 DEBUG: plan-limits response:', planLimits);
       res.json(planLimits);
     } catch (error) {
       console.error('❌ Failed to get plan limits:', error);
