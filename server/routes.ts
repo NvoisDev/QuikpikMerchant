@@ -12725,8 +12725,8 @@ https://quikpik.app`;
   function getTeamMemberLimit(tier: string): number {
     switch (tier) {
       case 'free': return 0; // No team members
-      case 'standard': return 2; // 2 team members
-      case 'premium': return 5; // 5 team members
+      case 'standard': return 3; // 3 team members - matches subscription service
+      case 'premium': return -1; // unlimited team members - matches subscription service
       default: return 0;
     }
   }

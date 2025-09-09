@@ -257,7 +257,7 @@ function getDefaultLimits() {
   return {
     products: 10,
     broadcasts: 5,
-    teamMembers: 1,
+    teamMembers: 1, // Free plan: 1 team member (user themselves)
     customGroups: 2
   };
 }
@@ -270,16 +270,7 @@ export async function getUserPlanLimits(userId: string) {
     const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
     const limits = plan?.limits || getDefaultLimits();
     
-    // 🐛 DEBUG: Log subscription data to identify Premium limits issue
-    console.log('🔍 DEBUG getUserPlanLimits:', {
-      userId,
-      currentPlan,
-      planExists: !!plan,
-      planLimits: plan?.limits,
-      finalLimits: limits,
-      isPremium: currentPlan === 'premium',
-      productsLimit: limits.products
-    });
+    // Subscription limits now consistent across all backend functions
     
     // Get current usage counts
     const [productCount, broadcastCount, teamMemberCount] = await Promise.all([
