@@ -158,25 +158,40 @@ export default function SubscriptionPricing() {
     }
   });
 
+  const downgradeSubscriptionMutation = useMutation({
+    mutationFn: async (targetPlan: string) => {
+      const response = await apiRequest('POST', '/api/subscriptions/downgrade', {
+        targetPlan
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const message = data?.type === 'downgrade_scheduled'
+        ? `Your plan will be downgraded to ${targetDowngradePlan} at the end of your current billing period. You'll keep all current features until then.`
+        : `Your subscription has been successfully downgraded to ${targetDowngradePlan}.`;
+        
+      toast({
+        title: "Plan Downgrade Scheduled",
+        description: message,
+        duration: 8000,
+      });
+      // Refresh subscription data
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+      setShowDowngradeModal(false);
+    },
+    onError: (error: any) => {
+      console.error('Downgrade error:', error);
+      toast({
+        title: "Downgrade Failed", 
+        description: error.message || "Failed to downgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handlePlanSelection = async (plan: SubscriptionPlan) => {
     const currentPlan = currentSubscription?.currentPlan || 'free';
     
-    if (!plan.stripePriceId) {
-      // Free plan - check if user is already on free or downgrading
-      if (currentPlan === 'free') {
-        toast({
-          title: "Free Plan Active",
-          description: "You're already on the free plan with basic features.",
-        });
-        return;
-      } else {
-        // User is on Standard/Premium trying to downgrade to Free - show downgrade modal
-        setTargetDowngradePlan('free');
-        setShowDowngradeModal(true);
-        return;
-      }
-    }
-
     // Check if user is selecting their current plan
     if (isCurrentPlan(plan.planId)) {
       toast({
@@ -185,9 +200,32 @@ export default function SubscriptionPricing() {
       });
       return;
     }
-
-    // Use mutation's built-in loading state and error handling
-    createCheckoutMutation.mutate(plan.stripePriceId);
+    
+    // Define plan hierarchy for upgrade/downgrade detection
+    const planHierarchy = { 'free': 0, 'standard': 1, 'premium': 2 };
+    const currentPlanLevel = planHierarchy[currentPlan as keyof typeof planHierarchy] || 0;
+    const targetPlanLevel = planHierarchy[plan.planId as keyof typeof planHierarchy] || 0;
+    
+    // Handle downgrades (moving to a lower tier)
+    if (targetPlanLevel < currentPlanLevel) {
+      setTargetDowngradePlan(plan.planId);
+      setShowDowngradeModal(true);
+      return;
+    }
+    
+    // Handle free plan selection for users already on free
+    if (!plan.stripePriceId && currentPlan === 'free') {
+      toast({
+        title: "Free Plan Active",
+        description: "You're already on the free plan with basic features.",
+      });
+      return;
+    }
+    
+    // Handle upgrades - proceed with checkout/subscription update
+    if (plan.stripePriceId) {
+      createCheckoutMutation.mutate(plan.stripePriceId);
+    }
   };
 
   const getPlanIcon = (planId: string) => {
@@ -457,8 +495,14 @@ export default function SubscriptionPricing() {
         onOpenChange={setShowDowngradeModal}
         currentPlan={currentSubscription?.currentPlan || 'free'}
         targetPlan={targetDowngradePlan}
-        onConfirmDowngrade={() => cancelSubscriptionMutation.mutate()}
-        isLoading={cancelSubscriptionMutation.isPending}
+        onConfirmDowngrade={() => {
+          if (targetDowngradePlan === 'free') {
+            cancelSubscriptionMutation.mutate();
+          } else {
+            downgradeSubscriptionMutation.mutate(targetDowngradePlan);
+          }
+        }}
+        isLoading={cancelSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
         billingInfo={{
           currentPeriodEnd: currentSubscription?.subscription?.current_period_end,
           daysRemaining: currentSubscription?.subscription?.current_period_end 
