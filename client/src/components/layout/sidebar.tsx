@@ -33,17 +33,25 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-const navigation = [
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: any;
+  onboardingId?: string;
+  tabName: string;
+  premiumOnly?: boolean;
+}
+
+const navigation: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
 
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
-  // Subscription navigation removed
-  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, tabName: "analytics" },
-  { name: "Advertising", href: "/advertising", icon: Megaphone, tabName: "advertising" },
-  { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace" },
+  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, tabName: "analytics", premiumOnly: true },
+  { name: "Advertising", href: "/advertising", icon: Megaphone, tabName: "advertising", premiumOnly: true },
+  { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", premiumOnly: true },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
@@ -53,8 +61,16 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  // Subscription system removed
   const { checkTabAccess } = useSidebarPermissions();
+
+  // Get current subscription to check for premium features
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['/api/subscriptions/current'],
+    enabled: !!user,
+  });
+
+  const isPremiumUser = subscriptionData?.user?.currentPlan === 'premium';
+  const isStandardUser = subscriptionData?.user?.currentPlan === 'standard';
 
   const handleLogout = () => {
     logout();
@@ -110,26 +126,35 @@ export default function Sidebar() {
           {navigation.map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
+            const isPremiumFeature = item.premiumOnly;
+            const isLocked = isPremiumFeature && !isPremiumUser;
             
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={isLocked ? "/subscription-pricing" : item.href}>
                 <div
                   className={cn(
-                    "flex items-center px-6 py-2 text-sm font-medium transition-colors cursor-pointer relative",
+                    "flex items-center justify-between px-6 py-2 text-sm font-medium transition-colors cursor-pointer relative",
                     isActive
                       ? "text-primary bg-blue-50 border-r-4 border-primary"
+                      : isLocked
+                      ? "text-gray-400 hover:text-gray-500"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
                   onClick={() => setIsCollapsed(true)}
                   data-onboarding={item.onboardingId}
                 >
-                  <IconComponent 
-                    className={cn(
-                      "mr-3 h-5 w-5 flex-shrink-0",
-                      isActive ? "text-primary" : "text-gray-400"
-                    )} 
-                  />
-                  <span className="flex-1">{item.name}</span>
+                  <div className="flex items-center flex-1">
+                    <IconComponent 
+                      className={cn(
+                        "mr-3 h-5 w-5 flex-shrink-0",
+                        isActive ? "text-primary" : isLocked ? "text-gray-400" : "text-gray-400"
+                      )} 
+                    />
+                    <span className="flex-1">{item.name}</span>
+                  </div>
+                  {isLocked && (
+                    <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  )}
                 </div>
               </Link>
             );
