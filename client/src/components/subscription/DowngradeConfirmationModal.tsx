@@ -15,6 +15,10 @@ interface DowngradeConfirmationModalProps {
   billingInfo?: {
     currentPeriodEnd?: number;
     daysRemaining?: number;
+    proratedCredit?: number;
+    nextBillingAmount?: number;
+    currentPlanPrice?: number;
+    targetPlanPrice?: number;
   };
 }
 
@@ -94,11 +98,14 @@ export function DowngradeConfirmationModal({
   };
 
   const handleConfirm = () => {
-    if (confirmationChecked) {
-      onConfirmDowngrade();
-      setConfirmationChecked(false);
-      onOpenChange(false);
+    // Only proceed if user has explicitly confirmed by checking the checkbox
+    if (!confirmationChecked) {
+      return;
     }
+    
+    onConfirmDowngrade();
+    setConfirmationChecked(false);
+    onOpenChange(false);
   };
 
   return (
@@ -118,15 +125,45 @@ export function DowngradeConfirmationModal({
           {/* Billing Information */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">📅 When This Takes Effect</h3>
-              <p className="text-blue-800 text-sm">
-                Your downgrade will take effect on <strong>{formatEndDate(billingInfo?.currentPeriodEnd)}</strong>
-                {billingInfo?.daysRemaining && (
-                  <span> ({billingInfo.daysRemaining} days remaining)</span>
-                )}. 
-                <br />
-                You'll keep all {currentFeatures.name} features until then with no additional charges.
-              </p>
+              <h3 className="font-semibold text-blue-900 mb-3">📅 Billing & Timeline Information</h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <p className="text-blue-800 text-sm">
+                    <strong>Effective Date:</strong> {formatEndDate(billingInfo?.currentPeriodEnd)}
+                    {billingInfo?.daysRemaining && (
+                      <span> ({billingInfo.daysRemaining} days remaining)</span>
+                    )}
+                  </p>
+                  <p className="text-blue-700 text-xs mt-1">
+                    You'll keep all {currentFeatures.name} features until then with no additional charges.
+                  </p>
+                </div>
+
+                {/* Pro-rated Credit Information */}
+                {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
+                  <div className="bg-green-100 p-3 rounded-md border border-green-200">
+                    <p className="text-green-800 text-sm font-medium">
+                      💰 You'll receive a pro-rated credit of <strong>£{billingInfo.proratedCredit.toFixed(2)}</strong>
+                    </p>
+                    <p className="text-green-700 text-xs mt-1">
+                      This credit will be applied to your next billing cycle or refunded if you cancel completely.
+                    </p>
+                  </div>
+                )}
+
+                {/* Next Billing Information */}
+                <div className="bg-gray-100 p-3 rounded-md">
+                  <p className="text-gray-800 text-sm">
+                    <strong>Next Billing:</strong> Your next charge will be <strong>£{(billingInfo?.nextBillingAmount || parseFloat(targetFeatures.price.replace('£', ''))).toFixed(2)}/month</strong> for the {targetFeatures.name} plan
+                  </p>
+                  {billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
+                    <p className="text-gray-600 text-xs mt-1">
+                      Monthly savings: £{(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -181,19 +218,29 @@ export function DowngradeConfirmationModal({
             </Card>
           ) : null}
 
-          {/* Confirmation Checkbox */}
-          <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-            <input
-              type="checkbox"
-              id="confirm-downgrade"
-              checked={confirmationChecked}
-              onChange={(e) => setConfirmationChecked(e.target.checked)}
-              className="mt-1"
-            />
-            <label htmlFor="confirm-downgrade" className="text-sm text-gray-700 cursor-pointer">
-              I understand that I will lose access to the features listed above when my current billing period ends. 
-              I can upgrade again at any time to restore full functionality.
-            </label>
+          {/* Enhanced Confirmation Checkbox */}
+          <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="confirm-downgrade"
+                checked={confirmationChecked}
+                onChange={(e) => setConfirmationChecked(e.target.checked)}
+                className="mt-1 h-4 w-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
+                required
+              />
+              <label htmlFor="confirm-downgrade" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
+                <span className="font-medium">I understand and confirm that:</span>
+                <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                  <li>• I will lose access to the {lostFeatures.length} premium features listed above</li>
+                  <li>• This change takes effect on {formatEndDate(billingInfo?.currentPeriodEnd)}</li>
+                  <li>• I can upgrade again at any time to restore full functionality</li>
+                  {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
+                    <li>• I will receive a £{billingInfo.proratedCredit.toFixed(2)} pro-rated credit</li>
+                  )}
+                </ul>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -202,6 +249,7 @@ export function DowngradeConfirmationModal({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
+            className="flex-1"
           >
             Keep Current Plan
           </Button>
@@ -209,9 +257,13 @@ export function DowngradeConfirmationModal({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!confirmationChecked || isLoading}
+            className="flex-1"
           >
             {isLoading ? (
-              'Processing...'
+              <div className="flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                Processing...
+              </div>
             ) : (
               `Confirm Downgrade to ${targetFeatures.name}`
             )}
