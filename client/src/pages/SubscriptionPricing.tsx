@@ -107,6 +107,30 @@ export default function SubscriptionPricing() {
     }
   });
 
+  // Cancel subscription mutation
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/subscriptions/cancel');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Subscription Canceled",
+        description: `Your subscription will be canceled at the end of the current billing period (${new Date(data.currentPeriodEnd * 1000).toLocaleDateString()})`,
+      });
+      // Refresh subscription data
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+    },
+    onError: (error: any) => {
+      console.error('Cancel error:', error);
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handlePlanSelection = async (plan: SubscriptionPlan) => {
     const currentPlan = currentSubscription?.currentPlan || 'free';
     
@@ -312,26 +336,44 @@ export default function SubscriptionPricing() {
                 </div>
               </div>
 
-              <Button
-                onClick={() => handlePlanSelection(plan)}
-                disabled={createCheckoutMutation.isPending || isCurrentPlan(plan.planId)}
-                className={`w-full ${
-                  plan.planId === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
-                  plan.planId === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
-                  'bg-gray-600 hover:bg-gray-700'
-                }`}
-                variant={isCurrentPlan(plan.planId) ? "outline" : "default"}
-              >
-                {isCurrentPlan(plan.planId) ? (
-                  'Current Plan'
-                ) : createCheckoutMutation.isPending ? (
-                  'Processing...'
-                ) : plan.planId === 'free' ? (
-                  'Get Started Free'
-                ) : (
-                  `Upgrade to ${plan.name}`
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handlePlanSelection(plan)}
+                  disabled={createCheckoutMutation.isPending || isCurrentPlan(plan.planId)}
+                  className={`w-full ${
+                    plan.planId === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
+                    plan.planId === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
+                    'bg-gray-600 hover:bg-gray-700'
+                  }`}
+                  variant={isCurrentPlan(plan.planId) ? "outline" : "default"}
+                >
+                  {isCurrentPlan(plan.planId) ? (
+                    'Current Plan'
+                  ) : createCheckoutMutation.isPending ? (
+                    'Processing...'
+                  ) : plan.planId === 'free' ? (
+                    'Get Started Free'
+                  ) : (
+                    `Upgrade to ${plan.name}`
+                  )}
+                </Button>
+
+                {/* Cancel Subscription Button - Only show for current paid plans */}
+                {isCurrentPlan(plan.planId) && plan.planId !== 'free' && (
+                  <Button
+                    onClick={() => cancelSubscriptionMutation.mutate()}
+                    disabled={cancelSubscriptionMutation.isPending}
+                    variant="outline"
+                    className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    {cancelSubscriptionMutation.isPending ? (
+                      'Canceling...'
+                    ) : (
+                      'Cancel Subscription'
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
