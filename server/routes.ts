@@ -1114,6 +1114,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
   });
 
+  // MANUAL SUBSCRIPTION SYNC - FOR FIXING WEBHOOK SYNC ISSUES
+  app.post('/api/subscriptions/manual-sync', requireAuth, async (req: any, res) => {
+    try {
+      const { targetTier } = req.body;
+      const userId = req.user.id;
+      
+      console.log(`🔄 Manual subscription sync: ${userId} → ${targetTier}`);
+      
+      if (!targetTier || !['free', 'standard', 'premium'].includes(targetTier)) {
+        return res.status(400).json({ error: 'Invalid target tier' });
+      }
+      
+      const productLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 50 : 10);
+      
+      await storage.updateUser(userId, {
+        subscriptionTier: targetTier,
+        subscriptionStatus: 'active',
+        productLimit: productLimit,
+        subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
+      
+      console.log(`✅ Manual sync complete: ${userId} to ${targetTier}`);
+      
+      res.json({
+        success: true,
+        message: `Subscription manually updated to ${targetTier}`,
+        userId: userId,
+        tier: targetTier,
+        productLimit: productLimit
+      });
+      
+    } catch (error) {
+      console.error('❌ Manual sync error:', error);
+      res.status(500).json({ error: 'Manual sync failed' });
+    }
+  });
+
   // STRIPE WEBHOOK DISABLED - Using standalone webhook server on port 5001 to prevent conflicts
   // CRITICAL: Multiple webhook handlers were causing payment blocking due to race conditions
   /*
