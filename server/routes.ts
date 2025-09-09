@@ -1129,37 +1129,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
         
         const userId = session?.metadata?.userId;
-        // Handle all possible tier metadata field names for maximum compatibility
         const tier = session?.metadata?.targetTier || 
                      session?.metadata?.tier || 
                      session?.metadata?.planId;
+        const subscriptionType = session?.metadata?.subscriptionType;
         
         if (userId && tier) {
-          console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
+          console.log(`🔄 Processing ${subscriptionType || 'new'} subscription: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
+          
+          // Get subscription details from Stripe if available
+          let subscriptionEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          if (session.subscription) {
+            try {
+              const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+              subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+              
+              // Update user's Stripe subscription ID
+              await storage.updateUser(userId, {
+                stripeSubscriptionId: subscription.id
+              });
+            } catch (error) {
+              console.error('❌ Failed to retrieve subscription details:', error);
+            }
+          }
           
           await storage.updateUser(userId, {
             currentPlan: tier,
             subscriptionStatus: 'active',
             productLimit: productLimit,
-            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            subscriptionEndsAt: subscriptionEndsAt
           });
           
-          console.log(`✅ Upgraded ${userId} to ${tier} successfully`);
-          
-          // Log upgrade success with timestamp for debugging
-          console.log(`📈 SUBSCRIPTION UPGRADE COMPLETED:`, {
-            userId,
-            tier,
-            productLimit,
-            timestamp: new Date().toISOString(),
-            eventType: 'checkout.session.completed'
-          });
+          console.log(`✅ ${subscriptionType || 'New'} subscription processed: ${userId} to ${tier}`);
           
           return res.json({
             received: true,
-            message: `Subscription upgraded to ${tier}`,
+            message: `Subscription ${subscriptionType === 'new' ? 'created' : 'updated'} - ${tier}`,
             userId: userId,
             tier: tier,
             productLimit: productLimit
@@ -16112,7 +16119,7 @@ The Quikpik Team
     }
   });
 
-  // Create Stripe checkout session for subscription
+  // Enhanced subscription management endpoint
   app.post('/api/subscriptions/create-checkout-session', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -16130,36 +16137,80 @@ The Quikpik Team
         return res.status(400).json({ message: 'Invalid price ID' });
       }
 
+      const targetPlan = validPlans[0];
+      
       // Get or create Stripe customer
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId);
       
-      // Create Stripe checkout session with idempotency
-      const sessionOptions: any = {
-        customer: stripeCustomerId,
-        payment_method_types: ['card'],
-        line_items: [{
-          price: priceId,
-          quantity: 1,
-        }],
-        mode: 'subscription',
-        success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
-        metadata: {
-          userId: userId,
-          planId: validPlans[0].planId
+      // Check for existing active subscription
+      const existingSubscription = await SubscriptionService.getCurrentSubscription(userId);
+      
+      if (existingSubscription && existingSubscription.stripeSubscriptionId) {
+        // UPGRADE FLOW: User has existing subscription - modify it with proration
+        console.log('🔄 Processing subscription upgrade with proration');
+        
+        try {
+          const updatedSubscription = await SubscriptionService.upgradeSubscriptionWithProration(
+            existingSubscription.stripeSubscriptionId,
+            priceId,
+            targetPlan.planId
+          );
+          
+          // Update user's plan immediately for upgrades (instant access)
+          await storage.updateUser(userId, {
+            currentPlan: targetPlan.planId,
+            subscriptionStatus: 'active',
+            productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 50 : 10),
+            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
+          });
+          
+          return res.json({ 
+            success: true, 
+            type: 'upgrade',
+            subscription: {
+              id: updatedSubscription.id,
+              status: updatedSubscription.status,
+              current_period_end: updatedSubscription.current_period_end
+            },
+            message: 'Subscription upgraded successfully with proration applied'
+          });
+        } catch (error) {
+          console.error('❌ Failed to upgrade subscription:', error);
+          return res.status(500).json({ message: 'Failed to upgrade subscription' });
         }
-      };
+      } else {
+        // NEW SUBSCRIPTION FLOW: User has no existing subscription - use checkout session
+        console.log('🆕 Creating new subscription via checkout session');
+        
+        const sessionOptions: any = {
+          customer: stripeCustomerId,
+          payment_method_types: ['card'],
+          line_items: [{
+            price: priceId,
+            quantity: 1,
+          }],
+          mode: 'subscription',
+          success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
+          metadata: {
+            userId: userId,
+            planId: targetPlan.planId,
+            subscriptionType: 'new'
+          }
+        };
 
-      // Create Stripe checkout session with correct API syntax
-      const session = idempotencyKey 
-        ? await stripe.checkout.sessions.create(sessionOptions, { idempotencyKey })
-        : await stripe.checkout.sessions.create(sessionOptions);
+        // Create Stripe checkout session with correct API syntax
+        const session = idempotencyKey 
+          ? await stripe.checkout.sessions.create(sessionOptions, { idempotencyKey })
+          : await stripe.checkout.sessions.create(sessionOptions);
 
-      res.json({ 
-        success: true, 
-        sessionId: session.id,
-        url: session.url 
-      });
+        return res.json({ 
+          success: true, 
+          type: 'checkout',
+          sessionId: session.id,
+          url: session.url 
+        });
+      }
     } catch (error) {
       console.error('❌ Failed to create checkout session:', error);
       res.status(500).json({ 
@@ -16190,7 +16241,48 @@ The Quikpik Team
     }
   });
 
-  // Cancel subscription
+  // Enhanced downgrade endpoint - modifies existing subscription instead of cancellation
+  app.post('/api/subscriptions/downgrade', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { targetPlan } = req.body;
+
+      if (!targetPlan) {
+        return res.status(400).json({ message: 'Target plan is required' });
+      }
+
+      // Get current subscription
+      const currentSubscription = await SubscriptionService.getCurrentSubscription(userId);
+      
+      if (!currentSubscription?.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'No active subscription found' });
+      }
+
+      // Schedule downgrade at end of current period
+      const result = await SubscriptionService.scheduleDowngrade(
+        currentSubscription.stripeSubscriptionId,
+        targetPlan,
+        userId
+      );
+
+      res.json({
+        success: true,
+        type: 'downgrade_scheduled',
+        currentPeriodEnd: result.current_period_end,
+        targetPlan: targetPlan,
+        proratedCredit: result.proratedCredit,
+        message: 'Downgrade scheduled for end of billing period'
+      });
+    } catch (error) {
+      console.error('❌ Failed to schedule downgrade:', error);
+      res.status(500).json({ 
+        message: 'Failed to schedule downgrade',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Cancel subscription (complete cancellation)
   app.post('/api/subscriptions/cancel', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;

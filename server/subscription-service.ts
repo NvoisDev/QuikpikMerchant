@@ -157,6 +157,159 @@ export class SubscriptionService {
   }
 
   /**
+   * Upgrade subscription with proration - instant access, prorated billing
+   */
+  static async upgradeSubscriptionWithProration(
+    subscriptionId: string, 
+    newPriceId: string, 
+    newPlanId: string
+  ): Promise<Stripe.Subscription> {
+    try {
+      console.log('🚀 Upgrading subscription with proration:', { subscriptionId, newPriceId, newPlanId });
+
+      // Get the current subscription
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Update subscription with immediate proration
+      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+        proration_behavior: 'create_prorations', // Create prorations for immediate billing
+        billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
+        items: [{
+          id: subscription.items.data[0].id,
+          price: newPriceId,
+        }],
+        metadata: {
+          ...subscription.metadata,
+          upgraded_from: subscription.items.data[0].price.id,
+          upgraded_to: newPriceId,
+          upgrade_timestamp: new Date().toISOString(),
+          planId: newPlanId
+        }
+      });
+
+      console.log('✅ Subscription upgraded with proration:', updatedSubscription.id);
+      return updatedSubscription;
+    } catch (error) {
+      console.error('❌ Failed to upgrade subscription with proration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Schedule downgrade at end of billing period - preserve access until period end
+   */
+  static async scheduleDowngrade(
+    subscriptionId: string, 
+    targetPlan: string, 
+    userId: string
+  ): Promise<{ current_period_end: number; proratedCredit: number }> {
+    try {
+      console.log('📅 Scheduling downgrade:', { subscriptionId, targetPlan, userId });
+
+      // Get current subscription details
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Calculate prorated credit (what they'll get back)
+      const now = Math.floor(Date.now() / 1000);
+      const periodStart = subscription.current_period_start;
+      const periodEnd = subscription.current_period_end;
+      const totalPeriod = periodEnd - periodStart;
+      const remainingPeriod = periodEnd - now;
+      const currentPrice = subscription.items.data[0].price.unit_amount || 0;
+      
+      // Calculate prorated credit for unused time
+      const proratedCredit = (currentPrice / 100) * (remainingPeriod / totalPeriod);
+
+      // Get target plan details
+      const targetPlanData = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, targetPlan));
+      
+      if (targetPlan === 'free') {
+        // Schedule cancellation at period end for downgrade to free
+        await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true,
+          metadata: {
+            ...subscription.metadata,
+            scheduled_downgrade: 'free',
+            downgrade_scheduled_at: new Date().toISOString(),
+            original_plan: subscription.items.data[0].price.id,
+            userId: userId
+          }
+        });
+      } else if (targetPlanData.length > 0) {
+        // Schedule plan change at period end for downgrade to paid plan
+        await stripe.subscriptions.update(subscriptionId, {
+          proration_behavior: 'none', // No immediate billing for downgrades
+          metadata: {
+            ...subscription.metadata,
+            scheduled_downgrade: targetPlan,
+            downgrade_scheduled_at: new Date().toISOString(),
+            original_plan: subscription.items.data[0].price.id,
+            new_price_id: targetPlanData[0].stripePriceId,
+            userId: userId
+          }
+        });
+
+        // Create a scheduled update for the billing cycle
+        await stripe.subscriptionSchedules.create({
+          customer: subscription.customer as string,
+          start_date: subscription.current_period_end,
+          end_behavior: 'release',
+          phases: [
+            {
+              items: [{
+                price: targetPlanData[0].stripePriceId!,
+                quantity: 1,
+              }],
+              iterations: 1,
+            }
+          ],
+        });
+      }
+
+      console.log('✅ Downgrade scheduled successfully');
+      return {
+        current_period_end: subscription.current_period_end,
+        proratedCredit: Math.max(0, proratedCredit)
+      };
+    } catch (error) {
+      console.error('❌ Failed to schedule downgrade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current active subscription for a user
+   */
+  static async getCurrentSubscription(userId: string) {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return null;
+      }
+
+      if (user.stripeSubscriptionId) {
+        // Verify subscription is still active in Stripe
+        const stripeSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (stripeSubscription.status === 'active') {
+          return {
+            userId: user.id,
+            stripeSubscriptionId: user.stripeSubscriptionId,
+            currentPlan: user.currentPlan,
+            subscriptionStatus: user.subscriptionStatus,
+            stripeSubscription
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ Failed to get current subscription:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get or create Stripe customer for a user
    */
   static async getOrCreateStripeCustomer(userId: string): Promise<string> {
