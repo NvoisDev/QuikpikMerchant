@@ -107,31 +107,6 @@ export default function SubscriptionPricing() {
     }
   });
 
-  // Manual subscription sync mutation  
-  const manualSyncMutation = useMutation({
-    mutationFn: async (targetTier: string) => {
-      const response = await apiRequest('POST', '/api/subscriptions/manual-sync', { targetTier });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Subscription Synced",
-        description: `Your subscription has been updated to ${data.tier}. Please refresh the page to see changes.`,
-      });
-      // Refresh subscription data
-      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
-      // Force page refresh to update UI
-      setTimeout(() => window.location.reload(), 1000);
-    },
-    onError: (error: any) => {
-      console.error('Sync error:', error);
-      toast({
-        title: "Sync Failed",
-        description: error.message || "Failed to sync subscription. Please contact support.",
-        variant: "destructive",
-      });
-    }
-  });
 
   // Cancel subscription mutation
   const cancelSubscriptionMutation = useMutation({
@@ -401,21 +376,6 @@ export default function SubscriptionPricing() {
                   )}
                 </Button>
 
-                {/* Sync Subscription Button - Emergency fix for webhook issues */}
-                {plan.planId === 'premium' && !isCurrentPlan(plan.planId) && (
-                  <Button
-                    onClick={() => manualSyncMutation.mutate('premium')}
-                    disabled={manualSyncMutation.isPending}
-                    variant="outline"
-                    className="w-full text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
-                  >
-                    {manualSyncMutation.isPending ? (
-                      'Syncing...'
-                    ) : (
-                      'Sync Premium Subscription'
-                    )}
-                  </Button>
-                )}
 
                 {/* Cancel Subscription Button - Only show for current paid plans */}
                 {isCurrentPlan(plan.planId) && plan.planId !== 'free' && (
