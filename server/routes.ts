@@ -8048,7 +8048,7 @@ Write a professional, sales-focused description that highlights the key benefits
       try {
         // 🎯 CRITICAL: Apply subscription limits to customer-visible products
         // Customers should only see products within the wholesaler's subscription tier
-        const limitClause = productLimit === -1 ? '' : `LIMIT ${productLimit}`;
+        const effectiveLimit = productLimit === -1 || !productLimit ? 1000 : productLimit; // Default to 1000 if unlimited or undefined
         
         const result = await db.execute(sql`
           SELECT p.id, p.name, p.description, p.price, p.currency, p.moq, p.stock,
@@ -8061,7 +8061,7 @@ Write a professional, sales-focused description that highlights the key benefits
           FROM products p
           WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
           ORDER BY p.created_at DESC
-          ${productLimit === -1 ? sql`` : sql`LIMIT ${productLimit}`}
+          LIMIT ${effectiveLimit}
         `);
         
         const rows = result.rows as any[];
