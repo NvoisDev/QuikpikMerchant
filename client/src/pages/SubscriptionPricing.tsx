@@ -108,11 +108,32 @@ export default function SubscriptionPricing() {
   });
 
   const handlePlanSelection = async (plan: SubscriptionPlan) => {
+    const currentPlan = currentSubscription?.currentPlan || 'free';
+    
     if (!plan.stripePriceId) {
-      // Free plan - no payment needed
+      // Free plan - check if user is already on free or downgrading
+      if (currentPlan === 'free') {
+        toast({
+          title: "Free Plan Active",
+          description: "You're already on the free plan with basic features.",
+        });
+        return;
+      } else {
+        // User is on Standard/Premium trying to downgrade to Free
+        toast({
+          title: "Downgrade to Free Plan",
+          description: "To downgrade to Free, please cancel your current subscription first. Contact support for assistance.",
+          variant: "default",
+        });
+        return;
+      }
+    }
+
+    // Check if user is selecting their current plan
+    if (isCurrentPlan(plan.planId)) {
       toast({
-        title: "Free Plan Active",
-        description: "You're already on the free plan with basic features.",
+        title: "Current Plan",
+        description: `You're already subscribed to the ${plan.name} plan.`,
       });
       return;
     }
