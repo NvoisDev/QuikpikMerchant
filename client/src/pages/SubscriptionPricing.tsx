@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CheckIcon, X, StarIcon, CrownIcon } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { useAuth } from '@/hooks/useAuth';
+import clsx from 'clsx';
 
 interface SubscriptionPlan {
   id: string;
@@ -304,11 +305,18 @@ export default function SubscriptionPricing() {
         {plans.map((plan: SubscriptionPlan) => (
           <Card 
             key={plan.id} 
-            className={`relative transition-all duration-200 ${getPlanColor(plan.planId)} ${
-              isCurrentPlan(plan.planId) 
-                ? 'ring-4 ring-green-500 bg-green-50 scale-[1.02] shadow-lg border-green-200' 
-                : plan.planId === 'standard' ? 'scale-105 shadow-lg hover:scale-[1.07]' : 'hover:scale-[1.02]'
-            }`}
+            className={clsx(
+              'relative transition-all duration-200',
+              getPlanColor(plan.planId),
+              {
+                // Current plan styling - prominent green highlighting
+                'ring-4 ring-green-500 bg-green-50 scale-[1.02] shadow-lg border-green-200': isCurrentPlan(plan.planId),
+                // Standard plan gets special treatment when not current plan
+                'scale-105 shadow-lg hover:scale-[1.07]': !isCurrentPlan(plan.planId) && plan.planId === 'standard',
+                // Default hover effect for non-current plans
+                'hover:scale-[1.02]': !isCurrentPlan(plan.planId) && plan.planId !== 'standard'
+              }
+            )}
           >
             {isCurrentPlan(plan.planId) && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
