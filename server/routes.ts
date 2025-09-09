@@ -16148,13 +16148,10 @@ The Quikpik Team
         }
       };
 
-      // Add idempotency key if provided (correct Stripe API syntax)
-      const requestOptions: any = {};
-      if (idempotencyKey) {
-        requestOptions.idempotencyKey = idempotencyKey;
-      }
-
-      const session = await stripe.checkout.sessions.create(sessionOptions, requestOptions);
+      // Create Stripe checkout session with correct API syntax
+      const session = idempotencyKey 
+        ? await stripe.checkout.sessions.create(sessionOptions, { idempotencyKey })
+        : await stripe.checkout.sessions.create(sessionOptions);
 
       res.json({ 
         success: true, 
