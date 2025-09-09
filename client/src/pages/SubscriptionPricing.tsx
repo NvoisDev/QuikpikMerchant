@@ -38,8 +38,6 @@ export default function SubscriptionPricing() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(false);
-
   // Handle success/cancel URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -119,14 +117,8 @@ export default function SubscriptionPricing() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      await createCheckoutMutation.mutateAsync(plan.stripePriceId);
-    } catch (error) {
-      console.error('Plan selection error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Use mutation's built-in loading state and error handling
+    createCheckoutMutation.mutate(plan.stripePriceId);
   };
 
   const getPlanIcon = (planId: string) => {
@@ -301,7 +293,7 @@ export default function SubscriptionPricing() {
 
               <Button
                 onClick={() => handlePlanSelection(plan)}
-                disabled={isLoading || createCheckoutMutation.isPending || isCurrentPlan(plan.planId)}
+                disabled={createCheckoutMutation.isPending || isCurrentPlan(plan.planId)}
                 className={`w-full ${
                   plan.planId === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
                   plan.planId === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :

@@ -1,0 +1,13 @@
+This looks like a solid React component for handling subscription checkout flow. It effectively combines state management, side effects, and data fetching with a clear separation of concerns.
+Strengths of the Code
+• UI/State Management: The use of useState for isLoading is a great way to handle the button state and provide user feedback.
+• Side Effects: The useEffect hook correctly handles the URL parameters for success or cancellation, showing toasts to the user and cleaning the URL. This is a common and robust pattern.
+• Data Invalidation: Invalidation of queries (queryClient.invalidateQueries) is a crucial part of using a tool like React Query (TanStack Query). It ensures the UI is automatically updated with the correct subscription status after a successful payment.
+• Error Handling: It uses the onError callback of the mutation to show a toast message to the user, providing a good user experience even when something goes wrong.
+Suggestions for Improvement
+• Avoid setIsLoading with useMutation: The useMutation hook already provides an isLoading property. You can simplify your code by using createCheckoutMutation.isLoading instead of managing your own isLoading state.
+• Simplify handlePlanSelection: You can remove the manual try...catch block in handlePlanSelection and the setIsLoading calls since useMutation handles this for you. Your onSuccess and onError callbacks already manage the result of the mutation. The code would be cleaner and more declarative.
+• Refactor useEffect: While the current useEffect works, it might be more aligned with React Query's philosophy to handle the success toast and query invalidation directly within the onSuccess callback of the createCheckoutMutation. This couples the UI feedback (toast) more closely to the result of the API call. However, the current approach is also valid, as it handles the page-load state from the URL redirect.
+• Separation of Concerns: For larger applications, you might consider moving the mutation logic into a custom hook, like useCreateCheckoutSession. This would make the SubscriptionPricing component even cleaner and the checkout logic reusable across your application.
+This video from YouTube provides a tutorial on creating a custom useAuth hook, which is a good example of how to centralize and reuse authentication logic in a React application, similar to what you could do for your checkout mutation.
+#27 React Js Challenge Day 27 | useAuth Custom Hook in React Js

@@ -16114,17 +16114,25 @@ The Quikpik Team
   app.post('/api/subscriptions/create-checkout-session', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { priceId } = req.body;
+      const { priceId, idempotencyKey } = req.body;
 
       if (!priceId) {
         return res.status(400).json({ message: 'Price ID is required' });
       }
 
+      // Validate priceId exists in our subscription plans
+      const validPlans = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.stripePriceId, priceId));
+      
+      if (validPlans.length === 0) {
+        return res.status(400).json({ message: 'Invalid price ID' });
+      }
+
       // Get or create Stripe customer
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId);
       
-      // Create Stripe checkout session
-      const session = await stripe.checkout.sessions.create({
+      // Create Stripe checkout session with idempotency
+      const sessionOptions: any = {
         customer: stripeCustomerId,
         payment_method_types: ['card'],
         line_items: [{
@@ -16135,9 +16143,18 @@ The Quikpik Team
         success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
         metadata: {
-          userId: userId
+          userId: userId,
+          planId: validPlans[0].planId
         }
-      });
+      };
+
+      // Add idempotency key if provided
+      const createOptions: any = {};
+      if (idempotencyKey) {
+        createOptions.idempotencyKey = idempotencyKey;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionOptions, createOptions);
 
       res.json({ 
         success: true, 
