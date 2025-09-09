@@ -114,9 +114,26 @@ export default function SubscriptionPricing() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Format the cancellation date properly
+      let cancellationMessage = "Your subscription has been canceled and will remain active until the end of your current billing period.";
+      
+      if (data.currentPeriodEnd) {
+        const endDate = new Date(data.currentPeriodEnd * 1000);
+        const today = new Date();
+        const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        cancellationMessage = `Your subscription will be canceled on ${endDate.toLocaleDateString('en-GB', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })} (${daysRemaining} days remaining). You'll keep all Standard features until then, then automatically switch to Free plan.`;
+      }
+      
       toast({
         title: "Subscription Canceled",
-        description: `Your subscription will be canceled at the end of the current billing period (${new Date(data.currentPeriodEnd * 1000).toLocaleDateString()})`,
+        description: cancellationMessage,
+        duration: 8000, // Show longer for important info
       });
       // Refresh subscription data
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
