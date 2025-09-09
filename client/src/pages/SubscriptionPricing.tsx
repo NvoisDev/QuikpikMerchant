@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckIcon, XMarkIcon, StarIcon, CrownIcon } from 'lucide-react';
+import { CheckIcon, X, StarIcon, CrownIcon } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -70,7 +70,7 @@ export default function SubscriptionPricing() {
   }, [toast, queryClient]);
 
   // Get available plans
-  const { data: plans = [], isLoading: plansLoading } = useQuery({
+  const { data: plans = [], isLoading: plansLoading } = useQuery<SubscriptionPlan[]>({
     queryKey: ['/api/subscriptions/plans'],
   });
 
@@ -81,7 +81,12 @@ export default function SubscriptionPricing() {
   });
 
   // Get plan limits and usage
-  const { data: planLimits, isLoading: limitsLoading } = useQuery({
+  const { data: planLimits, isLoading: limitsLoading } = useQuery<{
+    usage: { products: number; broadcasts: number; teamMembers: number };
+    limits: { products: number; broadcasts: number; teamMembers: number };
+    percentUsed: { products: number; broadcasts: number; teamMembers: number };
+    plan: string;
+  }>({
     queryKey: ['/api/subscriptions/plan-limits'],
     enabled: !!user,
   });
@@ -299,11 +304,20 @@ export default function SubscriptionPricing() {
         {plans.map((plan: SubscriptionPlan) => (
           <Card 
             key={plan.id} 
-            className={`relative ${getPlanColor(plan.planId)} ${
-              isCurrentPlan(plan.planId) ? 'ring-2 ring-primary' : ''
-            } ${plan.planId === 'standard' ? 'scale-105 shadow-lg' : ''}`}
+            className={`relative transition-all duration-200 ${getPlanColor(plan.planId)} ${
+              isCurrentPlan(plan.planId) 
+                ? 'ring-4 ring-green-500 bg-green-50 scale-[1.02] shadow-lg border-green-200' 
+                : plan.planId === 'standard' ? 'scale-105 shadow-lg hover:scale-[1.07]' : 'hover:scale-[1.02]'
+            }`}
           >
-            {plan.planId === 'standard' && (
+            {isCurrentPlan(plan.planId) && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <Badge className="bg-green-600 text-white px-3 py-1 text-sm font-semibold">
+                  ✅ Current Plan
+                </Badge>
+              </div>
+            )}
+            {!isCurrentPlan(plan.planId) && plan.planId === 'standard' && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
               </div>

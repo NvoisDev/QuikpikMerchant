@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangleIcon, XMarkIcon, CheckIcon, CrownIcon } from 'lucide-react';
+import { AlertTriangleIcon, X, CheckIcon, CrownIcon } from 'lucide-react';
 
 interface DowngradeConfirmationModalProps {
   open: boolean;
@@ -141,7 +141,7 @@ export function DowngradeConfirmationModal({
                 <ul className="space-y-2">
                   {lostFeatures.map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-red-800 text-sm">
-                      <XMarkIcon className="h-4 w-4 text-red-600 flex-shrink-0" />
+                      <X className="h-4 w-4 text-red-600 flex-shrink-0" />
                       {feature}
                     </li>
                   ))}
