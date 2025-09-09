@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CheckIcon, XMarkIcon, StarIcon, CrownIcon } from 'lucide-react';
+import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { useAuth } from '@/hooks/useAuth';
 
 interface SubscriptionPlan {
@@ -38,6 +39,8 @@ export default function SubscriptionPricing() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+  const [targetDowngradePlan, setTargetDowngradePlan] = useState<string>('free');
   // Handle success/cancel URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -108,7 +111,7 @@ export default function SubscriptionPricing() {
   });
 
 
-  // Cancel subscription mutation
+  // Cancel subscription mutation (now triggered through downgrade modal)
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/subscriptions/cancel');
@@ -128,13 +131,13 @@ export default function SubscriptionPricing() {
           year: 'numeric', 
           month: 'long', 
           day: 'numeric' 
-        })} (${daysRemaining} days remaining). You'll keep all Standard features until then, then automatically switch to Free plan.`;
+        })} (${daysRemaining} days remaining). You'll keep all ${currentSubscription?.currentPlan || 'current'} features until then, then automatically switch to Free plan.`;
       }
       
       toast({
-        title: "Subscription Canceled",
+        title: "Subscription Canceled", 
         description: cancellationMessage,
-        duration: 8000, // Show longer for important info
+        duration: 8000,
       });
       // Refresh subscription data
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
@@ -161,12 +164,9 @@ export default function SubscriptionPricing() {
         });
         return;
       } else {
-        // User is on Standard/Premium trying to downgrade to Free
-        toast({
-          title: "Downgrade to Free Plan",
-          description: "To downgrade to Free, please cancel your current subscription first. Contact support for assistance.",
-          variant: "default",
-        });
+        // User is on Standard/Premium trying to downgrade to Free - show downgrade modal
+        setTargetDowngradePlan('free');
+        setShowDowngradeModal(true);
         return;
       }
     }
@@ -377,16 +377,19 @@ export default function SubscriptionPricing() {
                 </Button>
 
 
-                {/* Cancel Subscription Button - Only show for current paid plans */}
+                {/* Cancel/Downgrade Button - Only show for current paid plans */}
                 {isCurrentPlan(plan.planId) && plan.planId !== 'free' && (
                   <Button
-                    onClick={() => cancelSubscriptionMutation.mutate()}
+                    onClick={() => {
+                      setTargetDowngradePlan('free');
+                      setShowDowngradeModal(true);
+                    }}
                     disabled={cancelSubscriptionMutation.isPending}
                     variant="outline"
                     className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                   >
                     {cancelSubscriptionMutation.isPending ? (
-                      'Canceling...'
+                      'Processing...'
                     ) : (
                       'Cancel Subscription'
                     )}
@@ -425,6 +428,22 @@ export default function SubscriptionPricing() {
           </div>
         </div>
       </div>
+
+      {/* Downgrade Confirmation Modal */}
+      <DowngradeConfirmationModal
+        open={showDowngradeModal}
+        onOpenChange={setShowDowngradeModal}
+        currentPlan={currentSubscription?.currentPlan || 'free'}
+        targetPlan={targetDowngradePlan}
+        onConfirmDowngrade={() => cancelSubscriptionMutation.mutate()}
+        isLoading={cancelSubscriptionMutation.isPending}
+        billingInfo={{
+          currentPeriodEnd: currentSubscription?.subscription?.current_period_end,
+          daysRemaining: currentSubscription?.subscription?.current_period_end 
+            ? Math.ceil((currentSubscription.subscription.current_period_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
+            : undefined
+        }}
+      />
     </div>
   );
 }
