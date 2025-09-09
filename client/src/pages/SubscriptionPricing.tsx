@@ -89,7 +89,7 @@ export default function SubscriptionPricing() {
       const response = await apiRequest('POST', '/api/subscriptions/create-checkout-session', {
         priceId
       });
-      return response;
+      return response.json();
     },
     onSuccess: (data) => {
       if (data.url) {
