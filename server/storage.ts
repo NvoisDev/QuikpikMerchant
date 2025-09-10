@@ -1686,7 +1686,8 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error finding customer by last 4 digits:", error);
-      return null;
+      // Re-throw security errors instead of returning null to prevent authentication bypass
+      throw error;
     }
   }
 
