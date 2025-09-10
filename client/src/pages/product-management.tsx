@@ -835,13 +835,15 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: any) => {
-    console.log('🔍 EDIT HANDLER DEBUG:', {
+    console.log('🚨 EDIT CLICKED - DEBUGGING MODAL ISSUE:', {
       productId: product.id,
       productName: product.name,
       authUser: user,
       mockUser: !user ? "Using mock user for testing" : "Using real user",
       editCount: product.editCount,
-      canEdit: canEditProduct(product.editCount || 0)
+      canEdit: canEditProduct(product.editCount || 0),
+      currentDialogState: isDialogOpen,
+      currentEditingProduct: editingProduct
     });
     
     // Premium access - unlimited edits
@@ -886,6 +888,15 @@ export default function ProductManagement() {
       productBeingSet: !!product,
       productName: product.name
     });
+    
+    // Force check dialog state after a brief delay
+    setTimeout(() => {
+      console.log('⏰ DELAYED STATE CHECK (after setState):', {
+        isDialogOpen_after: isDialogOpen,
+        editingProduct_after: !!editingProduct,
+        documentDialogVisible: document.querySelector('[role="dialog"]') ? 'FOUND' : 'NOT FOUND'
+      });
+    }, 100);
   };
 
   const handleDelete = (id: number) => {
