@@ -24,7 +24,7 @@ async function testStockDepletion() {
     // Step 2: Create test order for 2 pallets
     console.log('🛍️ Step 2: Creating test order for 2 pallets...');
     const testOrder = {
-      wholesalerId: '104871691614680693123', // Your wholesaler ID
+      wholesalerId: 'user_1756056297340_surulere', // Your wholesaler ID
       items: [{
         productId: productId,
         quantity: 2,

@@ -3494,7 +3494,7 @@ The Quikpik Team`
     
     try {
       // Use the same successful query from customer-products
-      const defaultUserId = "104871691614680693123";
+      const defaultUserId = "user_1756056297340_surulere";
       console.log('🛍️ Dev requesting products for wholesaler:', defaultUserId);
       console.log('🔧 Environment: development');
       console.log('⚡ TESTING: Endpoint reached successfully');
@@ -4305,7 +4305,7 @@ The Quikpik Team`
     
     try {
       const search = req.query.search;
-      const wholesalerId = req.query.wholesalerId || '104871691614680693123'; // Default to Surulere
+      const wholesalerId = req.query.wholesalerId || 'user_1756056297340_surulere'; // Default to Surulere
       
       console.log(`🔧 DEBUG: Fetching orders for wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
       const orders = await storage.getOrders(wholesalerId, undefined, search);
