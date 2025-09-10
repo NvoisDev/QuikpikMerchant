@@ -47,7 +47,10 @@ import {
   ContactRound,
   Check,
   ChevronDown,
-  Send
+  Send,
+  Shield,
+  ShieldX,
+  UserX
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -563,6 +566,48 @@ export default function Customers() {
       toast({
         title: "Failed to Send Welcome Message",
         description: error.message || "Could not send welcome message to customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Access control mutations
+  const removeCustomerAccessMutation = useMutation({
+    mutationFn: (customerId: string) => apiRequest('DELETE', `/api/wholesaler/customer/${customerId}`),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+      toast({ 
+        title: "Access Removed", 
+        description: data.message || "Customer access to your portal has been removed successfully.",
+        duration: 5000
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove customer access",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const allowCustomerAccessMutation = useMutation({
+    mutationFn: (customerData: { email: string; phoneNumber?: string; firstName?: string; lastName?: string }) => 
+      apiRequest('POST', '/api/wholesaler/invite', customerData),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+      toast({ 
+        title: "Access Granted", 
+        description: data.message || "Customer access has been restored successfully.",
+        duration: 5000
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to grant customer access",
         variant: "destructive",
       });
     },
@@ -1501,6 +1546,41 @@ export default function Customers() {
                             >
                               <Send className="h-4 w-4 mr-2" />
                               Send Welcome
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-orange-600"
+                              onClick={() => {
+                                if (confirm(`Remove portal access for ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
+                                  removeCustomerAccessMutation.mutate(customer?.id);
+                                }
+                              }}
+                              disabled={removeCustomerAccessMutation.isPending}
+                            >
+                              <ShieldX className="h-4 w-4 mr-2" />
+                              Remove Access
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-green-600"
+                              onClick={() => {
+                                if (customer?.email) {
+                                  allowCustomerAccessMutation.mutate({
+                                    email: customer.email,
+                                    phoneNumber: customer.phoneNumber,
+                                    firstName: customer.firstName,
+                                    lastName: customer.lastName
+                                  });
+                                } else {
+                                  toast({
+                                    title: "Email Required",
+                                    description: "Customer must have an email address to restore access.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              disabled={allowCustomerAccessMutation.isPending || !customer?.email}
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Allow Access
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-600"
