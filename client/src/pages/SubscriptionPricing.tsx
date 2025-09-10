@@ -287,6 +287,101 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
+      {/* Billing Information Section */}
+      {currentSubscription && currentSubscription.currentPlan !== 'free' && (
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V5a2 2 0 012-2h0a2 2 0 012 2v2M8 7V5a2 2 0 012-2h0a2 2 0 012 2v2m-6 0h8m-8 0H6a2 2 0 00-2 2v0a2 2 0 002 2v0M16 7h2a2 2 0 012 2v0a2 2 0 01-2 2v0" />
+            </svg>
+            Billing Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Next Billing Date */}
+            {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancel_at_period_end && (
+              <div className="bg-white p-4 rounded-lg border border-blue-100">
+                <div className="text-sm text-blue-600 font-medium mb-1">Next Billing Date</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    year: 'numeric', 
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {(() => {
+                    const nextBilling = new Date(currentSubscription.user.subscriptionPeriodEnd);
+                    const today = new Date();
+                    const daysUntil = Math.ceil((nextBilling.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    return daysUntil > 0 ? `${daysUntil} days away` : 'Today';
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Current Period (for active subscriptions) */}
+            {currentSubscription.user?.subscriptionPeriodStart && currentSubscription.user?.subscriptionPeriodEnd && (
+              <div className="bg-white p-4 rounded-lg border border-blue-100">
+                <div className="text-sm text-blue-600 font-medium mb-1">Current Billing Period</div>
+                <div className="text-sm text-gray-700">
+                  {new Date(currentSubscription.user.subscriptionPeriodStart).toLocaleDateString('en-GB', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })} - {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric' 
+                  })}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Monthly subscription
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Downgrade/Cancellation Status */}
+          {currentSubscription.subscription?.cancel_at_period_end && currentSubscription.user?.subscriptionPeriodEnd && (
+            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 text-orange-600 mt-0.5">
+                  <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-orange-800 mb-1">
+                    Plan Change Scheduled
+                  </div>
+                  <div className="text-sm text-orange-700">
+                    Your subscription will {currentSubscription.subscription.cancel_at_period_end ? 'end' : 'change'} on{' '}
+                    <strong>
+                      {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric'
+                      })}
+                    </strong>
+                    {(() => {
+                      const endDate = new Date(currentSubscription.user.subscriptionPeriodEnd);
+                      const today = new Date();
+                      const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      return daysRemaining > 0 ? ` (${daysRemaining} days remaining)` : '';
+                    })()}
+                  </div>
+                  <div className="text-xs text-orange-600 mt-2">
+                    You'll keep all {currentSubscription.currentPlan} features until then, then automatically switch to Free plan.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Usage Overview */}
       {planLimits && (
         <div className="mb-8 p-6 bg-gray-50 rounded-lg">
