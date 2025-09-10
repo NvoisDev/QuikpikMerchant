@@ -267,10 +267,37 @@ function getDefaultLimits() {
  */
 export async function getUserPlanLimits(userId: string) {
   try {
-    const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
-    const limits = plan?.limits || getDefaultLimits();
+    const { plan, currentPlan, user } = await SubscriptionService.getUserSubscription(userId);
     
-    // Subscription limits now consistent across all backend functions
+    // CRITICAL FIX: Determine limits based on subscription tier
+    let limits;
+    const userTier = user?.subscriptionTier || currentPlan || 'free';
+    
+    console.log(`🔍 getUserPlanLimits for user ${userId}: tier=${userTier}, plan=${JSON.stringify(plan?.limits)}`);
+    
+    if (userTier === 'premium') {
+      // Premium users get unlimited everything
+      limits = {
+        products: -1,
+        broadcasts: -1, 
+        teamMembers: -1,
+        customGroups: -1
+      };
+      console.log('✅ Premium user detected - applying unlimited limits');
+    } else if (userTier === 'standard') {
+      // Standard users get higher limits
+      limits = {
+        products: 50,
+        broadcasts: 25,
+        teamMembers: 3,
+        customGroups: 5
+      };
+      console.log('📊 Standard user detected - applying standard limits');
+    } else {
+      // Free users get basic limits
+      limits = getDefaultLimits();
+      console.log('🆓 Free user detected - applying free limits');
+    }
     
     // Get current usage counts
     const [productCount, broadcastCount, teamMemberCount] = await Promise.all([
@@ -279,8 +306,8 @@ export async function getUserPlanLimits(userId: string) {
       getCurrentTeamMemberCount(userId)
     ]);
 
-    return {
-      plan: currentPlan || 'free',
+    const result = {
+      plan: userTier,
       limits,
       usage: {
         products: productCount,
@@ -293,6 +320,9 @@ export async function getUserPlanLimits(userId: string) {
         teamMembers: limits.teamMembers === -1 ? 0 : Math.round((teamMemberCount / limits.teamMembers) * 100)
       }
     };
+    
+    console.log(`✅ Final limits for ${userTier} user:`, result);
+    return result;
   } catch (error) {
     console.error('❌ Error getting user plan limits:', error);
     throw error;
