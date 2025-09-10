@@ -3646,21 +3646,10 @@ The Quikpik Team`
     }
   });
 
-  app.patch('/api/products/:id', async (req: any, res) => {
-    // TEMPORARY: Handle auth failure gracefully for testing
-    let targetUserId = "104871691614680693123"; // Default to main account for testing
-    
-    try {
-      // Try to get authenticated user first
-      if (req.user?.id) {
-        targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-          ? req.user.wholesalerId 
-          : req.user.id;
-      }
-      console.log('🔍 Product PATCH - Using target user ID:', targetUserId);
-    } catch (authError) {
-      console.log('⚠️ Auth failed, using default user for testing:', targetUserId);
-    }
+  app.patch('/api/products/:id', requireAuth, async (req: any, res) => {
+    const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+      ? req.user.wholesalerId 
+      : req.user.id;
     try {
       const id = parseInt(req.params.id);
       
