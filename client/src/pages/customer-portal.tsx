@@ -1036,9 +1036,9 @@ export default function CustomerPortal() {
       console.log('🚚 CRITICAL: Updating customer data from authenticated customer, preserving existing shippingOption:', customerData.shippingOption);
       setCustomerData(prevData => ({
         ...prevData, // CRITICAL: This preserves the shippingOption and all other fields
-        name: authenticatedCustomer.name || 'Michael Ogunjemilua',
-        email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
-        phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550',
+        name: authenticatedCustomer.name || '',
+        email: authenticatedCustomer.email || '',
+        phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '',
         businessName: authenticatedCustomer.businessName || '',
         // CRITICAL FIX: Preserve shipping selection - don't default to pickup
         shippingOption: prevData.shippingOption
@@ -1894,7 +1894,7 @@ export default function CustomerPortal() {
       message: negotiationData.message,
       customerName: customerData.name,
       customerEmail: customerData.email,
-      customerPhone: customerData.phone || '+447507659550' // TEMP FIX: Use known phone for Michael Ogunjemilua
+      customerPhone: customerData.phone
     });
   };
 
