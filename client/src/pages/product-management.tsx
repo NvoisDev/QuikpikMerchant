@@ -140,7 +140,6 @@ export default function ProductManagement() {
   
   // Subscription system removed - defaulting to premium access
   const canCreateProduct = true;
-  const hookCanEditProduct = true;
   
   // Create a custom canEditProduct that requires proper authentication
   const canEditProduct = (editCount: number) => {
@@ -149,7 +148,8 @@ export default function ProductManagement() {
       return false;
     }
     
-    return hookCanEditProduct(editCount);
+    // Premium access - unlimited edits always allowed
+    return true;
   };
 
   // Auto-calculation for total package weight
@@ -835,68 +835,8 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: any) => {
-    console.log('🚨 EDIT CLICKED - DEBUGGING MODAL ISSUE:', {
-      productId: product.id,
-      productName: product.name,
-      authUser: user,
-      mockUser: !user ? "Using mock user for testing" : "Using real user",
-      editCount: product.editCount,
-      canEdit: canEditProduct(product.editCount || 0),
-      currentDialogState: isDialogOpen,
-      currentEditingProduct: editingProduct
-    });
-    
-    // Premium access - unlimited edits
-    const finalCanEdit = true;
-    
-    console.log('🔍 Edit Permission Check:', {
-      productId: product.id,
-      productName: product.name,
-      authUser: !!user,
-      finalDecision: finalCanEdit
-    });
-    
-    // Premium access - always allow editing
-    
-    console.log('✅ Edit permission granted, opening dialog...');
-    console.log('📝 Setting editing product:', product);
-    console.log('🔧 Form reset with product data:', {
-      name: product.name,
-      price: product.price,
-      currency: product.currency || 'GBP',
-      category: product.category
-    });
-    
     setEditingProduct(product);
-    
-    // COMPLETELY SKIP form reset to avoid stack overflow - let the dialog handle this
-    console.log('⚠️ SKIPPING form.reset() to avoid stack overflow');
-    console.log('🔧 Product data will be loaded when dialog opens:', {
-      productId: product.id,
-      productName: product.name,
-      hasData: !!product
-    });
-    console.log('🚀 Opening dialog - isDialogOpen state change to true');
-    console.log('✅ CRITICAL: Setting isDialogOpen to TRUE and editingProduct to product data');
-    
-    // Immediately set dialog open
     setIsDialogOpen(true);
-    
-    console.log('📊 Immediate state check:', {
-      isDialogOpen: isDialogOpen,
-      editingProduct: !!editingProduct,
-      productBeingSet: !!product,
-      productName: product.name
-    });
-    
-    // Force check dialog state after a brief delay
-    setTimeout(() => {
-      console.log('⏰ DELAYED STATE CHECK (after setState):', {
-        isDialogOpen_after: isDialogOpen,
-        editingProduct_after: !!editingProduct,
-        documentDialogVisible: document.querySelector('[role="dialog"]') ? 'FOUND' : 'NOT FOUND'
-      });
-    }, 100);
   };
 
   const handleDelete = (id: number) => {
