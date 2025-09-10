@@ -2254,7 +2254,7 @@ The Quikpik Team
           const wholesaler = await storage.getUser(userId);
           if (wholesaler) {
             const customerName = `${firstName} ${lastName}`.trim();
-            const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+            const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for approved customer ${customerName}`);
@@ -2292,7 +2292,7 @@ Great news! Your registration request has been approved by ${businessName}.
 
 You can now access their wholesale platform using your phone number: ${requestData.customerPhone}
 
-Portal: ${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal
+Portal: https://quikpik.app/customer/${userId}
 
 ${responseMessage ? `Message from ${businessName}: ${responseMessage}` : ''}
 
@@ -5150,7 +5150,7 @@ The Quikpik Team`
             const wholesaler = await storage.getUser(wholesalerId);
             if (wholesaler) {
               const customerName = `${firstName} ${lastName}`.trim();
-              const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+              const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
@@ -11042,7 +11042,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           const wholesaler = await storage.getUser(product.wholesalerId);
           if (wholesaler) {
             const customerName = `${firstName} ${lastName}`.trim();
-            const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+            const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
@@ -11270,7 +11270,7 @@ Please contact the customer to confirm this order.
             const wholesaler = await storage.getUser(firstProduct.wholesalerId);
             if (wholesaler) {
               const customerName = `${firstName} ${lastName}`.trim();
-              const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+              const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
@@ -11959,7 +11959,7 @@ Please contact the customer to confirm this order.
               const wholesaler = await storage.getUser(product.wholesalerId);
               if (wholesaler) {
                 const customerName = `${firstName} ${lastName}`.trim();
-                const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+                const portalUrl = `https://quikpik.app/customer/${userId}`;
                 const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
                 
                 console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
@@ -14927,7 +14927,7 @@ The Quikpik Team
       
       if (wholesaler) {
         const customerName = `${firstName} ${lastName || ''}`.trim();
-        const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
+        const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
         const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
         
         console.log('Sending welcome messages with params:', {
@@ -15027,7 +15027,7 @@ The Quikpik Team
       }
       
       const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
+      const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       
       console.log('🔄 Manual welcome message request for customer:', customerName);
@@ -15142,7 +15142,7 @@ The Quikpik Team
       }
       
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
       
       const welcomeResult = await sendWelcomeMessages({
         customerName,
@@ -15174,7 +15174,7 @@ The Quikpik Team
       
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       const wholesalerAccountName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK';
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${wholesalerId}`;
+      const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
       
       console.log('🧪 Testing welcome messages with:', {
         customerName,

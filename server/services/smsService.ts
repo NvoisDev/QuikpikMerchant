@@ -59,20 +59,17 @@ export function createWelcomeSMSMessage(params: {
 }): string {
   const { customerName, wholesalerName, wholesalerEmail, wholesalerPhone, wholesalerAccountName, portalUrl } = params;
 
-  return `Welcome to ${wholesalerName}: You've been onboarded!
+  return `Welcome to ${wholesalerName}! You've been onboarded!
 
-Your account is ready. Access your store and start ordering here:${portalUrl}
+Your account is ready. Access your store and start ordering here: ${portalUrl}
 
-Access exclusive wholesale pricing, place orders 24/7, track Orders, and manage your account seamlessly.
+Access exclusive wholesale pricing, place orders 24/7, track orders, and manage your account seamlessly.
 
-
-Question?
-Contact name: ${wholesalerAccountName || 'Ibk Test'}
-${wholesalerEmail} | ${wholesalerPhone || '07521469170'}
+Questions?
+Contact: ${wholesalerAccountName || 'Support'}
+${wholesalerEmail} | ${wholesalerPhone || ''}
 
 Start ordering today!
-
-
 
 Powered by Quikpik`;
 }

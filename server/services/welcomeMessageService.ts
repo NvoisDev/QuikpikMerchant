@@ -125,8 +125,7 @@ function createWelcomeWhatsAppMessage(params: {
 
   return `Welcome to ${wholesalerName}!
 
-Your account is ready. Access our store and start ordering here:
-${portalUrl}
+Your account is ready. Access our store and start ordering here: ${portalUrl}
 
 Powered by Quikpik`;
 }
