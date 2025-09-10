@@ -116,6 +116,7 @@ const addCustomerFormSchema = z.object({
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
+  groupId: z.number().optional(), // Optional group assignment
 });
 
 const searchAndAddFormSchema = z.object({
@@ -260,7 +261,7 @@ export default function Customers() {
 
   const addCustomerForm = useForm<AddCustomerFormData>({
     resolver: zodResolver(addCustomerFormSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", phoneNumber: "" },
+    defaultValues: { firstName: "", lastName: "", email: "", phoneNumber: "", groupId: undefined },
   });
 
   const searchAndAddForm = useForm<SearchAndAddFormData>({
@@ -998,6 +999,34 @@ export default function Customers() {
                         <FormControl>
                           <Input placeholder="+447123456789" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="groupId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer Group (Optional)</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                          value={field.value ? field.value.toString() : undefined}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a group (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No group - Add to directory only</SelectItem>
+                            {customerGroups.map((group) => (
+                              <SelectItem key={group.id} value={group.id.toString()}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

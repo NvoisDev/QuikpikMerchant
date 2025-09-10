@@ -14815,8 +14815,8 @@ The Quikpik Team
       console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       
-      const { firstName, lastName, email, phoneNumber } = req.body;
-      console.log('Customer data:', { firstName, lastName, email, phoneNumber });
+      const { firstName, lastName, email, phoneNumber, groupId } = req.body;
+      console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId });
       
       if (!firstName || !phoneNumber) {
         return res.status(400).json({ error: 'First name and phone number are required' });
@@ -14906,6 +14906,17 @@ The Quikpik Team
           status: 'active',
         });
         console.log('✅ Created wholesaler-customer relationship for multi-wholesaler platform');
+      }
+      
+      // Optional: Add customer to specified group if groupId is provided
+      if (groupId && groupId > 0) {
+        try {
+          await storage.addCustomerToGroup(groupId, customer.id);
+          console.log(`✅ Customer ${customer.id} added to group ${groupId}`);
+        } catch (groupError) {
+          console.warn(`⚠️ Failed to add customer to group ${groupId}:`, groupError);
+          // Don't fail the entire operation if group assignment fails
+        }
       }
       
       console.log('Customer created:', customer);
