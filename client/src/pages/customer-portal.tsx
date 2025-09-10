@@ -751,7 +751,8 @@ export default function CustomerPortal() {
       return response.json();
     },
     enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // CRITICAL FIX: No cache to prevent cross-customer contamination
+    refetchOnMount: true, // Always fetch fresh data on component mount
   });
 
   // Check for existing customer session on load
@@ -1061,9 +1062,22 @@ export default function CustomerPortal() {
 
 
 
+  // CRITICAL FIX: Clear all customer data when authenticated customer changes
+  useEffect(() => {
+    if (authenticatedCustomer?.phone) {
+      console.log('🧹 Customer changed - clearing all customer data cache for:', authenticatedCustomer.name);
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-orders"] });
+      queryClient.removeQueries({ queryKey: ["/api/customer-orders/stats"] });
+      queryClient.removeQueries({ queryKey: ["/api/customer-orders"] });
+    }
+  }, [authenticatedCustomer?.phone, authenticatedCustomer?.id]);
+
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
+      console.log('🎯 Generating welcome message for:', authenticatedCustomer.name, 'with stats:', customerOrderStats);
+      
       const generatePersonalizedMessage = () => {
         const orders = customerOrderStats.totalOrders || 0;
         const spent = customerOrderStats.totalSpent || 0;
