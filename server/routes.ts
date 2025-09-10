@@ -731,27 +731,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clear/reset user logo endpoint
-  app.post('/api/clear-logo', async (req, res) => {
+  // Clear/reset user logo endpoint (authenticated users only)
+  app.post('/api/clear-logo', requireAuth, async (req, res) => {
     try {
-      console.log('🧹 Logo clear request (temporary bypass enabled)');
+      console.log('🧹 Logo clear request from authenticated user:', req.user?.email);
       
-      // For now, we'll clear the logo for "Food 4 us" business
-      // In a real scenario, this would use authentication to get the user ID
-      const businessEmail = 'ibk_legacy1997@hotmail.co.uk';
-      
-      const user = await storage.getUserByEmail(businessEmail, 'wholesaler');
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
       }
       
-      // Clear the logo settings
-      const updatedUser = await storage.updateUserSettings(user.id, {
+      // Clear the logo settings for the authenticated user
+      const updatedUser = await storage.updateUserSettings(req.user.id, {
         logoUrl: null,
         logoType: 'business' // Reset to business initials
       });
       
-      console.log('✅ Logo cleared successfully for user:', user.businessName);
+      console.log('✅ Logo cleared successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo cleared successfully',
