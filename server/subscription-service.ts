@@ -226,7 +226,62 @@ export class SubscriptionService {
         }
       });
 
-      console.log('✅ Subscription downgraded with immediate proration:', updatedSubscription.id);
+      console.log('✅ Stripe subscription downgraded with immediate proration:', updatedSubscription.id);
+
+      // CRITICAL FIX: Update database immediately after Stripe call
+      console.log('🔄 Updating database immediately after downgrade...');
+      
+      // Find user by subscription ID
+      const [user] = await db.select().from(users)
+        .where(eq(users.stripeSubscriptionId, subscriptionId));
+        
+      if (!user) {
+        console.error('❌ User not found for subscription:', subscriptionId);
+        throw new Error('User not found for subscription');
+      }
+
+      // Update user's subscription fields immediately
+      await db.update(users).set({
+        subscriptionStatus: updatedSubscription.status,
+        currentPlan: newPlanId,
+        subscriptionPeriodStart: updatedSubscription.current_period_start ? new Date(updatedSubscription.current_period_start * 1000) : null,
+        subscriptionPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
+        updatedAt: new Date()
+      }).where(eq(users.id, user.id));
+
+      // Update or create user subscription record immediately
+      const existingSub = await db.select().from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, user.id));
+
+      if (existingSub.length > 0) {
+        // Update existing subscription
+        await db.update(userSubscriptions).set({
+          planId: newPlanId,
+          stripeSubscriptionId: subscriptionId,
+          status: updatedSubscription.status,
+          currentPeriodStart: updatedSubscription.current_period_start ? new Date(updatedSubscription.current_period_start * 1000) : null,
+          currentPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
+          cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+          updatedAt: new Date()
+        }).where(eq(userSubscriptions.userId, user.id));
+        
+        console.log('✅ Updated existing subscription record for user:', user.id);
+      } else {
+        // Create new subscription record
+        await db.insert(userSubscriptions).values({
+          userId: user.id,
+          planId: newPlanId,
+          stripeSubscriptionId: subscriptionId,
+          status: updatedSubscription.status,
+          currentPeriodStart: updatedSubscription.current_period_start ? new Date(updatedSubscription.current_period_start * 1000) : null,
+          currentPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
+          cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end
+        });
+        
+        console.log('✅ Created new subscription record for user:', user.id);
+      }
+
+      console.log('✅ Database updated immediately after downgrade for user:', user.id, 'New plan:', newPlanId);
       return updatedSubscription;
     } catch (error) {
       console.error('❌ Failed to downgrade subscription with proration:', error);
@@ -545,11 +600,66 @@ export class SubscriptionService {
       }
 
       // Cancel subscription immediately after applying credit
-      await stripe.subscriptions.cancel(subscriptionId, {
+      const cancelledSubscription = await stripe.subscriptions.cancel(subscriptionId, {
         prorate: true, // Ensure any final proration is applied
         invoice_now: true // Create final invoice with credit
       });
 
+      console.log('✅ Stripe subscription cancelled successfully:', subscriptionId);
+
+      // CRITICAL FIX: Update database immediately after Stripe cancellation
+      console.log('🔄 Updating database immediately after free downgrade...');
+      
+      // Find user by user ID
+      const [user] = await db.select().from(users)
+        .where(eq(users.id, userId));
+        
+      if (!user) {
+        console.error('❌ User not found for userId:', userId);
+        throw new Error('User not found');
+      }
+
+      // Update user's subscription fields to free plan immediately
+      await db.update(users).set({
+        subscriptionStatus: 'free',
+        currentPlan: 'free',
+        stripeSubscriptionId: null, // Clear subscription ID since cancelled
+        subscriptionPeriodStart: null,
+        subscriptionPeriodEnd: null,
+        updatedAt: new Date()
+      }).where(eq(users.id, userId));
+
+      // Update or create user subscription record immediately
+      const existingSub = await db.select().from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, userId));
+
+      if (existingSub.length > 0) {
+        // Update existing subscription to cancelled/free
+        await db.update(userSubscriptions).set({
+          planId: 'free',
+          stripeSubscriptionId: null, // Clear since cancelled
+          status: 'canceled',
+          cancelAtPeriodEnd: null, // No longer relevant
+          updatedAt: new Date()
+        }).where(eq(userSubscriptions.userId, userId));
+        
+        console.log('✅ Updated existing subscription record to free for user:', userId);
+      } else {
+        // Create new free subscription record
+        await db.insert(userSubscriptions).values({
+          userId: userId,
+          planId: 'free',
+          stripeSubscriptionId: null,
+          status: 'free',
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: null
+        });
+        
+        console.log('✅ Created new free subscription record for user:', userId);
+      }
+
+      console.log('✅ Database updated immediately after free downgrade for user:', userId);
       console.log('✅ Free downgrade with proration completed successfully');
       return {
         success: true,
