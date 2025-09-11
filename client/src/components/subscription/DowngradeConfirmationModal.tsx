@@ -130,13 +130,10 @@ export function DowngradeConfirmationModal({
               <div className="space-y-3">
                 <div>
                   <p className="text-blue-800 text-sm">
-                    <strong>Effective Date:</strong> {formatEndDate(billingInfo?.currentPeriodEnd)}
-                    {billingInfo?.daysRemaining && (
-                      <span> ({billingInfo.daysRemaining} days remaining)</span>
-                    )}
+                    <strong>Effective Date:</strong> Immediately upon confirmation
                   </p>
                   <p className="text-blue-700 text-xs mt-1">
-                    You'll keep all {currentFeatures.name} features until then with no additional charges.
+                    Your plan will change to {targetFeatures.name} right away, and you'll receive a pro-rated credit for any unused time from your {currentFeatures.name} plan.
                   </p>
                 </div>
 
@@ -232,12 +229,10 @@ export function DowngradeConfirmationModal({
               <label htmlFor="confirm-downgrade" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
                 <span className="font-medium">I understand and confirm that:</span>
                 <ul className="mt-2 space-y-1 text-xs text-gray-600">
-                  <li>• I will lose access to the {lostFeatures.length} premium features listed above</li>
-                  <li>• This change takes effect on {formatEndDate(billingInfo?.currentPeriodEnd)}</li>
+                  <li>• I will lose access to the {lostFeatures.length} premium features listed above immediately</li>
+                  <li>• This change takes effect immediately upon confirmation</li>
                   <li>• I can upgrade again at any time to restore full functionality</li>
-                  {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
-                    <li>• I will receive a £{billingInfo.proratedCredit.toFixed(2)} pro-rated credit</li>
-                  )}
+                  <li>• I will receive a pro-rated credit for any unused time on my current plan</li>
                 </ul>
               </label>
             </div>

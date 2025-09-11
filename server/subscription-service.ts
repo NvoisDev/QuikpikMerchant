@@ -8,7 +8,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-08-27.basil",
 });
 
 export class SubscriptionService {
@@ -191,6 +191,45 @@ export class SubscriptionService {
       return updatedSubscription;
     } catch (error) {
       console.error('❌ Failed to upgrade subscription with proration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Downgrade subscription with immediate proration - instant access change and credit refund
+   */
+  static async immediateDowngradeWithProration(
+    subscriptionId: string, 
+    newPriceId: string, 
+    newPlanId: string
+  ): Promise<Stripe.Subscription> {
+    try {
+      console.log('📉 Downgrading subscription with immediate proration:', { subscriptionId, newPriceId, newPlanId });
+
+      // Get the current subscription
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Update subscription with immediate proration (creates credit for unused time)
+      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+        proration_behavior: 'create_prorations', // Create prorations for immediate billing/credit
+        billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
+        items: [{
+          id: subscription.items.data[0].id,
+          price: newPriceId, // Switch to the new (lower) plan's price ID
+        }],
+        metadata: {
+          ...subscription.metadata,
+          downgraded_from: subscription.items.data[0].price.id,
+          downgraded_to: newPriceId,
+          downgrade_timestamp: new Date().toISOString(),
+          planId: newPlanId
+        }
+      });
+
+      console.log('✅ Subscription downgraded with immediate proration:', updatedSubscription.id);
+      return updatedSubscription;
+    } catch (error) {
+      console.error('❌ Failed to downgrade subscription with proration:', error);
       throw error;
     }
   }
@@ -451,6 +490,108 @@ export class SubscriptionService {
       
     } catch (error) {
       console.error('❌ Failed to update user subscription from webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle prorated free downgrade with credit calculation and immediate effect
+   */
+  static async proratedFreeDowngrade(subscriptionId: string, userId: string): Promise<{
+    success: boolean;
+    proratedCredit: number;
+    message: string;
+  }> {
+    try {
+      console.log('🆓 Processing prorated free downgrade:', { subscriptionId, userId });
+
+      // Get current subscription details for credit calculation
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Calculate prorated credit for unused time
+      const now = Math.floor(Date.now() / 1000);
+      const periodStart = subscription.current_period_start;
+      const periodEnd = subscription.current_period_end;
+      const totalPeriod = periodEnd - periodStart;
+      const remainingPeriod = periodEnd - now;
+      const currentPrice = subscription.items.data[0].price.unit_amount || 0;
+      
+      // Calculate prorated credit (what they get back)
+      const proratedCredit = remainingPeriod > 0 
+        ? (currentPrice / 100) * (remainingPeriod / totalPeriod)
+        : 0;
+
+      console.log('💰 Proration calculation:', {
+        currentPrice: currentPrice / 100,
+        remainingPeriod,
+        totalPeriod,
+        proratedCredit: proratedCredit.toFixed(2)
+      });
+
+      // Create credit note/invoice item for the prorated amount before cancellation
+      if (proratedCredit > 0) {
+        await stripe.invoiceItems.create({
+          customer: subscription.customer as string,
+          amount: -Math.round(proratedCredit * 100), // Negative amount = credit
+          currency: subscription.items.data[0].price.currency,
+          description: `Pro-rated credit for early downgrade to Free plan from ${new Date(now * 1000).toLocaleDateString()}`,
+          metadata: {
+            type: 'free_downgrade_credit',
+            originalSubscriptionId: subscriptionId,
+            userId: userId,
+            creditAmount: proratedCredit.toFixed(2)
+          }
+        });
+      }
+
+      // Cancel subscription immediately after applying credit
+      await stripe.subscriptions.cancel(subscriptionId, {
+        prorate: true, // Ensure any final proration is applied
+        invoice_now: true // Create final invoice with credit
+      });
+
+      console.log('✅ Free downgrade with proration completed successfully');
+      return {
+        success: true,
+        proratedCredit: Math.max(0, proratedCredit),
+        message: proratedCredit > 0 
+          ? `Subscription cancelled with £${proratedCredit.toFixed(2)} credit applied to your account`
+          : 'Subscription cancelled and downgraded to Free plan'
+      };
+    } catch (error) {
+      console.error('❌ Failed to process prorated free downgrade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel subscription with proper Stripe integration (delegated from routes)
+   */
+  static async cancelSubscription(subscriptionId: string, options?: {
+    cancelAtPeriodEnd?: boolean;
+    prorate?: boolean;
+  }): Promise<Stripe.Subscription> {
+    try {
+      console.log('🛑 Cancelling subscription:', subscriptionId, options);
+
+      if (options?.cancelAtPeriodEnd) {
+        // Schedule cancellation at period end
+        const subscription = await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true
+        });
+        console.log('📅 Subscription scheduled for cancellation at period end');
+        return subscription;
+      } else {
+        // Cancel immediately
+        const cancelledSubscription = await stripe.subscriptions.cancel(subscriptionId, {
+          prorate: options?.prorate ?? true,
+          invoice_now: true
+        });
+        console.log('✅ Subscription cancelled immediately');
+        return cancelledSubscription;
+      }
+    } catch (error) {
+      console.error('❌ Failed to cancel subscription:', error);
       throw error;
     }
   }

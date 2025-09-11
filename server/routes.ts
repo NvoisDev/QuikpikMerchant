@@ -123,7 +123,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
-import SubscriptionService from "./subscription-service";
+import { SubscriptionService } from "./subscription-service";
 import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits } from "./middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
 import cookieParser from "cookie-parser";
@@ -16236,14 +16236,25 @@ The Quikpik Team
     }
   });
 
-  // Enhanced downgrade endpoint - modifies existing subscription instead of cancellation
+  // Enhanced downgrade endpoint - immediate downgrade with proration
   app.post('/api/subscriptions/downgrade', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { targetPlan } = req.body;
 
-      if (!targetPlan) {
-        return res.status(400).json({ message: 'Target plan is required' });
+      // Zod validation for targetPlan
+      const targetPlanSchema = z.object({
+        targetPlan: z.enum(['free', 'standard', 'premium'], {
+          errorMap: () => ({ message: 'targetPlan must be one of: free, standard, premium' })
+        })
+      });
+
+      const validation = targetPlanSchema.safeParse({ targetPlan });
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: 'Invalid target plan',
+          errors: validation.error.errors
+        });
       }
 
       // Get current subscription
@@ -16253,25 +16264,55 @@ The Quikpik Team
         return res.status(400).json({ message: 'No active subscription found' });
       }
 
-      // Schedule downgrade at end of current period
-      const result = await SubscriptionService.scheduleDowngrade(
+      // Get target plan details to get the price ID
+      const plans = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, targetPlan));
+      
+      if (plans.length === 0) {
+        return res.status(400).json({ message: 'Target plan not found' });
+      }
+
+      const targetPlanData = plans[0];
+
+      // Handle downgrade to free plan with proper proration
+      if (targetPlan === 'free') {
+        const result = await SubscriptionService.proratedFreeDowngrade(
+          currentSubscription.stripeSubscriptionId,
+          userId
+        );
+        
+        res.json({
+          success: true,
+          type: 'downgrade_immediate',
+          targetPlan: targetPlan,
+          proratedCredit: result.proratedCredit,
+          message: result.message
+        });
+        return;
+      }
+
+      // Handle downgrade to paid plan with immediate proration
+      if (!targetPlanData.stripePriceId) {
+        return res.status(400).json({ message: 'Target plan price ID not configured' });
+      }
+
+      const result = await SubscriptionService.immediateDowngradeWithProration(
         currentSubscription.stripeSubscriptionId,
-        targetPlan,
-        userId
+        targetPlanData.stripePriceId,
+        targetPlan
       );
 
       res.json({
         success: true,
-        type: 'downgrade_scheduled',
-        currentPeriodEnd: result.current_period_end,
+        type: 'downgrade_immediate',
         targetPlan: targetPlan,
-        proratedCredit: result.proratedCredit,
-        message: 'Downgrade scheduled for end of billing period'
+        subscriptionId: result.id,
+        message: 'Subscription downgraded immediately with pro-rated credit'
       });
     } catch (error) {
-      console.error('❌ Failed to schedule downgrade:', error);
+      console.error('❌ Failed to downgrade subscription:', error);
       res.status(500).json({ 
-        message: 'Failed to schedule downgrade',
+        message: 'Failed to downgrade subscription',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -16287,10 +16328,11 @@ The Quikpik Team
         return res.status(400).json({ message: 'No active subscription found' });
       }
 
-      // Cancel subscription at period end
-      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
-        cancel_at_period_end: true
-      });
+      // Cancel subscription at period end using service method
+      const subscription = await SubscriptionService.cancelSubscription(
+        user.stripeSubscriptionId,
+        { cancelAtPeriodEnd: true }
+      );
 
       res.json({ 
         success: true, 

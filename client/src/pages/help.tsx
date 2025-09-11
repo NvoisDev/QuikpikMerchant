@@ -1193,7 +1193,7 @@ The Analytics dashboard provides insights into your business performance.
 #### Billing Cycle
 - Monthly subscriptions bill on the same date each month
 - Upgrades are pro-rated for the current period
-- Downgrades take effect at the next billing cycle
+- Downgrades take effect immediately with pro-rated credit
 
 #### Managing Subscription
 - **View Current Plan**: Check your active subscription
@@ -1203,7 +1203,7 @@ The Analytics dashboard provides insights into your business performance.
 
 #### Plan Changes
 - **Upgrading**: Immediate access to new features
-- **Downgrading**: Changes at next billing cycle
+- **Downgrading**: Changes take effect immediately with pro-rated credit
 - **Cancellation**: Account remains active until period end
 
 #### Transaction Fees

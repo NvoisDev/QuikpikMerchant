@@ -166,12 +166,10 @@ export default function SubscriptionPricing() {
       return response.json();
     },
     onSuccess: (data) => {
-      const message = data?.type === 'downgrade_scheduled'
-        ? `Your plan will be downgraded to ${targetDowngradePlan} at the end of your current billing period. You'll keep all current features until then.`
-        : `Your subscription has been successfully downgraded to ${targetDowngradePlan}.`;
+      const message = `Your subscription has been successfully downgraded to ${targetDowngradePlan}. Changes are active immediately and any unused time has been credited to your account.`;
         
       toast({
-        title: "Plan Downgrade Scheduled",
+        title: "Plan Downgraded Successfully",
         description: message,
         duration: 8000,
       });
