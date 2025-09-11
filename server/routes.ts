@@ -7254,11 +7254,11 @@ This message was sent by Quikpik Merchant Platform
   // Advanced analytics routes
   app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
     try {
-      // Check premium subscription for Business Performance access
-      if (req.user.subscriptionTier !== 'premium') {
+      // Check subscription tier for Business Performance access (Standard or Premium required)
+      if (req.user.subscriptionTier === 'free') {
         return res.status(403).json({ 
-          error: 'Premium plan required for Business Performance analytics',
-          required: 'premium'
+          error: 'Standard or Premium plan required for Business Performance analytics',
+          required: 'standard'
         });
       }
 
@@ -7350,11 +7350,11 @@ This message was sent by Quikpik Merchant Platform
 
   app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
     try {
-      // Check premium subscription for Business Performance access
-      if (req.user.subscriptionTier !== 'premium') {
+      // Check subscription tier for Business Performance access (Standard or Premium required)
+      if (req.user.subscriptionTier === 'free') {
         return res.status(403).json({ 
-          error: 'Premium plan required for Business Performance analytics',
-          required: 'premium'
+          error: 'Standard or Premium plan required for Business Performance analytics',
+          required: 'standard'
         });
       }
 
@@ -10459,11 +10459,11 @@ Return only the taglines, one per line, without numbers or formatting.`;
   // Financial Health Analysis API endpoints
   app.get('/api/financial-health', requireAuth, async (req: any, res) => {
     try {
-      // Check premium subscription for Business Performance access
-      if (req.user.subscriptionTier !== 'premium') {
+      // Check subscription tier for Business Performance access (Standard or Premium required)
+      if (req.user.subscriptionTier === 'free') {
         return res.status(403).json({ 
-          error: 'Premium plan required for Business Performance analytics',
-          required: 'premium'
+          error: 'Standard or Premium plan required for Business Performance analytics',
+          required: 'standard'
         });
       }
 
@@ -15620,11 +15620,11 @@ The Quikpik Team
   // Inventory Insights
   app.get('/api/analytics/inventory', requireAuth, async (req: any, res) => {
     try {
-      // Check premium subscription for Business Performance access
-      if (req.user.subscriptionTier !== 'premium') {
+      // Check subscription tier for Business Performance access (Standard or Premium required)
+      if (req.user.subscriptionTier === 'free') {
         return res.status(403).json({ 
-          error: 'Premium plan required for Business Performance analytics',
-          required: 'premium'
+          error: 'Standard or Premium plan required for Business Performance analytics',
+          required: 'standard'
         });
       }
 
