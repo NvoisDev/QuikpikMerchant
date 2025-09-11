@@ -27,7 +27,8 @@ import {
   Truck,
   Book,
   Contact,
-  Megaphone
+  Megaphone,
+  Badge
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -71,6 +72,7 @@ export default function Sidebar() {
 
   const isPremiumUser = subscriptionData?.user?.currentPlan === 'premium';
   const isStandardUser = subscriptionData?.user?.currentPlan === 'standard';
+  const isFreeUser = !isPremiumUser && !isStandardUser;
 
   const handleLogout = () => {
     logout();
@@ -127,7 +129,8 @@ export default function Sidebar() {
             const IconComponent = item.icon;
             const isActive = location === item.href;
             const isPremiumFeature = item.premiumOnly;
-            const isLocked = isPremiumFeature && !isPremiumUser;
+            const isLocked = isPremiumFeature && isFreeUser;
+            const showBeta = isPremiumFeature && isStandardUser;
             
             return (
               <Link key={item.name} href={isLocked ? "/subscription-pricing" : item.href}>
@@ -154,6 +157,12 @@ export default function Sidebar() {
                   </div>
                   {isLocked && (
                     <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  )}
+                  {showBeta && (
+                    <div className="flex items-center space-x-1">
+                      <Badge className="h-3 w-3 text-blue-500" />
+                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">BETA</span>
+                    </div>
                   )}
                 </div>
               </Link>
