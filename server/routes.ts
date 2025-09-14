@@ -13454,7 +13454,7 @@ The Quikpik Team
   // Password Reset Endpoints
   
   // Rate limiting store for password reset requests
-  const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number; }>>();
+  const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number; }>();
   
   // Request password reset - send email with reset token
   app.post('/api/auth/forgot-password', async (req, res) => {
