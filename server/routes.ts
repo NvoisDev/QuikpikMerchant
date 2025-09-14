@@ -4049,6 +4049,30 @@ The Quikpik Team`
         return res.status(500).json({ error: 'Failed to update order status' });
       }
 
+      // Send notification to customer about items being prepared
+      try {
+        const customer = await storage.getUser(updated.retailerId);
+        const wholesaler = await storage.getUser(updated.wholesalerId);
+        
+        if (customer && wholesaler) {
+          await orderNotificationService.sendOrderStatusUpdate({
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status: 'items_prepared',
+            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            customerPhone: customer.phoneNumber || '',
+            customerEmail: customer.email || undefined,
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            trackingNumber: updated.deliveryTrackingNumber || undefined,
+            estimatedDelivery: undefined
+          });
+          console.log(`📱 Items prepared notifications sent for order ${orderId}`);
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to send items prepared notifications:', notificationError);
+        // Don't fail the status update if notifications fail
+      }
+
       console.log(`✅ Order ${orderId} items marked as prepared`);
       res.json({ success: true, order: updated });
     } catch (error) {

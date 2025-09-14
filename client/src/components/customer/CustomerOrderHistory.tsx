@@ -106,6 +106,8 @@ const getStatusColor = (status: string) => {
       return 'bg-blue-100 text-blue-800';
     case 'processing':
       return 'bg-purple-100 text-purple-800';
+    case 'items_prepared':
+      return 'bg-green-100 text-green-800';
     case 'fulfilled':
       return 'bg-green-100 text-green-800';
     case 'cancelled':
@@ -125,6 +127,8 @@ const getStatusIcon = (status: string) => {
       return <Check className="h-3 w-3" />;
     case 'processing':
       return <Package className="h-3 w-3" />;
+    case 'items_prepared':
+      return <Check className="h-3 w-3" />;
     case 'fulfilled':
       return <ShoppingBag className="h-3 w-3" />;
     case 'ready_for_collection':

@@ -1,6 +1,6 @@
 import { storage } from "../storage";
 import { whatsAppBusinessService } from "../whatsapp-simple";
-import { ReliableSMSService } from "../sms-service";
+import { sendSMS } from "../services/smsService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
 
@@ -17,10 +17,8 @@ export interface OrderStatusNotification {
 }
 
 export class OrderNotificationService {
-  private smsService: ReliableSMSService;
-
   constructor() {
-    this.smsService = new ReliableSMSService();
+    // Service instances initialized as needed
   }
 
   /**
@@ -89,6 +87,15 @@ export class OrderNotificationService {
         };
         break;
 
+      case 'items_prepared':
+        messages.sms = `Order ${orderNumber} items prepared! ${wholesalerName} has finished picking your items and they're ready for the next step.`;
+        messages.whatsapp = `✅ *Items Prepared*\n\nOrder: ${orderNumber}\nWholesaler: ${wholesalerName}\n\nYour items have been carefully prepared and are ready for dispatch or collection.`;
+        messages.email = {
+          subject: `Order ${orderNumber} Items Prepared`,
+          body: `Great news! Your order ${orderNumber} items have been prepared by ${wholesalerName}. Your items are now ready for the next step in the fulfillment process.`
+        };
+        break;
+
       case 'ready_for_pickup':
         messages.sms = `Order ${orderNumber} is ready for pickup at ${wholesalerName}. Please collect at your convenience.`;
         messages.whatsapp = `📍 *Ready for Pickup*\n\nOrder: ${orderNumber}\nWholesaler: ${wholesalerName}\n\nYour order is ready for collection.`;
@@ -116,7 +123,7 @@ export class OrderNotificationService {
   private async sendSMSNotification(notification: OrderStatusNotification, message: string): Promise<void> {
     try {
       const formattedPhone = formatPhoneToInternational(notification.customerPhone);
-      await this.smsService.sendSMS(formattedPhone, message);
+      await sendSMS({ to: formattedPhone, message });
       console.log(`📱 SMS notification sent for order ${notification.orderNumber}`);
     } catch (error) {
       console.error(`❌ Failed to send SMS for order ${notification.orderNumber}:`, error);
@@ -128,8 +135,25 @@ export class OrderNotificationService {
    */
   private async sendWhatsAppNotification(notification: OrderStatusNotification, message: string): Promise<void> {
     try {
+      // Get the order to find the wholesaler ID
+      const order = await storage.getOrder(notification.orderId);
+      if (!order) {
+        console.log(`📱 Order ${notification.orderId} not found - skipping WhatsApp notification`);
+        return;
+      }
+
+      // Get wholesaler WhatsApp credentials
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler || !(wholesaler as any).whatsappEnabled || !(wholesaler as any).whatsappAccessToken) {
+        console.log(`📱 WhatsApp not configured for wholesaler - skipping WhatsApp notification`);
+        return;
+      }
+
       const formattedPhone = formatPhoneToInternational(notification.customerPhone);
-      await whatsAppBusinessService.sendMessage(formattedPhone, message);
+      await whatsAppBusinessService.sendMessage(formattedPhone, message, {
+        accessToken: (wholesaler as any).whatsappAccessToken,
+        phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
+      });
       console.log(`💬 WhatsApp notification sent for order ${notification.orderNumber}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp for order ${notification.orderNumber}:`, error);
