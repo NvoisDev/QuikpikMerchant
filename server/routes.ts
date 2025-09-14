@@ -7,6 +7,7 @@ import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
+import { validatePassword } from "./passwordUtils";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions } from "@shared/schema";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -129,6 +130,7 @@ import sgMail from "@sendgrid/mail";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
+import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
@@ -145,17 +147,13 @@ import { getEmailDeliveryAddress } from "./utils/address-helper";
 // Helper function to extract session ID from cookie string
 function extractSessionId(cookieString?: string): string | null {
   if (!cookieString) {
-    console.log('❌ No cookie string provided');
     return null;
   }
-  
-  console.log('🔍 Cookie string:', cookieString);
   
   // Try different cookie patterns
   let sessionMatch = cookieString.match(/connect\.sid=s%3A([^;]+)/);
   if (sessionMatch && sessionMatch[1]) {
     const decoded = decodeURIComponent(sessionMatch[1]).split('.')[0];
-    console.log('✅ Session ID extracted (encoded):', decoded);
     return decoded;
   }
   
@@ -163,11 +161,9 @@ function extractSessionId(cookieString?: string): string | null {
   sessionMatch = cookieString.match(/connect\.sid=([^;]+)/);
   if (sessionMatch && sessionMatch[1]) {
     const sessionId = sessionMatch[1].split('.')[0];
-    console.log('✅ Session ID extracted (unencoded):', sessionId);
     return sessionId;
   }
   
-  console.log('❌ No session ID found in cookies');
   return null;
 }
 
@@ -13366,14 +13362,35 @@ The Quikpik Team
         estimatedMonthlyVolume
       } = req.body;
 
+      // CRITICAL FIX: Validate required fields including password
+      if (!email || !password || !firstName || !lastName) {
+        return res.status(400).json({ 
+          message: "Email, password, first name, and last name are required",
+          field: "validation"
+        });
+      }
+
+      // CRITICAL FIX: Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isStrong) {
+        return res.status(400).json({ 
+          message: "Password does not meet security requirements",
+          field: "password",
+          errors: passwordValidation.messages
+        });
+      }
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: "An account with this email already exists" });
+        return res.status(400).json({ 
+          message: "An account with this email already exists",
+          field: "email"
+        });
       }
 
       // Create the business address string
-      const businessAddress = `${streetAddress}, ${city}, ${state} ${postalCode}, ${country}`;
+      const businessAddress = streetAddress && city ? `${streetAddress}, ${city}, ${state} ${postalCode}, ${country}` : '';
 
       // Create user account with generated ID
       const userId = `signup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -13400,28 +13417,10 @@ The Quikpik Team
         productLimit: 3
       };
 
-      // Create user account
-      const newUser = await storage.createUser({
-        id: userId,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        role: 'wholesaler',
-        businessName: businessName,
-        businessDescription: businessDescription,
-        businessPhone: businessPhone,
-        businessEmail: businessEmail,
-        businessAddress: businessAddress,
-        preferredCurrency: defaultCurrency,
-        defaultCurrency: defaultCurrency,
-        businessType: businessType,
-        estimatedMonthlyVolume: estimatedMonthlyVolume,
-        onboardingCompleted: false,
-        onboardingStep: 0,
-        onboardingSkipped: false,
-        isFirstLogin: true,
-        productLimit: 3
-      } as any);
+      // CRITICAL FIX: Use createUserWithPassword to hash and store password
+      const newUser = await storage.createUserWithPassword(userData, password);
+      
+      console.log(`✅ New user account created with secure password for ${email}`);
 
       // Create session for the new user
       (req.session as any).user = {
@@ -13449,6 +13448,169 @@ The Quikpik Team
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account. Please try again." });
+    }
+  });
+
+  // Password Reset Endpoints
+  
+  // Rate limiting store for password reset requests
+  const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number; }>>();
+  
+  // Request password reset - send email with reset token
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      // Rate limiting: 5 attempts per email per hour, 10 attempts per IP per hour
+      const now = Date.now();
+      const emailKey = `email:${email}`;
+      const ipKey = `ip:${clientIP}`;
+      
+      // Check email rate limit
+      const emailAttempts = passwordResetAttempts.get(emailKey);
+      if (emailAttempts) {
+        // Reset counter if last attempt was more than 1 hour ago
+        if (now - emailAttempts.lastAttempt > 3600000) {
+          emailAttempts.count = 0;
+        }
+        if (emailAttempts.count >= 5) {
+          return res.status(429).json({ 
+            error: "Too many password reset requests for this email. Please try again later." 
+          });
+        }
+      }
+      
+      // Check IP rate limit
+      const ipAttempts = passwordResetAttempts.get(ipKey);
+      if (ipAttempts) {
+        if (now - ipAttempts.lastAttempt > 3600000) {
+          ipAttempts.count = 0;
+        }
+        if (ipAttempts.count >= 10) {
+          return res.status(429).json({ 
+            error: "Too many password reset requests from this IP. Please try again later." 
+          });
+        }
+      }
+      
+      // Update rate limiting counters
+      passwordResetAttempts.set(emailKey, {
+        count: (emailAttempts?.count || 0) + 1,
+        lastAttempt: now
+      });
+      passwordResetAttempts.set(ipKey, {
+        count: (ipAttempts?.count || 0) + 1,
+        lastAttempt: now
+      });
+      
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Don't reveal if email exists - always return success for security
+        return res.json({ 
+          success: true, 
+          message: "If an account with that email exists, we've sent a password reset link." 
+        });
+      }
+      
+      // Generate reset token and expiration
+      const { token, hashedToken } = generateResetToken();
+      const expiresAt = createResetExpiration();
+      
+      // Store HASHED token in database for security
+      await storage.setPasswordResetToken(email, hashedToken, expiresAt);
+      
+      // Send password reset email with PLAIN token
+      await sendPasswordResetEmail(email, token, user.firstName);
+      
+      console.log(`🔐 Password reset email sent to ${email}`);
+      
+      res.json({ 
+        success: true, 
+        message: "If an account with that email exists, we've sent a password reset link." 
+      });
+      
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      res.status(500).json({ error: "Failed to process password reset request" });
+    }
+  });
+  
+  // Validate reset token
+  app.get('/api/auth/reset-password/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Reset token is required" });
+      }
+      
+      // Hash the token for database comparison
+      const hashedToken = hashResetToken(token);
+      
+      // Validate hashed token
+      const user = await storage.validatePasswordResetToken(hashedToken);
+      
+      if (!user) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Valid reset token",
+        email: user.email // Safe to return email for form pre-filling
+      });
+      
+    } catch (error) {
+      console.error('Password reset token validation error:', error);
+      res.status(500).json({ error: "Failed to validate reset token" });
+    }
+  });
+  
+  // Reset password with token
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ error: "Token and new password are required" });
+      }
+      
+      // Validate password strength
+      const validation = validatePassword(password);
+      if (!validation.isStrong) {
+        return res.status(400).json({ 
+          error: "Password does not meet security requirements",
+          messages: validation.messages 
+        });
+      }
+      
+      // Hash the token for database comparison
+      const hashedToken = hashResetToken(token);
+      
+      // Reset password with hashed token
+      const user = await storage.resetPasswordWithToken(hashedToken, password);
+      
+      if (!user) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+      
+      console.log(`🔐 Password successfully reset for ${user.email}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Password has been reset successfully. You can now log in with your new password." 
+      });
+      
+    } catch (error) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 

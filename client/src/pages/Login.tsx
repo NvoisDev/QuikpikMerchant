@@ -259,7 +259,16 @@ export default function Login() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="business-password">Password</Label>
+                      <div className="flex justify-between items-center">
+                        <Label htmlFor="business-password">Password</Label>
+                        <Link 
+                          href="/forgot-password" 
+                          className="text-sm text-primary hover:underline"
+                          data-testid="business-forgot-password-link"
+                        >
+                          Forgot Password?
+                        </Link>
+                      </div>
                       <Input
                         id="business-password"
                         type="password"
@@ -267,6 +276,7 @@ export default function Login() {
                         value={businessOwnerLogin.password}
                         onChange={(e) => setBusinessOwnerLogin({...businessOwnerLogin, password: e.target.value})}
                         required
+                        data-testid="business-password-input"
                       />
                     </div>
                     <Button
@@ -310,7 +320,16 @@ export default function Login() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="password">Password</Label>
+                      <Link 
+                        href="/forgot-password" 
+                        className="text-sm text-primary hover:underline"
+                        data-testid="team-forgot-password-link"
+                      >
+                        Forgot Password?
+                      </Link>
+                    </div>
                     <Input
                       id="password"
                       type="password"
@@ -318,6 +337,7 @@ export default function Login() {
                       value={teamMemberLogin.password}
                       onChange={(e) => setTeamMemberLogin({...teamMemberLogin, password: e.target.value})}
                       required
+                      data-testid="team-password-input"
                     />
                   </div>
                   <Button

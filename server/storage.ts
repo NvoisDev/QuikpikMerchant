@@ -92,6 +92,11 @@ export interface IStorage {
   authenticateUser(email: string, password: string): Promise<User | null>;
   updateUserPassword(id: string, newPassword: string): Promise<User>;
   
+  // Password reset methods
+  setPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<User | null>;
+  validatePasswordResetToken(token: string): Promise<User | null>;
+  resetPasswordWithToken(token: string, newPassword: string): Promise<User | null>;
+  
   // Product operations
   getProducts(wholesalerId?: string): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
@@ -125,7 +130,7 @@ export interface IStorage {
     shippingStatus?: string;
     deliveryCarrier?: string;
     deliveryServiceId?: string;
-    shippingTotal?: number;
+    shippingTotal?: string;
     deliveryTrackingNumber?: string;
   }): Promise<Order>;
   
@@ -156,7 +161,7 @@ export interface IStorage {
     businessName?: string;
   }): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
-  deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }>;
+  deleteCustomer(customerId: string, wholesalerId?: string): Promise<{ success: boolean; archived?: boolean; message: string }>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
   getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; storeTagline?: string; location?: string; rating?: number }[]>;
@@ -527,6 +532,61 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Password reset methods
+  async setPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<User | null> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        passwordResetToken: token,
+        passwordResetExpires: expiresAt,
+        updatedAt: new Date()
+      })
+      .where(eq(users.email, email))
+      .returning();
+    
+    return user || null;
+  }
+
+  async validatePasswordResetToken(token: string): Promise<User | null> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.passwordResetToken, token),
+          sql`${users.passwordResetExpires} > NOW()`
+        )
+      );
+    
+    return user || null;
+  }
+
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<User | null> {
+    // First validate the token
+    const user = await this.validatePasswordResetToken(token);
+    
+    if (!user) {
+      return null;
+    }
+    
+    // Hash the new password
+    const passwordHash = await hashPassword(newPassword);
+    
+    // Update password and clear reset token
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+    
+    return updatedUser;
+  }
+
   async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User> {
     const [user] = await db
       .update(users)
@@ -596,6 +656,8 @@ export class DatabaseStorage implements IStorage {
           price_visible, negotiation_enabled, minimum_bid_price,
           pack_quantity, unit_of_measure, size_per_unit, currency,
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+          base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
+          unit, unit_format, pallet_weight, unit_weight,
           created_at, updated_at
         FROM products 
         WHERE wholesaler_id = ${wholesalerId} 
@@ -630,23 +692,25 @@ export class DatabaseStorage implements IStorage {
         priceVisible: Boolean(row.price_visible !== false),
         negotiationEnabled: Boolean(row.negotiation_enabled),
         minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
-        editCount: 0,
+        editCount: Number(row.edit_count || 0),
         sellingFormat: String(row.selling_format || 'units'),
         palletPrice: row.pallet_price ? String(row.pallet_price) : null,
         palletMoq: row.pallet_moq ? Number(row.pallet_moq) : null,
         palletStock: row.pallet_stock ? Number(row.pallet_stock) : null,
         unitsPerPallet: row.units_per_pallet ? Number(row.units_per_pallet) : null,
-        palletWeight: null,
-        unitWeight: null,
+        palletWeight: row.pallet_weight ? String(row.pallet_weight) : null,
+        unitWeight: row.unit_weight ? String(row.unit_weight) : null,
         unit_weight: null,
         pallet_weight: null,
-        deliveryExcluded: false,
+        deliveryExcluded: Boolean(row.delivery_excluded),
         lowStockThreshold: Number(row.low_stock_threshold || 50),
-        unit: 'units',
-        unitFormat: null,
+        unit: String(row.unit || 'units'),
+        unitFormat: row.unit_format ? String(row.unit_format) : null,
         packQuantity: row.pack_quantity ? Number(row.pack_quantity) : null,
         unitOfMeasure: row.unit_of_measure ? String(row.unit_of_measure) : null,
         sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
+        baseUnitStock: Number(row.base_unit_stock || 0),
+        quantityInPack: Number(row.quantity_in_pack || 1),
         totalPackageWeight: null,
         individualUnitWeight: null,
         packageDimensions: {},

@@ -214,6 +214,10 @@ export const users = pgTable("users", {
   // Password field for team members
   passwordHash: varchar("password_hash"),
   
+  // Password reset fields
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+  
   // Parcel2Go Integration for automatic delivery payments
   parcel2GoCredentials: jsonb("parcel2go_credentials").$type<{
     clientId: string;

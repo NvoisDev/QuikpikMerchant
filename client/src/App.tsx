@@ -11,6 +11,8 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
 import CustomerLogin from "@/pages/CustomerLogin";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import WholesalerDashboard from "@/pages/wholesaler-dashboard";
 import ProductManagement from "@/pages/product-management";
 import RetailerInterface from "@/pages/retailer-interface";
@@ -70,6 +72,8 @@ function PublicRoutes() {
       <Route path="/signup" component={Signup} />
       <Route path="/signup-complete" component={SignupComplete} />
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/advertising-preview" component={AdvertisingPreview} />
       <Route path="/auth-success" component={AuthSuccess} />
@@ -160,7 +164,7 @@ function Router() {
   }
   
   // Check if current route is public (doesn't need authentication)
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview', '/forgot-password', '/reset-password'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 

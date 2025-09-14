@@ -12,13 +12,23 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, User, Building, Mail, Phone, MapPin, LogIn, Loader2 } from "lucide-react";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 
 const signupSchema = z.object({
   // Personal Information (Required)
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Valid email is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/\d/, "Password must contain at least one number")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character")
+    .refine((password) => {
+      const commonPatterns = ['password', '123456', 'qwerty', 'admin', 'welcome'];
+      return !commonPatterns.some(pattern => password.toLowerCase().includes(pattern));
+    }, "Password cannot contain common patterns"),
   confirmPassword: z.string(),
   
   // Business Information (Optional)
@@ -381,7 +391,12 @@ export default function Signup() {
                             <FormItem>
                               <FormLabel>Password *</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="At least 6 characters" {...field} />
+                                <PasswordStrengthIndicator
+                                  password={field.value}
+                                  onPasswordChange={field.onChange}
+                                  placeholder="Create a strong password"
+                                  data-testid="signup-password"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -395,7 +410,13 @@ export default function Signup() {
                             <FormItem>
                               <FormLabel>Confirm Password *</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="Re-enter password" {...field} />
+                                <PasswordStrengthIndicator
+                                  password={field.value}
+                                  onPasswordChange={field.onChange}
+                                  placeholder="Re-enter your password"
+                                  showStrength={false}
+                                  data-testid="signup-confirm-password"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
