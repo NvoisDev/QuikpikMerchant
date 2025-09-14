@@ -151,7 +151,6 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `<p><strong>Shipping:</strong> £${data.shippingTotal}</p>` : ''}
 
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #f59e0b;">
-            <p style="font-size: 18px;"><strong>Total Paid by Customer:</strong> <span style="color: #d97706; font-weight: bold;">£${data.total}</span></p>
             <div style="margin-top: 15px; padding: 15px; background-color: rgba(16, 185, 129, 0.1); border-radius: 6px; border-left: 4px solid #10b981;">
                 <h3 style="margin: 0 0 8px 0; color: #059669;">💰 Your Earnings</h3>
                 <p><strong>Platform Fee (3.3%):</strong> -£${data.wholesalerPlatformFee || data.platformFee || '0.00'}</p>
@@ -209,7 +208,6 @@ ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} ${item
 💰 PAYMENT BREAKDOWN
 Product Subtotal: £${data.subtotal}
 ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}` : ''}
-Total Paid by Customer: £${data.total}
 
 💰 YOUR EARNINGS
 Platform Fee (3.3%): £${data.wholesalerPlatformFee || data.platformFee || '0.00'} (deducted)
