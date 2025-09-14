@@ -1010,8 +1010,8 @@ export default function Customers() {
                       <FormItem>
                         <FormLabel>Customer Group (Optional)</FormLabel>
                         <Select 
-                          onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
-                          value={field.value ? field.value.toString() : undefined}
+                          onValueChange={(value) => field.onChange(value && value !== "no-group" ? parseInt(value) : undefined)}
+                          value={field.value ? field.value.toString() : "no-group"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -1019,7 +1019,7 @@ export default function Customers() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No group - Add to directory only</SelectItem>
+                            <SelectItem value="no-group">No group - Add to directory only</SelectItem>
                             {customerGroups.map((group) => (
                               <SelectItem key={group.id} value={group.id.toString()}>
                                 {group.name}
