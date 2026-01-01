@@ -32,7 +32,7 @@ export function registerWebhookRoutes(app: Express) {
         if (userId && tier) {
           console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
           
           await storage.updateUser(userId, {
             subscriptionTier: tier,
@@ -72,7 +72,7 @@ export function registerWebhookRoutes(app: Express) {
         if (userId && tier) {
           console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
           
           await storage.updateUser(userId, {
             subscriptionTier: tier,

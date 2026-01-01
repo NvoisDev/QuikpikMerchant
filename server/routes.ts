@@ -1187,7 +1187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (userId && tier) {
           console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
           
           await storage.updateUser(userId, {
             currentPlan: tier,
@@ -13414,7 +13414,7 @@ The Quikpik Team
         onboardingStep: 0,
         onboardingSkipped: false,
         isFirstLogin: true,
-        productLimit: 3
+        productLimit: 10
       };
 
       // CRITICAL FIX: Use createUserWithPassword to hash and store password

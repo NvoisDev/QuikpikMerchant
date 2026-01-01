@@ -2582,7 +2582,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.wholesalerId, userId));
 
     const currentCount = currentProducts.length;
-    const limit = user.productLimit || 3;
+    const limit = user.productLimit || 10;
     const tier = user.subscriptionTier || 'free';
 
     return {
