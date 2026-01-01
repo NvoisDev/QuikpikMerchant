@@ -133,8 +133,11 @@ export const users = pgTable("users", {
   // Subscription fields - Clean implementation driven by Stripe webhooks only
   subscriptionStatus: varchar("subscription_status").default("free"), // 'free', 'active', 'canceled', 'past_due', 'incomplete' - Updated via webhooks only
   currentPlan: varchar("current_plan").default("free"), // 'free', 'standard', 'premium' - Updated via webhooks only
+  subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'standard', 'premium' - Tier for feature gating
+  productLimit: integer("product_limit").default(10), // Product limit based on plan: Free=10, Standard=50, Premium=-1 (unlimited)
   subscriptionPeriodStart: timestamp("subscription_period_start"), // Current period start date
   subscriptionPeriodEnd: timestamp("subscription_period_end"), // Current period end date
+  subscriptionEndsAt: timestamp("subscription_ends_at"), // When current subscription expires
   
   // WhatsApp Integration - Simple Setup
   // WhatsApp Business API credentials (user's own)
