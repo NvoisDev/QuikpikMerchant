@@ -4459,7 +4459,15 @@ export default function CustomerPortal() {
                           <span>Pickup from store</span>
                           <span className="text-green-600 font-medium">FREE</span>
                         </div>
-                        <p className="text-sm text-gray-600">Collect your order from our location</p>
+                        <p className="text-sm text-gray-600">
+                          {wholesaler?.pickupAddress || wholesaler?.businessAddress || 
+                           (wholesaler?.streetAddress && wholesaler?.city 
+                             ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
+                             : 'Collect your order from our location')}
+                        </p>
+                        {wholesaler?.pickupInstructions && (
+                          <p className="text-xs text-gray-500 mt-1">{wholesaler.pickupInstructions}</p>
+                        )}
                       </Label>
                     </div>
                     <div className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-colors ${customerData.shippingOption === 'delivery' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
