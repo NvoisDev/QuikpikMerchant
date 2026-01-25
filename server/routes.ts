@@ -129,6 +129,7 @@ import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, req
 import sgMail from "@sendgrid/mail";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
+import { sendSMS } from "./services/smsService";
 import { sendEmail } from "./sendgrid-service";
 import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
@@ -3888,9 +3889,9 @@ The Quikpik Team`
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      // Check if order items are prepared first
-      if (order.status !== 'items_prepared') {
-        return res.status(400).json({ error: 'Order items must be prepared first before marking as ready' });
+      // Allow transition from 'paid' or 'items_prepared' status directly to ready_for_collection
+      if (order.status !== 'paid' && order.status !== 'items_prepared') {
+        return res.status(400).json({ error: `Order must be in 'paid' status to mark as ready. Current status: ${order.status}` });
       }
 
       // Check if already marked as ready
@@ -3937,6 +3938,40 @@ The Quikpik Team`
       } catch (emailError) {
         console.error('❌ Failed to send ready for collection email:', emailError);
         // Don't fail the API call if email fails
+      }
+
+      // Send SMS notification to customer
+      try {
+        const customer = await storage.getUser(updated.retailerId);
+        const wholesaler = await storage.getUser(updated.wholesalerId);
+        
+        if (customer && wholesaler && customer.phoneNumber) {
+          const actionType = updated.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
+          const collectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress || 
+            (wholesaler.streetAddress && wholesaler.city 
+              ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
+              : '');
+          
+          const smsMessage = actionType === 'collection'
+            ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
+            : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
+          
+          const smsSent = await sendSMS({
+            to: customer.phoneNumber,
+            message: smsMessage
+          });
+          
+          if (smsSent) {
+            console.log(`📱 Ready for ${actionType} SMS sent to ${customer.phoneNumber}`);
+          } else {
+            console.log(`⚠️ SMS not sent (Twilio not configured or failed)`);
+          }
+        } else {
+          console.log(`⚠️ No phone number available for customer ${updated.retailerId}`);
+        }
+      } catch (smsError) {
+        console.error('❌ Failed to send ready for collection SMS:', smsError);
+        // Don't fail the API call if SMS fails
       }
 
       console.log(`✅ Order ${orderId} marked as ready for collection`);
