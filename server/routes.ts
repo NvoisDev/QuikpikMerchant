@@ -3873,29 +3873,49 @@ The Quikpik Team`
   app.put('/api/orders/:id/ready-for-collection', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
+      console.log(`📦 Ready for collection request for order ID: ${orderId}`);
+      
       if (isNaN(orderId)) {
+        console.log(`❌ Invalid order ID: ${req.params.id}`);
         return res.status(400).json({ error: 'Invalid order ID' });
       }
 
-      // Get order details first to validate it's a pickup order
+      // Get order directly by ID for efficiency
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const orders = await storage.getOrders(wholesalerId, undefined, undefined);
-      const order = orders.find(o => o.id === orderId);
+      console.log(`🔍 Looking up order ${orderId} for wholesaler ${wholesalerId}`);
+      
+      // Fetch order directly from database
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
 
       if (!order) {
+        console.log(`❌ Order ${orderId} not found in database`);
         return res.status(404).json({ error: 'Order not found' });
+      }
+
+      console.log(`📋 Order found: ${order.orderNumber}, status: ${order.status}, wholesaler: ${order.wholesalerId}`);
+
+      // Verify the order belongs to this wholesaler
+      if (order.wholesalerId !== wholesalerId) {
+        console.log(`❌ Order ${orderId} belongs to ${order.wholesalerId}, not ${wholesalerId}`);
+        return res.status(403).json({ error: 'You do not have permission to modify this order' });
       }
 
       // Allow transition from 'paid' or 'items_prepared' status directly to ready_for_collection
       if (order.status !== 'paid' && order.status !== 'items_prepared') {
+        console.log(`❌ Order status is ${order.status}, not 'paid' or 'items_prepared'`);
         return res.status(400).json({ error: `Order must be in 'paid' status to mark as ready. Current status: ${order.status}` });
       }
 
       // Check if already marked as ready
       if (order.readyToCollectAt) {
+        console.log(`❌ Order ${orderId} already marked as ready at ${order.readyToCollectAt}`);
         return res.status(400).json({ error: 'Order is already marked as ready for collection' });
       }
 
