@@ -506,37 +506,33 @@ export default function OrdersFresh() {
     return labels[status] || status;
   };
 
-  // Get timeline steps based on order type and status
+  // Get timeline steps based on order type and status - simplified 3-step flow
   const getTimelineSteps = (order: Order) => {
     const isPickup = order.fulfillmentType === 'pickup';
     
     return [
       {
         id: 'payment_received',
-        title: 'Order Received',
+        title: 'Customer Payment Received',
         description: 'Payment successfully processed',
-        completed: ['paid', 'items_prepared', 'ready_for_collection', 'fulfilled'].includes(order.status)
-      },
-      {
-        id: 'items_prepared', 
-        title: 'Order Items Prepared',
-        description: 'Items have been prepared and packaged',
-        completed: ['items_prepared', 'ready_for_collection', 'fulfilled'].includes(order.status),
-        current: order.status === 'paid'
+        completed: ['paid', 'ready_for_collection', 'fulfilled'].includes(order.status),
+        timestamp: (order as any).paidAt
       },
       {
         id: 'ready_for_collection',
         title: isPickup ? 'Ready for Collection' : 'Ready for Delivery',
-        description: isPickup ? 'Customer notified order is ready to collect' : 'Order packaged and ready for delivery',
+        description: isPickup ? 'Customer notified - order ready to collect' : 'Order packaged and ready for delivery',
         completed: ['ready_for_collection', 'fulfilled'].includes(order.status),
-        current: order.status === 'items_prepared'
+        current: order.status === 'paid',
+        timestamp: (order as any).readyToCollectAt
       },
       {
         id: 'fulfilled',
-        title: 'Order Fulfilled',
+        title: isPickup ? 'Collected' : 'Delivered',
         description: isPickup ? 'Customer has collected the order' : 'Order has been delivered',
         completed: order.status === 'fulfilled',
-        current: order.status === 'ready_for_collection'
+        current: order.status === 'ready_for_collection',
+        timestamp: (order as any).fulfilledAt
       }
     ];
   };

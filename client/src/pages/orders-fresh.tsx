@@ -990,70 +990,52 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Order Timeline */}
+              {/* Order Timeline - Simplified 3-step flow */}
               <div>
                 <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
                 <div className="space-y-2">
+                  {/* Step 1: Customer Payment Received */}
                   <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <div>
-                      <div className="text-xs font-medium">Customer payment received</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                    <div>
-                      <div className="text-xs font-medium">Order notification received</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                    <div>
-                      <div className="text-xs font-medium">Customer confirmation sent</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  {selectedOrder.status !== 'fulfilled' && (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Prepare order items</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Package for {selectedOrder.fulfillmentType === 'delivery' ? 'delivery' : 'collection'}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Mark as fulfilled when ready</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {selectedOrder.status === 'fulfilled' && (
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                      <div>
-                        <div className="text-xs font-medium">Order fulfilled by you</div>
+                      <div className={`text-xs ${['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'font-medium' : 'text-gray-500'}`}>Customer payment received</div>
+                      {['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) && (
                         <div className="text-xs text-gray-500">
-                          {selectedOrder.fulfillmentType === 'delivery' ? 'Ready for delivery' : 'Ready for customer collection'}
+                          {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                         </div>
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Step 2: Ready for Collection/Delivery */}
+                  <div className="flex items-start gap-2">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${['ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <div>
+                      <div className={`text-xs ${['ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'font-medium' : 'text-gray-500'}`}>
+                        {selectedOrder.fulfillmentType === 'pickup' ? 'Ready for Collection' : 'Ready for Delivery'}
+                      </div>
+                      {(selectedOrder as any).readyToCollectAt && (
+                        <div className="text-xs text-gray-500">
+                          {new Date((selectedOrder as any).readyToCollectAt).toLocaleDateString()} at {new Date((selectedOrder as any).readyToCollectAt).toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Step 3: Collected/Delivered */}
+                  <div className="flex items-start gap-2">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${selectedOrder.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <div>
+                      <div className={`text-xs ${selectedOrder.status === 'fulfilled' ? 'font-medium' : 'text-gray-500'}`}>
+                        {selectedOrder.fulfillmentType === 'pickup' ? 'Collected' : 'Delivered'}
+                      </div>
+                      {selectedOrder.status === 'fulfilled' && (selectedOrder as any).fulfilledAt && (
+                        <div className="text-xs text-gray-500">
+                          {new Date((selectedOrder as any).fulfilledAt).toLocaleDateString()} at {new Date((selectedOrder as any).fulfilledAt).toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
