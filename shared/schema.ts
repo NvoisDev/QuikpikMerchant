@@ -545,6 +545,12 @@ export const orders = pgTable("orders", {
   quoteSentAt: timestamp("quote_sent_at"), // When the quote was sent to customer
   quoteSentVia: varchar("quote_sent_via"), // 'sms' | 'email' | 'whatsapp'
   
+  // Deposit payment feature
+  depositPercentage: integer("deposit_percentage").default(100), // 25, 50, 75, or 100 for full payment
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0.00"), // Amount customer has paid
+  amountOutstanding: decimal("amount_outstanding", { precision: 10, scale: 2 }).default("0.00"), // Remaining balance
+  paymentStatus: varchar("payment_status").default("unpaid"), // 'unpaid' | 'part_paid' | 'paid'
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

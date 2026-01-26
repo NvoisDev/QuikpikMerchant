@@ -16206,6 +16206,44 @@ The Quikpik Team
             await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
             console.log('✅ Subscription created from checkout:', subscription.id);
           }
+          
+          // Handle quote payment (deposit or full payment)
+          if (session.metadata?.isQuote === 'true' && session.metadata?.orderId) {
+            const orderId = parseInt(session.metadata.orderId);
+            const depositPercentage = parseInt(session.metadata.depositPercentage || '100');
+            const depositAmount = parseFloat(session.metadata.depositAmount || '0');
+            const totalAmount = parseFloat(session.metadata.totalAmount || '0');
+            const amountPaid = session.amount_total ? session.amount_total / 100 : depositAmount;
+            
+            console.log('💰 Quote payment received:', { orderId, depositPercentage, amountPaid, totalAmount });
+            
+            // Get existing order to calculate cumulative payment
+            const existingOrder = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+            const previouslyPaid = existingOrder[0] ? parseFloat(existingOrder[0].amountPaid || '0') : 0;
+            const totalPaidNow = previouslyPaid + amountPaid;
+            
+            // Calculate payment status and outstanding amount
+            const amountOutstanding = totalAmount - totalPaidNow;
+            const paymentStatus = amountOutstanding <= 0 ? 'paid' : 'part_paid';
+            
+            // Only set order status to 'paid' when fully paid, otherwise keep as 'pending'
+            const orderStatus = amountOutstanding <= 0 ? 'paid' : 'pending';
+            
+            // Update the order with payment info
+            // Only clear the payment link - user can generate a new one for remaining balance via UI
+            await db.update(orders)
+              .set({
+                amountPaid: totalPaidNow.toFixed(2),
+                amountOutstanding: amountOutstanding > 0 ? amountOutstanding.toFixed(2) : '0.00',
+                paymentStatus: paymentStatus,
+                status: orderStatus,
+                stripePaymentLinkUrl: null, // Clear old link - user generates new one for remaining balance
+                stripePaymentLinkId: null,
+              })
+              .where(eq(orders.id, orderId));
+            
+            console.log(`✅ Quote order ${orderId} updated: paid=${totalPaidNow}, outstanding=${amountOutstanding}, paymentStatus=${paymentStatus}, orderStatus=${orderStatus}`);
+          }
           break;
         }
 
@@ -16614,9 +16652,9 @@ The Quikpik Team
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100 } = req.body;
       
-      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia });
+      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
@@ -16641,6 +16679,11 @@ The Quikpik Team
       const platformFee = subtotal * 0.033; // 3.3% platform fee
       const total = subtotal;
 
+      // Calculate deposit amount
+      const validDepositPercentage = [25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
+      const depositAmount = total * (validDepositPercentage / 100);
+      const outstandingAmount = total - depositAmount;
+
       // Generate order number
       const existingOrders = await storage.getOrders(wholesalerId, undefined, undefined);
       const orderCount = existingOrders.length + 1;
@@ -16662,6 +16705,10 @@ The Quikpik Team
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',
+        depositPercentage: validDepositPercentage,
+        amountPaid: '0.00',
+        amountOutstanding: total.toFixed(2),
+        paymentStatus: 'unpaid',
       }).returning();
 
       // Create order items with custom prices
@@ -16682,17 +16729,30 @@ The Quikpik Team
       
       if (stripe) {
         try {
-          // Create line items for Stripe
-          const lineItems = items.map((item: any) => ({
-            price_data: {
-              currency: 'gbp',
-              product_data: {
-                name: item.productName,
-              },
-              unit_amount: Math.round(item.customPrice * 100), // Convert to pence
-            },
-            quantity: item.quantity,
-          }));
+          // Create line items for Stripe - for deposits, create a single line item for the deposit amount
+          const isDeposit = validDepositPercentage < 100;
+          const lineItems = isDeposit 
+            ? [{
+                price_data: {
+                  currency: 'gbp',
+                  product_data: {
+                    name: `Deposit (${validDepositPercentage}%) - Order ${orderNumber}`,
+                    description: `Deposit payment for quote. Full order: £${total.toFixed(2)}. Remaining: £${outstandingAmount.toFixed(2)}`,
+                  },
+                  unit_amount: Math.round(depositAmount * 100), // Convert to pence
+                },
+                quantity: 1,
+              }]
+            : items.map((item: any) => ({
+                price_data: {
+                  currency: 'gbp',
+                  product_data: {
+                    name: item.productName,
+                  },
+                  unit_amount: Math.round(item.customPrice * 100), // Convert to pence
+                },
+                quantity: item.quantity,
+              }));
 
           // Create a Stripe Checkout Session with a payment link
           const session = await stripe.checkout.sessions.create({
@@ -16707,6 +16767,9 @@ The Quikpik Team
               wholesalerId,
               customerId,
               isQuote: 'true',
+              depositPercentage: validDepositPercentage.toString(),
+              depositAmount: depositAmount.toFixed(2),
+              totalAmount: total.toFixed(2),
             },
             customer_email: customer.email || undefined,
             expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
@@ -16732,7 +16795,10 @@ The Quikpik Team
 
       // Send notification based on sendVia method
       if (sendVia !== 'link' && paymentLinkUrl) {
-        const message = `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`;
+        const isDeposit = validDepositPercentage < 100;
+        const message = isDeposit 
+          ? `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`
+          : `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`;
         
         if (sendVia === 'sms' && customer.phoneNumber) {
           try {
@@ -16789,6 +16855,99 @@ The Quikpik Team
     } catch (error) {
       console.error('❌ Error creating quote:', error);
       res.status(500).json({ error: 'Failed to create quote' });
+    }
+  });
+
+  // =====================================================
+  // GENERATE REMAINING BALANCE PAYMENT LINK
+  // =====================================================
+  app.post('/api/orders/:orderId/generate-balance-link', requireAuth, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+
+      // Get the order
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify the order belongs to this wholesaler
+      if (order.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const amountOutstanding = parseFloat(order.amountOutstanding || '0');
+      if (amountOutstanding <= 0) {
+        return res.status(400).json({ error: 'No outstanding balance on this order' });
+      }
+
+      // Get customer details
+      const customer = await storage.getUser(order.retailerId);
+      const wholesaler = await storage.getUser(wholesalerId);
+
+      if (!stripe) {
+        return res.status(500).json({ error: 'Payment service not available' });
+      }
+
+      // Create Stripe checkout session for remaining balance
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: `Remaining Balance - Order ${order.orderNumber}`,
+              description: `Payment for remaining balance. Original order total: £${order.total}`,
+            },
+            unit_amount: Math.round(amountOutstanding * 100),
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/customer/payment-success?order=${order.orderNumber}`,
+        cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/store/${wholesalerId}`,
+        metadata: {
+          orderId: orderId.toString(),
+          orderNumber: order.orderNumber || '',
+          wholesalerId,
+          customerId: order.retailerId,
+          isQuote: 'true',
+          isBalancePayment: 'true',
+          depositPercentage: '100',
+          depositAmount: amountOutstanding.toFixed(2),
+          totalAmount: order.total || '0',
+        },
+        customer_email: customer?.email || undefined,
+        expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+      });
+
+      // Update order with new payment link
+      await db.update(orders)
+        .set({
+          stripePaymentLinkId: session.id,
+          stripePaymentLinkUrl: session.url || '',
+          quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+        .where(eq(orders.id, orderId));
+
+      console.log(`✅ Balance payment link generated for order ${order.orderNumber}: ${session.url}`);
+
+      // Get the updated order to return
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+
+      res.json({
+        success: true,
+        paymentLink: session.url,
+        amount: amountOutstanding.toFixed(2),
+        order: updatedOrder,
+      });
+
+    } catch (error) {
+      console.error('❌ Error generating balance payment link:', error);
+      res.status(500).json({ error: 'Failed to generate payment link' });
     }
   });
 

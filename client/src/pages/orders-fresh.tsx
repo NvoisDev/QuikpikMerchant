@@ -48,6 +48,12 @@ interface Order {
     uploadedAt: string;
     description?: string;
   }>;
+  isQuote?: boolean;
+  depositPercentage?: number;
+  amountPaid?: string;
+  amountOutstanding?: string;
+  paymentStatus?: string;
+  stripePaymentLinkUrl?: string;
 }
 
 interface OrderItem {
@@ -430,6 +436,24 @@ export default function OrdersFresh() {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
+  const getPaymentStatusColor = (paymentStatus: string) => {
+    const colors: Record<string, string> = {
+      unpaid: "bg-red-100 text-red-800",
+      part_paid: "bg-amber-100 text-amber-800",
+      paid: "bg-green-100 text-green-800"
+    };
+    return colors[paymentStatus] || "bg-gray-100 text-gray-800";
+  };
+
+  const getPaymentStatusLabel = (paymentStatus: string) => {
+    const labels: Record<string, string> = {
+      unpaid: "Unpaid",
+      part_paid: "Part Paid",
+      paid: "Paid"
+    };
+    return labels[paymentStatus] || paymentStatus;
+  };
+
   // Calculate amounts after platform fee using actual database platform fees
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
@@ -644,10 +668,21 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        <div className="flex gap-1">
-                          <Badge className={getStatusColor(order.status) + " text-xs"}>
-                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                          </Badge>
+                        <div className="flex gap-1 flex-wrap">
+                          {order.isQuote && order.paymentStatus ? (
+                            <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
+                              {getPaymentStatusLabel(order.paymentStatus)}
+                            </Badge>
+                          ) : (
+                            <Badge className={getStatusColor(order.status) + " text-xs"}>
+                              {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                            </Badge>
+                          )}
+                          {order.isQuote && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              Quote
+                            </Badge>
+                          )}
                           {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
@@ -717,9 +752,20 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge className={getStatusColor(order.status) + " text-xs"}>
-                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                        </Badge>
+                        {order.isQuote && order.paymentStatus ? (
+                          <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
+                            {getPaymentStatusLabel(order.paymentStatus)}
+                          </Badge>
+                        ) : (
+                          <Badge className={getStatusColor(order.status) + " text-xs"}>
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                          </Badge>
+                        )}
+                        {order.isQuote && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                            Quote
+                          </Badge>
+                        )}
                         {order.fulfillmentType && (
                           <Badge variant="outline" className="text-xs">
                             {order.fulfillmentType === 'delivery' ? (
@@ -945,6 +991,107 @@ export default function OrdersFresh() {
                   </div>
                 </div>
               </div>
+
+              {/* Payment Status Section for Quotes */}
+              {selectedOrder.isQuote && (
+                <div>
+                  <h3 className="font-medium mb-2 text-sm flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                    Payment Status
+                  </h3>
+                  <div className="bg-gray-50 p-3 rounded text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span>Order Total:</span>
+                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.total || '0'))}</span>
+                    </div>
+                    {selectedOrder.depositPercentage && selectedOrder.depositPercentage < 100 && (
+                      <div className="flex justify-between text-amber-700">
+                        <span>Deposit ({selectedOrder.depositPercentage}%):</span>
+                        <span>{formatCurrency(parseFloat(selectedOrder.total || '0') * (selectedOrder.depositPercentage / 100))}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-green-600">
+                      <span>Amount Paid:</span>
+                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.amountPaid || '0'))}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>Outstanding Balance:</span>
+                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.amountOutstanding || '0'))}</span>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
+                        {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
+                      </Badge>
+                    </div>
+                    
+                    {/* Send Payment Link Buttons - only show if there's an outstanding balance */}
+                    {parseFloat(selectedOrder.amountOutstanding || '0') > 0 && (
+                      <div className="pt-2 border-t mt-2 space-y-2">
+                        {selectedOrder.stripePaymentLinkUrl ? (
+                          <Button 
+                            size="sm" 
+                            className="w-full bg-green-600 hover:bg-green-700 text-xs"
+                            onClick={() => {
+                              if (selectedOrder.stripePaymentLinkUrl) {
+                                navigator.clipboard.writeText(selectedOrder.stripePaymentLinkUrl);
+                                toast({
+                                  title: "Link Copied",
+                                  description: "Payment link copied to clipboard. Share it with your customer."
+                                });
+                              }
+                            }}
+                          >
+                            Copy Payment Link
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            className="w-full bg-green-600 hover:bg-green-700 text-xs"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/orders/${selectedOrder.id}/generate-balance-link`, {
+                                  method: 'POST',
+                                  credentials: 'include',
+                                });
+                                const data = await response.json();
+                                if (data.success && data.paymentLink) {
+                                  navigator.clipboard.writeText(data.paymentLink);
+                                  toast({
+                                    title: "Payment Link Generated",
+                                    description: "New payment link created and copied to clipboard."
+                                  });
+                                  if (data.order) {
+                                    setSelectedOrder({
+                                      ...selectedOrder,
+                                      ...data.order,
+                                      stripePaymentLinkUrl: data.paymentLink
+                                    });
+                                  }
+                                  loadOrders(currentPage, statusFilter || searchQuery);
+                                } else {
+                                  toast({
+                                    title: "Error",
+                                    description: data.error || "Failed to generate payment link",
+                                    variant: "destructive"
+                                  });
+                                }
+                              } catch (error) {
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to generate payment link",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                          >
+                            Generate Balance Payment Link
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Order Photos Section */}
               <div>

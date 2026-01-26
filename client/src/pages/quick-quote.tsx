@@ -88,6 +88,7 @@ export default function QuickQuote() {
     email: '',
     businessName: '',
   });
+  const [depositPercentage, setDepositPercentage] = useState<25 | 50 | 75 | 100>(100);
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -133,6 +134,7 @@ export default function QuickQuote() {
       customerId: string;
       items: QuoteItem[];
       sendVia: 'sms' | 'email' | 'link';
+      depositPercentage: 25 | 50 | 75 | 100;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       return response.json();
@@ -203,6 +205,14 @@ export default function QuickQuote() {
     return originalTotal - calculateTotal();
   };
 
+  const calculateDepositAmount = () => {
+    return calculateTotal() * (depositPercentage / 100);
+  };
+
+  const calculateRemainingBalance = () => {
+    return calculateTotal() - calculateDepositAmount();
+  };
+
   const handleCreateQuote = () => {
     if (!selectedCustomer) {
       toast({
@@ -226,6 +236,7 @@ export default function QuickQuote() {
       customerId: selectedCustomer.id,
       items: quoteItems,
       sendVia: sendMethod,
+      depositPercentage,
     });
   };
 
@@ -246,6 +257,7 @@ export default function QuickQuote() {
     setQuoteItems([]);
     setCreatedQuote(null);
     setSendMethod('sms');
+    setDepositPercentage(100);
   };
 
   if (createdQuote) {
@@ -576,6 +588,47 @@ export default function QuickQuote() {
                 <span>Total</span>
                 <span>£{calculateTotal().toFixed(2)}</span>
               </div>
+
+              <Separator />
+
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Payment Type</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[25, 50, 75, 100].map((percent) => (
+                    <Button
+                      key={percent}
+                      variant={depositPercentage === percent ? 'default' : 'outline'}
+                      className={depositPercentage === percent ? 'bg-green-600 hover:bg-green-700' : ''}
+                      size="sm"
+                      onClick={() => setDepositPercentage(percent as 25 | 50 | 75 | 100)}
+                    >
+                      {percent === 100 ? 'Full' : `${percent}%`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {depositPercentage < 100 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-amber-800">Deposit ({depositPercentage}%)</span>
+                    <span className="font-semibold text-amber-800">£{calculateDepositAmount().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-amber-700">Remaining Balance</span>
+                    <span className="text-amber-700">£{calculateRemainingBalance().toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              {depositPercentage === 100 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-700">Full Payment</span>
+                    <span className="font-semibold text-green-700">£{calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
