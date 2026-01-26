@@ -494,59 +494,65 @@ export default function OrdersFresh() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-gray-500">
-            Showing {displayedOrders} of {totalOrders} orders
-          </div>
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl md:text-2xl font-bold">Orders</h1>
+          <span className="text-xs text-gray-500 whitespace-nowrap">
+            {displayedOrders} of {totalOrders}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
             Refresh
           </Button>
           <Link href="/quick-quote">
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
-              <FileText className="w-4 h-4 mr-2" />
-              Quick Quote
+            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+              <FileText className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Quick Quote</span>
+              <span className="sm:hidden">Quote</span>
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Search and Filter - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Search orders by customer name, phone, or order number..."
+            placeholder="Search by name, phone, or order..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
-        <select 
-          className="px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          value={statusFilter}
-          onChange={(e) => handleStatusFilter(e.target.value)}
-        >
-          <option value="">All Status</option>
-          <option value="paid">Paid</option>
-          <option value="fulfilled">Fulfilled</option>
-          <option value="pending">Pending</option>
-        </select>
-        {(searchQuery || statusFilter) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              handleSearch('');
-              setStatusFilter('');
-            }}
-            className="text-sm"
+        <div className="flex gap-2">
+          <select 
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={statusFilter}
+            onChange={(e) => handleStatusFilter(e.target.value)}
           >
-            Clear All
-          </Button>
-        )}
+            <option value="">All Status</option>
+            <option value="paid">Paid</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="pending">Pending</option>
+          </select>
+          {(searchQuery || statusFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                handleSearch('');
+                setStatusFilter('');
+              }}
+              className="text-sm whitespace-nowrap"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Statistics Cards */}

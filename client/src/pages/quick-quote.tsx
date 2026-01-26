@@ -209,30 +209,31 @@ export default function QuickQuote() {
 
   if (createdQuote) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto">
         <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Check className="h-8 w-8 text-green-600" />
+          <CardHeader className="text-center p-4 md:p-6">
+            <div className="mx-auto w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3 md:mb-4">
+              <Check className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Quote Created!</CardTitle>
-            <CardDescription>
-              Order #{createdQuote.orderNumber} has been created and is awaiting payment.
+            <CardTitle className="text-xl md:text-2xl">Quote Created!</CardTitle>
+            <CardDescription className="text-sm">
+              Order #{createdQuote.orderNumber} is awaiting payment.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <Label className="text-sm text-gray-600">Payment Link</Label>
+          <CardContent className="space-y-4 p-4 md:p-6 pt-0">
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+              <Label className="text-xs md:text-sm text-gray-600">Payment Link</Label>
               <div className="flex items-center gap-2 mt-1">
                 <Input 
                   value={createdQuote.paymentLink} 
                   readOnly 
-                  className="flex-1 bg-white"
+                  className="flex-1 bg-white text-xs md:text-sm"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={copyPaymentLink}
+                  className="shrink-0"
                 >
                   {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
@@ -240,21 +241,21 @@ export default function QuickQuote() {
             </div>
 
             {sendMethod === 'link' && (
-              <p className="text-sm text-gray-600 text-center">
-                Share this link with your customer. They can pay directly from their phone.
+              <p className="text-xs md:text-sm text-gray-600 text-center">
+                Share this link with your customer to collect payment.
               </p>
             )}
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 md:pt-4">
               <Button 
                 variant="outline" 
                 className="flex-1"
                 onClick={resetQuote}
               >
-                Create Another Quote
+                New Quote
               </Button>
-              <Link href="/orders">
-                <Button className="flex-1 bg-green-600 hover:bg-green-700">
+              <Link href="/orders" className="flex-1">
+                <Button className="w-full bg-green-600 hover:bg-green-700">
                   View Orders
                 </Button>
               </Link>
@@ -266,20 +267,20 @@ export default function QuickQuote() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
         <Link href="/orders">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Quick Quote</h1>
-          <p className="text-gray-600">Create a quote with custom prices and send a payment link</p>
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold">Quick Quote</h1>
+          <p className="text-sm md:text-base text-gray-600 truncate">Create quotes with custom prices</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
