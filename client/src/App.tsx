@@ -54,6 +54,7 @@ import SuperAdmin from "@/pages/super-admin";
 import { LoadingDemo } from "@/pages/loading-demo";
 import { LoadingOverlay } from "@/components/ui/loading-spinner";
 import SubscriptionPricing from "@/pages/SubscriptionPricing";
+import QuickQuote from "@/pages/quick-quote";
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -123,6 +124,7 @@ function AuthenticatedRoutes() {
             <Route path="/broadcasts" component={Campaigns} />
             <Route path="/message-templates" component={Campaigns} />
             <Route path="/stock-alerts" component={StockAlerts} />
+            <Route path="/quick-quote" component={QuickQuote} />
             <Route path="/team-management" component={TeamManagement} />
             <Route path="/help" component={Help} />
             <Route path="/loading-demo" component={LoadingDemo} />
