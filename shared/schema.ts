@@ -537,6 +537,14 @@ export const orders = pgTable("orders", {
   // Ready for Collection feature
   readyToCollectAt: timestamp("ready_to_collect_at"), // When order was marked ready for collection
   
+  // Quick Quote feature - for on-the-spot sales with negotiated prices
+  isQuote: boolean("is_quote").default(false), // Whether this is a quote/invoice awaiting payment
+  stripePaymentLinkId: varchar("stripe_payment_link_id"), // Stripe Payment Link ID for quote
+  stripePaymentLinkUrl: varchar("stripe_payment_link_url"), // Public URL for customer to pay
+  quoteExpiresAt: timestamp("quote_expires_at"), // When the quote payment link expires
+  quoteSentAt: timestamp("quote_sent_at"), // When the quote was sent to customer
+  quoteSentVia: varchar("quote_sent_via"), // 'sms' | 'email' | 'whatsapp'
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
