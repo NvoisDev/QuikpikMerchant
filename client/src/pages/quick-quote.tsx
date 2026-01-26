@@ -37,9 +37,11 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  UserPlus
 } from "lucide-react";
 import { Link } from "wouter";
+import { DialogDescription } from "@/components/ui/dialog";
 
 interface QuoteItem {
   productId: number;
@@ -72,12 +74,20 @@ export default function QuickQuote() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'sms' | 'email' | 'link'>('sms');
   const [copiedLink, setCopiedLink] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<{
     orderNumber: string;
     paymentLink: string;
   } | null>(null);
+  const [newCustomer, setNewCustomer] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    email: '',
+    businessName: '',
+  });
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -85,6 +95,37 @@ export default function QuickQuote() {
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
+  });
+
+  const addCustomerMutation = useMutation({
+    mutationFn: async (data: typeof newCustomer) => {
+      const response = await apiRequest('POST', '/api/customers', data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      setSelectedCustomer({
+        id: data.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        businessName: data.businessName,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+      });
+      setAddCustomerDialogOpen(false);
+      setNewCustomer({ firstName: '', lastName: '', phoneNumber: '', email: '', businessName: '' });
+      toast({
+        title: "Customer Added",
+        description: "New customer has been added and selected.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer",
+        variant: "destructive",
+      });
+    },
   });
 
   const createQuoteMutation = useMutation({
@@ -284,10 +325,84 @@ export default function QuickQuote() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Select Customer
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Select Customer
+                </CardTitle>
+                <Dialog open={addCustomerDialogOpen} onOpenChange={setAddCustomerDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Add New</span>
+                      <span className="sm:hidden">Add</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Customer</DialogTitle>
+                      <DialogDescription>Add a customer to create a quote for them.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="firstName">First Name *</Label>
+                          <Input
+                            id="firstName"
+                            value={newCustomer.firstName}
+                            onChange={(e) => setNewCustomer({...newCustomer, firstName: e.target.value})}
+                            placeholder="John"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            value={newCustomer.lastName}
+                            onChange={(e) => setNewCustomer({...newCustomer, lastName: e.target.value})}
+                            placeholder="Doe"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="phoneNumber">Phone Number *</Label>
+                        <Input
+                          id="phoneNumber"
+                          value={newCustomer.phoneNumber}
+                          onChange={(e) => setNewCustomer({...newCustomer, phoneNumber: e.target.value})}
+                          placeholder="+44 7700 900000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newCustomer.email}
+                          onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+                          placeholder="john@example.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="businessName">Business Name</Label>
+                        <Input
+                          id="businessName"
+                          value={newCustomer.businessName}
+                          onChange={(e) => setNewCustomer({...newCustomer, businessName: e.target.value})}
+                          placeholder="Acme Ltd"
+                        />
+                      </div>
+                      <Button
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        disabled={!newCustomer.firstName || !newCustomer.phoneNumber || addCustomerMutation.isPending}
+                        onClick={() => addCustomerMutation.mutate(newCustomer)}
+                      >
+                        {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <Select
