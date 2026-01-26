@@ -16605,5 +16605,192 @@ The Quikpik Team
     }
   });
 
+  // =====================================================
+  // QUICK QUOTE - Create quote with custom prices and payment link
+  // =====================================================
+  app.post('/api/quotes', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { customerId, items, sendVia } = req.body;
+      
+      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia });
+      
+      if (!customerId || !items || items.length === 0) {
+        return res.status(400).json({ error: 'Customer and items are required' });
+      }
+
+      // Get customer details
+      const customer = await storage.getUser(customerId);
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      // Get wholesaler details
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+
+      // Calculate totals
+      const subtotal = items.reduce((sum: number, item: any) => 
+        sum + (item.customPrice * item.quantity), 0
+      );
+      const platformFee = subtotal * 0.033; // 3.3% platform fee
+      const total = subtotal;
+
+      // Generate order number
+      const existingOrders = await storage.getOrders(wholesalerId, undefined, undefined);
+      const orderCount = existingOrders.length + 1;
+      const orderNumber = `QT-${String(orderCount).padStart(3, '0')}`;
+
+      // Create the quote order in pending status
+      const [quoteOrder] = await db.insert(orders).values({
+        orderNumber,
+        wholesalerId,
+        retailerId: customerId,
+        customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+        customerEmail: customer.email,
+        customerPhone: customer.phoneNumber,
+        status: 'pending',
+        subtotal: subtotal.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        total: total.toFixed(2),
+        fulfillmentType: 'pickup',
+        isQuote: true,
+        quoteSentVia: sendVia,
+        notes: 'Quick Quote - Custom pricing negotiated on-site',
+      }).returning();
+
+      // Create order items with custom prices
+      for (const item of items) {
+        await db.insert(orderItems).values({
+          orderId: quoteOrder.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.customPrice.toFixed(2),
+          total: (item.customPrice * item.quantity).toFixed(2),
+          sellingType: 'units',
+        });
+      }
+
+      // Create Stripe Payment Link
+      let paymentLinkUrl = '';
+      let paymentLinkId = '';
+      
+      if (stripe) {
+        try {
+          // Create line items for Stripe
+          const lineItems = items.map((item: any) => ({
+            price_data: {
+              currency: 'gbp',
+              product_data: {
+                name: item.productName,
+              },
+              unit_amount: Math.round(item.customPrice * 100), // Convert to pence
+            },
+            quantity: item.quantity,
+          }));
+
+          // Create a Stripe Checkout Session with a payment link
+          const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: lineItems,
+            mode: 'payment',
+            success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/customer/payment-success?order=${quoteOrder.orderNumber}`,
+            cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/store/${wholesalerId}`,
+            metadata: {
+              orderId: quoteOrder.id.toString(),
+              orderNumber: quoteOrder.orderNumber,
+              wholesalerId,
+              customerId,
+              isQuote: 'true',
+            },
+            customer_email: customer.email || undefined,
+            expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+          });
+
+          paymentLinkUrl = session.url || '';
+          paymentLinkId = session.id;
+
+          // Update order with payment link
+          await db.update(orders)
+            .set({
+              stripePaymentLinkId: paymentLinkId,
+              stripePaymentLinkUrl: paymentLinkUrl,
+              quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+            })
+            .where(eq(orders.id, quoteOrder.id));
+
+        } catch (stripeError) {
+          console.error('❌ Stripe error creating payment link:', stripeError);
+          // Continue without payment link - manual payment can be arranged
+        }
+      }
+
+      // Send notification based on sendVia method
+      if (sendVia !== 'link' && paymentLinkUrl) {
+        const message = `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`;
+        
+        if (sendVia === 'sms' && customer.phoneNumber) {
+          try {
+            await sendSMS({
+              to: customer.phoneNumber,
+              message,
+            });
+            console.log(`📱 Quote SMS sent to ${customer.phoneNumber}`);
+            
+            // Update quote sent timestamp
+            await db.update(orders)
+              .set({ quoteSentAt: new Date() })
+              .where(eq(orders.id, quoteOrder.id));
+          } catch (smsError) {
+            console.error('❌ Failed to send quote SMS:', smsError);
+          }
+        } else if (sendVia === 'email' && customer.email) {
+          try {
+            await sendEmail({
+              to: customer.email,
+              from: 'hello@quikpik.co',
+              subject: `Quote from ${wholesaler.businessName || 'Your supplier'} - £${total.toFixed(2)}`,
+              html: `
+                <h2>You have a new quote!</h2>
+                <p>${wholesaler.businessName || 'Your supplier'} has created a quote for you.</p>
+                <p><strong>Total: £${total.toFixed(2)}</strong></p>
+                <p><a href="${paymentLinkUrl}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Pay Now</a></p>
+                <p><small>This payment link expires in 24 hours.</small></p>
+              `,
+              text: message,
+            });
+            console.log(`📧 Quote email sent to ${customer.email}`);
+            
+            // Update quote sent timestamp
+            await db.update(orders)
+              .set({ quoteSentAt: new Date() })
+              .where(eq(orders.id, quoteOrder.id));
+          } catch (emailError) {
+            console.error('❌ Failed to send quote email:', emailError);
+          }
+        }
+      }
+
+      console.log(`✅ Quote ${orderNumber} created successfully`);
+      
+      res.json({
+        success: true,
+        orderId: quoteOrder.id,
+        orderNumber: quoteOrder.orderNumber,
+        paymentLink: paymentLinkUrl,
+        total: total.toFixed(2),
+      });
+
+    } catch (error) {
+      console.error('❌ Error creating quote:', error);
+      res.status(500).json({ error: 'Failed to create quote' });
+    }
+  });
+
   return httpServer;
 }
