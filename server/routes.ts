@@ -3972,9 +3972,18 @@ The Quikpik Team`
       }
 
       // Allow transition from 'paid' or 'items_prepared' status directly to ready_for_collection
-      if (order.status !== 'paid' && order.status !== 'items_prepared') {
-        console.log(`❌ Order status is ${order.status}, not 'paid' or 'items_prepared'`);
-        return res.status(400).json({ error: `Order must be in 'paid' status to mark as ready. Current status: ${order.status}` });
+      // Also allow if paymentStatus is 'paid' (for orders where balance was paid but status wasn't updated)
+      const isPaymentComplete = order.paymentStatus === 'paid' || parseFloat(order.amountOutstanding || '0') <= 0.01;
+      const isValidStatus = order.status === 'paid' || order.status === 'items_prepared' || order.status === 'confirmed';
+      
+      if (!isValidStatus && !isPaymentComplete) {
+        console.log(`❌ Order status is ${order.status}, paymentStatus is ${order.paymentStatus}, cannot mark as ready`);
+        return res.status(400).json({ error: `Order must be paid to mark as ready. Current status: ${order.status}, payment: ${order.paymentStatus}` });
+      }
+      
+      // If payment is complete but status wasn't updated, log it for debugging
+      if (isPaymentComplete && order.status !== 'paid') {
+        console.log(`⚠️ Order ${orderId} has complete payment (${order.paymentStatus}) but status is ${order.status} - allowing ready for collection`);
       }
 
       // Check if already marked as ready
