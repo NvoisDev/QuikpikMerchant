@@ -431,7 +431,7 @@ export default function QuickQuote() {
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       <div className="flex flex-col">
-                        <span>{customer.businessName || `${customer.firstName} ${customer.lastName}`}</span>
+                        <span>{customer.firstName} {customer.lastName || ''}</span>
                         <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
                       </div>
                     </SelectItem>
@@ -442,7 +442,7 @@ export default function QuickQuote() {
               {selectedCustomer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="font-medium">
-                    {selectedCustomer.businessName || `${selectedCustomer.firstName} ${selectedCustomer.lastName}`}
+                    {selectedCustomer.firstName} {selectedCustomer.lastName || ''}
                   </div>
                   {selectedCustomer.email && (
                     <div className="text-sm text-gray-600 flex items-center gap-1">
@@ -509,21 +509,33 @@ export default function QuickQuote() {
               ) : (
                 <div className="space-y-4">
                   {quoteItems.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{item.productName}</div>
-                        <div className="text-sm text-gray-500">
-                          Original: £{item.originalPrice.toFixed(2)}
-                          {item.customPrice < item.originalPrice && (
-                            <Badge variant="secondary" className="ml-2 text-green-600">
-                              <Percent className="h-3 w-3 mr-1" />
-                              {((1 - item.customPrice / item.originalPrice) * 100).toFixed(0)}% off
-                            </Badge>
-                          )}
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                      {/* Product name and original price - full width on mobile */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{item.productName}</div>
+                          <div className="text-sm text-gray-500">
+                            Original: £{item.originalPrice.toFixed(2)}
+                            {item.customPrice < item.originalPrice && (
+                              <Badge variant="secondary" className="ml-2 text-green-600">
+                                <Percent className="h-3 w-3 mr-1" />
+                                {((1 - item.customPrice / item.originalPrice) * 100).toFixed(0)}% off
+                              </Badge>
+                            )}
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0 -mt-1 -mr-1"
+                          onClick={() => removeItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24">
+                      {/* Price, Qty, Total - row below on mobile */}
+                      <div className="flex items-end gap-3">
+                        <div className="flex-1">
                           <Label className="text-xs text-gray-500">Price</Label>
                           <Input
                             type="number"
@@ -534,7 +546,7 @@ export default function QuickQuote() {
                             className="h-8"
                           />
                         </div>
-                        <div className="w-20">
+                        <div className="w-16">
                           <Label className="text-xs text-gray-500">Qty</Label>
                           <Input
                             type="number"
@@ -544,20 +556,12 @@ export default function QuickQuote() {
                             className="h-8"
                           />
                         </div>
-                        <div className="w-24 text-right">
+                        <div className="w-20 text-right">
                           <Label className="text-xs text-gray-500">Total</Label>
                           <div className="font-semibold">
                             £{(item.customPrice * item.quantity).toFixed(2)}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => removeItem(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   ))}
