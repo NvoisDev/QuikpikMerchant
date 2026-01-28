@@ -17048,6 +17048,25 @@ The Quikpik Team
 
       console.log(`✅ Balance payment link generated for order ${order.orderNumber}: ${session.url}`);
 
+      // Send SMS notification to customer with payment link
+      let smsSent = false;
+      const customerPhone = order.customerPhone;
+      if (customerPhone && session.url) {
+        try {
+          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.\n\nOutstanding Balance: £${amountOutstanding.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
+          
+          const smsResult = await sendSMS({
+            to: customerPhone,
+            message: smsMessage
+          });
+          
+          smsSent = smsResult.success;
+          console.log(`📱 SMS ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for balance payment`);
+        } catch (smsError) {
+          console.error('❌ Failed to send balance payment SMS:', smsError);
+        }
+      }
+
       // Get the updated order to return
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
 
@@ -17056,6 +17075,8 @@ The Quikpik Team
         paymentLink: session.url,
         amount: amountOutstanding.toFixed(2),
         order: updatedOrder,
+        smsSent,
+        customerPhone: customerPhone || null,
       });
 
     } catch (error) {

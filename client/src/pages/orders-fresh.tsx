@@ -1032,18 +1032,18 @@ export default function OrdersFresh() {
                           className="w-full bg-green-600 hover:bg-green-700 text-xs"
                           onClick={async () => {
                             try {
-                              // Always generate a fresh payment link to avoid expired Stripe sessions
                               const response = await fetch(`/api/orders/${selectedOrder.id}/generate-balance-link`, {
                                 method: 'POST',
                                 credentials: 'include',
                               });
                               const data = await response.json();
                               if (data.success && data.paymentLink) {
-                                navigator.clipboard.writeText(data.paymentLink);
-                                toast({
-                                  title: "Payment Link Copied",
-                                  description: "Fresh payment link created and copied to clipboard. Share it with your customer."
-                                });
+                                try {
+                                  await navigator.clipboard.writeText(data.paymentLink);
+                                } catch (clipErr) {
+                                  console.log('Clipboard write failed, showing link instead');
+                                }
+                                
                                 if (data.order) {
                                   setSelectedOrder({
                                     ...selectedOrder,
@@ -1052,6 +1052,17 @@ export default function OrdersFresh() {
                                   });
                                 }
                                 loadOrders(currentPage, statusFilter || searchQuery);
+                                
+                                const smsStatus = data.smsSent 
+                                  ? `SMS sent to ${data.customerPhone}` 
+                                  : 'SMS not sent (no phone number)';
+                                
+                                toast({
+                                  title: data.smsSent ? "Payment Link Sent!" : "Payment Link Generated",
+                                  description: data.smsSent 
+                                    ? `Customer has been texted the payment link for £${data.amount}. Link also copied to clipboard.`
+                                    : `Payment link created and copied to clipboard. Share it with your customer.`
+                                });
                               } else {
                                 toast({
                                   title: "Error",
@@ -1068,8 +1079,23 @@ export default function OrdersFresh() {
                             }
                           }}
                         >
-                          Copy Payment Link
+                          Send Payment Link to Customer
                         </Button>
+                        
+                        {selectedOrder.stripePaymentLinkUrl && (
+                          <div className="bg-gray-50 p-2 rounded border">
+                            <p className="text-xs text-gray-600 mb-1">Payment Link (tap to copy):</p>
+                            <div 
+                              className="text-xs text-blue-600 break-all cursor-pointer hover:bg-gray-100 p-1 rounded"
+                              onClick={() => {
+                                navigator.clipboard.writeText(selectedOrder.stripePaymentLinkUrl || '');
+                                toast({ title: "Link copied!" });
+                              }}
+                            >
+                              {selectedOrder.stripePaymentLinkUrl}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
