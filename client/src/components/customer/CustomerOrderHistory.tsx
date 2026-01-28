@@ -170,14 +170,8 @@ const getPaymentStatusLabel = (status: string) => {
 
 const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState(order.stripePaymentLinkUrl || '');
 
   const handleGenerateLink = async () => {
-    if (paymentUrl) {
-      window.open(paymentUrl, '_blank');
-      return;
-    }
-    
     setIsLoading(true);
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/payment-link/${encodeURIComponent(customerPhone)}`, {
@@ -187,7 +181,6 @@ const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhon
       
       if (response.ok) {
         const data = await response.json();
-        setPaymentUrl(data.paymentLink);
         window.open(data.paymentLink, '_blank');
       } else {
         console.error('Failed to generate payment link');
