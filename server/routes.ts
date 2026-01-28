@@ -16799,11 +16799,14 @@ The Quikpik Team
       }
 
       // Calculate totals
+      // Customer pays: subtotal + transaction fee (5.5% + £0.50)
+      // Wholesaler pays: platform fee (3.3% of subtotal) - internal
       const subtotal = items.reduce((sum: number, item: any) => 
         sum + (item.customPrice * item.quantity), 0
       );
-      const platformFee = subtotal * 0.033; // 3.3% platform fee
-      const total = subtotal;
+      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 transaction fee (customer pays)
+      const platformFee = subtotal * 0.033; // 3.3% platform fee (wholesaler pays internally)
+      const total = subtotal + customerTransactionFee;
 
       // Calculate deposit amount
       const validDepositPercentage = [25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
@@ -16824,6 +16827,7 @@ The Quikpik Team
         status: 'pending',
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
         total: total.toFixed(2),
         fulfillmentType: 'pickup',
         isQuote: true,
