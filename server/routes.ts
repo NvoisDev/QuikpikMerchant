@@ -1126,6 +1126,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
                      session?.metadata?.planId;
         const subscriptionType = session?.metadata?.subscriptionType;
         
+        // Handle quote/order payments (has orderId and orderNumber in metadata)
+        const orderId = session?.metadata?.orderId;
+        const orderNumber = session?.metadata?.orderNumber;
+        const isQuote = session?.metadata?.isQuote === 'true';
+        
+        if (orderId && orderNumber) {
+          console.log(`🧾 Processing quote/order payment: Order ${orderNumber}, ID ${orderId}`);
+          
+          // Get the current order from database to get accurate totals and existing payments
+          const [existingOrder] = await db.select()
+            .from(orders)
+            .where(eq(orders.id, parseInt(orderId)))
+            .limit(1);
+          
+          if (!existingOrder) {
+            console.log(`❌ Order ${orderId} not found in database`);
+            return res.status(404).json({ error: 'Order not found' });
+          }
+          
+          // Get actual payment amount from Stripe session
+          const thisPayment = (session.amount_total || 0) / 100; // Convert from pence to pounds
+          
+          // Get existing amounts from order (cumulative)
+          const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
+          const orderTotal = parseFloat(existingOrder.total || '0');
+          
+          // Calculate cumulative paid and new outstanding
+          const cumulativePaid = previouslyPaid + thisPayment;
+          const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
+          
+          // Determine payment status
+          let paymentStatus = 'unpaid';
+          if (newOutstanding <= 0.01) { // Allow for rounding
+            paymentStatus = 'paid';
+          } else if (cumulativePaid > 0) {
+            paymentStatus = 'part_paid';
+          }
+          
+          console.log(`📊 Payment update: This payment £${thisPayment.toFixed(2)}, Previously paid £${previouslyPaid.toFixed(2)}, Total paid £${cumulativePaid.toFixed(2)}, Outstanding £${newOutstanding.toFixed(2)}, Status: ${paymentStatus}`);
+          
+          // Update order with payment details
+          await db.update(orders)
+            .set({
+              amountPaid: cumulativePaid.toFixed(2),
+              amountOutstanding: newOutstanding.toFixed(2),
+              paymentStatus: paymentStatus,
+              status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+            })
+            .where(eq(orders.id, parseInt(orderId)));
+          
+          console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}`);
+          
+          return res.json({
+            received: true,
+            message: `Order ${orderNumber} payment processed`,
+            orderId,
+            orderNumber,
+            amountPaid: cumulativePaid.toFixed(2),
+            paymentStatus
+          });
+        }
+        
+        // Handle subscription payments (has userId and tier in metadata)
         if (userId && tier) {
           console.log(`🔄 Processing ${subscriptionType || 'new'} subscription: ${userId} → ${tier}`);
           
@@ -1163,13 +1226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tier: tier,
             productLimit: productLimit
           });
-        } else {
-          console.log(`❌ Missing metadata: userId=${userId}, tier=${tier}`);
-          return res.status(400).json({ 
-            error: 'Missing user or plan metadata',
-            receivedMetadata: session?.metadata 
-          });
         }
+        
+        console.log(`⚠️ Checkout completed but no matching handler - metadata:`, session?.metadata);
+        return res.json({ received: true, type: event.type });
       }
 
       if (event.type === 'payment_intent.succeeded') {
