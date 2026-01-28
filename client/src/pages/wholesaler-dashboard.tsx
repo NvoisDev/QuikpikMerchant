@@ -154,6 +154,22 @@ export default function WholesalerDashboard() {
     enabled: !!user,
   });
 
+  const { data: orderStats, isLoading: orderStatsLoading } = useQuery({
+    queryKey: ["/api/orders/stats"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: false,
+    enabled: !!user,
+  });
+
+  const { data: customerInsights, isLoading: customerInsightsLoading } = useQuery({
+    queryKey: ["/api/analytics/customers"],
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    retry: false,
+    enabled: !!user,
+  });
+
   // Stripe Connect status for payment setup notifications
   const { data: stripeStatus } = useQuery({
     queryKey: ["/api/stripe/connect-status"],
@@ -858,6 +874,99 @@ export default function WholesalerDashboard() {
           {/* Productivity Pulse Widget */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <ProductivityPulseWidget />
+          </div>
+
+          {/* Order Summary & Top Customers */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Order History Summary */}
+            <Card className="bg-white border-gray-200 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <ShoppingCart className="w-6 h-6 text-purple-500 mr-2" />
+                  Order Summary
+                </CardTitle>
+                <p className="text-sm text-gray-600">Your order fulfillment at a glance</p>
+              </CardHeader>
+              <CardContent>
+                {orderStatsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  </div>
+                ) : orderStats ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-green-50 p-4 rounded-lg text-center">
+                        <p className="text-3xl font-bold text-green-700">{(orderStats as any).paidOrdersCount || 0}</p>
+                        <p className="text-sm text-green-600 font-medium">Paid Orders</p>
+                      </div>
+                      <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                        <p className="text-3xl font-bold text-yellow-700">{(orderStats as any).pendingOrdersCount || 0}</p>
+                        <p className="text-sm text-yellow-600 font-medium">Pending</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-blue-700">{(orderStats as any).ordersCount || 0}</p>
+                        <p className="text-sm text-blue-600 font-medium">Total Orders</p>
+                      </div>
+                      <div className="bg-emerald-50 p-4 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-emerald-700">£{Math.round((orderStats as any).avgOrderValue || 0).toLocaleString()}</p>
+                        <p className="text-sm text-emerald-600 font-medium">Avg Order Value</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>No order data available yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Customers */}
+            <Card className="bg-white border-gray-200 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <Users className="w-6 h-6 text-blue-500 mr-2" />
+                  Top Customers
+                </CardTitle>
+                <p className="text-sm text-gray-600">Your best customers by order value</p>
+              </CardHeader>
+              <CardContent>
+                {customerInsightsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : customerInsights && (customerInsights as any).topCustomers?.length > 0 ? (
+                  <div className="space-y-3">
+                    {((customerInsights as any).topCustomers || []).slice(0, 5).map((customer: any, index: number) => (
+                      <div key={customer.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-400' : 'bg-blue-400'}`}>
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{customer.name}</p>
+                            <p className="text-xs text-gray-500">{customer.orderCount} orders</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-600">£{customer.totalSpent?.toLocaleString() || 0}</p>
+                          <p className="text-xs text-gray-500">avg £{customer.avgOrderValue?.toLocaleString() || 0}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>No customer data yet</p>
+                    <p className="text-sm mt-1">Complete some orders to see your top customers</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Recent Orders & Top Products */}
