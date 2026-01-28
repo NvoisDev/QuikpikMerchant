@@ -89,6 +89,7 @@ export default function QuickQuote() {
     businessName: '',
   });
   const [depositPercentage, setDepositPercentage] = useState<25 | 50 | 75 | 100>(100);
+  const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -168,6 +169,7 @@ export default function QuickQuote() {
       updated[existingIndex].quantity += 1;
       setQuoteItems(updated);
     } else {
+      const newIndex = quoteItems.length;
       setQuoteItems([...quoteItems, {
         productId: product.id,
         productName: product.name,
@@ -175,6 +177,10 @@ export default function QuickQuote() {
         customPrice: parseFloat(product.price),
         quantity: 1,
       }]);
+      setInputValues(prev => ({
+        ...prev,
+        [newIndex]: { price: product.price, qty: '1' }
+      }));
     }
     setProductDialogOpen(false);
   };
@@ -255,6 +261,7 @@ export default function QuickQuote() {
   const resetQuote = () => {
     setSelectedCustomer(null);
     setQuoteItems([]);
+    setInputValues({});
     setCreatedQuote(null);
     setSendMethod('sms');
     setDepositPercentage(100);
@@ -538,21 +545,69 @@ export default function QuickQuote() {
                         <div className="flex-1">
                           <Label className="text-xs text-gray-500">Price</Label>
                           <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={item.customPrice}
-                            onChange={(e) => updateItemPrice(index, parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            pattern="[0-9]*\.?[0-9]*"
+                            value={inputValues[index]?.price ?? item.customPrice.toString()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], price: val }
+                                }));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val) && val >= 0) {
+                                updateItemPrice(index, val);
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], price: val.toString() }
+                                }));
+                              } else {
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], price: item.customPrice.toString() }
+                                }));
+                              }
+                            }}
                             className="h-8"
                           />
                         </div>
                         <div className="w-16">
                           <Label className="text-xs text-gray-500">Qty</Label>
                           <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={inputValues[index]?.qty ?? item.quantity.toString()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*$/.test(val)) {
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], qty: val }
+                                }));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val) && val >= 1) {
+                                updateItemQuantity(index, val);
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], qty: val.toString() }
+                                }));
+                              } else {
+                                updateItemQuantity(index, 1);
+                                setInputValues(prev => ({
+                                  ...prev,
+                                  [index]: { ...prev[index], qty: '1' }
+                                }));
+                              }
+                            }}
                             className="h-8"
                           />
                         </div>
