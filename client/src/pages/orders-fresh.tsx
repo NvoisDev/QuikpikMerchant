@@ -992,8 +992,15 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Payment Status Section for Quotes */}
-              {selectedOrder.isQuote && (
+              {/* Payment Status Section for Quotes - Shows product values (excludes customer transaction fees) */}
+              {selectedOrder.isQuote && (() => {
+                const productTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                const customerTotal = parseFloat(selectedOrder.total || '0');
+                const paymentRatio = customerTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / customerTotal : 0;
+                const wholesalerPaid = productTotal * paymentRatio;
+                const wholesalerOutstanding = productTotal - wholesalerPaid;
+                
+                return (
                 <div>
                   <h3 className="font-medium mb-2 text-sm flex items-center">
                     <DollarSign className="h-4 w-4 mr-2 text-green-600" />
@@ -1002,21 +1009,21 @@ export default function OrdersFresh() {
                   <div className="bg-gray-50 p-3 rounded text-sm space-y-2">
                     <div className="flex justify-between">
                       <span>Order Total:</span>
-                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.total || '0'))}</span>
+                      <span className="font-medium">{formatCurrency(productTotal)}</span>
                     </div>
                     {selectedOrder.depositPercentage && selectedOrder.depositPercentage < 100 && (
                       <div className="flex justify-between text-amber-700">
                         <span>Deposit ({selectedOrder.depositPercentage}%):</span>
-                        <span>{formatCurrency(parseFloat(selectedOrder.total || '0') * (selectedOrder.depositPercentage / 100))}</span>
+                        <span>{formatCurrency(productTotal * (selectedOrder.depositPercentage / 100))}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-green-600">
                       <span>Amount Paid:</span>
-                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.amountPaid || '0'))}</span>
+                      <span className="font-medium">{formatCurrency(wholesalerPaid)}</span>
                     </div>
                     <div className="flex justify-between text-red-600">
                       <span>Outstanding Balance:</span>
-                      <span className="font-medium">{formatCurrency(parseFloat(selectedOrder.amountOutstanding || '0'))}</span>
+                      <span className="font-medium">{formatCurrency(wholesalerOutstanding)}</span>
                     </div>
                     <div className="pt-2 border-t">
                       <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
@@ -1024,8 +1031,8 @@ export default function OrdersFresh() {
                       </Badge>
                     </div>
                     
-                    {/* Send Payment Link Buttons - only show if there's an outstanding balance */}
-                    {parseFloat(selectedOrder.amountOutstanding || '0') > 0 && (
+                    {/* Send Payment Link Buttons - only show if there's an outstanding balance (using wholesaler-perspective value) */}
+                    {wholesalerOutstanding > 0.01 && (
                       <div className="pt-2 border-t mt-2 space-y-2">
                         <Button 
                           size="sm" 
@@ -1100,7 +1107,8 @@ export default function OrdersFresh() {
                     )}
                   </div>
                 </div>
-              )}
+              );
+              })()}
 
               {/* Order Photos Section */}
               <div>
