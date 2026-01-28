@@ -17173,17 +17173,11 @@ The Quikpik Team
         return res.status(400).json({ error: 'No outstanding balance on this order' });
       }
 
-      // If there's an existing valid payment link, return it
-      if (order.stripePaymentLinkUrl && order.quoteExpiresAt && new Date(order.quoteExpiresAt) > new Date()) {
-        return res.json({
-          success: true,
-          paymentLink: order.stripePaymentLinkUrl,
-          amount: amountOutstanding.toFixed(2),
-          isExisting: true,
-        });
-      }
+      // For balance payments, always generate a fresh Stripe checkout session
+      // The original payment link was for the deposit and is now completed/expired
+      console.log(`💳 Generating fresh balance payment link for order ${order.orderNumber}, amount: £${amountOutstanding.toFixed(2)}`);
 
-      // Otherwise, generate a new payment link
+      // Generate a new payment link
       if (!stripe) {
         return res.status(500).json({ error: 'Payment service not available' });
       }
