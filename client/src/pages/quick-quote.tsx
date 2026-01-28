@@ -328,7 +328,7 @@ export default function QuickQuote() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 pl-10 lg:pl-0">
         <Link href="/orders">
           <Button variant="ghost" size="icon" className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
