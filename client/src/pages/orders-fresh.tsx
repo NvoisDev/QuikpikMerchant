@@ -1027,66 +1027,49 @@ export default function OrdersFresh() {
                     {/* Send Payment Link Buttons - only show if there's an outstanding balance */}
                     {parseFloat(selectedOrder.amountOutstanding || '0') > 0 && (
                       <div className="pt-2 border-t mt-2 space-y-2">
-                        {selectedOrder.stripePaymentLinkUrl ? (
-                          <Button 
-                            size="sm" 
-                            className="w-full bg-green-600 hover:bg-green-700 text-xs"
-                            onClick={() => {
-                              if (selectedOrder.stripePaymentLinkUrl) {
-                                navigator.clipboard.writeText(selectedOrder.stripePaymentLinkUrl);
+                        <Button 
+                          size="sm" 
+                          className="w-full bg-green-600 hover:bg-green-700 text-xs"
+                          onClick={async () => {
+                            try {
+                              // Always generate a fresh payment link to avoid expired Stripe sessions
+                              const response = await fetch(`/api/orders/${selectedOrder.id}/generate-balance-link`, {
+                                method: 'POST',
+                                credentials: 'include',
+                              });
+                              const data = await response.json();
+                              if (data.success && data.paymentLink) {
+                                navigator.clipboard.writeText(data.paymentLink);
                                 toast({
-                                  title: "Link Copied",
-                                  description: "Payment link copied to clipboard. Share it with your customer."
+                                  title: "Payment Link Copied",
+                                  description: "Fresh payment link created and copied to clipboard. Share it with your customer."
                                 });
-                              }
-                            }}
-                          >
-                            Copy Payment Link
-                          </Button>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            className="w-full bg-green-600 hover:bg-green-700 text-xs"
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(`/api/orders/${selectedOrder.id}/generate-balance-link`, {
-                                  method: 'POST',
-                                  credentials: 'include',
-                                });
-                                const data = await response.json();
-                                if (data.success && data.paymentLink) {
-                                  navigator.clipboard.writeText(data.paymentLink);
-                                  toast({
-                                    title: "Payment Link Generated",
-                                    description: "New payment link created and copied to clipboard."
-                                  });
-                                  if (data.order) {
-                                    setSelectedOrder({
-                                      ...selectedOrder,
-                                      ...data.order,
-                                      stripePaymentLinkUrl: data.paymentLink
-                                    });
-                                  }
-                                  loadOrders(currentPage, statusFilter || searchQuery);
-                                } else {
-                                  toast({
-                                    title: "Error",
-                                    description: data.error || "Failed to generate payment link",
-                                    variant: "destructive"
+                                if (data.order) {
+                                  setSelectedOrder({
+                                    ...selectedOrder,
+                                    ...data.order,
+                                    stripePaymentLinkUrl: data.paymentLink
                                   });
                                 }
-                              } catch (error) {
+                                loadOrders(currentPage, statusFilter || searchQuery);
+                              } else {
                                 toast({
                                   title: "Error",
-                                  description: "Failed to generate payment link",
+                                  description: data.error || "Failed to generate payment link",
                                   variant: "destructive"
                                 });
                               }
-                            }}
-                          >
-                            Generate Balance Payment Link
-                          </Button>
-                        )}
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to generate payment link",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
+                          Copy Payment Link
+                        </Button>
                       </div>
                     )}
                   </div>
