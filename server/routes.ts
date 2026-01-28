@@ -4210,6 +4210,55 @@ The Quikpik Team`
     }
   });
 
+  // Get order payment details by order number - requires valid Stripe session ID
+  app.get('/api/orders/by-number/:orderNumber', async (req: any, res) => {
+    try {
+      const { orderNumber } = req.params;
+      const { session_id } = req.query;
+
+      // Session ID is required for security
+      if (!session_id) {
+        return res.status(400).json({ error: 'Session ID required' });
+      }
+
+      // Validate Stripe session ID
+      try {
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+        // Verify the session's order number matches
+        if (session.metadata?.orderNumber !== orderNumber) {
+          return res.status(403).json({ error: 'Session does not match order' });
+        }
+        // Verify session is completed/paid
+        if (session.payment_status !== 'paid' && session.status !== 'complete') {
+          return res.status(403).json({ error: 'Payment not completed' });
+        }
+      } catch (stripeError) {
+        console.error('Stripe session validation failed:', stripeError);
+        return res.status(403).json({ error: 'Invalid session' });
+      }
+      
+      const [order] = await db.select({
+        orderNumber: orders.orderNumber,
+        total: orders.total,
+        amountPaid: orders.amountPaid,
+        amountOutstanding: orders.amountOutstanding,
+        paymentStatus: orders.paymentStatus,
+      })
+        .from(orders)
+        .where(eq(orders.orderNumber, orderNumber))
+        .limit(1);
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error('Error fetching order by number:', error);
+      res.status(500).json({ error: 'Failed to fetch order' });
+    }
+  });
+
   // Get single order details with items - REQUIRES AUTHENTICATION
   app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
     try {
@@ -16759,8 +16808,8 @@ The Quikpik Team
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/customer/payment-success?order=${quoteOrder.orderNumber}`,
-            cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/store/${wholesalerId}`,
+            success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${quoteOrder.orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${wholesalerId}`,
             metadata: {
               orderId: quoteOrder.id.toString(),
               orderNumber: quoteOrder.orderNumber,
@@ -16907,8 +16956,8 @@ The Quikpik Team
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/customer/payment-success?order=${order.orderNumber}`,
-        cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://quikpik.app'}/store/${wholesalerId}`,
+        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${wholesalerId}`,
         metadata: {
           orderId: orderId.toString(),
           orderNumber: order.orderNumber || '',
