@@ -168,6 +168,55 @@ const getPaymentStatusLabel = (status: string) => {
   }
 };
 
+const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState(order.stripePaymentLinkUrl || '');
+
+  const handleGenerateLink = async () => {
+    if (paymentUrl) {
+      window.open(paymentUrl, '_blank');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/payment-link/${encodeURIComponent(customerPhone)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentUrl(data.paymentLink);
+        window.open(data.paymentLink, '_blank');
+      } else {
+        console.error('Failed to generate payment link');
+      }
+    } catch (error) {
+      console.error('Error generating payment link:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleGenerateLink}
+      disabled={isLoading}
+      className="mt-3 inline-flex items-center justify-center w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+    >
+      {isLoading ? (
+        <>
+          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          Generating Link...
+        </>
+      ) : (
+        <>💳 Pay Balance Now</>
+      )}
+    </button>
+  );
+};
+
 const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
   const queryClient = useQueryClient();
   // Use stored values from order data
@@ -247,9 +296,7 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
                     <span>{formatCurrency(order.amountOutstanding || '0')}</span>
                   </div>
                 </div>
-                <p className="text-orange-700 text-xs mt-2">
-                  Please contact the seller to arrange payment for the remaining balance.
-                </p>
+                <PayBalanceButton order={order} customerPhone={customerPhone} />
               </div>
             </div>
           </div>

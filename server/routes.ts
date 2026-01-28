@@ -17143,5 +17143,109 @@ The Quikpik Team
     }
   });
 
+  // =====================================================
+  // CUSTOMER PORTAL - GET/GENERATE PAYMENT LINK FOR ORDER
+  // Uses same pattern as /api/customer-orders/:wholesalerId/:phoneNumber
+  // Phone is SMS-verified when customer logs into portal
+  // =====================================================
+  app.post('/api/customer/orders/:orderId/payment-link/:phoneNumber', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const customerPhone = decodeURIComponent(req.params.phoneNumber);
+
+      if (!customerPhone) {
+        return res.status(400).json({ error: 'Customer phone is required' });
+      }
+
+      // Get the order
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify the order belongs to this customer (by phone - matches portal auth pattern)
+      if (order.customerPhone !== customerPhone) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const amountOutstanding = parseFloat(order.amountOutstanding || '0');
+      if (amountOutstanding <= 0) {
+        return res.status(400).json({ error: 'No outstanding balance on this order' });
+      }
+
+      // If there's an existing valid payment link, return it
+      if (order.stripePaymentLinkUrl && order.quoteExpiresAt && new Date(order.quoteExpiresAt) > new Date()) {
+        return res.json({
+          success: true,
+          paymentLink: order.stripePaymentLinkUrl,
+          amount: amountOutstanding.toFixed(2),
+          isExisting: true,
+        });
+      }
+
+      // Otherwise, generate a new payment link
+      if (!stripe) {
+        return res.status(500).json({ error: 'Payment service not available' });
+      }
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      const customer = await storage.getUser(order.retailerId);
+
+      // Create Stripe checkout session for remaining balance
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: `Remaining Balance - Order ${order.orderNumber}`,
+              description: `Payment for remaining balance. Original order total: £${order.total}`,
+            },
+            unit_amount: Math.round(amountOutstanding * 100),
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${order.wholesalerId}`,
+        metadata: {
+          orderId: orderId.toString(),
+          orderNumber: order.orderNumber || '',
+          wholesalerId: order.wholesalerId,
+          customerId: order.retailerId,
+          isQuote: 'true',
+          isBalancePayment: 'true',
+          depositPercentage: '100',
+          depositAmount: amountOutstanding.toFixed(2),
+          totalAmount: order.total || '0',
+        },
+        customer_email: customer?.email || undefined,
+        expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+      });
+
+      // Update order with new payment link
+      await db.update(orders)
+        .set({
+          stripePaymentLinkId: session.id,
+          stripePaymentLinkUrl: session.url || '',
+          quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+        .where(eq(orders.id, orderId));
+
+      console.log(`✅ Customer-initiated balance payment link generated for order ${order.orderNumber}: ${session.url}`);
+
+      res.json({
+        success: true,
+        paymentLink: session.url,
+        amount: amountOutstanding.toFixed(2),
+        isExisting: false,
+      });
+
+    } catch (error) {
+      console.error('❌ Error generating customer payment link:', error);
+      res.status(500).json({ error: 'Failed to generate payment link' });
+    }
+  });
+
   return httpServer;
 }
