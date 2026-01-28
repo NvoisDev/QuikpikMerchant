@@ -57,6 +57,10 @@ interface Order {
   orderNotes?: string;
   paymentMethod?: string;
   paymentStatus?: string;
+  amountPaid?: string;
+  amountOutstanding?: string;
+  depositPercentage?: number;
+  stripePaymentLinkUrl?: string;
   createdAt: string;
   updatedAt: string;
   readyToCollectAt?: string;
@@ -138,6 +142,32 @@ const getStatusIcon = (status: string) => {
   }
 };
 
+const getPaymentStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'paid':
+      return 'bg-green-100 text-green-800';
+    case 'part_paid':
+      return 'bg-orange-100 text-orange-800';
+    case 'unpaid':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getPaymentStatusLabel = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'paid':
+      return 'Paid';
+    case 'part_paid':
+      return 'Part Paid';
+    case 'unpaid':
+      return 'Unpaid';
+    default:
+      return status || 'Unknown';
+  }
+};
+
 const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
   const queryClient = useQueryClient();
   // Use stored values from order data
@@ -179,8 +209,51 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
             <Badge variant="outline" className="text-xs">
               {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
             </Badge>
+            <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
+              {getPaymentStatusLabel(order.paymentStatus || 'paid')}
+            </Badge>
           </div>
         </div>
+
+        {/* Outstanding Balance Alert - Show if there's money owed */}
+        {parseFloat(order.amountOutstanding || '0') > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-start">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                <span className="text-lg">💳</span>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-orange-900 text-sm">Outstanding Balance</h4>
+                <p className="text-orange-800 text-xs mt-1">
+                  You have an outstanding balance of <span className="font-bold">{formatCurrency(order.amountOutstanding || '0')}</span> on this order.
+                </p>
+                <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Order Total:</span>
+                    <span className="font-medium">{formatCurrency(order.total)}</span>
+                  </div>
+                  {order.depositPercentage && order.depositPercentage < 100 && (
+                    <div className="flex justify-between text-green-700">
+                      <span>Deposit ({order.depositPercentage}%):</span>
+                      <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-green-700">
+                    <span>Amount Paid:</span>
+                    <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+                  </div>
+                  <div className="flex justify-between text-orange-700 font-semibold border-t pt-1">
+                    <span>Outstanding:</span>
+                    <span>{formatCurrency(order.amountOutstanding || '0')}</span>
+                  </div>
+                </div>
+                <p className="text-orange-700 text-xs mt-2">
+                  Please contact the seller to arrange payment for the remaining balance.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Ready for Collection Alert - Show prominently for pickup orders */}
         {order.fulfillmentType === 'pickup' && order.status === 'ready_for_collection' && (
