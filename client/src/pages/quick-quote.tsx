@@ -49,6 +49,8 @@ interface QuoteItem {
   originalPrice: number;
   customPrice: number;
   quantity: number;
+  sellingType: 'units' | 'pallets';
+  unitsPerPallet?: number;
 }
 
 interface Customer {
@@ -66,6 +68,9 @@ interface Product {
   price: string;
   stock: number;
   imageUrl?: string;
+  palletPrice?: string;
+  palletStock?: number;
+  unitsPerPallet?: number;
 }
 
 export default function QuickQuote() {
@@ -162,8 +167,16 @@ export default function QuickQuote() {
     },
   });
 
-  const addProduct = (product: Product) => {
-    const existingIndex = quoteItems.findIndex(item => item.productId === product.id);
+  const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
+    const price = sellingType === 'pallets' && product.palletPrice 
+      ? parseFloat(product.palletPrice) 
+      : parseFloat(product.price);
+    
+    // Check if already added with same product AND selling type
+    const existingIndex = quoteItems.findIndex(
+      item => item.productId === product.id && item.sellingType === sellingType
+    );
+    
     if (existingIndex >= 0) {
       const updated = [...quoteItems];
       updated[existingIndex].quantity += 1;
@@ -172,14 +185,16 @@ export default function QuickQuote() {
       const newIndex = quoteItems.length;
       setQuoteItems([...quoteItems, {
         productId: product.id,
-        productName: product.name,
-        originalPrice: parseFloat(product.price),
-        customPrice: parseFloat(product.price),
+        productName: product.name + (sellingType === 'pallets' ? ' (Pallet)' : ''),
+        originalPrice: price,
+        customPrice: price,
         quantity: 1,
+        sellingType,
+        unitsPerPallet: product.unitsPerPallet,
       }]);
       setInputValues(prev => ({
         ...prev,
-        [newIndex]: { price: product.price, qty: '1' }
+        [newIndex]: { price: price.toString(), qty: '1' }
       }));
     }
     setProductDialogOpen(false);
@@ -483,21 +498,46 @@ export default function QuickQuote() {
                     <DialogHeader>
                       <DialogTitle>Select Product</DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <div className="grid grid-cols-1 gap-3 mt-4">
                       {products.map((product) => (
-                        <div
-                          key={product.id}
-                          className="p-3 border rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
-                          onClick={() => addProduct(product)}
-                        >
-                          <div className="font-medium">{product.name}</div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-green-600 font-semibold">
-                              £{parseFloat(product.price).toFixed(2)}
-                            </span>
-                            <Badge variant="secondary">
-                              {product.stock} in stock
-                            </Badge>
+                        <div key={product.id} className="p-3 border rounded-lg">
+                          <div className="font-medium mb-2">{product.name}</div>
+                          <div className="flex flex-wrap gap-2">
+                            <div
+                              className="flex-1 min-w-[140px] p-2 border rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
+                              onClick={() => addProduct(product, 'units')}
+                            >
+                              <div className="text-xs text-gray-500">Per Unit</div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-green-600 font-semibold">
+                                  £{parseFloat(product.price).toFixed(2)}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {product.stock || 0} units
+                                </Badge>
+                              </div>
+                            </div>
+                            {product.palletPrice && parseFloat(product.palletPrice) > 0 && (
+                              <div
+                                className="flex-1 min-w-[140px] p-2 border rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors border-blue-200 bg-blue-50/30"
+                                onClick={() => addProduct(product, 'pallets')}
+                              >
+                                <div className="text-xs text-blue-600 font-medium">Per Pallet</div>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-blue-600 font-semibold">
+                                    £{parseFloat(product.palletPrice).toFixed(2)}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs bg-blue-100">
+                                    {product.palletStock || 0} pallets
+                                  </Badge>
+                                </div>
+                                {product.unitsPerPallet && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    ({product.unitsPerPallet} units/pallet)
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -520,9 +560,16 @@ export default function QuickQuote() {
                       {/* Product name and original price - full width on mobile */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{item.productName}</div>
+                          <div className="font-medium truncate flex items-center gap-2">
+                            {item.productName}
+                            {item.sellingType === 'pallets' && (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                                Pallet
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-sm text-gray-500">
-                            Original: £{item.originalPrice.toFixed(2)}
+                            Original: £{item.originalPrice.toFixed(2)}{item.sellingType === 'pallets' ? '/pallet' : '/unit'}
                             {item.customPrice < item.originalPrice && (
                               <Badge variant="secondary" className="ml-2 text-green-600">
                                 <Percent className="h-3 w-3 mr-1" />
