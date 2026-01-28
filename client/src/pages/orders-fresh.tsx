@@ -1159,24 +1159,50 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Order Timeline - Simplified 3-step flow */}
+              {/* Order Timeline - Payment-aware flow */}
               <div>
                 <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
                 <div className="space-y-2">
-                  {/* Step 1: Customer Payment Received */}
+                  {/* Step 1: Initial Payment - Shows deposit details if partial payment */}
                   <div className="flex items-start gap-2">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${parseFloat(selectedOrder.amountPaid || '0') > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <div>
-                      <div className={`text-xs ${['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'font-medium' : 'text-gray-500'}`}>Customer payment received</div>
-                      {['paid', 'ready_for_collection', 'fulfilled'].includes(selectedOrder.status) && (
+                      <div className={`text-xs ${parseFloat(selectedOrder.amountPaid || '0') > 0 ? 'font-medium' : 'text-gray-500'}`}>
+                        {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
+                          ? `Deposit received (${(selectedOrder as any).depositPercentage}%)`
+                          : 'Payment received'}
+                      </div>
+                      {parseFloat(selectedOrder.amountPaid || '0') > 0 && (
                         <div className="text-xs text-gray-500">
-                          {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                          {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
+                            ? `£${parseFloat((parseFloat(selectedOrder.total || '0') * ((selectedOrder as any).depositPercentage / 100)).toFixed(2)).toLocaleString()}`
+                            : `£${parseFloat(selectedOrder.total || '0').toLocaleString()}`}
+                          {' • '}{new Date(selectedOrder.createdAt).toLocaleDateString()}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Step 2: Ready for Collection/Delivery */}
+                  {/* Step 2: Balance Payment - Only show if there was a deposit */}
+                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && (
+                    <div className="flex items-start gap-2">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) ? 'bg-green-500' : 'bg-orange-400'}`}></div>
+                      <div>
+                        <div className={`text-xs ${(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) ? 'font-medium' : 'text-orange-600'}`}>
+                          {(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) 
+                            ? 'Balance payment received'
+                            : `Balance outstanding: £${parseFloat(selectedOrder.amountOutstanding || '0').toLocaleString()}`}
+                        </div>
+                        {(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) && (
+                          <div className="text-xs text-gray-500">
+                            £{(parseFloat(selectedOrder.total || '0') - parseFloat((parseFloat(selectedOrder.total || '0') * ((selectedOrder as any).depositPercentage / 100)).toFixed(2))).toLocaleString()} • Full payment complete
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Ready for Collection/Delivery */}
                   <div className="flex items-start gap-2">
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${['ready_for_collection', 'fulfilled'].includes(selectedOrder.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <div>
@@ -1191,7 +1217,7 @@ export default function OrdersFresh() {
                     </div>
                   </div>
 
-                  {/* Step 3: Collected/Delivered */}
+                  {/* Step 4: Collected/Delivered */}
                   <div className="flex items-start gap-2">
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${selectedOrder.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <div>
