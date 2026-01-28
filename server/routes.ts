@@ -16351,56 +16351,8 @@ The Quikpik Team
             // Only set order status to 'paid' when fully paid, otherwise keep as 'pending'
             const orderStatus = amountOutstanding <= 0 ? 'paid' : 'pending';
             
-            // CRITICAL: Decrement stock on FIRST payment only (when previouslyPaid is 0)
-            // This prevents double-counting when balance payments come in
-            if (previouslyPaid === 0) {
-              console.log('📦 First quote payment - decrementing stock...');
-              const quoteOrderItems = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
-              
-              for (const item of quoteOrderItems) {
-                const [product] = await db.select().from(products).where(eq(products.id, item.productId));
-                if (product) {
-                  const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
-                  const quantity = item.quantity;
-                  
-                  console.log(`📦 QUOTE STOCK: Decrementing ${quantity} ${sellingType} of ${product.name}`);
-                  
-                  // Use InventoryCalculator for proper stock tracking
-                  const orderResult = InventoryCalculator.processOrder(quantity, sellingType, {
-                    stock: product.stock,
-                    palletStock: product.palletStock,
-                    quantityInPack: product.quantityInPack,
-                    unitsPerPallet: product.unitsPerPallet
-                  });
-                  
-                  const { newUnitStock, newPalletStock } = orderResult;
-                  
-                  // Update stock fields
-                  await db.update(products)
-                    .set({ 
-                      stock: newUnitStock,
-                      palletStock: newPalletStock,
-                      updatedAt: new Date()
-                    })
-                    .where(eq(products.id, item.productId));
-                  
-                  // Record stock movement
-                  await db.insert(stockMovements).values({
-                    productId: item.productId,
-                    wholesalerId: session.metadata.wholesalerId,
-                    movementType: 'purchase',
-                    quantity: -quantity,
-                    unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-                    stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0),
-                    stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
-                    reason: `Quote order sale - ${quantity} ${sellingType}`,
-                    orderId: orderId
-                  });
-                  
-                  console.log(`✅ QUOTE STOCK: ${product.name} ${sellingType === 'pallets' ? 'pallets' : 'units'}: ${sellingType === 'pallets' ? product.palletStock : product.stock} → ${sellingType === 'pallets' ? newPalletStock : newUnitStock}`);
-                }
-              }
-            }
+            // NOTE: Stock is decremented at quote CREATION time (field sales - products given in person)
+            // No stock decrementation needed here on payment
             
             // Update the order with payment info
             // Only clear the payment link - user can generate a new one for remaining balance via UI
@@ -16857,10 +16809,8 @@ The Quikpik Team
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
 
-      // Generate order number
-      const existingOrders = await storage.getOrders(wholesalerId, undefined, undefined);
-      const orderCount = existingOrders.length + 1;
-      const orderNumber = `QT-${String(orderCount).padStart(3, '0')}`;
+      // Generate unified order number (same sequence as regular orders)
+      const orderNumber = await generateOrderNumber(wholesalerId);
 
       // Create the quote order in pending status
       const [quoteOrder] = await db.insert(orders).values({
@@ -16885,6 +16835,7 @@ The Quikpik Team
       }).returning();
 
       // Create order items with custom prices (supporting both units and pallets)
+      // AND decrement stock immediately (field sales - products given in person)
       for (const item of items) {
         const sellingType = item.sellingType || 'units';
         await db.insert(orderItems).values({
@@ -16895,6 +16846,47 @@ The Quikpik Team
           total: (item.customPrice * item.quantity).toFixed(2),
           sellingType: sellingType,
         });
+        
+        // CRITICAL: Decrement stock at quote creation (products handed over in person)
+        const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+        if (product) {
+          const quantity = item.quantity;
+          console.log(`📦 QUOTE STOCK: Decrementing ${quantity} ${sellingType} of ${product.name} at quote creation`);
+          
+          // Use InventoryCalculator for proper stock tracking
+          const orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
+            stock: product.stock,
+            palletStock: product.palletStock,
+            quantityInPack: product.quantityInPack,
+            unitsPerPallet: product.unitsPerPallet
+          });
+          
+          const { newUnitStock, newPalletStock } = orderResult;
+          
+          // Update stock fields
+          await db.update(products)
+            .set({ 
+              stock: newUnitStock,
+              palletStock: newPalletStock,
+              updatedAt: new Date()
+            })
+            .where(eq(products.id, item.productId));
+          
+          // Record stock movement
+          await db.insert(stockMovements).values({
+            productId: item.productId,
+            wholesalerId: wholesalerId,
+            movementType: 'purchase',
+            quantity: -quantity,
+            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
+            stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0),
+            stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
+            reason: `Quote order sale - ${quantity} ${sellingType}`,
+            orderId: quoteOrder.id
+          });
+          
+          console.log(`✅ QUOTE STOCK: ${product.name} ${sellingType}: ${sellingType === 'pallets' ? product.palletStock : product.stock} → ${sellingType === 'pallets' ? newPalletStock : newUnitStock}`);
+        }
       }
 
       // Create Stripe Payment Link
