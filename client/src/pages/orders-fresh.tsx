@@ -850,10 +850,17 @@ export default function OrdersFresh() {
               <div>
                 <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
                 <div className="flex gap-2">
-                  <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
-                  </Badge>
+                  {selectedOrder.isQuote ? (
+                    <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
+                    </Badge>
+                  ) : (
+                    <Badge className={`${getStatusColor(selectedOrder.status)} text-xs px-2 py-1`}>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {selectedOrder.status?.charAt(0).toUpperCase() + selectedOrder.status?.slice(1)}
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="text-xs px-2 py-1">
                     {selectedOrder.fulfillmentType === 'delivery' ? (
                       <><Truck className="w-3 h-3 mr-1" />Delivery</>
