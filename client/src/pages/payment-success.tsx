@@ -30,7 +30,7 @@ export default function PaymentSuccess() {
 
             <div className="bg-green-50 border border-green-100 p-4 rounded-lg">
               <p className="text-sm text-green-700 font-medium">
-                Your supplier has been notified and will prepare your order.
+                Thank you! Your payment is complete. We look forward to serving you again!
               </p>
             </div>
 
