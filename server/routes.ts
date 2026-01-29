@@ -17063,17 +17063,42 @@ The Quikpik Team
         return res.status(500).json({ error: 'Payment service not available' });
       }
 
-      // Create Stripe checkout session for remaining balance
+      // Calculate the correct payment amount
+      // For unpaid quotes with a deposit percentage, charge only the deposit amount
+      // For part_paid quotes, charge the remaining balance
+      const orderTotal = parseFloat(order.total || '0');
+      const amountPaid = parseFloat(order.amountPaid || '0');
+      const depositPercentage = order.depositPercentage || 100;
+      
+      let paymentAmount: number;
+      let paymentLabel: string;
+      let paymentDescription: string;
+      
+      if (order.paymentStatus === 'unpaid' && depositPercentage < 100) {
+        // Unpaid quote with deposit - charge the deposit amount
+        paymentAmount = orderTotal * (depositPercentage / 100);
+        paymentLabel = `Deposit (${depositPercentage}%) - Order ${order.orderNumber}`;
+        paymentDescription = `Deposit payment of ${depositPercentage}%. Order total: £${orderTotal.toFixed(2)}`;
+      } else {
+        // Part paid or full payment - charge outstanding balance
+        paymentAmount = amountOutstanding;
+        paymentLabel = `Remaining Balance - Order ${order.orderNumber}`;
+        paymentDescription = `Payment for remaining balance. Original order total: £${orderTotal.toFixed(2)}`;
+      }
+
+      console.log(`💳 Payment link calculation: status=${order.paymentStatus}, depositPct=${depositPercentage}%, total=${orderTotal}, paid=${amountPaid}, outstanding=${amountOutstanding}, charging=${paymentAmount}`);
+
+      // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [{
           price_data: {
             currency: 'gbp',
             product_data: {
-              name: `Remaining Balance - Order ${order.orderNumber}`,
-              description: `Payment for remaining balance. Original order total: £${order.total}`,
+              name: paymentLabel,
+              description: paymentDescription,
             },
-            unit_amount: Math.round(amountOutstanding * 100),
+            unit_amount: Math.round(paymentAmount * 100),
           },
           quantity: 1,
         }],
@@ -17086,10 +17111,10 @@ The Quikpik Team
           wholesalerId,
           customerId: order.retailerId,
           isQuote: 'true',
-          isBalancePayment: 'true',
-          depositPercentage: '100',
-          depositAmount: amountOutstanding.toFixed(2),
-          totalAmount: order.total || '0',
+          isBalancePayment: order.paymentStatus === 'part_paid' ? 'true' : 'false',
+          depositPercentage: depositPercentage.toString(),
+          depositAmount: paymentAmount.toFixed(2),
+          totalAmount: orderTotal.toFixed(2),
         },
         customer_email: customer?.email || undefined,
         expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
@@ -17111,7 +17136,11 @@ The Quikpik Team
       const customerPhone = order.customerPhone;
       if (customerPhone && session.url) {
         try {
-          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.\n\nOutstanding Balance: £${amountOutstanding.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
+          // Use the correct payment amount and label in SMS
+          const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
+            ? `Deposit (${depositPercentage}%)`
+            : 'Outstanding Balance';
+          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
           
           const smsResult = await sendSMS({
             to: customerPhone,
@@ -17119,9 +17148,9 @@ The Quikpik Team
           });
           
           smsSent = smsResult.success;
-          console.log(`📱 SMS ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for balance payment`);
+          console.log(`📱 SMS ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for ${paymentTypeLabel.toLowerCase()}`);
         } catch (smsError) {
-          console.error('❌ Failed to send balance payment SMS:', smsError);
+          console.error('❌ Failed to send payment SMS:', smsError);
         }
       }
 
@@ -17131,7 +17160,7 @@ The Quikpik Team
       res.json({
         success: true,
         paymentLink: session.url,
-        amount: amountOutstanding.toFixed(2),
+        amount: paymentAmount.toFixed(2),
         order: updatedOrder,
         smsSent,
         customerPhone: customerPhone || null,
