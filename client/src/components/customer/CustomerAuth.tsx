@@ -33,7 +33,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   
   const [lastFourDigits, setLastFourDigits] = useState(authParam || "");
   const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'step1' | 'step2' | 'step3' | 'success'>('step1');
+  const [authStep, setAuthStep] = useState<'step1' | 'step2' | 'step3' | 'success'>('step2');
   const [customerData, setCustomerData] = useState<any>(null);
   const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
   const [emailCode, setEmailCode] = useState("");
@@ -186,7 +186,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     } catch (error) {
       console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
       setError('Authentication failed. Please try again.');
-      setAuthStep('step1');
+      setAuthStep('step2');
     } finally {
       setSmsRequestInProgress(false);
     }
@@ -246,8 +246,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       // Fresh start - check for existing session first
       checkExistingSession().then(hasSession => {
         if (!hasSession) {
-          console.log('🔄 FRESH START: No session found, starting at step 1');
-          setAuthStep('step1');
+          console.log('🔄 FRESH START: No session found, starting at phone entry');
+          setAuthStep('step2');
         }
       });
     }
@@ -435,13 +435,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       } else {
         setError(data.error || "Failed to send SMS code. Please try again.");
         // If SMS fails, go back to phone step
-        setAuthStep('step1');
+        setAuthStep('step2');
         setCustomerData(null);
       }
     } catch (error) {
       console.error('SMS request error:', error);
       setError("Connection error. Please try again.");
-      setAuthStep('step1');
+      setAuthStep('step2');
     } finally {
       setIsSMSLoading(false);
     }
@@ -944,70 +944,54 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3 sm:space-y-4">
 
-                {/* Enhanced Step 1: Store Introduction with Progress Indicator */}
-                {authStep === 'step1' && (
-                  <>
-                    <div className="text-center space-y-4 sm:space-y-6">
-                      {/* Progress Bar */}
-                      <div className="mb-4 sm:mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 1 of 3</span>
-                          <span className="text-xs sm:text-sm text-gray-500">Getting Started</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
-                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '33%' }}></div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-blue-100 shadow-sm">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-                          <span className="text-white text-2xl sm:text-3xl">🏪</span>
-                        </div>
-                        <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
-                          Welcome to {wholesaler?.businessName || 'Our Store'}
-                        </h4>
-                        <p className="text-gray-600 text-sm sm:text-base">
-                          Access your wholesale portal with secure authentication
-                        </p>
-                      </div>
-                      
-                      <Button 
-                        onClick={() => setAuthStep('step2')} 
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1"
-                      >
-                        Continue to Authentication
-                        <span className="ml-2 text-lg">→</span>
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                {/* Enhanced Step 2: Phone Number Entry */}
+                {/* Step 1: Phone Number Entry (Simplified 2-step flow) */}
                 {authStep === 'step2' && (
                   <>
                     <div className="space-y-3 sm:space-y-4">
-                      {/* Enhanced Progress Indicator */}
+                      {/* Warm Welcome Header */}
                       <div className="text-center mb-3 sm:mb-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 2 of 3</span>
-                          <span className="text-xs sm:text-sm text-gray-500">Authentication</span>
+                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 1 of 2</span>
+                          <span className="text-xs sm:text-sm text-gray-500">Quick Login</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mb-3 sm:mb-4">
-                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '66%' }}></div>
+                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '50%' }}></div>
                         </div>
                         
-                        {/* Visual Header */}
-                        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-100">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-md">
-                            <span className="text-white text-lg sm:text-xl">📱</span>
-                          </div>
-                          <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
-                            Phone Authentication
+                        {/* Warm Welcome Message */}
+                        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-100 mb-3">
+                          <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
+                            Great to see you! 👋
                           </h4>
-                          <p className="text-xs sm:text-sm text-gray-600">
-                            Enter the last 4 digits of your phone number
+                          <p className="text-sm text-gray-600 mb-3">
+                            Your exclusive wholesale portal awaits
                           </p>
+                          
+                          {/* Quick Benefits - What You Can Do */}
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <div className="bg-white/70 rounded-lg p-2 text-center">
+                              <span className="text-lg">📦</span>
+                              <p className="text-xs text-gray-600 mt-1">View Orders</p>
+                            </div>
+                            <div className="bg-white/70 rounded-lg p-2 text-center">
+                              <span className="text-lg">🔄</span>
+                              <p className="text-xs text-gray-600 mt-1">Quick Reorder</p>
+                            </div>
+                            <div className="bg-white/70 rounded-lg p-2 text-center">
+                              <span className="text-lg">🏷️</span>
+                              <p className="text-xs text-gray-600 mt-1">Exclusive Prices</p>
+                            </div>
+                            <div className="bg-white/70 rounded-lg p-2 text-center">
+                              <span className="text-lg">💬</span>
+                              <p className="text-xs text-gray-600 mt-1">Direct Contact</p>
+                            </div>
+                          </div>
                         </div>
+                        
+                        {/* Phone Entry Instruction */}
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          Enter the last 4 digits of your phone number to continue
+                        </p>
                       </div>
                       <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
                         Last 4 digits of your phone number
@@ -1117,22 +1101,24 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </>
                 )}
 
-                {/* Step 3: SMS Verification */}
+                {/* Step 2: SMS Verification (was Step 3) */}
                 {authStep === 'step3' && customerData && (
                   <>
                     <div className="text-center mb-4">
+                      {/* Progress Bar */}
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs sm:text-sm font-medium text-gray-600">Step 2 of 2</span>
+                        <span className="text-xs sm:text-sm text-gray-500">Verification</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mb-4">
+                        <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '100%' }}></div>
+                      </div>
+                      
                       <h4 className="text-base font-semibold text-gray-800 mb-1">
-                        🔐 Verification Required
+                        Almost there, {customerData.name}! 🎉
                       </h4>
                       <p className="text-sm text-gray-600 mb-2">
-                        Hello {customerData.name}! Please verify your identity:
-                      </p>
-                      <div className="flex items-center justify-center space-x-2 my-4">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium">
-                        Step 3 of 3: SMS Verification
+                        Just one more step to access your portal
                       </p>
                       {countdown > 0 && (
                         <p className="text-xs text-blue-600 mt-2">
