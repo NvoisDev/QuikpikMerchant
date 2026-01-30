@@ -1187,8 +1187,29 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-2 border-t">
+              <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
                 
+                {/* Cancel Order Button - Always visible for non-fulfilled/non-cancelled orders */}
+                {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+                  <Button 
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      const items = selectedOrder.items || [];
+                      setReturnItems(items.map((item: any) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        sellingType: item.sellingType || 'unit',
+                        maxQty: item.quantity
+                      })));
+                      setShowCancelDialog(true);
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel Order
+                  </Button>
+                )}
+
                 {/* Items Prepared Button - Only for paid orders */}
                 {selectedOrder.status === 'paid' && (
                   <Button 
@@ -1247,27 +1268,6 @@ export default function OrdersFresh() {
                     disabled={updatingOrderId === selectedOrder.id}
                   >
                     {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
-                  </Button>
-                )}
-
-                {/* Cancel Order Button */}
-                {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
-                  <Button 
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => {
-                      const items = selectedOrder.items || [];
-                      setReturnItems(items.map((item: any) => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        sellingType: item.sellingType || 'unit',
-                        maxQty: item.quantity
-                      })));
-                      setShowCancelDialog(true);
-                    }}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Cancel Order
                   </Button>
                 )}
               </div>
