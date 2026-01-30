@@ -8,6 +8,7 @@ export default function PaymentSuccess() {
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const orderNumber = params.get('order');
+  const wholesalerId = params.get('wholesaler');
 
   const benefits = [
     {
@@ -81,15 +82,15 @@ export default function PaymentSuccess() {
 
             <div className="pt-2">
               <Button 
-                onClick={() => setLocation('/customer-login')}
+                onClick={() => setLocation(wholesalerId ? `/store/${wholesalerId}` : '/customer-login')}
                 className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg"
               >
                 <Lock className="w-5 h-5 mr-2" />
-                Log In to Your Account
+                {wholesalerId ? 'Go to Store' : 'Log In to Your Account'}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <p className="text-xs text-gray-500 text-center mt-3">
-                Secure login using your registered phone number
+                {wholesalerId ? 'Continue shopping with your wholesaler' : 'Secure login using your registered phone number'}
               </p>
             </div>
           </CardContent>
