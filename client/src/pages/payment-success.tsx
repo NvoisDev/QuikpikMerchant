@@ -1,4 +1,5 @@
 import { useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Bell, History, Tag, MessageCircle, Lock, ArrowRight } from "lucide-react";
@@ -9,6 +10,13 @@ export default function PaymentSuccess() {
   const params = new URLSearchParams(searchString);
   const orderNumber = params.get('order');
   const wholesalerId = params.get('wholesaler');
+
+  const { data: wholesaler } = useQuery<{ businessName: string }>({
+    queryKey: ['/api/wholesaler', wholesalerId],
+    enabled: !!wholesalerId,
+  });
+
+  const storeName = wholesaler?.businessName || (wholesalerId ? 'Your Wholesaler' : 'Quikpik');
 
   const benefits = [
     {
@@ -41,7 +49,7 @@ export default function PaymentSuccess() {
             <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <CardTitle className="text-2xl text-green-600">Welcome to Quikpik!</CardTitle>
+            <CardTitle className="text-2xl text-green-600">Welcome to {storeName}!</CardTitle>
             <p className="text-gray-600 mt-2">Thank you for your order</p>
             {orderNumber && (
               <p className="text-sm text-gray-500 mt-1">
