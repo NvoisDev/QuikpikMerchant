@@ -16972,8 +16972,8 @@ The Quikpik Team
         const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
         
         const message = isDeposit 
-          ? `Hi ${customer.firstName || 'there'}! As a registered customer of ${businessName}, you have a new quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
-          : `Hi ${customer.firstName || 'there'}! As a registered customer of ${businessName}, you have a new quote.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
         
         try {
           await sendSMS({
