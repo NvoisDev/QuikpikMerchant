@@ -551,6 +551,11 @@ export const orders = pgTable("orders", {
   amountOutstanding: decimal("amount_outstanding", { precision: 10, scale: 2 }).default("0.00"), // Remaining balance
   paymentStatus: varchar("payment_status").default("unpaid"), // 'unpaid' | 'part_paid' | 'paid'
   
+  // Refund tracking
+  amountRefunded: decimal("amount_refunded", { precision: 10, scale: 2 }).default("0.00"), // Total amount refunded
+  refundReason: text("refund_reason"), // Reason for refund/cancellation
+  cancelledAt: timestamp("cancelled_at"), // When order was cancelled
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

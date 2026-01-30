@@ -6018,12 +6018,15 @@ The Quikpik Team`
     }
   });
 
-  // Cancel order
+  // Cancel order with optional partial return and refund
   app.post('/api/orders/:id/cancel', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.id;
-      const { reason } = req.body;
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      const { reason, returnedItems, processRefund } = req.body;
+      // returnedItems: Array<{ productId: number, quantity: number, sellingType: 'units' | 'pallets' }>
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -6031,44 +6034,144 @@ The Quikpik Team`
       }
 
       // Only wholesaler can cancel order
-      if (order.wholesalerId !== userId) {
+      if (order.wholesalerId !== wholesalerId) {
         return res.status(403).json({ message: "Not authorized to cancel this order" });
       }
 
-      // Can't cancel already fulfilled or archived orders
-      if (order.status === 'fulfilled' || order.status === 'archived') {
-        return res.status(400).json({ message: "Cannot cancel fulfilled or archived orders" });
+      // Can't cancel already cancelled orders
+      if (order.status === 'cancelled') {
+        return res.status(400).json({ message: "Order is already cancelled" });
       }
 
-      // Update order status to cancelled
-      const updatedOrder = await storage.updateOrderStatus(id, 'cancelled');
-      
-      // Restore stock for cancelled orders
       const orderItems = await storage.getOrderItems(id);
-      for (const item of orderItems) {
-        const product = await storage.getProduct(item.productId);
-        if (product) {
-          await storage.updateProductStock(item.productId, product.stock + item.quantity);
+      let stockRestoredCount = 0;
+      let refundAmount = 0;
+      
+      // Calculate refund amount and restore stock for returned items
+      if (returnedItems && returnedItems.length > 0) {
+        // Partial cancellation - only restore specified items
+        for (const returnItem of returnedItems) {
+          const orderItem = orderItems.find(oi => oi.productId === returnItem.productId);
+          if (orderItem) {
+            const product = await storage.getProduct(returnItem.productId);
+            if (product) {
+              const returnQty = Math.min(returnItem.quantity, orderItem.quantity);
+              
+              // Restore stock based on selling type
+              if (returnItem.sellingType === 'pallets') {
+                const currentPalletStock = product.palletStock || 0;
+                await db.update(products)
+                  .set({ palletStock: currentPalletStock + returnQty })
+                  .where(eq(products.id, product.id));
+              } else {
+                await storage.updateProductStock(product.id, product.stock + returnQty);
+              }
+              
+              // Calculate refund for this item
+              refundAmount += parseFloat(orderItem.unitPrice) * returnQty;
+              stockRestoredCount += returnQty;
+              
+              console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
+            }
+          }
+        }
+      } else {
+        // Full cancellation - restore all items
+        for (const item of orderItems) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            if (item.sellingType === 'pallets') {
+              const currentPalletStock = product.palletStock || 0;
+              await db.update(products)
+                .set({ palletStock: currentPalletStock + item.quantity })
+                .where(eq(products.id, product.id));
+            } else {
+              await storage.updateProductStock(item.productId, product.stock + item.quantity);
+            }
+            stockRestoredCount += item.quantity;
+          }
+        }
+        // Full refund for full cancellation
+        refundAmount = parseFloat(order.amountPaid || '0');
+      }
+
+      // Process Stripe refund if order was paid and refund requested
+      let stripeRefund = null;
+      const amountPaid = parseFloat(order.amountPaid || '0');
+      
+      if (processRefund && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
+        try {
+          const refundAmountToProcess = returnedItems?.length > 0 ? refundAmount : amountPaid;
+          
+          if (refundAmountToProcess > 0 && refundAmountToProcess <= amountPaid) {
+            stripeRefund = await stripe.refunds.create({
+              payment_intent: order.stripePaymentIntentId,
+              amount: Math.round(refundAmountToProcess * 100),
+              reason: 'requested_by_customer',
+              metadata: {
+                order_id: id.toString(),
+                reason: reason || 'Order cancelled'
+              }
+            });
+            console.log(`💳 Stripe refund processed: £${refundAmountToProcess.toFixed(2)}`);
+          }
+        } catch (stripeError: any) {
+          console.error('Stripe refund failed:', stripeError);
+          // Continue with cancellation even if refund fails
         }
       }
 
-      // Send cancellation notification to customer if email available
+      // Determine new status
+      const isFullCancellation = !returnedItems || returnedItems.length === 0;
+      const newStatus = isFullCancellation ? 'cancelled' : order.status;
+
+      // Update order with cancellation details
+      const currentRefunded = parseFloat(order.amountRefunded || '0');
+      const totalRefunded = currentRefunded + (stripeRefund ? stripeRefund.amount / 100 : 0);
+      
+      await db.update(orders)
+        .set({
+          status: newStatus,
+          amountRefunded: totalRefunded.toFixed(2),
+          refundReason: reason || 'Customer requested cancellation',
+          cancelledAt: isFullCancellation ? new Date() : undefined,
+          notes: order.notes ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'}: ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. Refund: £${stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : '0.00'}` : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'}: ${reason || 'N/A'}`
+        })
+        .where(eq(orders.id, id));
+
+      // Send cancellation notification to customer
       try {
         const customer = await storage.getUser(order.retailerId);
         const wholesaler = await storage.getUser(order.wholesalerId);
         
-        if (customer?.email && wholesaler) {
-          // Send cancellation email
-          console.log(`Sending cancellation email to ${customer.email} for order ${id}`);
+        if (customer?.phoneNumber && wholesaler) {
+          const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+          const refundMsg = stripeRefund ? `\n\nA refund of £${(stripeRefund.amount / 100).toFixed(2)} has been processed to your original payment method.` : '';
+          const message = isFullCancellation 
+            ? `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`
+            : `Hi ${customer.firstName || 'there'}, a partial return has been processed for your order ${order.orderNumber} with ${businessName}.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
+          
+          await sendSMS({
+            to: customer.phoneNumber,
+            message,
+          });
+          console.log(`📱 Cancellation SMS sent to ${customer.phoneNumber}`);
         }
       } catch (error) {
         console.error('Failed to send cancellation notification:', error);
       }
 
+      const updatedOrder = await storage.getOrder(id);
+
       res.json({ 
-        message: "Order cancelled successfully",
+        message: isFullCancellation ? "Order cancelled successfully" : "Partial return processed successfully",
         order: updatedOrder,
-        stockRestored: true
+        stockRestored: stockRestoredCount,
+        refund: stripeRefund ? {
+          id: stripeRefund.id,
+          amount: stripeRefund.amount / 100,
+          status: stripeRefund.status
+        } : null
       });
     } catch (error) {
       console.error("Error cancelling order:", error);
