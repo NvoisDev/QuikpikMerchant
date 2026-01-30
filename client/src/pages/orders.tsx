@@ -263,7 +263,7 @@ export default function OrdersFresh() {
       setCancelReason('');
       setReturnItems([]);
       setSelectedOrder(null);
-      fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
     },
     onError: (error: any) => {
       toast({
@@ -1038,7 +1038,7 @@ export default function OrdersFresh() {
                       <div className="text-sm">
                         <div className="font-medium text-orange-800">Collect from business</div>
                         <div className="text-orange-700 font-medium mt-1">
-                          {selectedOrder.wholesalerBusinessName || 'Business Location'}
+                          {(selectedOrder as any).wholesalerBusinessName || 'Business Location'}
                         </div>
                         <div className="text-orange-600 text-xs mt-2">
                           Please contact the business to arrange collection time and get the exact address.
@@ -1310,7 +1310,7 @@ export default function OrdersFresh() {
                         }}
                       />
                       <div className="text-sm">
-                        <span className="font-medium">{orderItem?.productName || 'Product'}</span>
+                        <span className="font-medium">{(orderItem as any)?.productName || (orderItem as any)?.name || 'Product'}</span>
                         <span className="text-gray-500 ml-2">({item.sellingType})</span>
                       </div>
                     </div>
