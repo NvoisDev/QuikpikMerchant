@@ -16964,52 +16964,30 @@ The Quikpik Team
         }
       }
 
-      // Send notification based on sendVia method
-      if (sendVia !== 'link' && paymentLinkUrl) {
+      // Send SMS notification
+      if (sendVia === 'sms' && paymentLinkUrl && customer.phoneNumber) {
         const isDeposit = validDepositPercentage < 100;
-        const message = isDeposit 
-          ? `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`
-          : `Hi ${customer.firstName || 'there'}! ${wholesaler.businessName || 'Your supplier'} has created a quote for you.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nThis link expires in 24 hours.`;
+        const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+        const storeLink = `https://quikpik.app/store/${wholesalerId}`;
+        const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
         
-        if (sendVia === 'sms' && customer.phoneNumber) {
-          try {
-            await sendSMS({
-              to: customer.phoneNumber,
-              message,
-            });
-            console.log(`📱 Quote SMS sent to ${customer.phoneNumber}`);
-            
-            // Update quote sent timestamp
-            await db.update(orders)
-              .set({ quoteSentAt: new Date() })
-              .where(eq(orders.id, quoteOrder.id));
-          } catch (smsError) {
-            console.error('❌ Failed to send quote SMS:', smsError);
-          }
-        } else if (sendVia === 'email' && customer.email) {
-          try {
-            await sendEmail({
-              to: customer.email,
-              from: 'hello@quikpik.co',
-              subject: `Quote from ${wholesaler.businessName || 'Your supplier'} - £${total.toFixed(2)}`,
-              html: `
-                <h2>You have a new quote!</h2>
-                <p>${wholesaler.businessName || 'Your supplier'} has created a quote for you.</p>
-                <p><strong>Total: £${total.toFixed(2)}</strong></p>
-                <p><a href="${paymentLinkUrl}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Pay Now</a></p>
-                <p><small>This payment link expires in 24 hours.</small></p>
-              `,
-              text: message,
-            });
-            console.log(`📧 Quote email sent to ${customer.email}`);
-            
-            // Update quote sent timestamp
-            await db.update(orders)
-              .set({ quoteSentAt: new Date() })
-              .where(eq(orders.id, quoteOrder.id));
-          } catch (emailError) {
-            console.error('❌ Failed to send quote email:', emailError);
-          }
+        const message = isDeposit 
+          ? `Hi ${customer.firstName || 'there'}! As a registered customer of ${businessName}, you have a new quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          : `Hi ${customer.firstName || 'there'}! As a registered customer of ${businessName}, you have a new quote.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
+        
+        try {
+          await sendSMS({
+            to: customer.phoneNumber,
+            message,
+          });
+          console.log(`📱 Quote SMS sent to ${customer.phoneNumber}`);
+          
+          // Update quote sent timestamp
+          await db.update(orders)
+            .set({ quoteSentAt: new Date() })
+            .where(eq(orders.id, quoteOrder.id));
+        } catch (smsError) {
+          console.error('❌ Failed to send quote SMS:', smsError);
         }
       }
 
