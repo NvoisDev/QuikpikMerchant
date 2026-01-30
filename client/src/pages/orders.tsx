@@ -947,27 +947,6 @@ export default function OrdersFresh() {
 
           {selectedOrder && (
             <div className="space-y-4 text-sm">
-              {/* Cancel Order Button - At the very top for visibility */}
-              {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
-                <Button 
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => {
-                    const items = selectedOrder.items || [];
-                    setReturnItems(items.map((item: any) => ({
-                      productId: item.productId,
-                      quantity: item.quantity,
-                      sellingType: item.sellingType || 'unit',
-                      maxQty: item.quantity
-                    })));
-                    setShowCancelDialog(true);
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel Order
-                </Button>
-              )}
-
               {/* Status & Fulfillment */}
               <div>
                 <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
@@ -1206,6 +1185,27 @@ export default function OrdersFresh() {
                   ))}
                 </div>
               </div>
+
+              {/* Cancel Order Button - Under Order Timeline */}
+              {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+                <Button 
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => {
+                    const items = selectedOrder.items || [];
+                    setReturnItems(items.map((item: any) => ({
+                      productId: item.productId,
+                      quantity: item.quantity,
+                      sellingType: item.sellingType || 'unit',
+                      maxQty: item.quantity
+                    })));
+                    setShowCancelDialog(true);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel Order
+                </Button>
+              )}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
