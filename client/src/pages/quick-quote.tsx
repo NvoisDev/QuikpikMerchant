@@ -80,7 +80,7 @@ export default function QuickQuote() {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
-  const [sendMethod, setSendMethod] = useState<'sms' | 'email' | 'link'>('sms');
+  const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
   const [copiedLink, setCopiedLink] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<{
     orderNumber: string;
@@ -139,7 +139,7 @@ export default function QuickQuote() {
     mutationFn: async (data: {
       customerId: string;
       items: QuoteItem[];
-      sendVia: 'sms' | 'email' | 'link';
+      sendVia: 'sms' | 'link';
       depositPercentage: 25 | 50 | 75 | 100;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
@@ -744,7 +744,7 @@ export default function QuickQuote() {
               <CardDescription>How would you like to share the payment link?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant={sendMethod === 'sms' ? 'default' : 'outline'}
                   className={sendMethod === 'sms' ? 'bg-green-600' : ''}
@@ -754,20 +754,12 @@ export default function QuickQuote() {
                   SMS
                 </Button>
                 <Button
-                  variant={sendMethod === 'email' ? 'default' : 'outline'}
-                  className={sendMethod === 'email' ? 'bg-green-600' : ''}
-                  onClick={() => setSendMethod('email')}
-                >
-                  <Mail className="h-4 w-4 mr-1" />
-                  Email
-                </Button>
-                <Button
                   variant={sendMethod === 'link' ? 'default' : 'outline'}
                   className={sendMethod === 'link' ? 'bg-green-600' : ''}
                   onClick={() => setSendMethod('link')}
                 >
                   <LinkIcon className="h-4 w-4 mr-1" />
-                  Link
+                  Link Only
                 </Button>
               </div>
 
