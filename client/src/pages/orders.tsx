@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, Hand } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, Hand, AlertTriangle, RotateCcw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -141,6 +145,10 @@ export default function OrdersFresh() {
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [processRefund, setProcessRefund] = useState(true);
+  const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const ordersPerPage = 20;
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -217,6 +225,50 @@ export default function OrdersFresh() {
       toast({
         title: "Error",
         description: error.message || "Failed to resend notification",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Cancel order mutation
+  const cancelOrderMutation = useMutation({
+    mutationFn: async (data: { orderId: number; reason: string; processRefund: boolean; returnedItems?: Array<{ productId: number; quantity: number; sellingType: string }> }) => {
+      const response = await fetch(`/api/orders/${data.orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          reason: data.reason,
+          processRefund: data.processRefund,
+          returnedItems: data.returnedItems
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to cancel order');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.refund ? "Order Cancelled & Refunded" : "Order Cancelled",
+        description: data.refund 
+          ? `Order cancelled. £${data.refund.amount.toFixed(2)} refunded. ${data.stockRestored} items returned to stock.`
+          : `Order cancelled. ${data.stockRestored} items returned to stock.`,
+      });
+      
+      setShowCancelDialog(false);
+      setCancelReason('');
+      setReturnItems([]);
+      setSelectedOrder(null);
+      fetchOrders();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel order",
         variant: "destructive"
       });
     }
@@ -1197,9 +1249,146 @@ export default function OrdersFresh() {
                     {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
                   </Button>
                 )}
+
+                {/* Cancel Order Button */}
+                {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+                  <Button 
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      const items = selectedOrder.items || [];
+                      setReturnItems(items.map((item: any) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        sellingType: item.sellingType || 'unit',
+                        maxQty: item.quantity
+                      })));
+                      setShowCancelDialog(true);
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel Order
+                  </Button>
+                )}
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Cancel Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800">
+                Select items to return to stock. Uncheck items that won't be returned.
+              </p>
+            </div>
+
+            {/* Items to return */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Items to Return</Label>
+              {returnItems.map((item, index) => {
+                const orderItem = selectedOrder?.items?.find((i: any) => i.productId === item.productId);
+                return (
+                  <div key={`${item.productId}-${item.sellingType}`} className="flex items-center justify-between border rounded-lg p-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={item.quantity > 0}
+                        onCheckedChange={(checked) => {
+                          const newItems = [...returnItems];
+                          newItems[index].quantity = checked ? item.maxQty : 0;
+                          setReturnItems(newItems);
+                        }}
+                      />
+                      <div className="text-sm">
+                        <span className="font-medium">{orderItem?.productName || 'Product'}</span>
+                        <span className="text-gray-500 ml-2">({item.sellingType})</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max={item.maxQty}
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const newItems = [...returnItems];
+                          newItems[index].quantity = Math.min(parseInt(e.target.value) || 0, item.maxQty);
+                          setReturnItems(newItems);
+                        }}
+                        className="w-16 text-center border rounded px-2 py-1 text-sm"
+                      />
+                      <span className="text-gray-500 text-sm">/ {item.maxQty}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Reason */}
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason">Cancellation Reason</Label>
+              <Textarea
+                id="cancelReason"
+                placeholder="Enter reason for cancellation..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+
+            {/* Refund option */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="processRefund"
+                checked={processRefund}
+                onCheckedChange={(checked) => setProcessRefund(checked as boolean)}
+              />
+              <Label htmlFor="processRefund" className="text-sm">
+                Process refund for returned items
+              </Label>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowCancelDialog(false);
+                  setCancelReason('');
+                  setReturnItems([]);
+                }}
+              >
+                Keep Order
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  if (!selectedOrder) return;
+                  const itemsToReturn = returnItems.filter(i => i.quantity > 0);
+                  cancelOrderMutation.mutate({
+                    orderId: selectedOrder.id,
+                    reason: cancelReason,
+                    processRefund,
+                    returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined
+                  });
+                }}
+                disabled={cancelOrderMutation.isPending}
+              >
+                {cancelOrderMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
