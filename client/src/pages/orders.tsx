@@ -1186,14 +1186,12 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
-                
-                {/* Cancel Order Button - Always visible for non-fulfilled/non-cancelled orders */}
-                {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+              {/* Cancel Order Section - Prominent placement */}
+              {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+                <div className="border-t pt-3 mt-2">
                   <Button 
-                    size="sm"
                     variant="destructive"
+                    className="w-full"
                     onClick={() => {
                       const items = selectedOrder.items || [];
                       setReturnItems(items.map((item: any) => ({
@@ -1205,11 +1203,14 @@ export default function OrdersFresh() {
                       setShowCancelDialog(true);
                     }}
                   >
-                    <X className="h-4 w-4 mr-1" />
+                    <X className="h-4 w-4 mr-2" />
                     Cancel Order
                   </Button>
-                )}
+                </div>
+              )}
 
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
                 {/* Items Prepared Button - Only for paid orders */}
                 {selectedOrder.status === 'paid' && (
                   <Button 
