@@ -931,7 +931,12 @@ export default function OrdersFresh() {
               <div>
                 <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
                 <div className="flex gap-2">
-                  {selectedOrder.isQuote ? (
+                  {selectedOrder.status === 'cancelled' ? (
+                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">
+                      <X className="w-3 h-3 mr-1" />
+                      Cancelled
+                    </Badge>
+                  ) : selectedOrder.isQuote ? (
                     <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
                       <CheckCircle className="w-3 h-3 mr-1" />
                       {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
