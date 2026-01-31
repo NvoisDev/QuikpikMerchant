@@ -13619,6 +13619,55 @@ https://quikpik.app`;
     }
   });
 
+  // Update user payment terms settings
+  app.patch('/api/user/payment-terms', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { defaultDepositPercentage, balanceDueDays } = req.body;
+
+      // Build update object only with defined values
+      const updateData: { defaultDepositPercentage?: number; balanceDueDays?: number } = {};
+
+      // Validate and add deposit percentage if provided
+      if (defaultDepositPercentage !== undefined) {
+        if (![25, 50, 75, 100].includes(defaultDepositPercentage)) {
+          return res.status(400).json({ message: "Deposit percentage must be 25, 50, 75, or 100" });
+        }
+        updateData.defaultDepositPercentage = defaultDepositPercentage;
+      }
+
+      // Validate and add balance due days if provided
+      if (balanceDueDays !== undefined) {
+        if (![0, 7, 14, 30, 60].includes(balanceDueDays)) {
+          return res.status(400).json({ message: "Balance due days must be 0, 7, 14, 30, or 60" });
+        }
+        updateData.balanceDueDays = balanceDueDays;
+      }
+
+      // Only update if there's something to update
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const [updatedUser] = await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning();
+      
+      console.log(`✅ Updated payment terms for user ${userId}: ${updateData.defaultDepositPercentage ?? 'unchanged'}% deposit, ${updateData.balanceDueDays ?? 'unchanged'} days`);
+      res.json({ 
+        success: true,
+        user: {
+          defaultDepositPercentage: updatedUser.defaultDepositPercentage,
+          balanceDueDays: updatedUser.balanceDueDays
+        }
+      });
+    } catch (error) {
+      console.error("Error updating payment terms:", error);
+      res.status(500).json({ message: "Failed to update payment terms" });
+    }
+  });
+
   // User onboarding endpoints
   app.patch('/api/user/onboarding', requireAuth, async (req: any, res) => {
     try {
@@ -17685,6 +17734,7 @@ The Quikpik Team
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',
         depositPercentage: validDepositPercentage,
+        balanceDueDays: wholesaler.balanceDueDays || 0, // Copy wholesaler's payment terms
         amountPaid: '0.00',
         amountOutstanding: total.toFixed(2),
         paymentStatus: 'unpaid',

@@ -67,6 +67,7 @@ interface Order {
   refundedAt?: string;
   cancelledAt?: string;
   depositPercentage?: number;
+  balanceDueDays?: number;
   stripePaymentLinkUrl?: string;
   createdAt: string;
   updatedAt: string;
@@ -515,6 +516,12 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
                     <span>Outstanding:</span>
                     <span>{formatCurrency(order.amountOutstanding || '0')}</span>
                   </div>
+                  {order.balanceDueDays !== undefined && order.balanceDueDays > 0 && parseFloat(order.amountOutstanding || '0') > 0 && (
+                    <div className="flex justify-between text-red-700 font-medium mt-1">
+                      <span>Balance Due By:</span>
+                      <span>{new Date(new Date(order.createdAt).getTime() + (order.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  )}
                 </div>
                 <PayBalanceButton order={order} customerPhone={customerPhone} />
               </div>

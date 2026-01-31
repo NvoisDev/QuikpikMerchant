@@ -195,6 +195,10 @@ export const users = pgTable("users", {
   // Stock alert settings
   defaultLowStockThreshold: integer("default_low_stock_threshold").default(50), // Global default for new products
   
+  // Payment terms settings
+  defaultDepositPercentage: integer("default_deposit_percentage").default(100), // 25, 50, 75, or 100 - percentage required upfront
+  balanceDueDays: integer("balance_due_days").default(0), // 0=immediate, 7, 14, 30, 60 days for remaining balance
+  
   // New signup fields
   businessDescription: text("business_description"),
   businessEmail: varchar("business_email"),
@@ -547,6 +551,7 @@ export const orders = pgTable("orders", {
   
   // Deposit payment feature
   depositPercentage: integer("deposit_percentage").default(100), // 25, 50, 75, or 100 for full payment
+  balanceDueDays: integer("balance_due_days").default(0), // Days until remaining balance is due (0, 7, 14, 30, 60)
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0.00"), // Amount customer has paid
   amountOutstanding: decimal("amount_outstanding", { precision: 10, scale: 2 }).default("0.00"), // Remaining balance
   paymentStatus: varchar("payment_status").default("unpaid"), // 'unpaid' | 'part_paid' | 'paid'

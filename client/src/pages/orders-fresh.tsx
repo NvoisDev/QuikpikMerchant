@@ -50,6 +50,7 @@ interface Order {
   }>;
   isQuote?: boolean;
   depositPercentage?: number;
+  balanceDueDays?: number;
   amountPaid?: string;
   amountOutstanding?: string;
   paymentStatus?: string;
@@ -1428,6 +1429,12 @@ export default function OrdersFresh() {
                       <span>Outstanding Balance:</span>
                       <span className="font-medium">{formatCurrency(wholesalerOutstanding)}</span>
                     </div>
+                    {selectedOrder.balanceDueDays !== undefined && selectedOrder.balanceDueDays > 0 && wholesalerOutstanding > 0 && (
+                      <div className="flex justify-between text-red-700 font-medium">
+                        <span>Balance Due By:</span>
+                        <span>{new Date(new Date(selectedOrder.createdAt).getTime() + (selectedOrder.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
                     <div className="pt-2 border-t flex flex-wrap gap-2">
                       {/* Show payment status badge - but if refunded, show Refunded badge instead */}
                       {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (
