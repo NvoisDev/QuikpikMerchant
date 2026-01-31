@@ -949,7 +949,28 @@ export default function OrdersFresh() {
             <div className="space-y-4 text-sm">
               {/* Status & Fulfillment */}
               <div>
-                <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-sm">Status & Fulfillment</h3>
+                  {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        const items = selectedOrder.items || [];
+                        setReturnItems(items.map((item: any) => ({
+                          productId: item.productId,
+                          quantity: item.quantity,
+                          sellingType: item.sellingType || 'unit',
+                          maxQty: item.quantity
+                        })));
+                        setShowCancelDialog(true);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
                     <CheckCircle className="w-3 h-3 mr-1" />
@@ -1185,27 +1206,6 @@ export default function OrdersFresh() {
                   ))}
                 </div>
               </div>
-
-              {/* Cancel Order Button - Under Order Timeline */}
-              {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
-                <Button 
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => {
-                    const items = selectedOrder.items || [];
-                    setReturnItems(items.map((item: any) => ({
-                      productId: item.productId,
-                      quantity: item.quantity,
-                      sellingType: item.sellingType || 'unit',
-                      maxQty: item.quantity
-                    })));
-                    setShowCancelDialog(true);
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel Order
-                </Button>
-              )}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
