@@ -972,10 +972,25 @@ export default function OrdersFresh() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Paid
-                  </Badge>
+                  {/* Payment Status Badge - Dynamic based on actual status */}
+                  {(selectedOrder as any).paymentStatus === 'paid' && (
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Paid
+                    </Badge>
+                  )}
+                  {(selectedOrder as any).paymentStatus === 'part_paid' && (
+                    <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Part Paid
+                    </Badge>
+                  )}
+                  {((selectedOrder as any).paymentStatus === 'unpaid' || !(selectedOrder as any).paymentStatus) && (
+                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Unpaid
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="text-xs px-2 py-1">
                     {selectedOrder.fulfillmentType === 'delivery' ? (
                       <><Truck className="w-3 h-3 mr-1" />Delivery</>
