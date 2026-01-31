@@ -905,29 +905,7 @@ export default function OrdersFresh() {
             <div className="space-y-4 text-sm">
               {/* Status & Fulfillment */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium text-sm">Status & Fulfillment</h3>
-                  {selectedOrder.status !== 'cancelled' && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedOrder.items) {
-                          setReturnItems(selectedOrder.items.map(item => ({
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            sellingType: 'unit',
-                            maxQty: item.quantity
-                          })));
-                        }
-                        setShowCancelDialog(true);
-                      }}
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      Cancel Order
-                    </Button>
-                  )}
-                </div>
+                <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
                 <div className="flex gap-2">
                   {selectedOrder.isQuote ? (
                     <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
@@ -1329,33 +1307,56 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-2 border-t">
+              <div className="flex justify-between pt-2 border-t">
+                {/* Cancel Button - Left side */}
+                {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'fulfilled' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedOrder.items) {
+                        setReturnItems(selectedOrder.items.map(item => ({
+                          productId: item.productId,
+                          quantity: item.quantity,
+                          sellingType: 'unit',
+                          maxQty: item.quantity
+                        })));
+                      }
+                      setShowCancelDialog(true);
+                    }}
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Cancel Order
+                  </Button>
+                )}
                 
-                {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
-                {selectedOrder.fulfillmentType === 'pickup' && 
-                 selectedOrder.status !== 'ready_for_collection' && 
-                 selectedOrder.status !== 'fulfilled' && (
-                  <Button 
-                    size="sm"
-                    onClick={() => markReadyForCollection(selectedOrder.id)}
-                    disabled={updatingOrderId === selectedOrder.id}
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
-                  >
-                    <Clock className="h-4 w-4 mr-1" />
-                    {updatingOrderId === selectedOrder.id ? 'Marking Ready...' : 'Ready for Collection'}
-                  </Button>
-                )}
+                <div className="flex gap-2 ml-auto">
+                  {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
+                  {selectedOrder.fulfillmentType === 'pickup' && 
+                   selectedOrder.status !== 'ready_for_collection' && 
+                   selectedOrder.status !== 'fulfilled' && (
+                    <Button 
+                      size="sm"
+                      onClick={() => markReadyForCollection(selectedOrder.id)}
+                      disabled={updatingOrderId === selectedOrder.id}
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                    >
+                      <Clock className="h-4 w-4 mr-1" />
+                      {updatingOrderId === selectedOrder.id ? 'Marking Ready...' : 'Ready for Collection'}
+                    </Button>
+                  )}
 
-                {/* Mark as Fulfilled Button */}
-                {selectedOrder.status !== 'fulfilled' && (
-                  <Button 
-                    size="sm"
-                    onClick={() => markAsFulfilled(selectedOrder.id)}
-                    disabled={updatingOrderId === selectedOrder.id}
-                  >
-                    {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
-                  </Button>
-                )}
+                  {/* Mark as Fulfilled Button */}
+                  {selectedOrder.status !== 'fulfilled' && (
+                    <Button 
+                      size="sm"
+                      onClick={() => markAsFulfilled(selectedOrder.id)}
+                      disabled={updatingOrderId === selectedOrder.id}
+                    >
+                      {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
