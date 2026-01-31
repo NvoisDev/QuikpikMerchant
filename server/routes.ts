@@ -6302,9 +6302,9 @@ The Quikpik Team`
         return res.status(404).json({ message: "Order not found" });
       }
       
-      // Verify customer owns this order
-      const customer = await storage.getUserByPhoneNumber(customerPhone);
-      if (!customer || customer.id !== order.retailerId) {
+      // Verify customer owns this order by comparing phone numbers directly
+      const orderCustomerPhone = (order as any).customerPhone;
+      if (!orderCustomerPhone || orderCustomerPhone !== customerPhone) {
         return res.status(403).json({ message: "Not authorized to cancel this order" });
       }
       
@@ -6690,9 +6690,10 @@ The Quikpik Team`
         return res.status(404).json({ canCancel: false, reason: "Order not found" });
       }
       
-      // Verify customer owns this order
-      const customer = await storage.getUserByPhoneNumber(customerPhone);
-      if (!customer || customer.id !== order.retailerId) {
+      // Verify customer owns this order by comparing phone numbers directly
+      // Orders store the customer phone, so we can validate ownership directly
+      const orderCustomerPhone = (order as any).customerPhone;
+      if (!orderCustomerPhone || orderCustomerPhone !== customerPhone) {
         return res.json({ canCancel: false, reason: "Not authorized" });
       }
       
