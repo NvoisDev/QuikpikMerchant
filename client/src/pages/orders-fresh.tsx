@@ -1342,7 +1342,7 @@ export default function OrdersFresh() {
                       className="bg-orange-500 hover:bg-orange-600 text-white"
                     >
                       <Clock className="h-4 w-4 mr-1" />
-                      {updatingOrderId === selectedOrder.id ? '...' : 'Ready'}
+                      {updatingOrderId === selectedOrder.id ? '...' : 'Ready for Collection'}
                     </Button>
                   )}
 
