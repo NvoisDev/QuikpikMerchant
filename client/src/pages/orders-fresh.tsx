@@ -55,6 +55,9 @@ interface Order {
   paymentStatus?: string;
   stripePaymentLinkUrl?: string;
   wholesalerBusinessName?: string;
+  amountRefunded?: string;
+  refundReason?: string;
+  refundedAt?: string;
 }
 
 interface OrderItem {
@@ -1154,10 +1157,15 @@ export default function OrdersFresh() {
                       <span>Outstanding Balance:</span>
                       <span className="font-medium">{formatCurrency(wholesalerOutstanding)}</span>
                     </div>
-                    <div className="pt-2 border-t">
+                    <div className="pt-2 border-t flex flex-wrap gap-2">
                       <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
                         {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
                       </Badge>
+                      {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (
+                        <Badge className="bg-purple-100 text-purple-800">
+                          Refunded: {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))}
+                        </Badge>
+                      )}
                     </div>
                     
                     {/* Send Payment Link Buttons - only show if there's an outstanding balance (using wholesaler-perspective value) */}
@@ -1368,6 +1376,41 @@ export default function OrdersFresh() {
                       )}
                     </div>
                   </div>
+
+                  {/* Refund Entry - Show if refund was processed */}
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full mt-1.5 bg-purple-500"></div>
+                      <div>
+                        <div className="text-xs font-medium text-purple-700">
+                          Refund processed
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))} refunded
+                          {(selectedOrder as any).refundedAt && (
+                            <span> • {new Date((selectedOrder as any).refundedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancellation Entry - Show if order was cancelled */}
+                  {selectedOrder.status === 'cancelled' && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
+                      <div>
+                        <div className="text-xs font-medium text-red-700">
+                          Order Cancelled
+                        </div>
+                        {selectedOrder.refundReason && (
+                          <div className="text-xs text-gray-500">
+                            {selectedOrder.refundReason}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
