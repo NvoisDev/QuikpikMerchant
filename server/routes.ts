@@ -6181,6 +6181,7 @@ The Quikpik Team`
         .set({
           status: newStatus,
           amountRefunded: totalRefunded.toFixed(2),
+          amountOutstanding: isFullCancellation ? '0.00' : undefined,
           refundReason: reason || 'Customer requested cancellation',
           refundedAt: refundProcessedNow ? new Date() : undefined,
           cancelledAt: isFullCancellation ? new Date() : undefined,
