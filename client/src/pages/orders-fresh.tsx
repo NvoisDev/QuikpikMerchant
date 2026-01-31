@@ -175,7 +175,10 @@ export default function OrdersFresh() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
   const [processRefund, setProcessRefund] = useState(false);
-  const [refundType, setRefundType] = useState<'card' | 'credit'>('card');
+  const [refundType, setRefundType] = useState<'card' | 'credit' | 'later'>('card');
+  const [restockInventory, setRestockInventory] = useState(true);
+  const [sendNotification, setSendNotification] = useState(true);
+  const [staffNote, setStaffNote] = useState('');
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [isCancelling, setIsCancelling] = useState(false);
   
@@ -294,9 +297,12 @@ export default function OrdersFresh() {
         body: JSON.stringify({
           reason: fullReason,
           reasonCategory: cancelReasonCategory,
-          processRefund: processRefund && refundType === 'card',
-          refundType: processRefund ? refundType : undefined,
-          returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined
+          processRefund: processRefund && refundType !== 'later',
+          refundType: processRefund && refundType !== 'later' ? refundType : undefined,
+          returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined,
+          restockInventory,
+          sendNotification,
+          staffNote: staffNote || undefined
         })
       });
 
@@ -306,11 +312,11 @@ export default function OrdersFresh() {
         const data = await response.json();
         console.log('✅ Order cancelled successfully:', data);
         
-        const refundMessage = processRefund 
+        const refundMessage = processRefund && refundType !== 'later'
           ? refundType === 'card' 
             ? ' A refund has been initiated and will appear on the customer\'s statement within 5-10 business days.'
             : ' Store credit has been applied to the customer\'s account.'
-          : '';
+          : refundType === 'later' ? ' Refund will be processed separately.' : '';
         
         toast({
           title: "Order Cancelled",
@@ -326,6 +332,9 @@ export default function OrdersFresh() {
         setProcessRefund(false);
         setRefundType('card');
         setReturnItems([]);
+        setRestockInventory(true);
+        setSendNotification(true);
+        setStaffNote('');
         loadOrders(currentPage, statusFilter || searchQuery);
       } else {
         const errorData = await response.json();
@@ -1508,80 +1517,156 @@ export default function OrdersFresh() {
               </div>
             )}
 
-            {/* Refund Options */}
-            <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="processRefund"
-                  checked={processRefund}
-                  onChange={(e) => setProcessRefund(e.target.checked)}
-                  className="rounded"
-                />
-                <label htmlFor="processRefund" className="text-sm font-medium">Process refund</label>
-              </div>
+            {/* Refund Payments - Shopify Style */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
               
-              {processRefund && (
-                <>
-                  <div className="ml-6 space-y-2">
-                    <label className="text-sm font-medium">Refund method</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="refundType"
-                          checked={refundType === 'card'}
-                          onChange={() => setRefundType('card')}
-                          className="text-green-600"
-                        />
-                        <span className="text-sm">Original payment method</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="refundType"
-                          checked={refundType === 'credit'}
-                          onChange={() => setRefundType('credit')}
-                          className="text-green-600"
-                        />
-                        <span className="text-sm">Store credit</span>
-                      </label>
+              {/* Original Payment Method Option */}
+              <label 
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                  refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => { setRefundType('card'); setProcessRefund(true); }}
+              >
+                <input
+                  type="radio"
+                  name="refundType"
+                  checked={refundType === 'card'}
+                  onChange={() => { setRefundType('card'); setProcessRefund(true); }}
+                  className="w-4 h-4 text-green-600 border-gray-300"
+                />
+                <div className="ml-3 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900">Original payment method</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-gray-600">
+                      Refund {formatCurrency(parseFloat(selectedOrder?.amountPaid || selectedOrder?.total || '0'))} GBP
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-8 h-5 bg-gradient-to-r from-red-500 to-yellow-500 rounded text-white text-[8px] font-bold flex items-center justify-center">MC</div>
                     </div>
                   </div>
-                  
-                  {refundType === 'card' && (
-                    <div className="ml-6 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                      <Clock className="w-3 h-3 inline mr-1" />
-                      Refunds typically take 5-10 business days to appear on the customer's statement.
-                    </div>
-                  )}
-                  
-                  {refundType === 'credit' && (
-                    <div className="ml-6 p-2 bg-green-50 rounded text-xs text-green-700">
-                      <CheckCircle className="w-3 h-3 inline mr-1" />
-                      Store credit will be applied immediately and can be used on future orders.
-                    </div>
-                  )}
-                </>
+                </div>
+              </label>
+
+              {/* Store Credit Option */}
+              <label 
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                  refundType === 'credit' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => { setRefundType('credit'); setProcessRefund(true); }}
+              >
+                <input
+                  type="radio"
+                  name="refundType"
+                  checked={refundType === 'credit'}
+                  onChange={() => { setRefundType('credit'); setProcessRefund(true); }}
+                  className="w-4 h-4 text-green-600 border-gray-300"
+                />
+                <div className="ml-3">
+                  <span className="text-sm font-medium text-gray-900">Store credit</span>
+                  <p className="text-xs text-gray-500 mt-0.5">Applied immediately to customer's account</p>
+                </div>
+              </label>
+
+              {/* Later Option */}
+              <label 
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                  refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => { setRefundType('later'); setProcessRefund(false); }}
+              >
+                <input
+                  type="radio"
+                  name="refundType"
+                  checked={refundType === 'later'}
+                  onChange={() => { setRefundType('later'); setProcessRefund(false); }}
+                  className="w-4 h-4 text-green-600 border-gray-300"
+                />
+                <div className="ml-3">
+                  <span className="text-sm font-medium text-gray-900">Later</span>
+                  <p className="text-xs text-gray-500 mt-0.5">Process refund at a different time</p>
+                </div>
+              </label>
+
+              {/* Refund Timeline Info */}
+              {refundType === 'card' && (
+                <div className="p-2 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2">
+                  <Clock className="w-3 h-3 flex-shrink-0" />
+                  Refunds typically take 5-10 business days to appear on the customer's statement.
+                </div>
+              )}
+              
+              {refundType === 'credit' && (
+                <div className="p-2 bg-green-50 rounded text-xs text-green-700 flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                  Store credit will be applied immediately and can be used on future orders.
+                </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => {
-                setShowCancelDialog(false);
-                setCancelReasonCategory('');
-                setCancelReason('');
-                setProcessRefund(false);
-                setRefundType('card');
-              }}>
-                Keep Order
-              </Button>
+            {/* Staff Note */}
+            <div>
+              <label className="text-sm font-medium">Staff note</label>
+              <textarea
+                value={staffNote}
+                onChange={(e) => setStaffNote(e.target.value)}
+                placeholder="Add internal notes (not visible to customer)..."
+                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[50px]"
+              />
+              <p className="text-xs text-gray-500 mt-1">Only you and other staff can see this note.</p>
+            </div>
+
+            {/* Checkboxes */}
+            <div className="space-y-3 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={restockInventory}
+                  onChange={(e) => setRestockInventory(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-green-600"
+                />
+                <span className="text-sm text-gray-700">Restock inventory</span>
+              </label>
+              
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendNotification}
+                  onChange={(e) => setSendNotification(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-green-600"
+                />
+                <span className="text-sm text-gray-700">
+                  Send a <span className="text-green-600">notification</span> to the customer
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-3 border-t">
               <Button
                 variant="destructive"
+                className="w-full"
                 onClick={cancelOrder}
                 disabled={isCancelling || !cancelReasonCategory}
               >
-                {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+                {isCancelling ? 'Cancelling...' : 'Cancel order'}
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="w-full text-gray-500"
+                onClick={() => {
+                  setShowCancelDialog(false);
+                  setCancelReasonCategory('');
+                  setCancelReason('');
+                  setProcessRefund(false);
+                  setRefundType('card');
+                  setRestockInventory(true);
+                  setSendNotification(true);
+                  setStaffNote('');
+                }}
+              >
+                Keep order
               </Button>
             </div>
           </div>
