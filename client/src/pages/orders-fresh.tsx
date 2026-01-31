@@ -299,7 +299,7 @@ export default function OrdersFresh() {
         setCancelReason('');
         setProcessRefund(false);
         setReturnItems([]);
-        loadOrders(currentPage, searchQuery);
+        loadOrders(currentPage, statusFilter || searchQuery);
       } else {
         const errorData = await response.json();
         console.error('❌ Cancel failed:', errorData);
