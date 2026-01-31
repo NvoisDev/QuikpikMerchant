@@ -185,6 +185,14 @@ export default function OrdersFresh() {
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [isCancelling, setIsCancelling] = useState(false);
   
+  // Cancellation requests state
+  const [cancellationRequests, setCancellationRequests] = useState<any[]>([]);
+  const [showCancellationRequests, setShowCancellationRequests] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  
   const cancellationReasons = [
     { value: 'out_of_stock', label: 'Out of Stock' },
     { value: 'customer_request', label: 'Customer Request' },
@@ -231,7 +239,102 @@ export default function OrdersFresh() {
 
   useEffect(() => {
     loadOrders(1, searchQuery);
+    loadCancellationRequests();
   }, []);
+
+  // Load cancellation requests
+  const loadCancellationRequests = async () => {
+    try {
+      const response = await fetch('/api/cancellation-requests?status=pending', {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCancellationRequests(data);
+      }
+    } catch (error) {
+      console.error('Failed to load cancellation requests:', error);
+    }
+  };
+
+  // Approve cancellation request
+  const approveCancellationRequest = async (requestId: number, refundType: 'card' | 'credit' = 'card') => {
+    setProcessingRequestId(requestId);
+    try {
+      const response = await fetch(`/api/cancellation-requests/${requestId}/respond`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: true, refundType })
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Request Approved",
+          description: "The order has been cancelled and refund processed.",
+        });
+        loadCancellationRequests();
+        loadOrders(currentPage, searchQuery);
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.message || "Failed to approve request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process request",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  // Reject cancellation request
+  const rejectCancellationRequest = async (requestId: number, reason: string) => {
+    setProcessingRequestId(requestId);
+    try {
+      const response = await fetch(`/api/cancellation-requests/${requestId}/respond`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: false, responseMessage: reason })
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Request Rejected",
+          description: "The customer will be notified.",
+        });
+        loadCancellationRequests();
+        setShowRejectDialog(false);
+        setRejectReason('');
+        setSelectedRequestId(null);
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.message || "Failed to reject request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process request",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -730,6 +833,124 @@ export default function OrdersFresh() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cancellation Requests Alert */}
+      {cancellationRequests.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2 text-orange-800">
+                <Clock className="h-4 w-4" />
+                {cancellationRequests.length} Pending Cancellation Request{cancellationRequests.length > 1 ? 's' : ''}
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowCancellationRequests(!showCancellationRequests)}
+                className="text-orange-700 border-orange-300 hover:bg-orange-100"
+              >
+                {showCancellationRequests ? 'Hide' : 'Review Requests'}
+              </Button>
+            </div>
+          </CardHeader>
+          {showCancellationRequests && (
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                {cancellationRequests.map((request) => (
+                  <div key={request.id} className="bg-white rounded-lg p-4 border border-orange-200">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-900">
+                            Order {request.order?.orderNumber || `#${request.orderId}`}
+                          </span>
+                          <Badge className="bg-orange-100 text-orange-800 text-xs">
+                            {formatCurrency(parseFloat(request.order?.total || '0'))}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p><span className="font-medium">Customer:</span> {request.customer?.firstName} {request.customer?.lastName || request.customer?.phoneNumber}</p>
+                          <p><span className="font-medium">Reason:</span> {request.reasonCategory}</p>
+                          {request.reasonNotes && (
+                            <p><span className="font-medium">Notes:</span> {request.reasonNotes}</p>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            Requested: {new Date(request.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                          disabled={processingRequestId === request.id}
+                          onClick={() => {
+                            setSelectedRequestId(request.id);
+                            setShowRejectDialog(true);
+                          }}
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          disabled={processingRequestId === request.id}
+                          onClick={() => approveCancellationRequest(request.id)}
+                        >
+                          {processingRequestId === request.id ? 'Processing...' : (
+                            <>
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Approve & Refund
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      {/* Reject Cancellation Request Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Cancellation Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600">
+              Please provide a reason for rejecting this cancellation request. The customer will be notified.
+            </p>
+            <textarea
+              placeholder="Reason for rejection..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full min-h-[100px] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setShowRejectDialog(false);
+                setRejectReason('');
+                setSelectedRequestId(null);
+              }}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={!rejectReason.trim() || processingRequestId !== null}
+                onClick={() => selectedRequestId && rejectCancellationRequest(selectedRequestId, rejectReason)}
+              >
+                Reject Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Orders Table */}
       <Card>

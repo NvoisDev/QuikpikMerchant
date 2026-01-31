@@ -6350,14 +6350,64 @@ The Quikpik Team`
       
       console.log(`📋 Cancellation request created for order ${order.orderNumber} by customer ${customerPhone}`);
       
-      // Notify wholesaler about the cancellation request (optional SMS/email)
+      // Notify wholesaler about the cancellation request via SMS and email
       try {
         const wholesaler = await storage.getUser(order.wholesalerId);
+        const customerName = (order as any).customerName || customerPhone;
+        
+        // SMS notification
         if (wholesaler?.phoneNumber) {
           await sendSMS({
             to: wholesaler.phoneNumber,
-            message: `🔔 Cancellation Request: Customer ${(order as any).customerName || customerPhone} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
+            message: `🔔 Cancellation Request: Customer ${customerName} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
           });
+        }
+        
+        // Email notification
+        if (wholesaler?.email) {
+          const orderTotal = parseFloat(order.total?.toString() || '0');
+          const amountPaid = parseFloat(order.amountPaid?.toString() || '0');
+          
+          await sendEmail({
+            to: wholesaler.email,
+            from: 'hello@quikpik.co',
+            subject: `⚠️ Cancellation Request for Order ${order.orderNumber}`,
+            html: `
+              <!DOCTYPE html>
+              <html>
+              <head><meta charset="utf-8"></head>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: #EF4444; margin-bottom: 5px;">⚠️ Cancellation Request</h1>
+                  <p style="color: #666; font-size: 16px;">A customer has requested to cancel their order</p>
+                </div>
+                
+                <div style="background: #FEF2F2; border: 1px solid #FECACA; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                  <h2 style="color: #DC2626; margin-top: 0;">Order ${order.orderNumber}</h2>
+                  <p><strong>Customer:</strong> ${customerName}</p>
+                  <p><strong>Order Total:</strong> £${orderTotal.toFixed(2)}</p>
+                  <p><strong>Amount Paid:</strong> £${amountPaid.toFixed(2)}</p>
+                  <p><strong>Reason:</strong> ${reasonCategory}</p>
+                  ${reasonNotes ? `<p><strong>Additional Notes:</strong> ${reasonNotes}</p>` : ''}
+                </div>
+                
+                <div style="background: #FFF7ED; border: 1px solid #FED7AA; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                  <h3 style="color: #EA580C; margin-top: 0;">What happens next?</h3>
+                  <p>Please review this cancellation request in your dashboard and decide whether to:</p>
+                  <ul>
+                    <li><strong>Approve</strong> - The order will be cancelled and any payments will be refunded</li>
+                    <li><strong>Reject</strong> - The order will remain active and the customer will be notified</li>
+                  </ul>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                  <p style="color: #666; font-size: 14px;">This is an automated notification from Quikpik</p>
+                </div>
+              </body>
+              </html>
+            `,
+          });
+          console.log(`📧 Cancellation request email sent to ${wholesaler.email} for order ${order.orderNumber}`);
         }
       } catch (error) {
         console.error('Failed to send cancellation request notification:', error);
@@ -6633,14 +6683,17 @@ The Quikpik Team`
         }
       }
       
-      // Notify customer about the decision
+      // Notify customer about the decision via SMS and email
       try {
-        const customer = await storage.getUser(request.customerId);
         const order = await storage.getOrder(request.orderId);
         const wholesaler = await storage.getUser(request.wholesalerId);
+        const businessName = wholesaler?.businessName || 'the seller';
+        const customerPhone = (order as any)?.customerPhone;
+        const customerEmail = (order as any)?.customerEmail;
+        const customerName = (order as any)?.customerName || 'Customer';
         
-        if (customer?.phoneNumber && order) {
-          const businessName = wholesaler?.businessName || 'the seller';
+        // SMS notification
+        if (customerPhone && order) {
           let message = '';
           
           if (approved) {
@@ -6656,10 +6709,98 @@ The Quikpik Team`
           }
           
           await sendSMS({
-            to: customer.phoneNumber,
+            to: customerPhone,
             message,
           });
-          console.log(`📱 Cancellation response SMS sent to ${customer.phoneNumber}`);
+          console.log(`📱 Cancellation response SMS sent to ${customerPhone}`);
+        }
+        
+        // Email notification
+        if (customerEmail && order) {
+          const orderTotal = parseFloat(order.total?.toString() || '0');
+          const amountPaid = parseFloat(order.amountPaid?.toString() || '0');
+          
+          if (approved) {
+            let refundDetails = '';
+            if (refundType === 'card' && amountPaid > 0) {
+              refundDetails = `<p><strong>Refund Amount:</strong> £${amountPaid.toFixed(2)}</p><p>The refund has been processed to your original payment method and will appear on your statement within 5-10 business days.</p>`;
+            } else if (refundType === 'credit') {
+              refundDetails = `<p><strong>Store Credit:</strong> £${amountPaid.toFixed(2)}</p><p>Store credit has been applied to your account for future orders.</p>`;
+            }
+            
+            await sendEmail({
+              to: customerEmail,
+              from: 'hello@quikpik.co',
+              subject: `✅ Cancellation Approved - Order ${order.orderNumber}`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="utf-8"></head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #10B981; margin-bottom: 5px;">✅ Cancellation Approved</h1>
+                    <p style="color: #666; font-size: 16px;">Your order cancellation has been processed</p>
+                  </div>
+                  
+                  <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <p>Hi ${customerName},</p>
+                    <p>Your cancellation request for <strong>Order ${order.orderNumber}</strong> has been approved by <strong>${businessName}</strong>.</p>
+                    ${refundDetails}
+                  </div>
+                  
+                  <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">Order Summary</h3>
+                    <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+                    <p><strong>Original Total:</strong> £${orderTotal.toFixed(2)}</p>
+                    <p><strong>Status:</strong> Cancelled</p>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 30px;">
+                    <p style="color: #666; font-size: 14px;">Thank you for your understanding. We hope to serve you again soon!</p>
+                    <p style="color: #999; font-size: 12px;">This is an automated notification from Quikpik</p>
+                  </div>
+                </body>
+                </html>
+              `,
+            });
+          } else {
+            await sendEmail({
+              to: customerEmail,
+              from: 'hello@quikpik.co',
+              subject: `Order ${order.orderNumber} - Cancellation Request Update`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="utf-8"></head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #EF4444; margin-bottom: 5px;">Cancellation Request Update</h1>
+                    <p style="color: #666; font-size: 16px;">Your cancellation request could not be processed</p>
+                  </div>
+                  
+                  <div style="background: #FEF2F2; border: 1px solid #FECACA; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <p>Hi ${customerName},</p>
+                    <p>We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined by <strong>${businessName}</strong>.</p>
+                    ${responseMessage ? `<p><strong>Reason:</strong> ${responseMessage}</p>` : ''}
+                  </div>
+                  
+                  <div style="background: #FFF7ED; border: 1px solid #FED7AA; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="color: #EA580C; margin-top: 0;">What's Next?</h3>
+                    <p>Your order remains active. If you have any questions or concerns, please contact the seller directly:</p>
+                    <p><strong>${businessName}</strong></p>
+                    ${wholesaler?.phoneNumber ? `<p>Phone: ${wholesaler.phoneNumber}</p>` : ''}
+                    ${wholesaler?.email ? `<p>Email: ${wholesaler.email}</p>` : ''}
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 30px;">
+                    <p style="color: #999; font-size: 12px;">This is an automated notification from Quikpik</p>
+                  </div>
+                </body>
+                </html>
+              `,
+            });
+          }
+          console.log(`📧 Cancellation response email sent to ${customerEmail}`);
         }
       } catch (error) {
         console.error('Failed to send cancellation response notification:', error);
