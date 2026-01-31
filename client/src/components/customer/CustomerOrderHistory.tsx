@@ -667,9 +667,47 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
-              <span>Total Paid:</span>
+              <span>Order Total:</span>
               <span>{formatCurrency(totalPaid)}</span>
             </div>
+            
+            {/* Deposit and payment breakdown */}
+            {order.depositPercentage && order.depositPercentage < 100 && (
+              <div className="flex justify-between text-xs text-amber-700">
+                <span>Deposit ({order.depositPercentage}%):</span>
+                <span className="font-medium">{formatCurrency(totalPaid * (order.depositPercentage / 100))}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs text-green-600">
+              <span>Amount Paid:</span>
+              <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+            </div>
+            
+            {/* Outstanding balance - show £0.00 for cancelled orders */}
+            {order.status === 'cancelled' ? (
+              <div className="flex justify-between text-xs text-gray-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{formatCurrency(0)} - Nothing to pay</span>
+              </div>
+            ) : parseFloat(order.amountOutstanding || '0') > 0 ? (
+              <div className="flex justify-between text-xs text-red-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{formatCurrency(order.amountOutstanding || '0')}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-xs text-green-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{formatCurrency(0)} - Fully paid</span>
+              </div>
+            )}
+            
+            {/* Refund info if applicable */}
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 && (
+              <div className="flex justify-between text-xs text-purple-700 bg-purple-50 p-2 rounded mt-1">
+                <span>Refunded:</span>
+                <span className="font-medium">{formatCurrency(order.amountRefunded)}</span>
+              </div>
+            )}
           </div>
         </div>
 
