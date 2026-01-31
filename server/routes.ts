@@ -6340,7 +6340,7 @@ The Quikpik Team`
       const [request] = await db.insert(orderCancellationRequests)
         .values({
           orderId,
-          customerId: customer.id,
+          customerId: order.retailerId,
           wholesalerId: order.wholesalerId,
           reasonCategory,
           reasonNotes: reasonNotes || null,
@@ -6348,7 +6348,7 @@ The Quikpik Team`
         })
         .returning();
       
-      console.log(`📋 Cancellation request created for order ${order.orderNumber} by customer ${customer.phoneNumber}`);
+      console.log(`📋 Cancellation request created for order ${order.orderNumber} by customer ${customerPhone}`);
       
       // Notify wholesaler about the cancellation request (optional SMS/email)
       try {
@@ -6356,7 +6356,7 @@ The Quikpik Team`
         if (wholesaler?.phoneNumber) {
           await sendSMS({
             to: wholesaler.phoneNumber,
-            message: `🔔 Cancellation Request: Customer ${customer.firstName || customer.phoneNumber} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
+            message: `🔔 Cancellation Request: Customer ${(order as any).customerName || customerPhone} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
           });
         }
       } catch (error) {
