@@ -54,6 +54,7 @@ interface Order {
   amountOutstanding?: string;
   paymentStatus?: string;
   stripePaymentLinkUrl?: string;
+  wholesalerBusinessName?: string;
 }
 
 interface OrderItem {
@@ -169,6 +170,12 @@ export default function OrdersFresh() {
   const [statusFilter, setStatusFilter] = useState('');
   const ordersPerPage = 20;
   const { toast } = useToast();
+  
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [processRefund, setProcessRefund] = useState(false);
+  const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
@@ -249,6 +256,56 @@ export default function OrdersFresh() {
       console.error(`❌ Error fetching order details:`, error);
       // Fall back to basic order data without items
       setSelectedOrder(order);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (!selectedOrder) return;
+    setIsCancelling(true);
+    
+    try {
+      const itemsToReturn = returnItems.filter(item => item.quantity > 0);
+      const response = await fetch(`/api/orders/${selectedOrder.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          reason: cancelReason,
+          processRefund,
+          returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Order Cancelled",
+          description: "The order has been successfully cancelled.",
+        });
+        setOrders(orders.map(order => 
+          order.id === selectedOrder.id ? { ...order, status: 'cancelled' } : order
+        ));
+        setSelectedOrder({ ...selectedOrder, status: 'cancelled' });
+        setShowCancelDialog(false);
+        setCancelReason('');
+        setProcessRefund(false);
+        setReturnItems([]);
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to cancel order",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to cancel order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel order",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -848,7 +905,29 @@ export default function OrdersFresh() {
             <div className="space-y-4 text-sm">
               {/* Status & Fulfillment */}
               <div>
-                <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-sm">Status & Fulfillment</h3>
+                  {selectedOrder.status !== 'cancelled' && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedOrder.items) {
+                          setReturnItems(selectedOrder.items.map(item => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            sellingType: 'unit',
+                            maxQty: item.quantity
+                          })));
+                        }
+                        setShowCancelDialog(true);
+                      }}
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancel Order
+                    </Button>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   {selectedOrder.isQuote ? (
                     <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
@@ -1280,6 +1359,93 @@ export default function OrdersFresh() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Reason for cancellation</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Enter reason for cancellation..."
+                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[80px]"
+              />
+            </div>
+
+            {selectedOrder?.items && selectedOrder.items.length > 0 && (
+              <div>
+                <label className="text-sm font-medium">Items to return (adjust quantities if partial return)</label>
+                <div className="mt-2 space-y-2 max-h-[200px] overflow-y-auto">
+                  {returnItems.map((item, index) => {
+                    const orderItem = selectedOrder.items?.find(oi => oi.productId === item.productId);
+                    return (
+                      <div key={item.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="text-sm">{orderItem?.product?.name || `Product ${item.productId}`}</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newItems = [...returnItems];
+                              newItems[index].quantity = Math.max(0, newItems[index].quantity - 1);
+                              setReturnItems(newItems);
+                            }}
+                          >
+                            -
+                          </Button>
+                          <span className="text-sm w-8 text-center">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newItems = [...returnItems];
+                              newItems[index].quantity = Math.min(item.maxQty, newItems[index].quantity + 1);
+                              setReturnItems(newItems);
+                            }}
+                          >
+                            +
+                          </Button>
+                          <span className="text-xs text-gray-500">/ {item.maxQty}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="processRefund"
+                checked={processRefund}
+                onChange={(e) => setProcessRefund(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="processRefund" className="text-sm">Process refund via Stripe</label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                Keep Order
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={cancelOrder}
+                disabled={isCancelling}
+              >
+                {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
