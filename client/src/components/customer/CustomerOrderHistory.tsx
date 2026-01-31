@@ -484,8 +484,8 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
           </div>
         </div>
 
-        {/* Outstanding Balance Alert - Show if there's money owed */}
-        {parseFloat(order.amountOutstanding || '0') > 0 && (
+        {/* Outstanding Balance Alert - Show if there's money owed (not for cancelled orders) */}
+        {parseFloat(order.amountOutstanding || '0') > 0 && order.status !== 'cancelled' && (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-start">
               <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">

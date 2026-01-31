@@ -1130,7 +1130,8 @@ export default function OrdersFresh() {
                 const customerTotal = parseFloat(selectedOrder.total || '0');
                 const paymentRatio = customerTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / customerTotal : 0;
                 const wholesalerPaid = productTotal * paymentRatio;
-                const wholesalerOutstanding = productTotal - wholesalerPaid;
+                // For cancelled orders, outstanding balance should be £0.00
+                const wholesalerOutstanding = selectedOrder.status === 'cancelled' ? 0 : productTotal - wholesalerPaid;
                 
                 return (
                 <div>
@@ -1330,17 +1331,17 @@ export default function OrdersFresh() {
                     </div>
                   </div>
 
-                  {/* Step 2: Balance Payment - Only show if there was a deposit */}
-                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && (
+                  {/* Step 2: Balance Payment - Only show if there was a deposit and order is NOT cancelled */}
+                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (
                     <div className="flex items-start gap-2">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 ${(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) ? 'bg-green-500' : 'bg-orange-400'}`}></div>
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') ? 'bg-green-500' : 'bg-orange-400'}`}></div>
                       <div>
-                        <div className={`text-xs ${(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) ? 'font-medium' : 'text-orange-600'}`}>
-                          {(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) 
+                        <div className={`text-xs ${parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') ? 'font-medium' : 'text-orange-600'}`}>
+                          {parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0')
                             ? 'Balance payment received'
-                            : `Balance outstanding: £${parseFloat(selectedOrder.amountOutstanding || '0').toLocaleString()}`}
+                            : `Balance outstanding: ${formatCurrency(parseFloat(selectedOrder.amountOutstanding || '0'))}`}
                         </div>
-                        {(selectedOrder.paymentStatus === 'paid' || parseFloat(selectedOrder.amountOutstanding || '0') <= 0) && (
+                        {parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') && (
                           <div className="text-xs text-gray-500">
                             £{(parseFloat(selectedOrder.total || '0') - parseFloat((parseFloat(selectedOrder.total || '0') * ((selectedOrder as any).depositPercentage / 100)).toFixed(2))).toLocaleString()} • Full payment complete
                           </div>
