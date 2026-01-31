@@ -738,7 +738,12 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex gap-1 flex-wrap">
-                          {order.isQuote && order.paymentStatus ? (
+                          {order.status === 'cancelled' ? (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              <X className="w-2 h-2 mr-1" />
+                              Cancelled
+                            </Badge>
+                          ) : order.isQuote && order.paymentStatus ? (
                             <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
                               {getPaymentStatusLabel(order.paymentStatus)}
                             </Badge>
@@ -764,7 +769,9 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {order.status !== 'fulfilled' ? (
+                        {order.status === 'cancelled' ? (
+                          <span className="text-red-600 text-xs">-</span>
+                        ) : order.status !== 'fulfilled' ? (
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -821,7 +828,12 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {order.isQuote && order.paymentStatus ? (
+                        {order.status === 'cancelled' ? (
+                          <Badge className="bg-red-100 text-red-800 text-xs">
+                            <X className="w-2 h-2 mr-1" />
+                            Cancelled
+                          </Badge>
+                        ) : order.isQuote && order.paymentStatus ? (
                           <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
                             {getPaymentStatusLabel(order.paymentStatus)}
                           </Badge>
@@ -846,7 +858,7 @@ export default function OrdersFresh() {
                         )}
                       </div>
                       
-                      {order.status !== 'fulfilled' && (
+                      {order.status !== 'fulfilled' && order.status !== 'cancelled' && (
                         <Button 
                           size="sm" 
                           variant="outline"
