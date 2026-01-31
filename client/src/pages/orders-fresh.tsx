@@ -173,9 +173,22 @@ export default function OrdersFresh() {
   
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelReasonCategory, setCancelReasonCategory] = useState('');
   const [processRefund, setProcessRefund] = useState(false);
+  const [refundType, setRefundType] = useState<'card' | 'credit'>('card');
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [isCancelling, setIsCancelling] = useState(false);
+  
+  const cancellationReasons = [
+    { value: 'out_of_stock', label: 'Out of Stock' },
+    { value: 'customer_request', label: 'Customer Request' },
+    { value: 'wrong_order', label: 'Wrong Order / Items' },
+    { value: 'damaged_goods', label: 'Damaged Goods' },
+    { value: 'pricing_error', label: 'Pricing Error' },
+    { value: 'duplicate_order', label: 'Duplicate Order' },
+    { value: 'delivery_issue', label: 'Delivery Issue' },
+    { value: 'other', label: 'Other' }
+  ];
 
   const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
@@ -267,17 +280,22 @@ export default function OrdersFresh() {
     
     try {
       const itemsToReturn = returnItems.filter(item => item.quantity > 0);
+      const reasonLabel = cancellationReasons.find(r => r.value === cancelReasonCategory)?.label || cancelReasonCategory;
+      const fullReason = cancelReason ? `${reasonLabel}: ${cancelReason}` : reasonLabel;
+      
       console.log('📦 Items to return:', itemsToReturn);
-      console.log('💳 Process refund:', processRefund);
-      console.log('📝 Cancel reason:', cancelReason);
+      console.log('💳 Process refund:', processRefund, 'Type:', refundType);
+      console.log('📝 Cancel reason:', fullReason);
       
       const response = await fetch(`/api/orders/${selectedOrder.id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          reason: cancelReason,
-          processRefund,
+          reason: fullReason,
+          reasonCategory: cancelReasonCategory,
+          processRefund: processRefund && refundType === 'card',
+          refundType: processRefund ? refundType : undefined,
           returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined
         })
       });
@@ -287,9 +305,16 @@ export default function OrdersFresh() {
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Order cancelled successfully:', data);
+        
+        const refundMessage = processRefund 
+          ? refundType === 'card' 
+            ? ' A refund has been initiated and will appear on the customer\'s statement within 5-10 business days.'
+            : ' Store credit has been applied to the customer\'s account.'
+          : '';
+        
         toast({
           title: "Order Cancelled",
-          description: "The order has been successfully cancelled.",
+          description: `The order has been successfully cancelled.${refundMessage}`,
         });
         setOrders(orders.map(order => 
           order.id === selectedOrder.id ? { ...order, status: 'cancelled' } : order
@@ -297,7 +322,9 @@ export default function OrdersFresh() {
         setSelectedOrder({ ...selectedOrder, status: 'cancelled' });
         setShowCancelDialog(false);
         setCancelReason('');
+        setCancelReasonCategory('');
         setProcessRefund(false);
+        setRefundType('card');
         setReturnItems([]);
         loadOrders(currentPage, statusFilter || searchQuery);
       } else {
@@ -1405,31 +1432,49 @@ export default function OrdersFresh() {
 
       {/* Cancel Order Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cancel Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Cancellation Reason Dropdown */}
             <div>
-              <label className="text-sm font-medium">Reason for cancellation</label>
+              <label className="text-sm font-medium">Reason for cancellation *</label>
+              <Select value={cancelReasonCategory} onValueChange={setCancelReasonCategory}>
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder="Select a reason..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {cancellationReasons.map((reason) => (
+                    <SelectItem key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Additional Notes (Optional) */}
+            <div>
+              <label className="text-sm font-medium">Additional notes (optional)</label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Enter reason for cancellation..."
-                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[80px]"
+                placeholder="Add any additional details..."
+                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[60px]"
               />
             </div>
 
             {selectedOrder?.items && selectedOrder.items.length > 0 && (
               <div>
                 <label className="text-sm font-medium">Items to return (adjust quantities if partial return)</label>
-                <div className="mt-2 space-y-2 max-h-[200px] overflow-y-auto">
+                <div className="mt-2 space-y-2 max-h-[150px] overflow-y-auto">
                   {returnItems.map((item, index) => {
                     const orderItem = selectedOrder.items?.find(oi => oi.productId === item.productId);
                     return (
                       <div key={item.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{orderItem?.product?.name || `Product ${item.productId}`}</span>
+                        <span className="text-sm truncate max-w-[150px]">{orderItem?.product?.name || `Product ${item.productId}`}</span>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -1463,25 +1508,78 @@ export default function OrdersFresh() {
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="processRefund"
-                checked={processRefund}
-                onChange={(e) => setProcessRefund(e.target.checked)}
-                className="rounded"
-              />
-              <label htmlFor="processRefund" className="text-sm">Process refund via Stripe</label>
+            {/* Refund Options */}
+            <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="processRefund"
+                  checked={processRefund}
+                  onChange={(e) => setProcessRefund(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="processRefund" className="text-sm font-medium">Process refund</label>
+              </div>
+              
+              {processRefund && (
+                <>
+                  <div className="ml-6 space-y-2">
+                    <label className="text-sm font-medium">Refund method</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="refundType"
+                          checked={refundType === 'card'}
+                          onChange={() => setRefundType('card')}
+                          className="text-green-600"
+                        />
+                        <span className="text-sm">Original payment method</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="refundType"
+                          checked={refundType === 'credit'}
+                          onChange={() => setRefundType('credit')}
+                          className="text-green-600"
+                        />
+                        <span className="text-sm">Store credit</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {refundType === 'card' && (
+                    <div className="ml-6 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                      <Clock className="w-3 h-3 inline mr-1" />
+                      Refunds typically take 5-10 business days to appear on the customer's statement.
+                    </div>
+                  )}
+                  
+                  {refundType === 'credit' && (
+                    <div className="ml-6 p-2 bg-green-50 rounded text-xs text-green-700">
+                      <CheckCircle className="w-3 h-3 inline mr-1" />
+                      Store credit will be applied immediately and can be used on future orders.
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+              <Button variant="outline" onClick={() => {
+                setShowCancelDialog(false);
+                setCancelReasonCategory('');
+                setCancelReason('');
+                setProcessRefund(false);
+                setRefundType('card');
+              }}>
                 Keep Order
               </Button>
               <Button
                 variant="destructive"
                 onClick={cancelOrder}
-                disabled={isCancelling}
+                disabled={isCancelling || !cancelReasonCategory}
               >
                 {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
               </Button>

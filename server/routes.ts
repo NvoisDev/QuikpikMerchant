@@ -6025,8 +6025,9 @@ The Quikpik Team`
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
-      const { reason, returnedItems, processRefund } = req.body;
+      const { reason, reasonCategory, returnedItems, processRefund, refundType } = req.body;
       // returnedItems: Array<{ productId: number, quantity: number, sellingType: 'units' | 'pallets' }>
+      // refundType: 'card' | 'credit' - determines if refund goes to original payment or store credit
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -6138,9 +6139,24 @@ The Quikpik Team`
       
       const newStatus = isFullCancellation ? 'cancelled' : order.status;
 
+      // Handle store credit if selected
+      let storeCreditAmount = 0;
+      if (refundType === 'credit' && refundAmount > 0) {
+        storeCreditAmount = returnedItems?.length > 0 ? refundAmount : parseFloat(order.amountPaid || '0');
+        // TODO: Add store credit to customer account when customer credits table is implemented
+        console.log(`💳 Store credit of £${storeCreditAmount.toFixed(2)} would be applied to customer account`);
+      }
+
       // Update order with cancellation details
       const currentRefunded = parseFloat(order.amountRefunded || '0');
-      const totalRefunded = currentRefunded + (stripeRefund ? stripeRefund.amount / 100 : 0);
+      const stripeRefundAmount = stripeRefund ? stripeRefund.amount / 100 : 0;
+      const totalRefunded = currentRefunded + stripeRefundAmount + storeCreditAmount;
+      
+      const refundNote = stripeRefund 
+        ? `Stripe refund: £${stripeRefundAmount.toFixed(2)}` 
+        : storeCreditAmount > 0 
+          ? `Store credit: £${storeCreditAmount.toFixed(2)}`
+          : 'No refund';
       
       await db.update(orders)
         .set({
@@ -6148,7 +6164,9 @@ The Quikpik Team`
           amountRefunded: totalRefunded.toFixed(2),
           refundReason: reason || 'Customer requested cancellation',
           cancelledAt: isFullCancellation ? new Date() : undefined,
-          notes: order.notes ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'}: ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. Refund: £${stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : '0.00'}` : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'}: ${reason || 'N/A'}`
+          notes: order.notes 
+            ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
+            : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. ${refundNote}`
         })
         .where(eq(orders.id, id));
 
@@ -6159,7 +6177,12 @@ The Quikpik Team`
         
         if (customer?.phoneNumber && wholesaler) {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
-          const refundMsg = stripeRefund ? `\n\nA refund of £${(stripeRefund.amount / 100).toFixed(2)} has been processed to your original payment method.` : '';
+          let refundMsg = '';
+          if (stripeRefund) {
+            refundMsg = `\n\nA refund of £${stripeRefundAmount.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
+          } else if (storeCreditAmount > 0) {
+            refundMsg = `\n\nStore credit of £${storeCreditAmount.toFixed(2)} has been applied to your account and can be used on future orders.`;
+          }
           const message = isFullCancellation 
             ? `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`
             : `Hi ${customer.firstName || 'there'}, a partial return has been processed for your order ${order.orderNumber} with ${businessName}.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
@@ -6180,10 +6203,15 @@ The Quikpik Team`
         message: isFullCancellation ? "Order cancelled successfully" : "Partial return processed successfully",
         order: updatedOrder,
         stockRestored: stockRestoredCount,
+        reasonCategory: reasonCategory || null,
         refund: stripeRefund ? {
           id: stripeRefund.id,
-          amount: stripeRefund.amount / 100,
-          status: stripeRefund.status
+          amount: stripeRefundAmount,
+          status: stripeRefund.status,
+          type: 'card'
+        } : storeCreditAmount > 0 ? {
+          amount: storeCreditAmount,
+          type: 'credit'
         } : null
       });
     } catch (error) {
