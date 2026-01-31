@@ -263,8 +263,14 @@ export default function OrdersFresh() {
     if (!selectedOrder) return;
     setIsCancelling(true);
     
+    console.log('🚫 Attempting to cancel order:', selectedOrder.id);
+    
     try {
       const itemsToReturn = returnItems.filter(item => item.quantity > 0);
+      console.log('📦 Items to return:', itemsToReturn);
+      console.log('💳 Process refund:', processRefund);
+      console.log('📝 Cancel reason:', cancelReason);
+      
       const response = await fetch(`/api/orders/${selectedOrder.id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,7 +282,11 @@ export default function OrdersFresh() {
         })
       });
 
+      console.log('📡 Cancel response status:', response.status);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Order cancelled successfully:', data);
         toast({
           title: "Order Cancelled",
           description: "The order has been successfully cancelled.",
@@ -289,19 +299,21 @@ export default function OrdersFresh() {
         setCancelReason('');
         setProcessRefund(false);
         setReturnItems([]);
+        loadOrders(currentPage, searchQuery);
       } else {
         const errorData = await response.json();
+        console.error('❌ Cancel failed:', errorData);
         toast({
           title: "Error",
-          description: errorData.error || "Failed to cancel order",
+          description: errorData.message || errorData.error || "Failed to cancel order",
           variant: "destructive"
         });
       }
     } catch (error) {
-      console.error('Failed to cancel order:', error);
+      console.error('❌ Failed to cancel order:', error);
       toast({
         title: "Error",
-        description: "Failed to cancel order",
+        description: "Failed to cancel order - network error",
         variant: "destructive"
       });
     } finally {
