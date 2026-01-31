@@ -4359,8 +4359,27 @@ The Quikpik Team`
         return res.status(403).json({ error: 'Access denied' });
       }
 
+      // Fetch cancellation request for this order if exists
+      const [cancellationRequest] = await db.select()
+        .from(orderCancellationRequests)
+        .where(eq(orderCancellationRequests.orderId, orderId))
+        .orderBy(desc(orderCancellationRequests.requestedAt))
+        .limit(1);
+
       console.log(`📦 Retrieved order ${orderId} with ${order.items?.length || 0} items`);
-      res.json(order);
+      res.json({
+        ...order,
+        cancellationRequest: cancellationRequest ? {
+          id: cancellationRequest.id,
+          status: cancellationRequest.status,
+          reasonCategory: cancellationRequest.reasonCategory,
+          reasonNotes: cancellationRequest.reasonNotes,
+          requestedAt: cancellationRequest.requestedAt,
+          respondedAt: cancellationRequest.respondedAt,
+          responseMessage: cancellationRequest.responseMessage,
+          refundType: cancellationRequest.refundType
+        } : null
+      });
     } catch (error) {
       console.error(`❌ Error fetching order ${req.params.id}:`, error);
       res.status(500).json({ 
@@ -4423,8 +4442,37 @@ The Quikpik Team`
 
       console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
       
+      // Fetch cancellation requests for these orders to include in response
+      const orderIds = ordersResult.map(o => o.id);
+      let cancellationRequestsMap: Record<number, any> = {};
+      
+      if (orderIds.length > 0) {
+        const requests = await db.select()
+          .from(orderCancellationRequests)
+          .where(inArray(orderCancellationRequests.orderId, orderIds));
+        
+        requests.forEach(req => {
+          cancellationRequestsMap[req.orderId] = {
+            id: req.id,
+            status: req.status,
+            reasonCategory: req.reasonCategory,
+            reasonNotes: req.reasonNotes,
+            requestedAt: req.requestedAt,
+            respondedAt: req.respondedAt,
+            responseMessage: req.responseMessage,
+            refundType: req.refundType
+          };
+        });
+      }
+      
+      // Attach cancellation request to each order
+      const ordersWithRequests = ordersResult.map(order => ({
+        ...order,
+        cancellationRequest: cancellationRequestsMap[order.id] || null
+      }));
+      
       res.json({
-        orders: ordersResult,
+        orders: ordersWithRequests,
         currentPage: page,
         totalPages,
         total: totalOrders,

@@ -58,6 +58,17 @@ interface Order {
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
+  cancelledAt?: string;
+  cancellationRequest?: {
+    id: number;
+    status: 'pending' | 'approved' | 'rejected';
+    reasonCategory: string;
+    reasonNotes?: string;
+    requestedAt: string;
+    respondedAt?: string;
+    responseMessage?: string;
+    refundType?: string;
+  };
 }
 
 interface OrderItem {
@@ -192,6 +203,7 @@ export default function OrdersFresh() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [pendingCancellationRequestId, setPendingCancellationRequestId] = useState<number | null>(null);
   
   const cancellationReasons = [
     { value: 'out_of_stock', label: 'Out of Stock' },
@@ -258,42 +270,61 @@ export default function OrdersFresh() {
     }
   };
 
-  // Approve cancellation request
-  const approveCancellationRequest = async (requestId: number, refundType: 'card' | 'credit' = 'card') => {
-    setProcessingRequestId(requestId);
-    try {
-      const response = await fetch(`/api/cancellation-requests/${requestId}/respond`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: true, refundType })
-      });
-      
-      if (response.ok) {
-        toast({
-          title: "Request Approved",
-          description: "The order has been cancelled and refund processed.",
+  // Approve cancellation request - opens the cancel dialog for refund selection
+  const approveCancellationRequest = (requestId: number) => {
+    const request = cancellationRequests.find(r => r.id === requestId);
+    if (!request) return;
+    
+    // Find the order for this request
+    const order = orders.find(o => o.id === request.orderId);
+    if (!order) {
+      // Need to load the order first
+      fetch(`/api/orders/${request.orderId}`, {
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(orderData => {
+          setupCancellationDialog(orderData, request, requestId);
+        })
+        .catch(() => {
+          toast({
+            title: "Error",
+            description: "Could not load order details",
+            variant: "destructive"
+          });
         });
-        loadCancellationRequests();
-        loadOrders(currentPage, searchQuery);
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: errorData.message || "Failed to approve request",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process request",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingRequestId(null);
+    } else {
+      setupCancellationDialog(order, request, requestId);
     }
+  };
+
+  // Helper to setup the cancel dialog from a cancellation request
+  const setupCancellationDialog = (order: Order, request: any, requestId: number) => {
+    setSelectedOrder(order);
+    setPendingCancellationRequestId(requestId);
+    
+    // Pre-fill the reason from customer's request
+    setCancelReasonCategory('customer_request');
+    setCancelReason(`Customer request: ${request.reasonCategory.replace(/_/g, ' ')}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`);
+    
+    // Set up return items if order has items
+    if (order.items && order.items.length > 0) {
+      setReturnItems(order.items.map((item: OrderItem) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        sellingType: (item as any).sellingType || 'units',
+        maxQty: item.quantity
+      })));
+    }
+    
+    // Default refund settings
+    setProcessRefund(true);
+    setRefundType('card');
+    setRestockInventory(true);
+    setSendNotification(true);
+    
+    // Open the cancel dialog
+    setShowCancelDialog(true);
   };
 
   // Reject cancellation request
@@ -418,6 +449,25 @@ export default function OrdersFresh() {
         const data = await response.json();
         console.log('✅ Order cancelled successfully:', data);
         
+        // If this was from a pending cancellation request, mark it as approved
+        if (pendingCancellationRequestId) {
+          try {
+            await fetch(`/api/cancellation-requests/${pendingCancellationRequestId}/respond`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                approved: true, 
+                refundType: processRefund && refundType !== 'later' ? refundType : 'later',
+                responseMessage: 'Order cancelled and processed via wholesaler dashboard'
+              })
+            });
+            loadCancellationRequests();
+          } catch (e) {
+            console.log('Note: Could not update cancellation request status');
+          }
+        }
+        
         const refundMessage = processRefund && refundType !== 'later'
           ? refundType === 'card' 
             ? ' A refund has been initiated and will appear on the customer\'s statement within 5-10 business days.'
@@ -425,7 +475,7 @@ export default function OrdersFresh() {
           : refundType === 'later' ? ' Refund will be processed separately.' : '';
         
         toast({
-          title: "Order Cancelled",
+          title: pendingCancellationRequestId ? "Cancellation Approved" : "Order Cancelled",
           description: `The order has been successfully cancelled.${refundMessage}`,
         });
         setOrders(orders.map(order => 
@@ -441,6 +491,7 @@ export default function OrdersFresh() {
         setRestockInventory(true);
         setSendNotification(true);
         setStaffNote('');
+        setPendingCancellationRequestId(null);
         loadOrders(currentPage, statusFilter || searchQuery);
       } else {
         const errorData = await response.json();
@@ -899,12 +950,10 @@ export default function OrdersFresh() {
                           disabled={processingRequestId === request.id}
                           onClick={() => approveCancellationRequest(request.id)}
                         >
-                          {processingRequestId === request.id ? 'Processing...' : (
-                            <>
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Approve & Refund
-                            </>
-                          )}
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Review & Approve
+                          </>
                         </Button>
                       </div>
                     </div>
@@ -1601,6 +1650,66 @@ export default function OrdersFresh() {
                     </div>
                   </div>
 
+                  {/* Cancellation Requested Entry - Show if customer requested cancellation */}
+                  {selectedOrder.cancellationRequest && (
+                    <div className="flex items-start gap-2">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${selectedOrder.cancellationRequest.status === 'pending' ? 'bg-orange-500' : 'bg-orange-400'}`}></div>
+                      <div>
+                        <div className={`text-xs font-medium ${selectedOrder.cancellationRequest.status === 'pending' ? 'text-orange-700' : 'text-orange-600'}`}>
+                          Cancellation Requested
+                          {selectedOrder.cancellationRequest.status === 'pending' && (
+                            <span className="ml-1 text-orange-500">(Pending Review)</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(selectedOrder.cancellationRequest.requestedAt).toLocaleDateString()} at {new Date(selectedOrder.cancellationRequest.requestedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Reason: {selectedOrder.cancellationRequest.reasonCategory.replace(/_/g, ' ')}
+                          {selectedOrder.cancellationRequest.reasonNotes && ` - ${selectedOrder.cancellationRequest.reasonNotes}`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancellation Approved/Rejected Entry */}
+                  {selectedOrder.cancellationRequest?.status === 'approved' && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
+                      <div>
+                        <div className="text-xs font-medium text-green-700">
+                          Cancellation Approved
+                        </div>
+                        {selectedOrder.cancellationRequest.respondedAt && (
+                          <div className="text-xs text-gray-500">
+                            {new Date(selectedOrder.cancellationRequest.respondedAt).toLocaleDateString()} at {new Date(selectedOrder.cancellationRequest.respondedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedOrder.cancellationRequest?.status === 'rejected' && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full mt-1.5 bg-red-400"></div>
+                      <div>
+                        <div className="text-xs font-medium text-red-600">
+                          Cancellation Declined
+                        </div>
+                        {selectedOrder.cancellationRequest.respondedAt && (
+                          <div className="text-xs text-gray-500">
+                            {new Date(selectedOrder.cancellationRequest.respondedAt).toLocaleDateString()}
+                          </div>
+                        )}
+                        {selectedOrder.cancellationRequest.responseMessage && (
+                          <div className="text-xs text-gray-500">
+                            {selectedOrder.cancellationRequest.responseMessage}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Refund Entry - Show if refund was processed */}
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (
                     <div className="flex items-start gap-2">
@@ -1618,7 +1727,7 @@ export default function OrdersFresh() {
                     </div>
                   )}
 
-                  {/* Cancellation Entry - Show if order was cancelled */}
+                  {/* Order Cancelled Entry - Show if order was cancelled */}
                   {selectedOrder.status === 'cancelled' && (
                     <div className="flex items-start gap-2">
                       <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
@@ -1626,7 +1735,12 @@ export default function OrdersFresh() {
                         <div className="text-xs font-medium text-red-700">
                           Order Cancelled
                         </div>
-                        {selectedOrder.refundReason && (
+                        {selectedOrder.cancelledAt && (
+                          <div className="text-xs text-gray-500">
+                            {new Date(selectedOrder.cancelledAt).toLocaleDateString()} at {new Date(selectedOrder.cancelledAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </div>
+                        )}
+                        {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
                           <div className="text-xs text-gray-500">
                             {selectedOrder.refundReason}
                           </div>
@@ -1930,6 +2044,7 @@ export default function OrdersFresh() {
                   setRestockInventory(true);
                   setSendNotification(true);
                   setStaffNote('');
+                  setPendingCancellationRequestId(null);
                 }}
               >
                 Keep order
