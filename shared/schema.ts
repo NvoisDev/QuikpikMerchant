@@ -630,6 +630,29 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   requestedAtIdx: index("registration_requests_requested_at_idx").on(table.requestedAt),
 }));
 
+// Order cancellation requests (customer-initiated, within 24hr window)
+export const orderCancellationRequests = pgTable("order_cancellation_requests", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  reasonCategory: varchar("reason_category", { length: 50 }).notNull(),
+  reasonNotes: text("reason_notes"),
+  status: varchar("status").$type<'pending' | 'approved' | 'rejected'>().notNull().default('pending'),
+  requestedAt: timestamp("requested_at").notNull().defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  respondedBy: varchar("responded_by").references(() => users.id),
+  responseMessage: text("response_message"),
+  refundType: varchar("refund_type").$type<'card' | 'credit' | 'none'>(),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+}, (table) => ({
+  orderIdIdx: index("cancellation_requests_order_id_idx").on(table.orderId),
+  customerIdIdx: index("cancellation_requests_customer_id_idx").on(table.customerId),
+  wholesalerIdIdx: index("cancellation_requests_wholesaler_id_idx").on(table.wholesalerId),
+  statusIdx: index("cancellation_requests_status_idx").on(table.status),
+  requestedAtIdx: index("cancellation_requests_requested_at_idx").on(table.requestedAt),
+}));
+
 // Customer profile update notifications for wholesalers
 export const customerProfileUpdateNotifications = pgTable("customer_profile_update_notifications", {
   id: serial("id").primaryKey(),
@@ -1129,6 +1152,15 @@ export const insertCustomerRegistrationRequestSchema = createInsertSchema(custom
 });
 export type InsertCustomerRegistrationRequest = z.infer<typeof insertCustomerRegistrationRequestSchema>;
 export type CustomerRegistrationRequest = typeof customerRegistrationRequests.$inferSelect;
+
+// Order Cancellation Request schemas
+export const insertOrderCancellationRequestSchema = createInsertSchema(orderCancellationRequests).omit({
+  id: true,
+  requestedAt: true,
+  respondedAt: true,
+});
+export type InsertOrderCancellationRequest = z.infer<typeof insertOrderCancellationRequestSchema>;
+export type OrderCancellationRequest = typeof orderCancellationRequests.$inferSelect;
 
 // Customer Profile Update Notification schemas
 export const insertCustomerProfileUpdateNotificationSchema = createInsertSchema(customerProfileUpdateNotifications).omit({

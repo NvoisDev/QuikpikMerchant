@@ -8,7 +8,7 @@ import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
 import { validatePassword } from "./passwordUtils";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -6217,6 +6217,459 @@ The Quikpik Team`
     } catch (error) {
       console.error("Error cancelling order:", error);
       res.status(500).json({ message: "Failed to cancel order" });
+    }
+  });
+
+  // Customer requests order cancellation (within 24-hour window)
+  app.post('/api/customer/orders/:id/request-cancellation', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { customerPhone, reasonCategory, reasonNotes } = req.body;
+      
+      if (!customerPhone) {
+        return res.status(400).json({ message: "Customer phone is required" });
+      }
+      if (!reasonCategory) {
+        return res.status(400).json({ message: "Cancellation reason is required" });
+      }
+      
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Verify customer owns this order
+      const customer = await storage.getUserByPhoneNumber(customerPhone);
+      if (!customer || customer.id !== order.retailerId) {
+        return res.status(403).json({ message: "Not authorized to cancel this order" });
+      }
+      
+      // Check if order is within 24-hour window
+      const orderDate = new Date(order.createdAt);
+      const now = new Date();
+      const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSinceOrder > 24) {
+        return res.status(400).json({ 
+          message: "Cancellation window expired. Orders can only be cancelled within 24 hours of placement. Please contact the seller directly."
+        });
+      }
+      
+      // Check if order is already cancelled or has a pending cancellation request
+      if (order.status === 'cancelled') {
+        return res.status(400).json({ message: "Order is already cancelled" });
+      }
+      
+      const existingRequest = await db.select()
+        .from(orderCancellationRequests)
+        .where(and(
+          eq(orderCancellationRequests.orderId, orderId),
+          eq(orderCancellationRequests.status, 'pending')
+        ))
+        .limit(1);
+        
+      if (existingRequest.length > 0) {
+        return res.status(400).json({ message: "A cancellation request is already pending for this order" });
+      }
+      
+      // Create cancellation request
+      const [request] = await db.insert(orderCancellationRequests)
+        .values({
+          orderId,
+          customerId: customer.id,
+          wholesalerId: order.wholesalerId,
+          reasonCategory,
+          reasonNotes: reasonNotes || null,
+          status: 'pending',
+        })
+        .returning();
+      
+      console.log(`📋 Cancellation request created for order ${order.orderNumber} by customer ${customer.phoneNumber}`);
+      
+      // Notify wholesaler about the cancellation request (optional SMS/email)
+      try {
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        if (wholesaler?.phoneNumber) {
+          await sendSMS({
+            to: wholesaler.phoneNumber,
+            message: `🔔 Cancellation Request: Customer ${customer.firstName || customer.phoneNumber} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to send cancellation request notification:', error);
+      }
+      
+      res.json({ 
+        message: "Cancellation request submitted successfully. The seller will review your request shortly.",
+        request 
+      });
+    } catch (error) {
+      console.error("Error creating cancellation request:", error);
+      res.status(500).json({ message: "Failed to submit cancellation request" });
+    }
+  });
+
+  // Get cancellation requests for wholesaler
+  app.get('/api/cancellation-requests', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      const status = req.query.status as string || undefined;
+      
+      let query = db.select()
+        .from(orderCancellationRequests)
+        .where(eq(orderCancellationRequests.wholesalerId, wholesalerId));
+      
+      if (status) {
+        query = db.select()
+          .from(orderCancellationRequests)
+          .where(and(
+            eq(orderCancellationRequests.wholesalerId, wholesalerId),
+            eq(orderCancellationRequests.status, status as 'pending' | 'approved' | 'rejected')
+          ));
+      }
+      
+      const requests = await query.orderBy(desc(orderCancellationRequests.requestedAt));
+      
+      // Enrich with order and customer details
+      const enrichedRequests = await Promise.all(requests.map(async (request) => {
+        const order = await storage.getOrder(request.orderId);
+        const customer = await storage.getUser(request.customerId);
+        return {
+          ...request,
+          order: order ? {
+            id: order.id,
+            orderNumber: order.orderNumber,
+            total: order.total,
+            status: order.status,
+            createdAt: order.createdAt,
+          } : null,
+          customer: customer ? {
+            id: customer.id,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            phoneNumber: customer.phoneNumber,
+            businessName: customer.businessName,
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error("Error fetching cancellation requests:", error);
+      res.status(500).json({ message: "Failed to fetch cancellation requests" });
+    }
+  });
+
+  // Get pending cancellation requests count for wholesaler
+  app.get('/api/cancellation-requests/pending-count', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(orderCancellationRequests)
+        .where(and(
+          eq(orderCancellationRequests.wholesalerId, wholesalerId),
+          eq(orderCancellationRequests.status, 'pending')
+        ));
+      
+      res.json({ count: Number(result[0]?.count || 0) });
+    } catch (error) {
+      console.error("Error fetching pending cancellation count:", error);
+      res.status(500).json({ message: "Failed to fetch count" });
+    }
+  });
+
+  // Cancellation analytics endpoint
+  app.get('/api/analytics/cancellations', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { timeRange = '30d' } = req.query;
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (timeRange) {
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+      
+      // Get all cancelled orders
+      const allOrders = await storage.getOrders(wholesalerId);
+      const cancelledOrders = allOrders.filter(o => 
+        o.status === 'cancelled' && new Date(o.createdAt) >= startDate
+      );
+      
+      // Get cancellation requests
+      const requests = await db.select()
+        .from(orderCancellationRequests)
+        .where(and(
+          eq(orderCancellationRequests.wholesalerId, wholesalerId),
+          gte(orderCancellationRequests.requestedAt, startDate)
+        ));
+      
+      // Calculate metrics
+      const totalCancelled = cancelledOrders.length;
+      const totalRefunded = cancelledOrders.reduce((sum, o) => sum + parseFloat(o.amountRefunded || '0'), 0);
+      const totalValue = cancelledOrders.reduce((sum, o) => sum + parseFloat(o.total || '0'), 0);
+      
+      // Cancellation reason breakdown
+      const reasonBreakdown: Record<string, number> = {};
+      cancelledOrders.forEach(o => {
+        const reason = o.refundReason?.split(':')[0]?.trim() || 'Unknown';
+        reasonBreakdown[reason] = (reasonBreakdown[reason] || 0) + 1;
+      });
+      
+      // Customer-initiated vs wholesaler-initiated
+      const customerInitiated = requests.filter(r => r.status === 'approved').length;
+      const wholesalerInitiated = totalCancelled - customerInitiated;
+      
+      // Pending requests
+      const pendingRequests = requests.filter(r => r.status === 'pending').length;
+      const approvedRequests = requests.filter(r => r.status === 'approved').length;
+      const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+      
+      // Calculate cancellation rate
+      const totalOrders = allOrders.filter(o => new Date(o.createdAt) >= startDate).length;
+      const cancellationRate = totalOrders > 0 ? (totalCancelled / totalOrders * 100).toFixed(1) : '0';
+      
+      res.json({
+        totalCancelled,
+        totalRefunded: totalRefunded.toFixed(2),
+        totalValue: totalValue.toFixed(2),
+        cancellationRate,
+        reasonBreakdown: Object.entries(reasonBreakdown).map(([reason, count]) => ({ reason, count })),
+        initiatedBy: {
+          customer: customerInitiated,
+          wholesaler: wholesalerInitiated
+        },
+        requests: {
+          pending: pendingRequests,
+          approved: approvedRequests,
+          rejected: rejectedRequests,
+          total: requests.length
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching cancellation analytics:", error);
+      res.status(500).json({ message: "Failed to fetch cancellation analytics" });
+    }
+  });
+
+  // Wholesaler responds to cancellation request
+  app.post('/api/cancellation-requests/:id/respond', requireAuth, async (req: any, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      const { approved, responseMessage, refundType } = req.body;
+      
+      const [request] = await db.select()
+        .from(orderCancellationRequests)
+        .where(eq(orderCancellationRequests.id, requestId))
+        .limit(1);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Cancellation request not found" });
+      }
+      
+      if (request.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ message: "Not authorized to respond to this request" });
+      }
+      
+      if (request.status !== 'pending') {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+      
+      const newStatus = approved ? 'approved' : 'rejected';
+      
+      // Update the request
+      await db.update(orderCancellationRequests)
+        .set({
+          status: newStatus,
+          respondedAt: new Date(),
+          respondedBy: req.user.id,
+          responseMessage: responseMessage || null,
+          refundType: approved ? (refundType || 'card') : null,
+        })
+        .where(eq(orderCancellationRequests.id, requestId));
+      
+      // If approved, cancel the order
+      if (approved) {
+        const order = await storage.getOrder(request.orderId);
+        if (order) {
+          // Use the existing cancel logic
+          const orderItems = await storage.getOrderItems(order.id);
+          
+          // Restore stock for all items
+          for (const item of orderItems) {
+            const product = await storage.getProduct(item.productId);
+            if (product) {
+              if (item.sellingType === 'pallets') {
+                const currentPalletStock = product.palletStock || 0;
+                await db.update(products)
+                  .set({ palletStock: currentPalletStock + item.quantity })
+                  .where(eq(products.id, product.id));
+              } else {
+                await storage.updateProductStock(item.productId, product.stock + item.quantity);
+              }
+            }
+          }
+          
+          // Process refund if applicable
+          let stripeRefund = null;
+          const amountPaid = parseFloat(order.amountPaid || '0');
+          
+          if (refundType === 'card' && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
+            try {
+              stripeRefund = await stripe.refunds.create({
+                payment_intent: order.stripePaymentIntentId,
+                amount: Math.round(amountPaid * 100),
+                reason: 'requested_by_customer',
+                metadata: {
+                  order_id: order.id.toString(),
+                  reason: `Customer request: ${request.reasonCategory}`
+                }
+              });
+              console.log(`💳 Stripe refund processed for customer cancellation: £${amountPaid.toFixed(2)}`);
+            } catch (stripeError: any) {
+              console.error('Stripe refund failed:', stripeError);
+            }
+          }
+          
+          // Update order status
+          await db.update(orders)
+            .set({
+              status: 'cancelled',
+              amountRefunded: stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : (refundType === 'credit' ? amountPaid.toFixed(2) : '0.00'),
+              refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
+              cancelledAt: new Date(),
+              notes: order.notes 
+                ? `${order.notes}\n[${new Date().toISOString()}] Order cancelled via customer request (${request.reasonCategory}). Refund: ${refundType}`
+                : `[${new Date().toISOString()}] Order cancelled via customer request (${request.reasonCategory}). Refund: ${refundType}`,
+            })
+            .where(eq(orders.id, order.id));
+          
+          console.log(`🚫 Order ${order.orderNumber} cancelled via customer cancellation request`);
+        }
+      }
+      
+      // Notify customer about the decision
+      try {
+        const customer = await storage.getUser(request.customerId);
+        const order = await storage.getOrder(request.orderId);
+        const wholesaler = await storage.getUser(request.wholesalerId);
+        
+        if (customer?.phoneNumber && order) {
+          const businessName = wholesaler?.businessName || 'the seller';
+          let message = '';
+          
+          if (approved) {
+            let refundMsg = '';
+            if (refundType === 'card') {
+              refundMsg = 'A refund has been processed and will appear on your statement within 5-10 business days.';
+            } else if (refundType === 'credit') {
+              refundMsg = 'Store credit has been applied to your account for future orders.';
+            }
+            message = `✅ Your cancellation request for order ${order.orderNumber} has been approved by ${businessName}. ${refundMsg}`;
+          } else {
+            message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
+          }
+          
+          await sendSMS({
+            to: customer.phoneNumber,
+            message,
+          });
+          console.log(`📱 Cancellation response SMS sent to ${customer.phoneNumber}`);
+        }
+      } catch (error) {
+        console.error('Failed to send cancellation response notification:', error);
+      }
+      
+      res.json({ 
+        message: approved ? "Cancellation request approved and order cancelled" : "Cancellation request rejected",
+        status: newStatus
+      });
+    } catch (error) {
+      console.error("Error responding to cancellation request:", error);
+      res.status(500).json({ message: "Failed to process cancellation request" });
+    }
+  });
+
+  // Check if customer can request cancellation for an order
+  app.get('/api/customer/orders/:id/can-cancel', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const customerPhone = req.query.customerPhone as string;
+      
+      if (!customerPhone) {
+        return res.status(400).json({ canCancel: false, reason: "Customer phone is required" });
+      }
+      
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ canCancel: false, reason: "Order not found" });
+      }
+      
+      // Verify customer owns this order
+      const customer = await storage.getUserByPhoneNumber(customerPhone);
+      if (!customer || customer.id !== order.retailerId) {
+        return res.json({ canCancel: false, reason: "Not authorized" });
+      }
+      
+      // Check if order is already cancelled
+      if (order.status === 'cancelled') {
+        return res.json({ canCancel: false, reason: "Order is already cancelled" });
+      }
+      
+      // Check if there's already a pending cancellation request
+      const existingRequest = await db.select()
+        .from(orderCancellationRequests)
+        .where(and(
+          eq(orderCancellationRequests.orderId, orderId),
+          eq(orderCancellationRequests.status, 'pending')
+        ))
+        .limit(1);
+        
+      if (existingRequest.length > 0) {
+        return res.json({ canCancel: false, reason: "pending_request", pendingRequest: existingRequest[0] });
+      }
+      
+      // Check if order is within 24-hour window
+      const orderDate = new Date(order.createdAt);
+      const now = new Date();
+      const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
+      const hoursRemaining = Math.max(0, 24 - hoursSinceOrder);
+      
+      if (hoursSinceOrder > 24) {
+        return res.json({ 
+          canCancel: false, 
+          reason: "24-hour cancellation window has expired. Please contact the seller directly." 
+        });
+      }
+      
+      res.json({ 
+        canCancel: true, 
+        hoursRemaining: Math.round(hoursRemaining * 10) / 10 
+      });
+    } catch (error) {
+      console.error("Error checking cancellation eligibility:", error);
+      res.status(500).json({ canCancel: false, reason: "Error checking eligibility" });
     }
   });
 

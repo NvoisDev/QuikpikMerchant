@@ -2,16 +2,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 import { DynamicDeliveryAddressDisplay } from "@/components/shared/DynamicDeliveryAddressDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -207,6 +210,219 @@ const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhon
         <>💳 Pay Balance Now</>
       )}
     </button>
+  );
+};
+
+// Cancellation reasons for customer requests
+const customerCancellationReasons = [
+  { value: 'changed_mind', label: 'Changed my mind' },
+  { value: 'ordered_wrong', label: 'Ordered wrong items' },
+  { value: 'found_better_price', label: 'Found better price elsewhere' },
+  { value: 'no_longer_needed', label: 'No longer needed' },
+  { value: 'duplicate_order', label: 'Duplicate order' },
+  { value: 'other', label: 'Other reason' },
+];
+
+const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canCancel, setCanCancel] = useState<boolean | null>(null);
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [hoursRemaining, setHoursRemaining] = useState<number>(0);
+  const [reasonCategory, setReasonCategory] = useState('');
+  const [reasonNotes, setReasonNotes] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen && canCancel === null) {
+      checkCancellationEligibility();
+    }
+  }, [isOpen]);
+
+  const checkCancellationEligibility = async () => {
+    setIsChecking(true);
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/can-cancel?customerPhone=${encodeURIComponent(customerPhone)}`);
+      const data = await response.json();
+      setCanCancel(data.canCancel);
+      setHoursRemaining(data.hoursRemaining || 0);
+      setCancelReason(data.canCancel ? null : data.reason);
+    } catch (error) {
+      setCanCancel(false);
+      setCancelReason('Unable to check cancellation eligibility');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!reasonCategory) {
+      toast({
+        title: "Error",
+        description: "Please select a reason for cancellation",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/request-cancellation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerPhone,
+          reasonCategory,
+          reasonNotes: reasonNotes || undefined
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Request Submitted",
+          description: "Your cancellation request has been sent to the seller for review.",
+        });
+        setIsOpen(false);
+        setReasonCategory('');
+        setReasonNotes('');
+        onSuccess?.();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit cancellation request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit cancellation request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Don't show button for already cancelled orders
+  if (order.status === 'cancelled') {
+    return null;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50">
+          <X className="h-3 w-3 mr-1" />
+          <span className="text-xs">Cancel Order</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <X className="h-5 w-5 text-red-500" />
+            Request Order Cancellation
+          </DialogTitle>
+          <DialogDescription>
+            Order {order.orderNumber}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {isChecking ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-500">Checking eligibility...</span>
+            </div>
+          ) : canCancel === false ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-red-900">Cannot Cancel</h4>
+                  <p className="text-sm text-red-700 mt-1">
+                    {cancelReason === 'pending_request' 
+                      ? 'A cancellation request is already pending for this order.'
+                      : cancelReason || 'This order cannot be cancelled.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {hoursRemaining > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800">
+                    <Clock className="h-4 w-4 inline-block mr-1" />
+                    You have <strong>{hoursRemaining.toFixed(1)} hours</strong> remaining to request cancellation.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reason for cancellation *
+                  </label>
+                  <Select value={reasonCategory} onValueChange={setReasonCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a reason..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customerCancellationReasons.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Additional notes (optional)
+                  </label>
+                  <Textarea
+                    value={reasonNotes}
+                    onChange={(e) => setReasonNotes(e.target.value)}
+                    placeholder="Any additional details..."
+                    className="h-20"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                <p>Your request will be reviewed by the seller. You'll receive a notification once they respond.</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Close
+          </Button>
+          {canCancel && (
+            <Button 
+              onClick={handleSubmitRequest} 
+              disabled={isSubmitting || !reasonCategory}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Request'
+              )}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -938,16 +1154,23 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       </div>
                     </div>
                     
-                    {/* View Details Button */}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 px-3 w-full sm:w-auto">
-                          <Eye className="h-3 w-3 mr-1" />
-                          <span className="text-xs">View Details</span>
-                        </Button>
-                      </DialogTrigger>
-                      <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} />
-                    </Dialog>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 px-3 flex-1 sm:flex-none">
+                            <Eye className="h-3 w-3 mr-1" />
+                            <span className="text-xs">View Details</span>
+                          </Button>
+                        </DialogTrigger>
+                        <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} />
+                      </Dialog>
+                      <CancellationRequestButton 
+                        order={order} 
+                        customerPhone={customerPhone} 
+                        onSuccess={() => handleRefresh()}
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

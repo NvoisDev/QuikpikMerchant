@@ -21,7 +21,8 @@ import {
   ArrowDownRight,
   Eye,
   MessageSquare,
-  Clock
+  Clock,
+  XCircle
 } from "lucide-react";
 import { 
   LineChart, 
@@ -105,6 +106,19 @@ export default function Analytics() {
     enabled: !!user,
   });
 
+  const { data: cancellationData } = useQuery<{
+    totalCancelled: number;
+    totalRefunded: string;
+    totalValue: string;
+    cancellationRate: string;
+    reasonBreakdown: Array<{ reason: string; count: number }>;
+    initiatedBy: { customer: number; wholesaler: number };
+    requests: { pending: number; approved: number; rejected: number; total: number };
+  }>({
+    queryKey: ["/api/analytics/cancellations", timeRange],
+    enabled: !!user,
+  });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -162,13 +176,14 @@ export default function Analytics() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
         {[
           { id: "overview", label: "Overview", icon: BarChart3 },
           { id: "revenue", label: "Revenue", icon: DollarSign },
           { id: "customers", label: "Customers", icon: Users },
           { id: "products", label: "Products", icon: Package },
-          { id: "marketing", label: "Marketing", icon: MessageSquare }
+          { id: "marketing", label: "Marketing", icon: MessageSquare },
+          { id: "cancellations", label: "Cancellations", icon: XCircle }
         ].map((tab) => (
           <Button
             key={tab.id}
@@ -475,6 +490,194 @@ export default function Analytics() {
                 <TrendingUp className="h-12 w-12 text-green-600 mx-auto mb-4" />
                 <p className="text-3xl font-bold text-green-600">234%</p>
                 <p className="text-gray-600">Average Campaign ROI</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Cancellations Tab */}
+      {activeTab === "cancellations" && (
+        <div className="space-y-6">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Cancelled</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {cancellationData?.totalCancelled || 0}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">orders</p>
+                  </div>
+                  <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <XCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Cancellation Rate</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {cancellationData?.cancellationRate || '0'}%
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">of total orders</p>
+                  </div>
+                  <div className="h-12 w-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-amber-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Refunded</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(parseFloat(cancellationData?.totalRefunded || '0'))}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">refund value</p>
+                  </div>
+                  <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Pending Requests</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {cancellationData?.requests?.pending || 0}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">awaiting review</p>
+                  </div>
+                  <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Reason Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cancellation Reasons</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {cancellationData?.reasonBreakdown && cancellationData.reasonBreakdown.length > 0 ? (
+                  <div className="space-y-3">
+                    {cancellationData.reasonBreakdown.map((item: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-3"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-sm text-gray-700">{item.reason}</span>
+                        </div>
+                        <Badge variant="outline">{item.count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <XCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No cancellations in this period</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Initiated By */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cancellation Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-600">
+                      {cancellationData?.initiatedBy?.customer || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Customer Requested</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <Package className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-purple-600">
+                      {cancellationData?.initiatedBy?.wholesaler || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Wholesaler Initiated</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Customer Request Status</h4>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="text-lg font-semibold text-gray-700">
+                        {cancellationData?.requests?.total || 0}
+                      </p>
+                      <p className="text-xs text-gray-500">Total</p>
+                    </div>
+                    <div className="p-2 bg-green-50 rounded">
+                      <p className="text-lg font-semibold text-green-700">
+                        {cancellationData?.requests?.approved || 0}
+                      </p>
+                      <p className="text-xs text-gray-500">Approved</p>
+                    </div>
+                    <div className="p-2 bg-red-50 rounded">
+                      <p className="text-lg font-semibold text-red-700">
+                        {cancellationData?.requests?.rejected || 0}
+                      </p>
+                      <p className="text-xs text-gray-500">Rejected</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Value Impact */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial Impact</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Order Value Lost</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {formatCurrency(parseFloat(cancellationData?.totalValue || '0'))}
+                  </p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Refunds Issued</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(parseFloat(cancellationData?.totalRefunded || '0'))}
+                  </p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Recovery Rate</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {parseFloat(cancellationData?.totalValue || '0') > 0 
+                      ? (100 - (parseFloat(cancellationData?.totalRefunded || '0') / parseFloat(cancellationData?.totalValue || '1') * 100)).toFixed(1)
+                      : '0'}%
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
