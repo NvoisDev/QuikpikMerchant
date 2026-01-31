@@ -1158,12 +1158,14 @@ export default function OrdersFresh() {
                       <span className="font-medium">{formatCurrency(wholesalerOutstanding)}</span>
                     </div>
                     <div className="pt-2 border-t flex flex-wrap gap-2">
-                      <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
-                        {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
-                      </Badge>
-                      {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (
-                        <Badge className="bg-purple-100 text-purple-800">
-                          Refunded: {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))}
+                      {/* Show payment status badge - but if refunded, show Refunded badge instead */}
+                      {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (
+                        <Badge className="bg-purple-600 text-white">
+                          Refunded
+                        </Badge>
+                      ) : (
+                        <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
+                          {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
                         </Badge>
                       )}
                     </div>
@@ -1383,13 +1385,12 @@ export default function OrdersFresh() {
                       <div className="w-2 h-2 rounded-full mt-1.5 bg-purple-500"></div>
                       <div>
                         <div className="text-xs font-medium text-purple-700">
-                          Refund processed
+                          Refunded: {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))} refunded
-                          {(selectedOrder as any).refundedAt && (
-                            <span> • {new Date((selectedOrder as any).refundedAt).toLocaleDateString()}</span>
-                          )}
+                          {selectedOrder.refundedAt 
+                            ? new Date(selectedOrder.refundedAt).toLocaleDateString() 
+                            : 'Processing'}
                         </div>
                       </div>
                     </div>

@@ -6170,28 +6170,71 @@ The Quikpik Team`
         })
         .where(eq(orders.id, id));
 
-      // Send cancellation notification to customer
+      // Send cancellation notification to customer (SMS and Email)
       try {
         const customer = await storage.getUser(order.retailerId);
         const wholesaler = await storage.getUser(order.wholesalerId);
         
-        if (customer?.phoneNumber && wholesaler) {
+        if (wholesaler) {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+          const amountPaid = parseFloat(order.amountPaid || '0');
+          
+          // Build refund message based on what happened
           let refundMsg = '';
           if (stripeRefund) {
             refundMsg = `\n\nA refund of £${stripeRefundAmount.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
           } else if (storeCreditAmount > 0) {
             refundMsg = `\n\nStore credit of £${storeCreditAmount.toFixed(2)} has been applied to your account and can be used on future orders.`;
+          } else if (amountPaid <= 0) {
+            refundMsg = `\n\nNo payment was taken for this order, so no refund is required.`;
           }
-          const message = isFullCancellation 
-            ? `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`
-            : `Hi ${customer.firstName || 'there'}, a partial return has been processed for your order ${order.orderNumber} with ${businessName}.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
           
-          await sendSMS({
-            to: customer.phoneNumber,
-            message,
-          });
-          console.log(`📱 Cancellation SMS sent to ${customer.phoneNumber}`);
+          // SMS notification
+          if (customer?.phoneNumber) {
+            const message = isFullCancellation 
+              ? `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`
+              : `Hi ${customer.firstName || 'there'}, a partial return has been processed for your order ${order.orderNumber} with ${businessName}.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
+            
+            await sendSMS({
+              to: customer.phoneNumber,
+              message,
+            });
+            console.log(`📱 Cancellation SMS sent to ${customer.phoneNumber}`);
+          }
+          
+          // Email notification
+          if (customer?.email) {
+            try {
+              const emailSubject = isFullCancellation 
+                ? `Order ${order.orderNumber} Cancelled - ${businessName}`
+                : `Partial Return Processed - Order ${order.orderNumber}`;
+              
+              let emailBody = isFullCancellation
+                ? `<h2>Order Cancelled</h2><p>Hi ${customer.firstName || 'there'},</p><p>Your order <strong>${order.orderNumber}</strong> with ${businessName} has been cancelled.</p>`
+                : `<h2>Partial Return Processed</h2><p>Hi ${customer.firstName || 'there'},</p><p>A partial return has been processed for your order <strong>${order.orderNumber}</strong> with ${businessName}.</p>`;
+              
+              // Add refund details to email
+              if (stripeRefund) {
+                emailBody += `<div style="background:#f0f7ff;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#1e40af;">Refund Details</h3><p style="margin:0;">Amount: <strong>£${stripeRefundAmount.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">Refunded to your original payment method. Please allow 5-10 business days for the refund to appear on your statement.</p></div>`;
+              } else if (storeCreditAmount > 0) {
+                emailBody += `<div style="background:#f0fdf4;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#166534;">Store Credit Applied</h3><p style="margin:0;">Amount: <strong>£${storeCreditAmount.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">This credit is available immediately and can be used on your next order.</p></div>`;
+              } else if (amountPaid <= 0) {
+                emailBody += `<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0;"><p style="margin:0;color:#666;">No payment was taken for this order, so no refund is required.</p></div>`;
+              }
+              
+              emailBody += `<p>If you have any questions, please contact ${businessName}:</p><ul><li>Phone: ${wholesaler.phoneNumber || 'N/A'}</li><li>Email: ${wholesaler.email || 'N/A'}</li></ul><p style="color:#666;font-size:12px;margin-top:30px;">This is an automated message from Quikpik.</p>`;
+              
+              await sendEmail({
+                to: customer.email,
+                subject: emailSubject,
+                html: emailBody,
+                from: `${businessName} via Quikpik <orders@quikpik.app>`
+              });
+              console.log(`📧 Cancellation email sent to ${customer.email}`);
+            } catch (emailError) {
+              console.error('Failed to send cancellation email:', emailError);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to send cancellation notification:', error);
