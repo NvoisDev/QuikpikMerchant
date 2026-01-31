@@ -1307,7 +1307,7 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between pt-2 border-t">
+              <div className="flex justify-between pt-2 border-t gap-3">
                 {/* Cancel Button - Left side */}
                 {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'fulfilled' && (
                   <Button
@@ -1325,12 +1325,12 @@ export default function OrdersFresh() {
                       setShowCancelDialog(true);
                     }}
                   >
-                    <X className="w-3 h-3 mr-1" />
-                    Cancel Order
+                    <X className="w-4 h-4 mr-1" />
+                    Cancel
                   </Button>
                 )}
                 
-                <div className="flex gap-2 ml-auto">
+                <div className="flex gap-3 ml-auto">
                   {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
                   {selectedOrder.fulfillmentType === 'pickup' && 
                    selectedOrder.status !== 'ready_for_collection' && 
@@ -1342,7 +1342,7 @@ export default function OrdersFresh() {
                       className="bg-orange-500 hover:bg-orange-600 text-white"
                     >
                       <Clock className="h-4 w-4 mr-1" />
-                      {updatingOrderId === selectedOrder.id ? 'Marking Ready...' : 'Ready for Collection'}
+                      {updatingOrderId === selectedOrder.id ? '...' : 'Ready'}
                     </Button>
                   )}
 
@@ -1352,8 +1352,10 @@ export default function OrdersFresh() {
                       size="sm"
                       onClick={() => markAsFulfilled(selectedOrder.id)}
                       disabled={updatingOrderId === selectedOrder.id}
+                      className="bg-green-600 hover:bg-green-700 text-white"
                     >
-                      {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      {updatingOrderId === selectedOrder.id ? '...' : 'Fulfilled'}
                     </Button>
                   )}
                 </div>
