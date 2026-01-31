@@ -951,25 +951,23 @@ export default function OrdersFresh() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-medium text-sm">Status & Fulfillment</h3>
-                  {selectedOrder.status !== 'fulfilled' && selectedOrder.status !== 'cancelled' && (
-                    <Button 
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        const items = selectedOrder.items || [];
-                        setReturnItems(items.map((item: any) => ({
-                          productId: item.productId,
-                          quantity: item.quantity,
-                          sellingType: item.sellingType || 'unit',
-                          maxQty: item.quantity
-                        })));
-                        setShowCancelDialog(true);
-                      }}
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Cancel
-                    </Button>
-                  )}
+                  <Button 
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      const items = selectedOrder.items || [];
+                      setReturnItems(items.map((item: any) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        sellingType: item.sellingType || 'unit',
+                        maxQty: item.quantity
+                      })));
+                      setShowCancelDialog(true);
+                    }}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Cancel
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   {/* Payment Status Badge - Dynamic based on actual status */}
