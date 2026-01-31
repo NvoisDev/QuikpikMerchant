@@ -554,6 +554,7 @@ export const orders = pgTable("orders", {
   // Refund tracking
   amountRefunded: decimal("amount_refunded", { precision: 10, scale: 2 }).default("0.00"), // Total amount refunded
   refundReason: text("refund_reason"), // Reason for refund/cancellation
+  refundedAt: timestamp("refunded_at"), // When refund was processed
   cancelledAt: timestamp("cancelled_at"), // When order was cancelled
   
   createdAt: timestamp("created_at").defaultNow(),

@@ -62,6 +62,10 @@ interface Order {
   paymentStatus?: string;
   amountPaid?: string;
   amountOutstanding?: string;
+  amountRefunded?: string;
+  refundReason?: string;
+  refundedAt?: string;
+  cancelledAt?: string;
   depositPercentage?: number;
   stripePaymentLinkUrl?: string;
   createdAt: string;
@@ -467,9 +471,16 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
             <Badge variant="outline" className="text-xs">
               {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
             </Badge>
-            <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
-              {getPaymentStatusLabel(order.paymentStatus || 'paid')}
-            </Badge>
+            {/* Show Refunded badge if refund was processed, otherwise show payment status */}
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
+              <Badge className="bg-purple-100 text-purple-800 text-xs">
+                Refunded
+              </Badge>
+            ) : (
+              <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
+                {getPaymentStatusLabel(order.paymentStatus || 'paid')}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -695,6 +706,43 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
                 <div className="flex-1 min-w-0">
                   <span className="text-gray-600 block">{format(new Date(order.readyToCollectAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
                   <span className="font-medium break-words text-orange-700">📦 Order ready for collection</span>
+                </div>
+              </div>
+            )}
+
+            {/* Refund Timeline Event */}
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">
+                    {order.refundedAt 
+                      ? format(new Date(order.refundedAt), 'MMM d, yyyy')
+                      : order.cancelledAt 
+                        ? format(new Date(order.cancelledAt), 'MMM d, yyyy')
+                        : 'Processing'}
+                  </span>
+                  <span className="font-medium break-words text-purple-700">
+                    Refunded: {formatCurrency(parseFloat(order.amountRefunded))}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled Timeline Event */}
+            {order.status === 'cancelled' && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">
+                    {order.cancelledAt 
+                      ? format(new Date(order.cancelledAt), 'MMM d, yyyy \'at\' h:mm a')
+                      : format(new Date(order.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}
+                  </span>
+                  <span className="font-medium break-words text-red-700">Order Cancelled</span>
+                  {order.refundReason && (
+                    <span className="text-gray-500 block">{order.refundReason}</span>
+                  )}
                 </div>
               </div>
             )}

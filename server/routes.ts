@@ -2073,6 +2073,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentStatus: order.paymentStatus || "paid",
           amountPaid: order.amountPaid || '0.00',
           amountOutstanding: order.amountOutstanding || '0.00',
+          amountRefunded: order.amountRefunded || '0.00',
+          refundReason: order.refundReason || null,
+          refundedAt: order.refundedAt || null,
+          cancelledAt: order.cancelledAt || null,
           depositPercentage: order.depositPercentage || 100,
           stripePaymentLinkUrl: order.stripePaymentLinkUrl || null,
           fulfillmentType: order.fulfillmentType,
@@ -6150,19 +6154,35 @@ The Quikpik Team`
       // Update order with cancellation details
       const currentRefunded = parseFloat(order.amountRefunded || '0');
       const stripeRefundAmount = stripeRefund ? stripeRefund.amount / 100 : 0;
-      const totalRefunded = currentRefunded + stripeRefundAmount + storeCreditAmount;
+      const amountPaidNum = parseFloat(order.amountPaid || '0');
+      
+      // Calculate total refunded: Stripe refund + store credit, or full amount if cancelled
+      let totalRefunded = currentRefunded + stripeRefundAmount + storeCreditAmount;
+      
+      // For full cancellation, always record the refund amount even if "later" refund type
+      if (isFullCancellation && totalRefunded === 0 && amountPaidNum > 0) {
+        // If we're cancelling but haven't processed refund yet (e.g., 'later' option),
+        // still record how much was paid to show what should be refunded
+        totalRefunded = amountPaidNum;
+      }
       
       const refundNote = stripeRefund 
         ? `Stripe refund: £${stripeRefundAmount.toFixed(2)}` 
         : storeCreditAmount > 0 
           ? `Store credit: £${storeCreditAmount.toFixed(2)}`
-          : 'No refund';
+          : amountPaidNum > 0 
+            ? `Refund pending: £${amountPaidNum.toFixed(2)}`
+            : 'No payment taken';
+      
+      // Determine if refund was processed now
+      const refundProcessedNow = stripeRefund || storeCreditAmount > 0;
       
       await db.update(orders)
         .set({
           status: newStatus,
           amountRefunded: totalRefunded.toFixed(2),
           refundReason: reason || 'Customer requested cancellation',
+          refundedAt: refundProcessedNow ? new Date() : undefined,
           cancelledAt: isFullCancellation ? new Date() : undefined,
           notes: order.notes 
             ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
