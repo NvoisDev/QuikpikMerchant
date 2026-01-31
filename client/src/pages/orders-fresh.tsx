@@ -1318,60 +1318,69 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between pt-2 border-t gap-3">
-                {/* Cancel Button - Left side */}
-                {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'fulfilled' && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      if (selectedOrder.items) {
-                        setReturnItems(selectedOrder.items.map(item => ({
-                          productId: item.productId,
-                          quantity: item.quantity,
-                          sellingType: 'unit',
-                          maxQty: item.quantity
-                        })));
-                      }
-                      setShowCancelDialog(true);
-                    }}
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Cancel
-                  </Button>
-                )}
-                
-                <div className="flex gap-3 ml-auto">
-                  {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
-                  {selectedOrder.fulfillmentType === 'pickup' && 
-                   selectedOrder.status !== 'ready_for_collection' && 
-                   selectedOrder.status !== 'fulfilled' && (
-                    <Button 
-                      size="sm"
-                      onClick={() => markReadyForCollection(selectedOrder.id)}
-                      disabled={updatingOrderId === selectedOrder.id}
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                    >
-                      <Clock className="h-4 w-4 mr-1" />
-                      {updatingOrderId === selectedOrder.id ? '...' : 'Ready for Collection'}
-                    </Button>
-                  )}
-
-                  {/* Mark as Fulfilled Button */}
-                  {selectedOrder.status !== 'fulfilled' && (
-                    <Button 
-                      size="sm"
-                      onClick={() => markAsFulfilled(selectedOrder.id)}
-                      disabled={updatingOrderId === selectedOrder.id}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      {updatingOrderId === selectedOrder.id ? '...' : 'Fulfilled'}
-                    </Button>
-                  )}
+              {/* Action Buttons or Cancelled Notice */}
+              {selectedOrder.status === 'cancelled' ? (
+                <div className="flex items-center justify-center py-3 border-t bg-red-50 rounded-b-lg">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <X className="w-5 h-5" />
+                    <span className="font-semibold">Order Cancelled</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex justify-between pt-2 border-t gap-3">
+                  {/* Cancel Button - Left side */}
+                  {selectedOrder.status !== 'fulfilled' && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedOrder.items) {
+                          setReturnItems(selectedOrder.items.map(item => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            sellingType: 'unit',
+                            maxQty: item.quantity
+                          })));
+                        }
+                        setShowCancelDialog(true);
+                      }}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  )}
+                  
+                  <div className="flex gap-3 ml-auto">
+                    {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
+                    {selectedOrder.fulfillmentType === 'pickup' && 
+                     selectedOrder.status !== 'ready_for_collection' && 
+                     selectedOrder.status !== 'fulfilled' && (
+                      <Button 
+                        size="sm"
+                        onClick={() => markReadyForCollection(selectedOrder.id)}
+                        disabled={updatingOrderId === selectedOrder.id}
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        <Clock className="h-4 w-4 mr-1" />
+                        {updatingOrderId === selectedOrder.id ? '...' : 'Ready for Collection'}
+                      </Button>
+                    )}
+
+                    {/* Mark as Fulfilled Button */}
+                    {selectedOrder.status !== 'fulfilled' && (
+                      <Button 
+                        size="sm"
+                        onClick={() => markAsFulfilled(selectedOrder.id)}
+                        disabled={updatingOrderId === selectedOrder.id}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        {updatingOrderId === selectedOrder.id ? '...' : 'Fulfilled'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

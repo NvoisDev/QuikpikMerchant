@@ -6121,8 +6121,21 @@ The Quikpik Team`
         }
       }
 
-      // Determine new status
-      const isFullCancellation = !returnedItems || returnedItems.length === 0;
+      // Determine new status - full cancellation if no items specified OR all items returned at full quantity
+      let isFullCancellation = !returnedItems || returnedItems.length === 0;
+      
+      // Check if all items are being returned at full quantity (also a full cancellation)
+      if (!isFullCancellation && returnedItems && returnedItems.length > 0) {
+        const allItemsFullyReturned = orderItems.every(orderItem => {
+          const returnItem = returnedItems.find((ri: any) => ri.productId === orderItem.productId);
+          return returnItem && returnItem.quantity >= orderItem.quantity;
+        });
+        if (allItemsFullyReturned && returnedItems.length >= orderItems.length) {
+          isFullCancellation = true;
+          console.log('🚫 All items returned at full quantity - treating as full cancellation');
+        }
+      }
+      
       const newStatus = isFullCancellation ? 'cancelled' : order.status;
 
       // Update order with cancellation details
