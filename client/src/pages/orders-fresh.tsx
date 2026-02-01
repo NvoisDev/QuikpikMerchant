@@ -263,6 +263,14 @@ export default function OrdersFresh() {
       if (response.ok) {
         const data = await response.json();
         console.log(`✅ Loaded ${data.orders.length} orders successfully (page ${page} of ${data.totalPages})`);
+        // Log order statuses for debugging
+        const statusCounts: Record<string, number> = {};
+        data.orders.forEach((o: any) => {
+          const status = o.status || 'null';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+        console.log(`📋 Order statuses on this page:`, statusCounts);
+        
         setOrders(data.orders);
         setTotalOrders(data.total);
         setTotalPages(data.totalPages);
@@ -787,28 +795,28 @@ export default function OrdersFresh() {
   
   // Filter orders based on archive tab
   // Active tab shows all orders EXCEPT archived ones (prevents orphaned orders)
-  // First filter by tab (active vs archived)
+  // First filter by tab (active vs archived) - with null safety
   const filteredByTab = archiveTab === 'archived' 
-    ? orders.filter(o => archivedStatuses.includes(o.status.toLowerCase()))
-    : orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase()));
+    ? orders.filter(o => archivedStatuses.includes((o.status || '').toLowerCase()))
+    : orders.filter(o => !archivedStatuses.includes((o.status || '').toLowerCase()));
   
-  // Then apply status filter if selected
+  // Then apply status filter if selected - with null safety
   const filteredByStatus = statusFilter 
-    ? filteredByTab.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase())
+    ? filteredByTab.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase())
     : filteredByTab;
   
   const displayedOrders = filteredByStatus.length;
-  // Net Revenue excludes cancelled orders (they represent £0 actual revenue)
+  // Net Revenue excludes cancelled orders (they represent £0 actual revenue) - with null safety
   const totalValue = filteredByStatus
-    .filter(o => o.status.toLowerCase() !== 'cancelled')
+    .filter(o => (o.status || '').toLowerCase() !== 'cancelled')
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
-  // Stats reflect the current tab's orders
-  const paidOrders = filteredByStatus.filter(o => o.status === 'paid').length;
-  const pendingOrders = filteredByStatus.filter(o => o.status === 'pending').length;
+  // Stats reflect the current tab's orders - with null safety
+  const paidOrders = filteredByStatus.filter(o => (o.status || '') === 'paid').length;
+  const pendingOrders = filteredByStatus.filter(o => (o.status || '') === 'pending').length;
   
-  // Count orders for tab badges
-  const archivedCount = orders.filter(o => archivedStatuses.includes(o.status.toLowerCase())).length;
-  const activeCount = orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase())).length;
+  // Count orders for tab badges - with null safety
+  const archivedCount = orders.filter(o => archivedStatuses.includes((o.status || '').toLowerCase())).length;
+  const activeCount = orders.filter(o => !archivedStatuses.includes((o.status || '').toLowerCase())).length;
 
   // Show loading state for auth or orders loading
   if (authLoading || loading) {
