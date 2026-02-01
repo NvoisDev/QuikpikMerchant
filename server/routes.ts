@@ -4495,40 +4495,56 @@ The Quikpik Team`
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
-      console.log(`📊 Fetching order statistics for authenticated wholesaler: ${wholesalerId}`);
+      
+      // Check if filtering by archive tab
+      const archiveTab = req.query.archiveTab as string || 'active';
+      const archivedStatuses = ['cancelled', 'fulfilled'];
+      
+      console.log(`📊 Fetching order statistics for authenticated wholesaler: ${wholesalerId}, tab: ${archiveTab}`);
 
       // Get all orders to calculate overall statistics
       const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
-      console.log(`📊 Found ${allOrders.length} total orders for statistics`);
+      
+      // Filter by active/archived based on tab
+      const filteredOrders = archiveTab === 'archived'
+        ? allOrders.filter(order => archivedStatuses.includes(order.status?.toLowerCase() || ''))
+        : allOrders.filter(order => !archivedStatuses.includes(order.status?.toLowerCase() || ''));
+      
+      console.log(`📊 Found ${filteredOrders.length} ${archiveTab} orders for statistics`);
 
-      // Calculate overall statistics
-      const paidOrders = allOrders.filter(order => 
+      // Calculate overall statistics for the filtered set
+      const paidOrders = filteredOrders.filter(order => 
         order.status === 'paid' || 
-        order.status === 'fulfilled' || 
         order.status === 'completed' ||
         order.status === 'processing' ||
         order.status === 'shipped'
       );
 
-      const pendingOrders = allOrders.filter(order => 
-        order.status === 'pending' || 
-        order.status === 'confirmed'
+      const pendingOrders = filteredOrders.filter(order => 
+        order.status === 'pending'
       );
 
-      // Calculate net revenue (total - platform fees) for paid orders
-      const totalRevenue = paidOrders.reduce((sum, order) => {
+      // Calculate net revenue (total - platform fees) for non-cancelled orders
+      const revenueOrders = filteredOrders.filter(order => order.status !== 'cancelled');
+      const totalRevenue = revenueOrders.reduce((sum, order) => {
         const total = parseFloat(order.total || '0');
         const platformFee = parseFloat(order.platformFee || '0');
         const netAmount = total - platformFee;
         return sum + (isNaN(netAmount) ? 0 : netAmount);
       }, 0);
 
+      // Count by tab for badges
+      const activeCount = allOrders.filter(order => !archivedStatuses.includes(order.status?.toLowerCase() || '')).length;
+      const archivedCount = allOrders.filter(order => archivedStatuses.includes(order.status?.toLowerCase() || '')).length;
+
       const stats = {
-        ordersCount: allOrders.length,
+        ordersCount: filteredOrders.length,
         totalRevenue: totalRevenue,
         paidOrdersCount: paidOrders.length,
         pendingOrdersCount: pendingOrders.length,
-        avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0
+        avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0,
+        activeCount: activeCount,
+        archivedCount: archivedCount
       };
 
       console.log(`📊 Calculated stats:`, stats);

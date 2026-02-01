@@ -184,6 +184,14 @@ export default function OrdersFresh() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [archiveTab, setArchiveTab] = useState<'active' | 'archived'>('active');
+  const [orderStats, setOrderStats] = useState<{
+    ordersCount: number;
+    totalRevenue: number;
+    paidOrdersCount: number;
+    pendingOrdersCount: number;
+    activeCount: number;
+    archivedCount: number;
+  } | null>(null);
   const ordersPerPage = 20;
   const { toast } = useToast();
   
@@ -217,6 +225,23 @@ export default function OrdersFresh() {
     { value: 'delivery_issue', label: 'Delivery Issue' },
     { value: 'other', label: 'Other' }
   ];
+
+  const loadOrderStats = async (tab: 'active' | 'archived' = 'active') => {
+    try {
+      const response = await fetch(`/api/orders/stats?archiveTab=${tab}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const stats = await response.json();
+        console.log(`📊 Loaded order stats for ${tab} tab:`, stats);
+        setOrderStats(stats);
+      }
+    } catch (err) {
+      console.error('❌ Failed to load order stats:', err);
+    }
+  };
 
   const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
@@ -254,6 +279,7 @@ export default function OrdersFresh() {
   useEffect(() => {
     loadOrders(1, searchQuery);
     loadCancellationRequests();
+    loadOrderStats(archiveTab);
     
     // Check for order ID in URL params to auto-open order details
     const urlParams = new URLSearchParams(window.location.search);
@@ -857,7 +883,7 @@ export default function OrdersFresh() {
       {/* Archive Tabs */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => setArchiveTab('active')}
+          onClick={() => { setArchiveTab('active'); loadOrderStats('active'); setStatusFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -865,14 +891,14 @@ export default function OrdersFresh() {
           }`}
         >
           Active Orders
-          {activeCount > 0 && (
+          {(orderStats?.activeCount ?? activeCount) > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
-              {activeCount}
+              {orderStats?.activeCount ?? activeCount}
             </span>
           )}
         </button>
         <button
-          onClick={() => setArchiveTab('archived')}
+          onClick={() => { setArchiveTab('archived'); loadOrderStats('archived'); setStatusFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-green-600 text-green-600'
@@ -880,9 +906,9 @@ export default function OrdersFresh() {
           }`}
         >
           Archived
-          {archivedCount > 0 && (
+          {(orderStats?.archivedCount ?? archivedCount) > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-              {archivedCount}
+              {orderStats?.archivedCount ?? archivedCount}
             </span>
           )}
         </button>
@@ -945,11 +971,11 @@ export default function OrdersFresh() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium">Total Orders</CardTitle>
+              <CardTitle className="text-xs font-medium">Total Active Orders</CardTitle>
               <Package className="h-3 w-3 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{displayedOrders}</div>
+              <div className="text-xl font-bold">{orderStats?.ordersCount ?? displayedOrders}</div>
             </CardContent>
           </Card>
           
@@ -959,7 +985,7 @@ export default function OrdersFresh() {
               <DollarSign className="h-3 w-3 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(totalValue)}</div>
+              <div className="text-xl font-bold">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</div>
               <p className="text-xs text-muted-foreground">After platform fees</p>
             </CardContent>
           </Card>
@@ -970,7 +996,7 @@ export default function OrdersFresh() {
               <Users className="h-3 w-3 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{paidOrders}</div>
+              <div className="text-xl font-bold">{orderStats?.paidOrdersCount ?? paidOrders}</div>
             </CardContent>
           </Card>
           
@@ -980,7 +1006,7 @@ export default function OrdersFresh() {
               <Clock className="h-3 w-3 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{pendingOrders}</div>
+              <div className="text-xl font-bold">{orderStats?.pendingOrdersCount ?? pendingOrders}</div>
             </CardContent>
           </Card>
         </div>
