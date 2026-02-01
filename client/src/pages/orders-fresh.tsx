@@ -183,6 +183,7 @@ export default function OrdersFresh() {
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [archiveTab, setArchiveTab] = useState<'active' | 'archived'>('active');
   const ordersPerPage = 20;
   const { toast } = useToast();
   
@@ -726,10 +727,23 @@ export default function OrdersFresh() {
     return subtotal - feeToDeduct;
   };
 
-  const displayedOrders = orders.length;
-  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order), 0);
+  // Define archived statuses (cancelled, fulfilled, delivered, refunded)
+  const archivedStatuses = ['cancelled', 'fulfilled', 'delivered', 'refunded'];
+  
+  // Filter orders based on archive tab
+  // Active tab shows all orders EXCEPT archived ones (prevents orphaned orders)
+  const filteredByTab = archiveTab === 'archived' 
+    ? orders.filter(o => archivedStatuses.includes(o.status.toLowerCase()))
+    : orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase()));
+  
+  const displayedOrders = filteredByTab.length;
+  const totalValue = filteredByTab.reduce((sum, order) => sum + calculateNetAmount(order), 0);
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  
+  // Count orders for tab badges
+  const archivedCount = orders.filter(o => archivedStatuses.includes(o.status.toLowerCase())).length;
+  const activeCount = orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase())).length;
 
   // Show loading state for auth or orders loading
   if (authLoading || loading) {
@@ -804,6 +818,40 @@ export default function OrdersFresh() {
         </div>
       </div>
 
+      {/* Archive Tabs */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setArchiveTab('active')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'active'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Active Orders
+          {activeCount > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+              {activeCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setArchiveTab('archived')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'archived'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Archived
+          {archivedCount > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+              {archivedCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Search and Filter - stacks on mobile */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
         <div className="relative flex-1">
@@ -822,9 +870,23 @@ export default function OrdersFresh() {
             onChange={(e) => handleStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
-            <option value="paid">Paid</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="pending">Pending</option>
+            {archiveTab === 'active' ? (
+              <>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="ready_for_collection">Ready for Collection</option>
+              </>
+            ) : (
+              <>
+                <option value="fulfilled">Fulfilled</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </>
+            )}
           </select>
           {(searchQuery || statusFilter) && (
             <Button
@@ -1008,10 +1070,19 @@ export default function OrdersFresh() {
           <CardTitle className="text-lg">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          {orders.length === 0 ? (
+          {filteredByTab.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">No orders found</p>
+              <p className="text-gray-500">
+                {archiveTab === 'archived' 
+                  ? 'No archived orders found' 
+                  : 'No active orders found'}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {archiveTab === 'archived' 
+                  ? 'Cancelled and fulfilled orders will appear here' 
+                  : 'Orders that are pending, processing, or shipped will appear here'}
+              </p>
             </div>
           ) : (
             <>
@@ -1029,7 +1100,7 @@ export default function OrdersFresh() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.slice(0, 50).map((order) => (
+                  {filteredByTab.slice(0, 50).map((order) => (
                     <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
@@ -1115,7 +1186,7 @@ export default function OrdersFresh() {
               
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-3">
-                {orders.slice(0, 50).map((order) => (
+                {filteredByTab.slice(0, 50).map((order) => (
                   <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
