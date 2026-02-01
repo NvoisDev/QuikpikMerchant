@@ -738,8 +738,9 @@ export default function OrdersFresh() {
   
   const displayedOrders = filteredByTab.length;
   const totalValue = filteredByTab.reduce((sum, order) => sum + calculateNetAmount(order), 0);
-  const paidOrders = orders.filter(o => o.status === 'paid').length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  // Stats reflect the current tab's orders
+  const paidOrders = filteredByTab.filter(o => o.status === 'paid').length;
+  const pendingOrders = filteredByTab.filter(o => o.status === 'pending').length;
   
   // Count orders for tab badges
   const archivedCount = orders.filter(o => archivedStatuses.includes(o.status.toLowerCase())).length;
