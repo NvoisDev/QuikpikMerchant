@@ -848,11 +848,6 @@ export default function OrdersFresh() {
           }`}
         >
           Archived
-          {archivedCount > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-              {archivedCount}
-            </span>
-          )}
         </button>
       </div>
 
@@ -868,21 +863,30 @@ export default function OrdersFresh() {
           />
         </div>
         <div className="flex gap-2">
-          {archiveTab === 'active' && (
-            <select 
-              className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={statusFilter}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
-              <option value="ready_for_collection">Ready for Collection</option>
-            </select>
-          )}
+          <select 
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={statusFilter}
+            onChange={(e) => handleStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            {archiveTab === 'active' ? (
+              <>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="ready_for_collection">Ready for Collection</option>
+              </>
+            ) : (
+              <>
+                <option value="fulfilled">Fulfilled</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </>
+            )}
+          </select>
           {(searchQuery || statusFilter) && (
             <Button
               variant="ghost"
@@ -899,49 +903,51 @@ export default function OrdersFresh() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">Total Orders</CardTitle>
-            <Package className="h-3 w-3 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{displayedOrders}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">Net Revenue</CardTitle>
-            <DollarSign className="h-3 w-3 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatCurrency(totalValue)}</div>
-            <p className="text-xs text-muted-foreground">After platform fees</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">Paid Orders</CardTitle>
-            <Users className="h-3 w-3 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{paidOrders}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">Pending</CardTitle>
-            <Clock className="h-3 w-3 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{pendingOrders}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Statistics Cards - only show on Active tab */}
+      {archiveTab === 'active' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium">Total Orders</CardTitle>
+              <Package className="h-3 w-3 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{displayedOrders}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium">Net Revenue</CardTitle>
+              <DollarSign className="h-3 w-3 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{formatCurrency(totalValue)}</div>
+              <p className="text-xs text-muted-foreground">After platform fees</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium">Paid Orders</CardTitle>
+              <Users className="h-3 w-3 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{paidOrders}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium">Pending</CardTitle>
+              <Clock className="h-3 w-3 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{pendingOrders}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Cancellation Requests Alert */}
       {cancellationRequests.length > 0 && (
