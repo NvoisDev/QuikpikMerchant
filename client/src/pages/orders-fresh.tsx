@@ -378,8 +378,11 @@ export default function OrdersFresh() {
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
     setCurrentPage(1);
-    const searchTerm = status || searchQuery;
-    loadOrders(1, searchTerm);
+    // Status filter is now applied client-side after tab filtering
+    // Only reload from server if there's a search query
+    if (searchQuery) {
+      loadOrders(1, searchQuery);
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -732,18 +735,24 @@ export default function OrdersFresh() {
   
   // Filter orders based on archive tab
   // Active tab shows all orders EXCEPT archived ones (prevents orphaned orders)
+  // First filter by tab (active vs archived)
   const filteredByTab = archiveTab === 'archived' 
     ? orders.filter(o => archivedStatuses.includes(o.status.toLowerCase()))
     : orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase()));
   
-  const displayedOrders = filteredByTab.length;
+  // Then apply status filter if selected
+  const filteredByStatus = statusFilter 
+    ? filteredByTab.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase())
+    : filteredByTab;
+  
+  const displayedOrders = filteredByStatus.length;
   // Net Revenue excludes cancelled orders (they represent £0 actual revenue)
-  const totalValue = filteredByTab
+  const totalValue = filteredByStatus
     .filter(o => o.status.toLowerCase() !== 'cancelled')
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders
-  const paidOrders = filteredByTab.filter(o => o.status === 'paid').length;
-  const pendingOrders = filteredByTab.filter(o => o.status === 'pending').length;
+  const paidOrders = filteredByStatus.filter(o => o.status === 'paid').length;
+  const pendingOrders = filteredByStatus.filter(o => o.status === 'pending').length;
   
   // Count orders for tab badges
   const archivedCount = orders.filter(o => archivedStatuses.includes(o.status.toLowerCase())).length;
@@ -1071,7 +1080,7 @@ export default function OrdersFresh() {
           <CardTitle className="text-lg">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredByTab.length === 0 ? (
+          {filteredByStatus.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">
@@ -1101,7 +1110,7 @@ export default function OrdersFresh() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredByTab.slice(0, 50).map((order) => (
+                  {filteredByStatus.slice(0, 50).map((order) => (
                     <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
@@ -1187,7 +1196,7 @@ export default function OrdersFresh() {
               
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-3">
-                {filteredByTab.slice(0, 50).map((order) => (
+                {filteredByStatus.slice(0, 50).map((order) => (
                   <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
