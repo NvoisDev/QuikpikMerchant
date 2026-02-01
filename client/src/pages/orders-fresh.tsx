@@ -749,8 +749,8 @@ export default function OrdersFresh() {
     return subtotal - feeToDeduct;
   };
 
-  // Define archived statuses (cancelled, fulfilled, delivered, refunded)
-  const archivedStatuses = ['cancelled', 'fulfilled', 'delivered', 'refunded'];
+  // Define archived statuses (only cancelled and fulfilled)
+  const archivedStatuses = ['cancelled', 'fulfilled'];
   
   // Filter orders based on archive tab
   // Active tab shows all orders EXCEPT archived ones (prevents orphaned orders)
@@ -833,7 +833,11 @@ export default function OrdersFresh() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl md:text-2xl font-bold">Orders</h1>
           <span className="text-xs text-gray-500 whitespace-nowrap">
-            {displayedOrders} of {totalOrders}
+            {statusFilter ? (
+              <>Showing {displayedOrders} {statusFilter} ({archiveTab === 'archived' ? 'Archived' : 'Active'})</>
+            ) : (
+              <>Showing {displayedOrders} {archiveTab === 'archived' ? 'Archived' : 'Active'} orders</>
+            )}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -876,6 +880,11 @@ export default function OrdersFresh() {
           }`}
         >
           Archived
+          {archivedCount > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+              {archivedCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -905,13 +914,13 @@ export default function OrdersFresh() {
                 <option value="processing">Processing</option>
                 <option value="shipped">Shipped</option>
                 <option value="ready_for_collection">Ready for Collection</option>
+                <option value="delivered">Delivered</option>
+                <option value="refunded">Refunded</option>
               </>
             ) : (
               <>
-                <option value="fulfilled">Fulfilled</option>
-                <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option>
+                <option value="fulfilled">Fulfilled</option>
               </>
             )}
           </select>
