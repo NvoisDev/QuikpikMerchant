@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { log } from "./vite";
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
+import { checkAndSendPaymentReminders } from "./payment-reminders";
 import cron from 'node-cron';
 
 // Set OAuth redirect URI for production deployment
@@ -108,6 +109,17 @@ app.use((req, res, next) => {
       }
     });
     console.log(`🔔 Stock alert system enabled (every 2 hours)`);
+    
+    // Start payment reminder scheduler (runs daily at 9 AM)
+    cron.schedule('0 9 * * *', async () => {
+      console.log('📧 Running payment reminder check...');
+      try {
+        await checkAndSendPaymentReminders();
+      } catch (error) {
+        console.error('❌ Payment reminder check failed:', error);
+      }
+    });
+    console.log(`📧 Payment reminder system enabled (daily at 9 AM)`);
     
     log(`serving on port ${port}`);
   });

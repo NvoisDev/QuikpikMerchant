@@ -94,6 +94,7 @@ export default function QuickQuote() {
     businessName: '',
   });
   const [depositPercentage, setDepositPercentage] = useState<25 | 50 | 75 | 100>(100);
+  const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -141,6 +142,7 @@ export default function QuickQuote() {
       items: QuoteItem[];
       sendVia: 'sms' | 'link';
       depositPercentage: 25 | 50 | 75 | 100;
+      balanceDueDays: 0 | 7 | 14 | 30 | 60;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       return response.json();
@@ -258,6 +260,7 @@ export default function QuickQuote() {
       items: quoteItems,
       sendVia: sendMethod,
       depositPercentage,
+      balanceDueDays: depositPercentage === 100 ? 0 : balanceDueDays,
     });
   };
 
@@ -280,6 +283,7 @@ export default function QuickQuote() {
     setCreatedQuote(null);
     setSendMethod('sms');
     setDepositPercentage(100);
+    setBalanceDueDays(0);
   };
 
   if (createdQuote) {
@@ -724,6 +728,36 @@ export default function QuickQuote() {
                     <span className="text-amber-700">Remaining Balance</span>
                     <span className="text-amber-700">£{calculateRemainingBalance().toFixed(2)}</span>
                   </div>
+                </div>
+              )}
+
+              {depositPercentage < 100 && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Balance Due In</Label>
+                  <div className="grid grid-cols-5 gap-1">
+                    {[
+                      { value: 0, label: 'Now' },
+                      { value: 7, label: '7 days' },
+                      { value: 14, label: '14 days' },
+                      { value: 30, label: '30 days' },
+                      { value: 60, label: '60 days' },
+                    ].map((option) => (
+                      <Button
+                        key={option.value}
+                        variant={balanceDueDays === option.value ? 'default' : 'outline'}
+                        className={balanceDueDays === option.value ? 'bg-green-600 hover:bg-green-700' : ''}
+                        size="sm"
+                        onClick={() => setBalanceDueDays(option.value as 0 | 7 | 14 | 30 | 60)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  {balanceDueDays > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Customer will be reminded to pay the remaining £{calculateRemainingBalance().toFixed(2)} within {balanceDueDays} days
+                    </p>
+                  )}
                 </div>
               )}
 

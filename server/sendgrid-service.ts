@@ -331,4 +331,88 @@ export async function sendWholesalerOrderNotification(orderData: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification };
+export async function sendPaymentReminderEmail(data: {
+  to: string;
+  customerName: string;
+  orderNumber: string;
+  amountOutstanding: number;
+  dueDate: string;
+  businessName: string;
+  paymentLink: string;
+  urgency: 'upcoming' | 'due_today' | 'overdue';
+}): Promise<boolean> {
+  const { to, customerName, orderNumber, amountOutstanding, dueDate, businessName, paymentLink, urgency } = data;
+  
+  let urgencyColor: string;
+  let urgencyMessage: string;
+  let subject: string;
+  
+  if (urgency === 'upcoming') {
+    urgencyColor = '#F59E0B';
+    urgencyMessage = `Your payment of <strong>£${amountOutstanding.toFixed(2)}</strong> is due on <strong>${dueDate}</strong>.`;
+    subject = `Payment Reminder: £${amountOutstanding.toFixed(2)} due soon - Order ${orderNumber}`;
+  } else if (urgency === 'due_today') {
+    urgencyColor = '#DC2626';
+    urgencyMessage = `Your payment of <strong>£${amountOutstanding.toFixed(2)}</strong> is <strong>due today</strong>.`;
+    subject = `Payment Due Today: £${amountOutstanding.toFixed(2)} - Order ${orderNumber}`;
+  } else {
+    urgencyColor = '#991B1B';
+    urgencyMessage = `Your payment of <strong>£${amountOutstanding.toFixed(2)}</strong> was due on <strong>${dueDate}</strong> and is now <strong>overdue</strong>.`;
+    subject = `Overdue Payment: £${amountOutstanding.toFixed(2)} - Order ${orderNumber}`;
+  }
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+        .header { background: ${urgencyColor}; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .amount-box { background: white; border: 2px solid ${urgencyColor}; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; }
+        .amount { font-size: 28px; font-weight: bold; color: ${urgencyColor}; }
+        .btn { display: inline-block; background: #10B981; color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; margin: 15px 0; }
+        .footer { padding: 15px; text-align: center; font-size: 12px; color: #666; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${urgency === 'overdue' ? '⚠️ Overdue Payment Notice' : urgency === 'due_today' ? '⏰ Payment Due Today' : '📅 Payment Reminder'}</h1>
+      </div>
+      <div class="content">
+        <p>Hi ${customerName},</p>
+        <p>${urgencyMessage}</p>
+        
+        <div class="amount-box">
+          <p style="margin: 0; color: #666;">Amount Due</p>
+          <p class="amount">£${amountOutstanding.toFixed(2)}</p>
+          <p style="margin: 0; color: #666;">Order: ${orderNumber}</p>
+        </div>
+        
+        ${paymentLink ? `
+        <div style="text-align: center;">
+          <a href="${paymentLink}" class="btn">Pay Now</a>
+        </div>
+        ` : `
+        <p>Please contact ${businessName} to arrange payment.</p>
+        `}
+        
+        <p style="margin-top: 20px;">Thank you for your business!</p>
+        <p><strong>${businessName}</strong></p>
+      </div>
+      <div class="footer">
+        <p>This is an automated payment reminder from ${businessName} via Quikpik.</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({
+    to,
+    from: 'hello@quikpik.co',
+    subject,
+    html
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail };

@@ -17678,7 +17678,7 @@ The Quikpik Team
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100 } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0 } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
       
@@ -17734,7 +17734,7 @@ The Quikpik Team
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',
         depositPercentage: validDepositPercentage,
-        balanceDueDays: wholesaler.balanceDueDays || 0, // Copy wholesaler's payment terms
+        balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
         amountPaid: '0.00',
         amountOutstanding: total.toFixed(2),
         paymentStatus: 'unpaid',
