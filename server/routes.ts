@@ -4471,13 +4471,42 @@ The Quikpik Team`
         cancellationRequest: cancellationRequestsMap[order.id] || null
       }));
       
+      // Calculate stats for active/archived tabs from ALL orders (not just current page)
+      const archivedStatuses = ['cancelled', 'fulfilled'];
+      const allOrdersForStats = await db.select().from(orders).where(eq(orders.wholesalerId, wholesalerId));
+      
+      const activeCount = allOrdersForStats.filter(o => !archivedStatuses.includes(o.status?.toLowerCase() || '')).length;
+      const archivedCount = allOrdersForStats.filter(o => archivedStatuses.includes(o.status?.toLowerCase() || '')).length;
+      
+      // Calculate stats for active orders (non-cancelled/fulfilled)
+      const activeOrders = allOrdersForStats.filter(o => !archivedStatuses.includes(o.status?.toLowerCase() || ''));
+      const paidOrdersCount = activeOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
+      const pendingOrdersCount = activeOrders.filter(o => o.status === 'pending').length;
+      
+      // Calculate net revenue for non-cancelled orders
+      const revenueOrders = activeOrders.filter(o => o.status !== 'cancelled');
+      const totalRevenue = revenueOrders.reduce((sum, order) => {
+        const total = parseFloat(order.total || '0');
+        const platformFee = parseFloat(order.platformFee || '0');
+        const netAmount = total - platformFee;
+        return sum + (isNaN(netAmount) ? 0 : netAmount);
+      }, 0);
+      
       res.json({
         orders: ordersWithRequests,
         currentPage: page,
         totalPages,
         total: totalOrders,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
+        hasPrevPage: page > 1,
+        stats: {
+          activeCount,
+          archivedCount,
+          paidOrdersCount,
+          pendingOrdersCount,
+          totalRevenue,
+          ordersCount: activeCount
+        }
       });
     } catch (error) {
       console.error("❌ Error fetching paginated orders:", error);

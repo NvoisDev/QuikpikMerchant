@@ -267,6 +267,11 @@ export default function OrdersFresh() {
         setTotalOrders(data.total);
         setTotalPages(data.totalPages);
         setCurrentPage(page);
+        // Use stats from paginated response (more reliable than separate API call)
+        if (data.stats) {
+          console.log(`📊 Got stats from paginated response:`, data.stats);
+          setOrderStats(data.stats);
+        }
       } else {
         throw new Error(`Server responded with ${response.status}`);
       }
