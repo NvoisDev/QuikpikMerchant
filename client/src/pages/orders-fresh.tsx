@@ -737,7 +737,10 @@ export default function OrdersFresh() {
     : orders.filter(o => !archivedStatuses.includes(o.status.toLowerCase()));
   
   const displayedOrders = filteredByTab.length;
-  const totalValue = filteredByTab.reduce((sum, order) => sum + calculateNetAmount(order), 0);
+  // Net Revenue excludes cancelled orders (they represent £0 actual revenue)
+  const totalValue = filteredByTab
+    .filter(o => o.status.toLowerCase() !== 'cancelled')
+    .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders
   const paidOrders = filteredByTab.filter(o => o.status === 'paid').length;
   const pendingOrders = filteredByTab.filter(o => o.status === 'pending').length;
