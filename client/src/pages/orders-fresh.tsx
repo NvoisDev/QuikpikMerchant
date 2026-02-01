@@ -868,30 +868,21 @@ export default function OrdersFresh() {
           />
         </div>
         <div className="flex gap-2">
-          <select 
-            className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={statusFilter}
-            onChange={(e) => handleStatusFilter(e.target.value)}
-          >
-            <option value="">All Status</option>
-            {archiveTab === 'active' ? (
-              <>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
-                <option value="ready_for_collection">Ready for Collection</option>
-              </>
-            ) : (
-              <>
-                <option value="fulfilled">Fulfilled</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option>
-              </>
-            )}
-          </select>
+          {archiveTab === 'active' && (
+            <select 
+              className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={statusFilter}
+              onChange={(e) => handleStatusFilter(e.target.value)}
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="ready_for_collection">Ready for Collection</option>
+            </select>
+          )}
           {(searchQuery || statusFilter) && (
             <Button
               variant="ghost"
@@ -916,7 +907,7 @@ export default function OrdersFresh() {
             <Package className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{totalOrders}</div>
+            <div className="text-xl font-bold">{displayedOrders}</div>
           </CardContent>
         </Card>
         
