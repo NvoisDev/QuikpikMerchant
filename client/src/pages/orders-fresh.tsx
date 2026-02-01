@@ -237,6 +237,8 @@ export default function OrdersFresh() {
         const stats = await response.json();
         console.log(`📊 Loaded order stats for ${tab} tab:`, stats);
         setOrderStats(stats);
+      } else {
+        console.error('❌ Stats API returned non-OK status:', response.status);
       }
     } catch (err) {
       console.error('❌ Failed to load order stats:', err);
@@ -891,11 +893,9 @@ export default function OrdersFresh() {
           }`}
         >
           Active Orders
-          {(orderStats?.activeCount ?? activeCount) > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
-              {orderStats?.activeCount ?? activeCount}
-            </span>
-          )}
+          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+            {orderStats?.activeCount ?? '...'}
+          </span>
         </button>
         <button
           onClick={() => { setArchiveTab('archived'); loadOrderStats('archived'); setStatusFilter(''); }}
@@ -906,11 +906,9 @@ export default function OrdersFresh() {
           }`}
         >
           Archived
-          {(orderStats?.archivedCount ?? archivedCount) > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-              {orderStats?.archivedCount ?? archivedCount}
-            </span>
-          )}
+          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+            {orderStats?.archivedCount ?? '...'}
+          </span>
         </button>
       </div>
 
