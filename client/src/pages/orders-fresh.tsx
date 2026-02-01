@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
@@ -1208,9 +1208,13 @@ export default function OrdersFresh() {
                               {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
                             </Badge>
                           )}
-                          {order.isQuote && (
-                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                              Quote
+                          {order.isQuote ? (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
+                              <UserPen className="w-3 h-3" />
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title="Online Order (placed by customer)">
+                              <ShoppingCart className="w-3 h-3" />
                             </Badge>
                           )}
                           {order.fulfillmentType && (
@@ -1298,9 +1302,13 @@ export default function OrdersFresh() {
                             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
                           </Badge>
                         )}
-                        {order.isQuote && (
-                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                            Quote
+                        {order.isQuote ? (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
+                            <UserPen className="w-3 h-3" />
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title="Online Order (placed by customer)">
+                            <ShoppingCart className="w-3 h-3" />
                           </Badge>
                         )}
                         {order.fulfillmentType && (
