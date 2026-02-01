@@ -416,7 +416,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       wholesalerName: wholesaler?.businessName || wholesaler?.firstName || 'Your Wholesaler',
       // Always fetch live address data - prioritize complete data over stored snapshot
       shippingAddress: await getCompleteDeliveryAddress(order) || 'Address to be confirmed',
-      estimatedDelivery: undefined // Can be enhanced with shipping data later
+      estimatedDelivery: undefined, // Can be enhanced with shipping data later
+      depositPercentage: order.depositPercentage || 100,
+      balanceDueDays: order.balanceDueDays || 0,
+      amountOutstanding: parseFloat(order.amountOutstanding || '0')
     };
 
     const emailSent = await sendOrderConfirmationEmail(orderConfirmationData);
@@ -606,7 +609,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       transactionFee: parseFloat(orderData.customerTransactionFee),
       totalPaid: parseFloat(orderData.total),
       wholesalerName: wholesaler?.businessName || 'Supplier',
-      shippingAddress: completeShippingAddress
+      shippingAddress: completeShippingAddress,
+      depositPercentage: order.depositPercentage || 100,
+      balanceDueDays: order.balanceDueDays || 0,
+      amountOutstanding: parseFloat(order.amountOutstanding || '0')
     });
 
     console.log('📧 Customer confirmation email:', emailSent ? '✅ Sent' : '❌ Failed');

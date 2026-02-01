@@ -17872,8 +17872,20 @@ The Quikpik Team
         const storeLink = `https://quikpik.app/store/${wholesalerId}`;
         const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
         
+        // Calculate balance due date for deposit orders - use persisted order value for consistency
+        const orderBalanceDueDays = quoteOrder.balanceDueDays || 0;
+        let balanceDueText = '';
+        if (isDeposit && orderBalanceDueDays > 0) {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + orderBalanceDueDays);
+          const formattedDate = dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          balanceDueText = `\nBalance due by: ${formattedDate}`;
+        } else if (isDeposit && orderBalanceDueDays === 0) {
+          balanceDueText = '\nBalance due: Immediately';
+        }
+        
         const message = isDeposit 
-          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
           : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
         
         try {

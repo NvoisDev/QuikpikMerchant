@@ -58,6 +58,9 @@ export async function sendOrderConfirmationEmail(orderData: {
   wholesalerName: string;
   shippingAddress?: string;
   estimatedDelivery?: string;
+  depositPercentage?: number;
+  balanceDueDays?: number;
+  amountOutstanding?: number;
 }): Promise<boolean> {
   const itemsHtml = orderData.orderItems.map(item => `
     <tr style="border-bottom: 1px solid #eee;">
@@ -67,6 +70,37 @@ export async function sendOrderConfirmationEmail(orderData: {
       <td style="padding: 10px; text-align: right;">£${item.total.toFixed(2)}</td>
     </tr>
   `).join('');
+
+  // Generate payment terms section if applicable
+  let paymentTermsHtml = '';
+  if (orderData.depositPercentage !== undefined && orderData.depositPercentage < 100 && orderData.amountOutstanding !== undefined && orderData.amountOutstanding > 0) {
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + (orderData.balanceDueDays || 0));
+    const formattedDueDate = dueDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    
+    paymentTermsHtml = `
+      <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <h3 style="color: #92400e; margin-top: 0; margin-bottom: 10px;">💳 Payment Terms</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 5px 0; color: #92400e;">Deposit Paid (${orderData.depositPercentage}%):</td>
+            <td style="padding: 5px 0; text-align: right; color: #92400e;"><strong>£${orderData.totalPaid.toFixed(2)}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 5px 0; color: #92400e;">Balance Outstanding:</td>
+            <td style="padding: 5px 0; text-align: right; color: #92400e;"><strong>£${orderData.amountOutstanding.toFixed(2)}</strong></td>
+          </tr>
+          <tr style="border-top: 1px solid #f59e0b; margin-top: 10px;">
+            <td style="padding: 10px 0 5px 0; color: #92400e;"><strong>Balance Due By:</strong></td>
+            <td style="padding: 10px 0 5px 0; text-align: right; color: #92400e;"><strong>${formattedDueDate}</strong></td>
+          </tr>
+        </table>
+        <p style="margin: 10px 0 0 0; font-size: 13px; color: #92400e;">
+          ${orderData.balanceDueDays === 0 ? 'Payment is due immediately upon order confirmation.' : `You have ${orderData.balanceDueDays} days to pay the remaining balance.`}
+        </p>
+      </div>
+    `;
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -119,6 +153,8 @@ export async function sendOrderConfirmationEmail(orderData: {
           </tr>
         </table>
       </div>
+
+      ${paymentTermsHtml}
 
       <div style="background: #f0f9ff; border: 1px solid #10B981; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
         <p style="margin: 0; color: #0f766e;"><strong>📧 Stripe Receipt:</strong> You'll receive a separate payment receipt from Stripe at this email address.</p>
