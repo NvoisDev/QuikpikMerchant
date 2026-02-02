@@ -1673,9 +1673,14 @@ export default function OrdersFresh() {
                           Send Payment Link to Customer
                         </Button>
                         
+                        {/* Show payment link if available */}
                         {selectedOrder.stripePaymentLinkUrl && (
                           <div className="bg-gray-50 p-2 rounded border">
-                            <p className="text-xs text-gray-600 mb-1">Payment Link (tap to copy):</p>
+                            <p className="text-xs text-gray-600 mb-1">
+                              {selectedOrder.paymentStatus === 'part_paid' 
+                                ? 'Balance Payment Link (tap to copy):' 
+                                : 'Payment Link (tap to copy):'}
+                            </p>
                             <div 
                               className="text-xs text-blue-600 break-all cursor-pointer hover:bg-gray-100 p-1 rounded"
                               onClick={() => {
@@ -1685,7 +1690,18 @@ export default function OrdersFresh() {
                             >
                               {selectedOrder.stripePaymentLinkUrl}
                             </div>
+                            {selectedOrder.paymentStatus === 'part_paid' && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Note: Click "Send Payment Link" above to generate a fresh link if this one has expired.
+                              </p>
+                            )}
                           </div>
+                        )}
+                        {/* For part_paid orders without a link, show helper text */}
+                        {!selectedOrder.stripePaymentLinkUrl && selectedOrder.paymentStatus === 'part_paid' && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Click the button above to generate a payment link for the outstanding balance.
+                          </p>
                         )}
                       </div>
                     )}

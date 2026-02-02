@@ -1168,16 +1168,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`📊 Payment update: This payment £${thisPayment.toFixed(2)}, Previously paid £${previouslyPaid.toFixed(2)}, Total paid £${cumulativePaid.toFixed(2)}, Outstanding £${newOutstanding.toFixed(2)}, Status: ${paymentStatus}`);
           
           // Update order with payment details
+          // Clear old payment link - user will generate a fresh balance link if needed
           await db.update(orders)
             .set({
               amountPaid: cumulativePaid.toFixed(2),
               amountOutstanding: newOutstanding.toFixed(2),
               paymentStatus: paymentStatus,
               status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+              stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
+              stripePaymentLinkId: null,
             })
             .where(eq(orders.id, parseInt(orderId)));
           
-          console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}`);
+          console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}, old payment link cleared`);
           
           return res.json({
             received: true,
