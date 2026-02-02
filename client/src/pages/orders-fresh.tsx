@@ -790,15 +790,28 @@ export default function OrdersFresh() {
     return subtotal - feeToDeduct;
   };
 
-  // Define archived statuses (only cancelled and fulfilled)
-  const archivedStatuses = ['cancelled', 'fulfilled'];
+  // Helper function to determine if an order should be archived
+  // Archived = cancelled OR (fulfilled AND fully paid)
+  // Active = everything else (including part paid fulfilled orders with outstanding balance)
+  const isArchivedOrder = (order: Order) => {
+    const status = (order.status || '').toLowerCase();
+    const paymentStatus = (order.paymentStatus || '').toLowerCase();
+    
+    // Cancelled orders are always archived
+    if (status === 'cancelled') return true;
+    
+    // Fulfilled orders are archived ONLY if fully paid
+    if (status === 'fulfilled' && paymentStatus === 'paid') return true;
+    
+    // Everything else stays in active (including part paid fulfilled orders)
+    return false;
+  };
   
   // Filter orders based on archive tab
-  // Active tab shows all orders EXCEPT archived ones (prevents orphaned orders)
-  // First filter by tab (active vs archived) - with null safety
+  // Active tab shows all orders EXCEPT archived ones (including part paid fulfilled with outstanding balance)
   const filteredByTab = archiveTab === 'archived' 
-    ? orders.filter(o => archivedStatuses.includes((o.status || '').toLowerCase()))
-    : orders.filter(o => !archivedStatuses.includes((o.status || '').toLowerCase()));
+    ? orders.filter(o => isArchivedOrder(o))
+    : orders.filter(o => !isArchivedOrder(o));
   
   // Then apply status filter if selected - with null safety
   const filteredByStatus = statusFilter 
@@ -814,9 +827,9 @@ export default function OrdersFresh() {
   const paidOrders = filteredByStatus.filter(o => (o.status || '') === 'paid').length;
   const pendingOrders = filteredByStatus.filter(o => (o.status || '') === 'pending').length;
   
-  // Count orders for tab badges - with null safety
-  const archivedCount = orders.filter(o => archivedStatuses.includes((o.status || '').toLowerCase())).length;
-  const activeCount = orders.filter(o => !archivedStatuses.includes((o.status || '').toLowerCase())).length;
+  // Count orders for tab badges using the same isArchivedOrder function
+  const archivedCount = orders.filter(o => isArchivedOrder(o)).length;
+  const activeCount = orders.filter(o => !isArchivedOrder(o)).length;
 
   // Show loading state for auth or orders loading
   if (authLoading || loading) {

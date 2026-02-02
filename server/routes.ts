@@ -4472,14 +4472,23 @@ The Quikpik Team`
       }));
       
       // Calculate stats for active/archived tabs from ALL orders (not just current page)
-      const archivedStatuses = ['cancelled', 'fulfilled'];
+      // Archived = cancelled OR (fulfilled AND fully paid)
+      // Active = everything else (including part paid fulfilled orders with outstanding balance)
       const allOrdersForStats = await db.select().from(orders).where(eq(orders.wholesalerId, wholesalerId));
       
-      const activeCount = allOrdersForStats.filter(o => !archivedStatuses.includes(o.status?.toLowerCase() || '')).length;
-      const archivedCount = allOrdersForStats.filter(o => archivedStatuses.includes(o.status?.toLowerCase() || '')).length;
+      const isArchivedOrder = (order: any) => {
+        const status = (order.status || '').toLowerCase();
+        const paymentStatus = (order.paymentStatus || '').toLowerCase();
+        if (status === 'cancelled') return true;
+        if (status === 'fulfilled' && paymentStatus === 'paid') return true;
+        return false;
+      };
       
-      // Calculate stats for active orders (non-cancelled/fulfilled)
-      const activeOrders = allOrdersForStats.filter(o => !archivedStatuses.includes(o.status?.toLowerCase() || ''));
+      const activeCount = allOrdersForStats.filter(o => !isArchivedOrder(o)).length;
+      const archivedCount = allOrdersForStats.filter(o => isArchivedOrder(o)).length;
+      
+      // Calculate stats for active orders
+      const activeOrders = allOrdersForStats.filter(o => !isArchivedOrder(o));
       const paidOrdersCount = activeOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
       const pendingOrdersCount = activeOrders.filter(o => o.status === 'pending').length;
       
@@ -4527,7 +4536,16 @@ The Quikpik Team`
       
       // Check if filtering by archive tab
       const archiveTab = req.query.archiveTab as string || 'active';
-      const archivedStatuses = ['cancelled', 'fulfilled'];
+      
+      // Archived = cancelled OR (fulfilled AND fully paid)
+      // Active = everything else (including part paid fulfilled orders with outstanding balance)
+      const isArchivedOrder = (order: any) => {
+        const status = (order.status || '').toLowerCase();
+        const paymentStatus = (order.paymentStatus || '').toLowerCase();
+        if (status === 'cancelled') return true;
+        if (status === 'fulfilled' && paymentStatus === 'paid') return true;
+        return false;
+      };
       
       console.log(`📊 Fetching order statistics for authenticated wholesaler: ${wholesalerId}, tab: ${archiveTab}`);
 
@@ -4536,8 +4554,8 @@ The Quikpik Team`
       
       // Filter by active/archived based on tab
       const filteredOrders = archiveTab === 'archived'
-        ? allOrders.filter(order => archivedStatuses.includes(order.status?.toLowerCase() || ''))
-        : allOrders.filter(order => !archivedStatuses.includes(order.status?.toLowerCase() || ''));
+        ? allOrders.filter(order => isArchivedOrder(order))
+        : allOrders.filter(order => !isArchivedOrder(order));
       
       console.log(`📊 Found ${filteredOrders.length} ${archiveTab} orders for statistics`);
 
@@ -4562,9 +4580,9 @@ The Quikpik Team`
         return sum + (isNaN(netAmount) ? 0 : netAmount);
       }, 0);
 
-      // Count by tab for badges
-      const activeCount = allOrders.filter(order => !archivedStatuses.includes(order.status?.toLowerCase() || '')).length;
-      const archivedCount = allOrders.filter(order => archivedStatuses.includes(order.status?.toLowerCase() || '')).length;
+      // Count by tab for badges using the same isArchivedOrder logic
+      const activeCount = allOrders.filter(order => !isArchivedOrder(order)).length;
+      const archivedCount = allOrders.filter(order => isArchivedOrder(order)).length;
 
       const stats = {
         ordersCount: filteredOrders.length,
