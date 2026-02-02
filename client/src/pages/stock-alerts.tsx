@@ -211,17 +211,17 @@ export default function StockAlerts() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Stock Alerts</h1>
-          <p className="text-gray-600">Monitor and manage low stock notifications</p>
+          <h1 className="text-xl md:text-2xl font-bold">Stock Alerts</h1>
+          <p className="text-sm md:text-base text-gray-600">Monitor and manage low stock notifications</p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Default Threshold for New Products</p>
-            <p className="text-lg font-semibold">{user?.defaultLowStockThreshold || 50} units</p>
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="text-left md:text-right">
+            <p className="text-xs md:text-sm text-gray-600">Default Threshold for New Products</p>
+            <p className="text-base md:text-lg font-semibold">{user?.defaultLowStockThreshold || 50} units</p>
           </div>
           
           <Dialog>
@@ -282,18 +282,13 @@ export default function StockAlerts() {
         <div className="space-y-4">
           {alerts.map((alert: StockAlert) => (
             <Card key={alert.id} className={`${getAlertColor(alert.alertType)} ${!alert.isRead ? 'border-l-4' : ''}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
+              <CardContent className="p-3 md:p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-start space-x-3 md:space-x-4">
                     {getAlertIcon(alert.alertType)}
                     <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{alert.product.name}</h3>
-                        {alert.product.sku && (
-                          <Badge variant="outline" className="text-xs">
-                            SKU: {alert.product.sku}
-                          </Badge>
-                        )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium text-sm md:text-base">{alert.product.name}</h3>
                         {!alert.isRead && (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">
                             New
@@ -301,7 +296,7 @@ export default function StockAlerts() {
                         )}
                       </div>
                       
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-xs md:text-sm text-gray-600 space-y-1">
                         <p>
                           <span className="font-medium">Current Stock:</span> {alert.currentStock} units
                         </p>
@@ -310,7 +305,7 @@ export default function StockAlerts() {
                         </p>
                         <p>
                           <span className="font-medium">Alert Type:</span>{" "}
-                          <Badge variant={alert.alertType === 'out_of_stock' ? 'destructive' : 'secondary'}>
+                          <Badge variant={alert.alertType === 'out_of_stock' ? 'destructive' : 'secondary'} className="text-xs">
                             {alert.alertType === 'out_of_stock' ? 'Out of Stock' : 'Low Stock'}
                           </Badge>
                         </p>
@@ -321,13 +316,14 @@ export default function StockAlerts() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-7 md:ml-0 flex-wrap">
                     {!alert.isRead && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleMarkAsRead(alert.id)}
                         disabled={markAsReadMutation.isPending}
+                        className="h-8 w-8 p-0 md:h-9 md:w-auto md:px-3"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -337,8 +333,9 @@ export default function StockAlerts() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleUpdateProductThreshold(alert)}
+                      className="h-8 text-xs md:text-sm"
                     >
-                      <Settings className="h-4 w-4 mr-1" />
+                      <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       Adjust
                     </Button>
                     
@@ -347,8 +344,9 @@ export default function StockAlerts() {
                       size="sm"
                       onClick={() => handleResolveAlert(alert.id)}
                       disabled={resolveAlertMutation.isPending}
+                      className="h-8 text-xs md:text-sm"
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       Resolve
                     </Button>
                   </div>
