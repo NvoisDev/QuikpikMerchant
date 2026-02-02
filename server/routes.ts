@@ -4060,7 +4060,10 @@ The Quikpik Team`
             const itemsListParts: string[] = [];
             for (const item of orderItemsList) {
               const productName = item.product?.name || `Product #${item.productId}`;
-              itemsListParts.push(`• ${item.quantity}x ${productName} - £${parseFloat(item.total || '0').toFixed(2)}`);
+              const total = parseFloat(item.total || '0');
+              const unitPrice = parseFloat(item.unitPrice || '0');
+              const sellingType = item.sellingType || 'units';
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {
@@ -17963,7 +17966,8 @@ The Quikpik Team
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
             const productName = product?.name || `Product #${item.productId}`;
             const sellingType = item.sellingType || 'units';
-            itemsListParts.push(`• ${item.quantity}x ${productName} (${sellingType}) - £${(item.customPrice * item.quantity).toFixed(2)}`);
+            const total = item.customPrice * item.quantity;
+            itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = £${total.toFixed(2)}`);
           }
           itemsList = itemsListParts.join('\n');
         } catch (itemsError) {
@@ -18133,7 +18137,10 @@ The Quikpik Team
             const itemsListParts: string[] = [];
             for (const item of orderItemsList) {
               const productName = item.product?.name || `Product #${item.productId}`;
-              itemsListParts.push(`• ${item.quantity}x ${productName} - £${parseFloat(item.total || '0').toFixed(2)}`);
+              const total = parseFloat(item.total || '0');
+              const unitPrice = parseFloat(item.unitPrice || '0');
+              const sellingType = item.sellingType || 'units';
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {
