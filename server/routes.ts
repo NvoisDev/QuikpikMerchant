@@ -5656,6 +5656,9 @@ The Quikpik Team`
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
+              paymentStatus: 'paid', // CRITICAL: Set payment status for archive logic
+              amountPaid: correctTotal, // Full amount paid on checkout
+              amountOutstanding: '0.00', // Nothing outstanding
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: selectedDeliveryAddress ? (() => {
                 // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
