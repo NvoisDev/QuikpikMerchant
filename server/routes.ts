@@ -4053,9 +4053,23 @@ The Quikpik Team`
               ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
               : '');
           
+          // Build order items list for SMS (getOrderItems already includes product data)
+          let itemsList = '';
+          try {
+            const orderItemsList = await storage.getOrderItems(updated.id);
+            const itemsListParts: string[] = [];
+            for (const item of orderItemsList) {
+              const productName = item.product?.name || `Product #${item.productId}`;
+              itemsListParts.push(`• ${item.quantity}x ${productName} - £${parseFloat(item.total || '0').toFixed(2)}`);
+            }
+            itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
+          } catch (itemsError) {
+            console.error('⚠️ Could not fetch order items for SMS:', itemsError);
+          }
+          
           const smsMessage = actionType === 'collection'
-            ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
-            : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
+            ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!${itemsList}\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
+            : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!${itemsList}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
           
           const smsSent = await sendSMS({
             to: customer.phoneNumber,
@@ -17941,6 +17955,22 @@ The Quikpik Team
         const storeLink = `https://quikpik.app/store/${wholesalerId}`;
         const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
         
+        // Build order items list for SMS
+        let itemsList = '';
+        try {
+          const itemsListParts: string[] = [];
+          for (const item of items) {
+            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+            const productName = product?.name || `Product #${item.productId}`;
+            const sellingType = item.sellingType || 'units';
+            itemsListParts.push(`• ${item.quantity}x ${productName} (${sellingType}) - £${(item.customPrice * item.quantity).toFixed(2)}`);
+          }
+          itemsList = itemsListParts.join('\n');
+        } catch (itemsError) {
+          console.error('⚠️ Could not fetch product names for SMS:', itemsError);
+          itemsList = `${items.length} item(s)`;
+        }
+        
         // Calculate balance due date for deposit orders - use persisted order value for consistency
         const orderBalanceDueDays = quoteOrder.balanceDueDays || 0;
         let balanceDueText = '';
@@ -17954,8 +17984,8 @@ The Quikpik Team
         }
         
         const message = isDeposit 
-          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}\n\nPay deposit: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
-          : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nView orders & browse products: ${storeLink}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
         
         try {
           await sendSMS({
@@ -18096,11 +18126,25 @@ The Quikpik Team
       const customerPhone = order.customerPhone;
       if (customerPhone && session.url) {
         try {
+          // Build order items list for SMS (getOrderItems already includes product data)
+          let itemsList = '';
+          try {
+            const orderItemsList = await storage.getOrderItems(orderId);
+            const itemsListParts: string[] = [];
+            for (const item of orderItemsList) {
+              const productName = item.product?.name || `Product #${item.productId}`;
+              itemsListParts.push(`• ${item.quantity}x ${productName} - £${parseFloat(item.total || '0').toFixed(2)}`);
+            }
+            itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
+          } catch (itemsError) {
+            console.error('⚠️ Could not fetch order items for SMS:', itemsError);
+          }
+          
           // Use the correct payment amount and label in SMS
           const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
             ? `Deposit (${depositPercentage}%)`
             : 'Outstanding Balance';
-          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
+          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
           
           const smsResult = await sendSMS({
             to: customerPhone,
