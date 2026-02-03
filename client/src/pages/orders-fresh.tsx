@@ -184,6 +184,9 @@ export default function OrdersFresh() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [archiveTab, setArchiveTab] = useState<'active' | 'archived'>('active');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+  const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
+  const [dateRangeFilter, setDateRangeFilter] = useState('');
   const [orderStats, setOrderStats] = useState<{
     ordersCount: number;
     totalRevenue: number;
@@ -818,14 +821,40 @@ export default function OrdersFresh() {
     ? filteredByTab.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase())
     : filteredByTab;
   
-  const displayedOrders = filteredByStatus.length;
+  // Apply payment status filter (archive tab only)
+  const filteredByPayment = paymentStatusFilter
+    ? filteredByStatus.filter(o => (o.paymentStatus || '').toLowerCase() === paymentStatusFilter.toLowerCase())
+    : filteredByStatus;
+  
+  // Apply delivery type filter (archive tab only)
+  const filteredByDelivery = deliveryTypeFilter
+    ? filteredByPayment.filter(o => (o.fulfillmentType || '').toLowerCase() === deliveryTypeFilter.toLowerCase())
+    : filteredByPayment;
+  
+  // Apply date range filter (archive tab only)
+  const filteredByDate = dateRangeFilter
+    ? filteredByDelivery.filter(o => {
+        if (!o.createdAt) return true;
+        const orderDate = new Date(o.createdAt);
+        const now = new Date();
+        const daysDiff = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+        switch (dateRangeFilter) {
+          case '7': return daysDiff <= 7;
+          case '30': return daysDiff <= 30;
+          case '90': return daysDiff <= 90;
+          default: return true;
+        }
+      })
+    : filteredByDelivery;
+  
+  const displayedOrders = filteredByDate.length;
   // Net Revenue excludes cancelled orders (they represent £0 actual revenue) - with null safety
-  const totalValue = filteredByStatus
+  const totalValue = filteredByDate
     .filter(o => (o.status || '').toLowerCase() !== 'cancelled')
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders - with null safety
-  const paidOrders = filteredByStatus.filter(o => (o.status || '') === 'paid').length;
-  const pendingOrders = filteredByStatus.filter(o => (o.status || '') === 'pending').length;
+  const paidOrders = filteredByDate.filter(o => (o.status || '') === 'paid').length;
+  const pendingOrders = filteredByDate.filter(o => (o.status || '') === 'pending').length;
   
   // Count orders for tab badges using the same isArchivedOrder function
   const archivedCount = orders.filter(o => isArchivedOrder(o)).length;
@@ -911,7 +940,7 @@ export default function OrdersFresh() {
       {/* Archive Tabs */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => { setArchiveTab('active'); loadOrderStats('active'); setStatusFilter(''); }}
+          onClick={() => { setArchiveTab('active'); loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -924,7 +953,7 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); loadOrderStats('archived'); setStatusFilter(''); }}
+          onClick={() => { setArchiveTab('archived'); loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-green-600 text-green-600'
@@ -939,8 +968,8 @@ export default function OrdersFresh() {
       </div>
 
       {/* Search and Filter - stacks on mobile */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="relative">
           <input
             type="text"
             placeholder="Search by name, phone, or order..."
@@ -949,9 +978,9 @@ export default function OrdersFresh() {
             className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select 
-            className="flex-1 sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 min-w-[120px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             value={statusFilter}
             onChange={(e) => handleStatusFilter(e.target.value)}
           >
@@ -974,13 +1003,54 @@ export default function OrdersFresh() {
               </>
             )}
           </select>
-          {(searchQuery || statusFilter) && (
+          
+          {/* Additional Archive Filters */}
+          {archiveTab === 'archived' && (
+            <>
+              <select 
+                className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={paymentStatusFilter}
+                onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              >
+                <option value="">All Payment</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="part_paid">Part-paid</option>
+              </select>
+              
+              <select 
+                className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={deliveryTypeFilter}
+                onChange={(e) => setDeliveryTypeFilter(e.target.value)}
+              >
+                <option value="">All Type</option>
+                <option value="pickup">Collection</option>
+                <option value="delivery">Delivery</option>
+              </select>
+              
+              <select 
+                className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={dateRangeFilter}
+                onChange={(e) => setDateRangeFilter(e.target.value)}
+              >
+                <option value="">All Time</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </>
+          )}
+          
+          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 handleSearch('');
                 setStatusFilter('');
+                setPaymentStatusFilter('');
+                setDeliveryTypeFilter('');
+                setDateRangeFilter('');
               }}
               className="text-sm whitespace-nowrap"
             >
