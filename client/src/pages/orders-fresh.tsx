@@ -1842,27 +1842,36 @@ export default function OrdersFresh() {
                 <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
                 <div className="space-y-2">
                   {/* Step 1: Initial Payment - Shows deposit details if partial payment */}
-                  <div className="flex items-start gap-2">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${parseFloat(selectedOrder.amountPaid || '0') > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <div className={`text-xs ${parseFloat(selectedOrder.amountPaid || '0') > 0 ? 'font-medium' : 'text-gray-500'}`}>
-                        {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
-                          ? `Deposit received (${(selectedOrder as any).depositPercentage}%)`
-                          : 'Payment received'}
-                      </div>
-                      {parseFloat(selectedOrder.amountPaid || '0') > 0 && (
-                        <div className="text-xs text-gray-500">
-                          {(() => {
-                            const pTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
-                            return (selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
-                              ? formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))
-                              : formatCurrency(pTotal);
-                          })()}
-                          {' • '}{new Date(selectedOrder.createdAt).toLocaleDateString()}
+                  {(() => {
+                    const hasPaid = parseFloat(selectedOrder.amountPaid || '0') > 0;
+                    const hasDeposit = (selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100;
+                    const pTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                    return (
+                    <div className="flex items-start gap-2">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${hasPaid ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <div>
+                        <div className={`text-xs ${hasPaid ? 'font-medium' : 'text-gray-500'}`}>
+                          {hasDeposit
+                            ? (hasPaid ? `Deposit received (${(selectedOrder as any).depositPercentage}%)` : `Awaiting deposit payment (${(selectedOrder as any).depositPercentage}%)`)
+                            : (hasPaid ? 'Payment received' : 'Awaiting payment')}
                         </div>
-                      )}
+                        {hasPaid && (
+                          <div className="text-xs text-gray-500">
+                            {hasDeposit
+                              ? formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))
+                              : formatCurrency(pTotal)}
+                            {' • '}{new Date(selectedOrder.createdAt).toLocaleDateString()}
+                          </div>
+                        )}
+                        {!hasPaid && hasDeposit && (
+                          <div className="text-xs text-gray-500">
+                            {formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))} deposit required
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Step 2: Balance Payment - Only show if there was a deposit and order is NOT cancelled */}
                   {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (() => {
