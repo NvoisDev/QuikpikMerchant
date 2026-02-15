@@ -1852,9 +1852,12 @@ export default function OrdersFresh() {
                       </div>
                       {parseFloat(selectedOrder.amountPaid || '0') > 0 && (
                         <div className="text-xs text-gray-500">
-                          {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
-                            ? `£${parseFloat((parseFloat(selectedOrder.total || '0') * ((selectedOrder as any).depositPercentage / 100)).toFixed(2)).toLocaleString()}`
-                            : `£${parseFloat(selectedOrder.total || '0').toLocaleString()}`}
+                          {(() => {
+                            const pTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                            return (selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 
+                              ? formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))
+                              : formatCurrency(pTotal);
+                          })()}
                           {' • '}{new Date(selectedOrder.createdAt).toLocaleDateString()}
                         </div>
                       )}
@@ -1862,23 +1865,32 @@ export default function OrdersFresh() {
                   </div>
 
                   {/* Step 2: Balance Payment - Only show if there was a deposit and order is NOT cancelled */}
-                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (
+                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (() => {
+                    const prodTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                    const custTotal = parseFloat(selectedOrder.total || '0');
+                    const paidRatio = custTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / custTotal : 0;
+                    const wPaid = prodTotal * paidRatio;
+                    const wOutstanding = selectedOrder.status === 'cancelled' ? 0 : prodTotal - wPaid;
+                    const isFullyPaid = parseFloat(selectedOrder.amountPaid || '0') >= custTotal;
+                    const depositAmt = prodTotal * ((selectedOrder as any).depositPercentage / 100);
+                    return (
                     <div className="flex items-start gap-2">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 ${parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') ? 'bg-green-500' : 'bg-orange-400'}`}></div>
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${isFullyPaid ? 'bg-green-500' : 'bg-orange-400'}`}></div>
                       <div>
-                        <div className={`text-xs ${parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') ? 'font-medium' : 'text-orange-600'}`}>
-                          {parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0')
+                        <div className={`text-xs ${isFullyPaid ? 'font-medium' : 'text-orange-600'}`}>
+                          {isFullyPaid
                             ? 'Balance payment received'
-                            : `Balance outstanding: ${formatCurrency(parseFloat(selectedOrder.amountOutstanding || '0'))}`}
+                            : `Balance outstanding: ${formatCurrency(wOutstanding)}`}
                         </div>
-                        {parseFloat(selectedOrder.amountPaid || '0') >= parseFloat(selectedOrder.total || '0') && (
+                        {isFullyPaid && (
                           <div className="text-xs text-gray-500">
-                            £{(parseFloat(selectedOrder.total || '0') - parseFloat((parseFloat(selectedOrder.total || '0') * ((selectedOrder as any).depositPercentage / 100)).toFixed(2))).toLocaleString()} • Full payment complete
+                            {formatCurrency(prodTotal - depositAmt)} • Full payment complete
                           </div>
                         )}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Step 3: Ready for Collection/Delivery */}
                   <div className="flex items-start gap-2">
