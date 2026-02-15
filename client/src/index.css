@@ -735,3 +735,19 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
+
+@media (max-width: 639px) {
+  .order-detail-mobile-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    transform: none !important;
+    border-radius: 0 !important;
+    z-index: 9999 !important;
+  }
+}

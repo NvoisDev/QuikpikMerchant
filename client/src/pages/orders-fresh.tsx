@@ -1459,7 +1459,7 @@ export default function OrdersFresh() {
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="w-[95vw] sm:w-full max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:hidden">
+        <DialogContent className="order-detail-mobile-fullscreen sm:max-w-lg sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:hidden">
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
