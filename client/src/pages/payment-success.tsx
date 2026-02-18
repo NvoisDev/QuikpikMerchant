@@ -115,6 +115,20 @@ export default function PaymentSuccess() {
               </div>
             )}
 
+            <div className="pt-2">
+              <Button 
+                onClick={() => setLocation(wholesalerId ? `/store/${wholesalerId}` : '/customer-login')}
+                className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg"
+              >
+                <Lock className="w-5 h-5 mr-2" />
+                {wholesalerId ? 'Go to Store' : 'Log In to Your Account'}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                {wholesalerId ? 'Continue shopping with your wholesaler' : 'Secure login using your registered phone number'}
+              </p>
+            </div>
+
             {isReturning ? (
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-800 text-center">
@@ -156,20 +170,6 @@ export default function PaymentSuccess() {
                 </div>
               </div>
             )}
-
-            <div className="pt-2">
-              <Button 
-                onClick={() => setLocation(wholesalerId ? `/store/${wholesalerId}` : '/customer-login')}
-                className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg"
-              >
-                <Lock className="w-5 h-5 mr-2" />
-                {wholesalerId ? 'Go to Store' : 'Log In to Your Account'}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                {wholesalerId ? 'Continue shopping with your wholesaler' : 'Secure login using your registered phone number'}
-              </p>
-            </div>
           </CardContent>
         </Card>
 
