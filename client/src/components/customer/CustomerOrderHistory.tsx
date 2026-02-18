@@ -403,6 +403,14 @@ const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, cust
               <span>Same as original order</span>
             </div>
 
+            <p className="text-xs text-center text-gray-500">
+              Want to add items or change delivery method?{' '}
+              <a href={`/store/${order.wholesalerId}`} className="text-green-600 underline hover:text-green-700">
+                Visit the store
+              </a>{' '}
+              to place a new order.
+            </p>
+
             <div className="flex gap-2 pt-2">
               <DialogClose asChild>
                 <Button variant="outline" className="flex-1">
