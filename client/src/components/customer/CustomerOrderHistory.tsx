@@ -224,6 +224,66 @@ const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhon
   );
 };
 
+const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  if (order.status !== 'fulfilled' && order.status !== 'completed') {
+    return null;
+  }
+
+  const handleReorder = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/reorder/${encodeURIComponent(customerPhone)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Reorder Placed!",
+          description: `Order ${data.orderNumber} has been created and is awaiting approval from your supplier.`,
+        });
+        onSuccess?.();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Reorder Failed",
+          description: error.error || "Could not place reorder. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="h-8 px-3 flex-1 sm:flex-none text-green-600 border-green-200 hover:bg-green-50"
+      onClick={handleReorder}
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+      ) : (
+        <ShoppingBag className="h-3 w-3 mr-1" />
+      )}
+      <span className="text-xs">{isLoading ? 'Placing...' : 'Reorder'}</span>
+    </Button>
+  );
+};
+
 // Cancellation reasons for customer requests
 const customerCancellationReasons = [
   { value: 'changed_mind', label: 'Changed my mind' },
@@ -317,8 +377,7 @@ const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order:
     }
   };
 
-  // Don't show button for already cancelled orders
-  if (order.status === 'cancelled') {
+  if (order.status === 'cancelled' || order.status === 'fulfilled' || order.status === 'completed') {
     return null;
   }
 
@@ -1264,6 +1323,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         </DialogTrigger>
                         <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} />
                       </Dialog>
+                      <ReorderButton
+                        order={order}
+                        customerPhone={customerPhone}
+                        onSuccess={() => handleRefresh()}
+                      />
                       <CancellationRequestButton 
                         order={order} 
                         customerPhone={customerPhone} 

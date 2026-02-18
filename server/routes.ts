@@ -18287,5 +18287,107 @@ The Quikpik Team
     }
   });
 
+  // =====================================================
+  // Customer Reorder - Clone a fulfilled order as a new pending order
+  // =====================================================
+  app.post('/api/customer/orders/:orderId/reorder/:phoneNumber', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const customerPhone = decodeURIComponent(req.params.phoneNumber);
+
+      if (!customerPhone || isNaN(orderId)) {
+        return res.status(400).json({ error: 'Valid order ID and customer phone are required' });
+      }
+
+      const originalOrder = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!originalOrder.length) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      const order = originalOrder[0];
+
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').slice(-10);
+      const orderPhone = order.customerPhone ? normalizePhone(order.customerPhone) : '';
+      const requestPhone = normalizePhone(customerPhone);
+      if (!orderPhone || orderPhone !== requestPhone) {
+        return res.status(403).json({ error: 'You can only reorder your own orders' });
+      }
+
+      if (order.status !== 'fulfilled' && order.status !== 'completed') {
+        return res.status(400).json({ error: 'Only fulfilled or completed orders can be reordered' });
+      }
+
+      const originalItems = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      if (!originalItems.length) {
+        return res.status(400).json({ error: 'No items found in the original order' });
+      }
+
+      const newOrderNumber = await generateOrderNumber(order.wholesalerId);
+
+      const subtotal = originalItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
+      const platformFeeRate = 0.033;
+      const platformFee = subtotal * platformFeeRate;
+      const customerTransactionFeeRate = 0.055;
+      const customerTransactionFeeFixed = 0.50;
+      const customerTransactionFee = (subtotal * customerTransactionFeeRate) + customerTransactionFeeFixed;
+      const deliveryCost = parseFloat(order.deliveryCost || '0');
+      const shippingTotal = parseFloat(order.shippingTotal || '0');
+      const total = subtotal + customerTransactionFee + deliveryCost + shippingTotal;
+
+      const newOrderData: any = {
+        orderNumber: newOrderNumber,
+        wholesalerId: order.wholesalerId,
+        retailerId: order.retailerId,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        status: 'pending',
+        subtotal: subtotal.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
+        total: total.toFixed(2),
+        fulfillmentType: order.fulfillmentType,
+        deliveryAddress: order.deliveryAddress,
+        deliveryAddressId: order.deliveryAddressId,
+        deliveryCost: deliveryCost.toFixed(2),
+        deliveryCarrier: order.deliveryCarrier,
+        shippingTotal: shippingTotal > 0 ? shippingTotal.toFixed(2) : undefined,
+        notes: `Reorder of ${order.orderNumber}`,
+        depositPercentage: 100,
+        balanceDueDays: 0,
+        amountPaid: '0.00',
+        amountOutstanding: total.toFixed(2),
+        paymentStatus: 'unpaid',
+      };
+
+      const newOrderItems = originalItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total,
+        sellingType: item.sellingType || 'units',
+      }));
+
+      const createdOrder = await storage.createOrderWithTransaction(
+        db,
+        newOrderData,
+        newOrderItems
+      );
+
+      console.log(`🔄 Reorder created: ${newOrderNumber} (from ${order.orderNumber}) for customer ${order.customerName}`);
+
+      res.json({
+        success: true,
+        orderNumber: newOrderNumber,
+        orderId: createdOrder.id,
+        message: `Reorder ${newOrderNumber} has been placed and is awaiting approval`,
+      });
+
+    } catch (error) {
+      console.error('❌ Error creating reorder:', error);
+      res.status(500).json({ error: 'Failed to create reorder' });
+    }
+  });
+
   return httpServer;
 }
