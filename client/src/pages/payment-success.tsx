@@ -2,7 +2,7 @@ import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Bell, History, Tag, MessageCircle, Lock, ArrowRight } from "lucide-react";
+import { CheckCircle, Bell, History, Tag, MessageCircle, Lock, ArrowRight, Heart } from "lucide-react";
 
 export default function PaymentSuccess() {
   const [, setLocation] = useLocation();
@@ -10,13 +10,16 @@ export default function PaymentSuccess() {
   const params = new URLSearchParams(searchString);
   const orderNumber = params.get('order');
   const wholesalerId = params.get('wholesaler');
+  const isReturning = params.get('returning') === 'true';
 
-  const { data: wholesaler } = useQuery<{ businessName: string }>({
+  const { data: wholesaler } = useQuery<{ businessName: string | null; firstName: string | null }>({
     queryKey: ['/api/wholesaler', wholesalerId],
     enabled: !!wholesalerId,
   });
 
-  const storeName = wholesaler?.businessName || (wholesalerId ? 'Your Wholesaler' : 'Quikpik');
+  const headingText = wholesaler?.businessName 
+    ? `Welcome to ${wholesaler.businessName}!`
+    : (wholesaler?.firstName ? `You're shopping with ${wholesaler.firstName}` : 'Thank you for your order!');
 
   const benefits = [
     {
@@ -47,9 +50,13 @@ export default function PaymentSuccess() {
         <Card className="border-0 shadow-xl">
           <CardHeader className="text-center pb-4">
             <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-10 h-10 text-green-600" />
+              {isReturning ? (
+                <Heart className="w-10 h-10 text-green-600" />
+              ) : (
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              )}
             </div>
-            <CardTitle className="text-2xl text-green-600">Welcome to {storeName}!</CardTitle>
+            <CardTitle className="text-2xl text-green-600">{headingText}</CardTitle>
             <p className="text-gray-600 mt-2">Thank you for your order</p>
             {orderNumber && (
               <p className="text-sm text-gray-500 mt-1">
@@ -59,34 +66,47 @@ export default function PaymentSuccess() {
           </CardHeader>
           
           <CardContent className="space-y-6">
-            <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center">
-              <p className="text-green-700 font-semibold">
-                You're now registered!
-              </p>
-              <p className="text-sm text-green-600 mt-1">
-                Your account is ready to use
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 text-center">
-                Your Account Benefits
-              </h3>
-              
-              <div className="space-y-3">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <benefit.icon className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{benefit.title}</p>
-                      <p className="text-xs text-gray-500">{benefit.description}</p>
-                    </div>
-                  </div>
-                ))}
+            {isReturning ? (
+              <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center">
+                <p className="text-green-700 font-semibold">
+                  Thank you for your continued business!
+                </p>
+                <p className="text-sm text-green-600 mt-1">
+                  We appreciate your loyalty
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center">
+                <p className="text-green-700 font-semibold">
+                  You're now registered!
+                </p>
+                <p className="text-sm text-green-600 mt-1">
+                  Your account is ready to use
+                </p>
+              </div>
+            )}
+
+            {!isReturning && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-800 text-center">
+                  Your Account Benefits
+                </h3>
+                
+                <div className="space-y-3">
+                  {benefits.map((benefit, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <benefit.icon className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{benefit.title}</p>
+                        <p className="text-xs text-gray-500">{benefit.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="pt-2">
               <Button 

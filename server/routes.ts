@@ -9338,10 +9338,10 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // Return basic wholesaler info for customer login
       res.json({
         id: wholesaler.id,
-        businessName: wholesaler.businessName || wholesaler.firstName || 'Business',
+        businessName: wholesaler.businessName || null,
+        firstName: wholesaler.firstName || null,
         email: wholesaler.email
       });
     } catch (error) {
@@ -17912,12 +17912,18 @@ The Quikpik Team
                 quantity: item.quantity,
               }));
 
+          // Check if customer has previous orders with this wholesaler
+          const previousOrders = await db.select({ id: orders.id }).from(orders)
+            .where(and(eq(orders.retailerId, customerId), eq(orders.wholesalerId, wholesalerId), ne(orders.id, quoteOrder.id)))
+            .limit(1);
+          const isReturning = previousOrders.length > 0;
+
           // Create a Stripe Checkout Session with a payment link
           const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${wholesalerId}`,
             metadata: {
               orderId: quoteOrder.id.toString(),
@@ -18097,7 +18103,7 @@ The Quikpik Team
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&wholesaler=${wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&wholesaler=${wholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${wholesalerId}`,
         metadata: {
           orderId: orderId.toString(),
@@ -18240,7 +18246,7 @@ The Quikpik Team
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${order.wholesalerId}`,
         metadata: {
           orderId: orderId.toString(),
