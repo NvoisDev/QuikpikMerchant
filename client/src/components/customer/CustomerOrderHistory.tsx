@@ -189,13 +189,19 @@ const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhon
       
       if (response.ok) {
         const data = await response.json();
-        window.open(data.paymentLink, '_blank');
+        if (data.paymentLink) {
+          window.location.href = data.paymentLink;
+        } else {
+          alert('Could not generate payment link. Please try again.');
+          setIsLoading(false);
+        }
       } else {
-        console.error('Failed to generate payment link');
+        alert('Could not generate payment link. Please try again.');
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error generating payment link:', error);
-    } finally {
+      alert('Something went wrong. Please check your connection and try again.');
       setIsLoading(false);
     }
   };
