@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,7 +31,18 @@ import {
 import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/components/LazyComponents";
 import Logo from "@/components/ui/logo";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
-import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
+import { format } from "date-fns";
+import {
+  Order,
+  getStatusColor,
+  getStatusIcon,
+  getPaymentStatusColor,
+  getPaymentStatusLabel,
+  ReorderButton,
+  CancellationRequestButton,
+  OrderDetailsModal,
+  PayBalanceButton,
+} from "@/components/customer/CustomerOrderHistory";
 import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressManager";
 import { FirstTimeAddressSetup } from "@/components/customer/FirstTimeAddressSetup";
 import { AddressSelector } from "@/components/customer/AddressSelector";
@@ -667,6 +678,111 @@ const PaymentFormContent = ({
     </>
   );
 };
+
+function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void }) {
+  const { data: recentOrdersData = [] } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
+    queryFn: async () => {
+      const encodedPhone = encodeURIComponent(customerPhone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!wholesalerId && !!customerPhone,
+  });
+
+  const recentOrders = [...recentOrdersData]
+    .sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+
+  if (recentOrders.length === 0) return null;
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
+  };
+
+  return (
+    <div className="bg-white rounded-lg p-6 border">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Recent Orders</h2>
+        <Button
+          variant="outline"
+          onClick={onViewAllOrders}
+          className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+        >
+          View All Orders
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {recentOrders.map((order: Order) => (
+          <div key={order.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-sm">{order.orderNumber}</span>
+                <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                  {getStatusIcon(order.status)}
+                  <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
+                </Badge>
+                {order.paymentStatus && (
+                  <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
+                    {getPaymentStatusLabel(order.paymentStatus)}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
+                {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : ''}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              {order.fulfillmentType === 'delivery' ? (
+                <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Delivery</span>
+              ) : (
+                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
+              )}
+              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.subtotal || order.total))}</span>
+              {order.items && order.items.length > 0 && (
+                <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                    <Eye className="h-3 w-3 mr-1" />
+                    Details
+                  </Button>
+                </DialogTrigger>
+                <OrderDetailsModal
+                  order={order}
+                  wholesalerId={wholesalerId}
+                  customerPhone={customerPhone}
+                />
+              </Dialog>
+
+              <PayBalanceButton order={order} customerPhone={customerPhone} />
+
+              <CancellationRequestButton
+                order={order}
+                customerPhone={customerPhone}
+                onSuccess={handleRefresh}
+              />
+
+              <ReorderButton
+                order={order}
+                customerPhone={customerPhone}
+                onSuccess={handleRefresh}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
@@ -2695,6 +2811,15 @@ export default function CustomerPortal() {
                   </div>
                 </div>
               </div>
+
+              {/* Recent Orders */}
+              {authenticatedCustomer?.phone && wholesalerId && (
+                <RecentOrdersSection
+                  wholesalerId={wholesalerId}
+                  customerPhone={authenticatedCustomer.phone}
+                  onViewAllOrders={() => setActiveTab("orders")}
+                />
+              )}
 
               {/* Top Selling Products */}
               <div className="bg-white rounded-lg p-6 border">
