@@ -1282,7 +1282,7 @@ export default function OrdersFresh() {
                               <X className="w-2 h-2 mr-1" />
                               Cancelled
                             </Badge>
-                          ) : order.isQuote && order.paymentStatus ? (
+                          ) : order.paymentStatus ? (
                             <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
                               {getPaymentStatusLabel(order.paymentStatus)}
                             </Badge>
@@ -1483,10 +1483,10 @@ export default function OrdersFresh() {
                       <X className="w-3 h-3 mr-1" />
                       Cancelled
                     </Badge>
-                  ) : selectedOrder.isQuote ? (
-                    <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')} text-xs px-2 py-1`}>
+                  ) : selectedOrder.paymentStatus ? (
+                    <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus)} text-xs px-2 py-1`}>
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
+                      {getPaymentStatusLabel(selectedOrder.paymentStatus)}
                     </Badge>
                   ) : (
                     <Badge className={`${getStatusColor(selectedOrder.status)} text-xs px-2 py-1`}>
