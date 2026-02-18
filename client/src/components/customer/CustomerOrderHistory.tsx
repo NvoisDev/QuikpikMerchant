@@ -16,19 +16,19 @@ import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDispl
 import { DynamicDeliveryAddressDisplay } from "@/components/shared/DynamicDeliveryAddressDisplay";
 import { useToast } from "@/hooks/use-toast";
 
-interface CustomerOrderHistoryProps {
+export interface CustomerOrderHistoryProps {
   wholesalerId: string;
   customerPhone: string;
 }
 
-interface OrderItem {
+export interface OrderItem {
   productName: string;
   quantity: number;
   unitPrice: string;
   total: string;
 }
 
-interface Order {
+export interface Order {
   id: number;
   orderNumber: string;
   date: string;
@@ -110,7 +110,7 @@ const getLabelIcon = (label?: string) => {
   }
 };
 
-const getStatusColor = (status: string) => {
+export const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case 'pending':
       return 'bg-yellow-100 text-yellow-800';
@@ -131,7 +131,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getStatusIcon = (status: string) => {
+export const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
     case 'pending':
       return <Clock className="h-3 w-3" />;
@@ -150,7 +150,7 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-const getPaymentStatusColor = (status: string) => {
+export const getPaymentStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'paid':
       return 'bg-green-100 text-green-800';
@@ -163,7 +163,7 @@ const getPaymentStatusColor = (status: string) => {
   }
 };
 
-const getPaymentStatusLabel = (status: string) => {
+export const getPaymentStatusLabel = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'paid':
       return 'Paid';
@@ -176,7 +176,7 @@ const getPaymentStatusLabel = (status: string) => {
   }
 };
 
-const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
+export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGenerateLink = async () => {
@@ -242,7 +242,7 @@ interface ReorderPreview {
   total: string;
 }
 
-const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
+export const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -451,7 +451,7 @@ const customerCancellationReasons = [
   { value: 'other', label: 'Other reason' },
 ];
 
-const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
+export const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -653,7 +653,7 @@ const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order:
   );
 };
 
-const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
+export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
   const queryClient = useQueryClient();
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');

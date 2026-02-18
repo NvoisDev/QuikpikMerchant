@@ -2,14 +2,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Package, TrendingUp, Clock, ShoppingCart, Plus, X, Search, 
-  Zap, Phone, Mail, CheckCircle 
+  Zap, Phone, Mail, CheckCircle, Eye, Truck, MapPin
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import { formatCurrency } from "@shared/utils/currency";
+import { format } from "date-fns";
+import {
+  Order,
+  getStatusColor,
+  getStatusIcon,
+  getPaymentStatusColor,
+  getPaymentStatusLabel,
+  ReorderButton,
+  CancellationRequestButton,
+  OrderDetailsModal,
+  PayBalanceButton,
+} from "@/components/customer/CustomerOrderHistory";
 
 // Quick Order Component
 function QuickOrder({ wholesalerId }: { wholesalerId: string }) {
@@ -228,6 +242,151 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
   );
 }
 
+function RecentOrders({ wholesalerId, customerPhone }: { wholesalerId: string; customerPhone: string }) {
+  const queryClient = useQueryClient();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
+    queryFn: async () => {
+      const encodedPhone = encodeURIComponent(customerPhone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!wholesalerId && !!customerPhone,
+  });
+
+  const recentOrders = [...orders]
+    .sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Clock className="h-5 w-5 text-green-600" />
+            <span>Recent Orders</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (recentOrders.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Clock className="h-5 w-5 text-green-600" />
+            <span>Recent Orders</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 text-center py-4">No orders yet. Browse products to place your first order!</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Clock className="h-5 w-5 text-green-600" />
+          <span>Recent Orders</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {recentOrders.map((order: Order) => (
+          <div key={order.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-sm">{order.orderNumber}</span>
+                <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                  {getStatusIcon(order.status)}
+                  <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
+                </Badge>
+                {order.paymentStatus && (
+                  <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
+                    {getPaymentStatusLabel(order.paymentStatus)}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
+                {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : ''}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              {order.fulfillmentType === 'delivery' ? (
+                <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Delivery</span>
+              ) : (
+                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
+              )}
+              <span className="font-medium text-gray-900">{formatCurrency(order.subtotal || order.total)}</span>
+              {order.items && order.items.length > 0 && (
+                <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 px-3 text-xs"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Details
+                  </Button>
+                </DialogTrigger>
+                {selectedOrder?.id === order.id && (
+                  <OrderDetailsModal
+                    order={order}
+                    wholesalerId={wholesalerId}
+                    customerPhone={customerPhone}
+                  />
+                )}
+              </Dialog>
+
+              <PayBalanceButton order={order} customerPhone={customerPhone} />
+
+              <CancellationRequestButton
+                order={order}
+                customerPhone={customerPhone}
+                onSuccess={handleRefresh}
+              />
+
+              <ReorderButton
+                order={order}
+                customerPhone={customerPhone}
+                onSuccess={handleRefresh}
+              />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 interface ModernCustomerHomeProps {
   wholesaler: any;
   customerData: any;
@@ -290,6 +449,14 @@ export function ModernCustomerHome({
         {customerData && (
           <CustomerStats 
             wholesalerId={wholesaler?.id} 
+            customerPhone={customerData.phone || customerData.phoneNumber}
+          />
+        )}
+
+        {/* Recent Orders */}
+        {customerData && (
+          <RecentOrders
+            wholesalerId={wholesaler?.id}
             customerPhone={customerData.phone || customerData.phoneNumber}
           />
         )}
