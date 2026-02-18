@@ -18288,7 +18288,74 @@ The Quikpik Team
   });
 
   // =====================================================
-  // Customer Reorder - Clone a fulfilled order as a new pending order
+  // Customer Reorder - Preview items from a fulfilled order
+  // =====================================================
+  app.get('/api/customer/orders/:orderId/reorder-preview/:phoneNumber', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const customerPhone = decodeURIComponent(req.params.phoneNumber);
+
+      if (!customerPhone || isNaN(orderId)) {
+        return res.status(400).json({ error: 'Valid order ID and customer phone are required' });
+      }
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').slice(-10);
+      if (normalizePhone(order.customerPhone || '') !== normalizePhone(customerPhone)) {
+        return res.status(403).json({ error: 'You can only reorder your own orders' });
+      }
+
+      if (order.status !== 'fulfilled' && order.status !== 'completed') {
+        return res.status(400).json({ error: 'Only fulfilled or completed orders can be reordered' });
+      }
+
+      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      
+      const productIds = items.map(i => i.productId);
+      const productResults = await db.select().from(products).where(inArray(products.id, productIds));
+      const productMap = new Map(productResults.map(p => [p.id, p]));
+
+      const previewItems = items.map(item => {
+        const product = productMap.get(item.productId);
+        return {
+          productName: product?.name || 'Unknown Product',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+          sellingType: item.sellingType || 'units',
+          inStock: product ? (product.stock || 0) >= item.quantity : false,
+        };
+      });
+
+      const subtotal = items.reduce((sum, item) => sum + parseFloat(item.total), 0);
+      const customerTransactionFee = (subtotal * 0.055) + 0.50;
+      const deliveryCost = parseFloat(order.deliveryCost || '0');
+      const shippingTotal = parseFloat(order.shippingTotal || '0');
+      const total = subtotal + customerTransactionFee + deliveryCost + shippingTotal;
+
+      res.json({
+        success: true,
+        orderNumber: order.orderNumber,
+        fulfillmentType: order.fulfillmentType,
+        items: previewItems,
+        subtotal: subtotal.toFixed(2),
+        transactionFee: customerTransactionFee.toFixed(2),
+        deliveryCost: deliveryCost.toFixed(2),
+        shippingTotal: shippingTotal.toFixed(2),
+        total: total.toFixed(2),
+      });
+    } catch (error) {
+      console.error('❌ Error fetching reorder preview:', error);
+      res.status(500).json({ error: 'Failed to fetch reorder preview' });
+    }
+  });
+
+  // =====================================================
+  // Customer Reorder - Create order and generate payment link
   // =====================================================
   app.post('/api/customer/orders/:orderId/reorder/:phoneNumber', async (req: any, res) => {
     try {
@@ -18299,17 +18366,13 @@ The Quikpik Team
         return res.status(400).json({ error: 'Valid order ID and customer phone are required' });
       }
 
-      const originalOrder = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-      if (!originalOrder.length) {
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) {
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      const order = originalOrder[0];
-
       const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').slice(-10);
-      const orderPhone = order.customerPhone ? normalizePhone(order.customerPhone) : '';
-      const requestPhone = normalizePhone(customerPhone);
-      if (!orderPhone || orderPhone !== requestPhone) {
+      if (normalizePhone(order.customerPhone || '') !== normalizePhone(customerPhone)) {
         return res.status(403).json({ error: 'You can only reorder your own orders' });
       }
 
@@ -18322,14 +18385,16 @@ The Quikpik Team
         return res.status(400).json({ error: 'No items found in the original order' });
       }
 
+      if (!stripe) {
+        return res.status(500).json({ error: 'Payment service not available' });
+      }
+
       const newOrderNumber = await generateOrderNumber(order.wholesalerId);
 
       const subtotal = originalItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
       const platformFeeRate = 0.033;
       const platformFee = subtotal * platformFeeRate;
-      const customerTransactionFeeRate = 0.055;
-      const customerTransactionFeeFixed = 0.50;
-      const customerTransactionFee = (subtotal * customerTransactionFeeRate) + customerTransactionFeeFixed;
+      const customerTransactionFee = (subtotal * 0.055) + 0.50;
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
       const total = subtotal + customerTransactionFee + deliveryCost + shippingTotal;
@@ -18353,6 +18418,7 @@ The Quikpik Team
         deliveryCarrier: order.deliveryCarrier,
         shippingTotal: shippingTotal > 0 ? shippingTotal.toFixed(2) : undefined,
         notes: `Reorder of ${order.orderNumber}`,
+        isQuote: true,
         depositPercentage: 100,
         balanceDueDays: 0,
         amountPaid: '0.00',
@@ -18374,13 +18440,54 @@ The Quikpik Team
         newOrderItems
       );
 
-      console.log(`🔄 Reorder created: ${newOrderNumber} (from ${order.orderNumber}) for customer ${order.customerName}`);
+      const appUrl = process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: `Reorder - ${newOrderNumber}`,
+              description: `Reorder of ${order.orderNumber}`,
+            },
+            unit_amount: Math.round(total * 100),
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${appUrl}/customer/payment-success?order=${newOrderNumber}&wholesaler=${order.wholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/store/${order.wholesalerId}`,
+        metadata: {
+          orderId: createdOrder.id.toString(),
+          orderNumber: newOrderNumber,
+          wholesalerId: order.wholesalerId,
+          customerId: order.retailerId,
+          isQuote: 'true',
+          isReorder: 'true',
+          depositPercentage: '100',
+          depositAmount: total.toFixed(2),
+          totalAmount: total.toFixed(2),
+        },
+        customer_email: order.customerEmail || undefined,
+        expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+      });
+
+      await db.update(orders)
+        .set({
+          stripePaymentLinkId: session.id,
+          stripePaymentLinkUrl: session.url || '',
+          quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+        .where(eq(orders.id, createdOrder.id));
+
+      console.log(`🔄 Reorder created: ${newOrderNumber} (from ${order.orderNumber}) for customer ${order.customerName} - payment link generated`);
 
       res.json({
         success: true,
         orderNumber: newOrderNumber,
         orderId: createdOrder.id,
-        message: `Reorder ${newOrderNumber} has been placed and is awaiting approval`,
+        paymentLink: session.url,
       });
 
     } catch (error) {

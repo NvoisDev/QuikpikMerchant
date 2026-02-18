@@ -224,16 +224,64 @@ const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhon
   );
 };
 
+interface ReorderPreview {
+  orderNumber: string;
+  fulfillmentType: string;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: string;
+    total: string;
+    sellingType: string;
+    inStock: boolean;
+  }>;
+  subtotal: string;
+  transactionFee: string;
+  deliveryCost: string;
+  shippingTotal: string;
+  total: string;
+}
+
 const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState<ReorderPreview | null>(null);
   const { toast } = useToast();
 
   if (order.status !== 'fulfilled' && order.status !== 'completed') {
     return null;
   }
 
-  const handleReorder = async () => {
-    setIsLoading(true);
+  const loadPreview = async () => {
+    setIsLoadingPreview(true);
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/reorder-preview/${encodeURIComponent(customerPhone)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPreview(data);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load order details. Please try again.",
+          variant: "destructive"
+        });
+        setIsOpen(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+      setIsOpen(false);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleConfirmReorder = async () => {
+    setIsSubmitting(true);
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/reorder/${encodeURIComponent(customerPhone)}`, {
         method: 'POST',
@@ -242,11 +290,16 @@ const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, cust
 
       if (response.ok) {
         const data = await response.json();
-        toast({
-          title: "Reorder Placed!",
-          description: `Order ${data.orderNumber} has been created and is awaiting approval from your supplier.`,
-        });
-        onSuccess?.();
+        if (data.paymentLink) {
+          window.location.href = data.paymentLink;
+        } else {
+          toast({
+            title: "Reorder Created",
+            description: `Order ${data.orderNumber} has been created.`,
+          });
+          setIsOpen(false);
+          onSuccess?.();
+        }
       } else {
         const error = await response.json();
         toast({
@@ -254,6 +307,7 @@ const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, cust
           description: error.error || "Could not place reorder. Please try again.",
           variant: "destructive"
         });
+        setIsSubmitting(false);
       }
     } catch (error) {
       toast({
@@ -261,26 +315,121 @@ const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, cust
         description: "Something went wrong. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Button 
-      variant="outline" 
-      size="sm" 
-      className="h-8 px-3 flex-1 sm:flex-none text-green-600 border-green-200 hover:bg-green-50"
-      onClick={handleReorder}
-      disabled={isLoading}
-    >
-      {isLoading ? (
-        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-      ) : (
-        <ShoppingBag className="h-3 w-3 mr-1" />
-      )}
-      <span className="text-xs">{isLoading ? 'Placing...' : 'Reorder'}</span>
-    </Button>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (open && !preview) {
+        loadPreview();
+      }
+    }}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-3 flex-1 sm:flex-none text-green-600 border-green-200 hover:bg-green-50"
+        >
+          <ShoppingBag className="h-3 w-3 mr-1" />
+          <span className="text-xs">Reorder</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" style={{ zIndex: 9999 }}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-green-600" />
+            Reorder {order.orderNumber}
+          </DialogTitle>
+          <DialogDescription>
+            Review your items before proceeding to payment
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoadingPreview ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-500">Loading order details...</span>
+          </div>
+        ) : preview ? (
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              {preview.items.map((item, index) => (
+                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{item.productName}</p>
+                    <p className="text-xs text-gray-500">
+                      {item.quantity} {item.sellingType} x {formatCurrency(item.unitPrice)}
+                    </p>
+                    {!item.inStock && (
+                      <p className="text-xs text-orange-600 mt-0.5">Stock may have changed</p>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(item.total)}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-3 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span>{formatCurrency(preview.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Transaction Fee</span>
+                <span>{formatCurrency(preview.transactionFee)}</span>
+              </div>
+              {parseFloat(preview.deliveryCost) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Delivery</span>
+                  <span>{formatCurrency(preview.deliveryCost)}</span>
+                </div>
+              )}
+              {parseFloat(preview.shippingTotal || '0') > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Shipping</span>
+                  <span>{formatCurrency(preview.shippingTotal)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-bold border-t pt-2">
+                <span>Total</span>
+                <span className="text-green-600">{formatCurrency(preview.total)}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center text-xs text-gray-500 bg-gray-50 p-2 rounded">
+              <span>{preview.fulfillmentType === 'pickup' ? '📦 Collection' : '🚚 Delivery'}</span>
+              <span>Same as original order</span>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <DialogClose asChild>
+                <Button variant="outline" className="flex-1">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleConfirmReorder}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    💳 Pay & Reorder
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 };
 
