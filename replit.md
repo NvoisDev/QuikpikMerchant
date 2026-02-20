@@ -8,6 +8,14 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**February 20, 2026 - Complete Email Template Modernisation:**
+- **UNIFIED TEMPLATE SYSTEM**: All emails across the platform now use the centralised template system in `server/email-templates.ts`
+- **TWO LAYOUT MODES**: `wrapCustomerEmail` (customer-facing, branded with wholesaler's business identity + "Powered by Quikpik" footer) and `wrapPlatformEmail` (platform-facing, branded with Quikpik identity)
+- **REUSABLE HELPERS**: `emailCard`, `emailButton`, `emailHeading`, `emailBadge`, `emailDivider`, `emailTable` - all inline-styled for email client compatibility
+- **FILES UPDATED**: routes.ts (registration request/approved/rejected, team invitation, welcome, cancellation request/approved/rejected, refund receipt, wholesaler welcome), passwordResetService.ts, orderNotificationService.ts, stockAlertService.ts, emailService.ts
+- **CONTENT PRESERVED**: All original email content (items, addresses, payment breakdowns, next steps) preserved - only design/layout modernised
+- **INVOICE EXCLUDED**: Invoice HTML template (used for PDF generation via Puppeteer) intentionally kept separate as it's a printable document, not an email
+
 **August 30, 2025 - Delivery/Collection Radio Button System FINAL FIX:**
 - **ROOT CAUSE IDENTIFIED**: Frontend fallback to 'pickup' when shipping option was undefined
 - **CORE SOLUTION**: Removed fallback logic and added validation to prevent undefined shipping options

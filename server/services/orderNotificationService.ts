@@ -3,6 +3,7 @@ import { whatsAppBusinessService } from "../whatsapp-simple";
 import { sendSMS } from "../services/smsService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
+import { wrapCustomerEmail, emailHeading, emailCard, emailBadge } from "../email-templates";
 
 export interface OrderStatusNotification {
   orderId: number;
@@ -170,26 +171,48 @@ export class OrderNotificationService {
     }
 
     try {
+      const statusColor = this.getStatusColor(notification.status);
+      const statusLabel = notification.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      const order = await storage.getOrder(notification.orderId);
+      const wholesaler = order ? await storage.getUser(order.wholesalerId) : null;
+      const businessName = wholesaler?.businessName || notification.wholesalerName;
+
+      const emailBody = `
+        ${emailHeading('Order Update', { size: '22px', color: '#10b981' })}
+        <p style="margin: 0 0 20px 0;">Hi ${notification.customerName},</p>
+
+        ${emailCard(`
+          <p style="margin: 0 0 8px 0;"><strong>Order:</strong> ${notification.orderNumber}</p>
+          <p style="margin: 0 0 8px 0;"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p>
+          <p style="margin: 0;">${emailContent.body}</p>
+          ${notification.trackingNumber ? `<p style="margin: 8px 0 0 0;"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}
+          ${notification.estimatedDelivery ? `<p style="margin: 8px 0 0 0;"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}
+        `)}
+      `;
+
       await sendEmail({
         to: notification.customerEmail,
         from: 'hello@quikpik.co',
         subject: emailContent.subject,
-        text: emailContent.body,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #22c55e;">Order Update</h2>
-            <p>${emailContent.body}</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="color: #6b7280; font-size: 12px;">
-              This is an automated message from Quikpik. Please do not reply to this email.
-            </p>
-          </div>
-        `
+        html: wrapCustomerEmail(emailBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: emailContent.body })
       });
       console.log(`📧 Email notification sent for order ${notification.orderNumber}`);
     } catch (error) {
       console.error(`❌ Failed to send email for order ${notification.orderNumber}:`, error);
     }
+  }
+
+  private getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+      confirmed: '#10b981',
+      processing: '#3b82f6',
+      shipped: '#8b5cf6',
+      delivered: '#22c55e',
+      items_prepared: '#f59e0b',
+      ready_for_pickup: '#06b6d4',
+    };
+    return colors[status] || '#6b7280';
   }
 }
 

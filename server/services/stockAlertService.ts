@@ -4,6 +4,7 @@ import { eq, lt, and } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { ReliableSMSService } from "../sms-service";
 import { whatsAppBusinessService } from "../whatsapp-simple";
+import { wrapPlatformEmail, emailHeading, emailCard, emailButton } from "../email-templates";
 
 export interface StockAlert {
   productId: number;
@@ -161,63 +162,51 @@ export class StockAlertService {
     const urgentProducts = alerts.filter(alert => alert.currentStock <= 5);
     const lowProducts = alerts.filter(alert => alert.currentStock > 5 && alert.currentStock <= alert.minimumThreshold);
 
-    let html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">🚨 Stock Alert for ${wholesaler.wholesalerName}</h2>
-        
-        <p>We've detected ${alerts.length} products that need restocking to maintain optimal inventory levels.</p>
+    let body = `
+      ${emailHeading('Stock Alert', { size: '22px', color: '#dc2626' })}
+      <p style="margin: 0 0 20px 0;">We've detected ${alerts.length} products that need restocking to maintain optimal inventory levels.</p>
     `;
 
     if (urgentProducts.length > 0) {
-      html += `
-        <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0;">
-          <h3 style="color: #dc2626; margin-top: 0;">⚠️ URGENT - Critical Stock Levels (≤5 units)</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            ${urgentProducts.map(product => `
-              <li style="margin: 8px 0;">
-                <strong>${product.productName}</strong> - Only ${product.currentStock} units left
-                <br><small style="color: #6b7280;">Suggested reorder: ${product.suggestedReorderQuantity} units</small>
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-      `;
+      body += emailCard(`
+        ${emailHeading('URGENT - Critical Stock Levels', { size: '16px', color: '#dc2626' })}
+        <ul style="margin: 0; padding-left: 20px;">
+          ${urgentProducts.map(product => `
+            <li style="margin: 8px 0;">
+              <strong>${product.productName}</strong> - Only ${product.currentStock} units left
+              <br><small style="color: #6b7280;">Suggested reorder: ${product.suggestedReorderQuantity} units</small>
+            </li>
+          `).join('')}
+        </ul>
+      `, { borderColor: '#FECACA', bgColor: '#FEF2F2' });
     }
 
     if (lowProducts.length > 0) {
-      html += `
-        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0;">
-          <h3 style="color: #f59e0b; margin-top: 0;">📦 Low Stock Products</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            ${lowProducts.map(product => `
-              <li style="margin: 8px 0;">
-                <strong>${product.productName}</strong> - ${product.currentStock} units (Min: ${product.minimumThreshold})
-                <br><small style="color: #6b7280;">Suggested reorder: ${product.suggestedReorderQuantity} units</small>
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-      `;
+      body += emailCard(`
+        ${emailHeading('Low Stock Products', { size: '16px', color: '#f59e0b' })}
+        <ul style="margin: 0; padding-left: 20px;">
+          ${lowProducts.map(product => `
+            <li style="margin: 8px 0;">
+              <strong>${product.productName}</strong> - ${product.currentStock} units (Min: ${product.minimumThreshold})
+              <br><small style="color: #6b7280;">Suggested reorder: ${product.suggestedReorderQuantity} units</small>
+            </li>
+          `).join('')}
+        </ul>
+      `, { borderColor: '#FDE68A', bgColor: '#FFFBEB' });
     }
 
-    html += `
-        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h4 style="margin-top: 0;">💡 Quick Actions</h4>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>Log into your dashboard to place reorders immediately</li>
-            <li>Contact your suppliers to ensure timely delivery</li>
-            <li>Consider adjusting minimum stock thresholds for better planning</li>
-          </ul>
-        </div>
-        
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-        <p style="color: #6b7280; font-size: 12px;">
-          This is an automated alert from Quikpik. Stock levels are checked regularly to help you maintain optimal inventory.
-        </p>
-      </div>
-    `;
+    body += emailCard(`
+      ${emailHeading('Quick Actions', { size: '16px' })}
+      <ul style="margin: 0; padding-left: 20px;">
+        <li style="margin-bottom: 6px;">Log into your dashboard to place reorders immediately</li>
+        <li style="margin-bottom: 6px;">Contact your suppliers to ensure timely delivery</li>
+        <li>Consider adjusting minimum stock thresholds for better planning</li>
+      </ul>
+    `);
 
-    return html;
+    body += emailButton('View Dashboard', 'https://quikpik.co/products');
+
+    return wrapPlatformEmail(body, { preheader: `${alerts.length} products need restocking` });
   }
 
   /**
