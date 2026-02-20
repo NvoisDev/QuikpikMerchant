@@ -4,7 +4,7 @@ import { eq, lt, and } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { ReliableSMSService } from "../sms-service";
 import { whatsAppBusinessService } from "../whatsapp-simple";
-import { wrapPlatformEmail, emailHeading, emailCard, emailButton } from "../email-templates";
+import { wrapCustomerEmail, emailHeading, emailCard, emailButton } from "../email-templates";
 
 export interface StockAlert {
   productId: number;
@@ -206,7 +206,7 @@ export class StockAlertService {
 
     body += emailButton('View Dashboard', 'https://quikpik.co/products');
 
-    return wrapPlatformEmail(body, { preheader: `${alerts.length} products need restocking` });
+    return wrapCustomerEmail(body, { businessName: wholesaler.wholesalerName, logoUrl: undefined }, { preheader: `${alerts.length} products need restocking` });
   }
 
   /**

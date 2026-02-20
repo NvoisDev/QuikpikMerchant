@@ -74,7 +74,7 @@ export function wrapCustomerEmail(body: string, branding: EmailBranding, options
           <tr>
             <td style="padding: 24px 40px 32px 40px; background-color: #fafafa; border-top: 1px solid #f0f0f0; text-align: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
               <p style="margin: 0 0 6px 0; font-size: 13px; color: #9ca3af;">Questions? Contact <strong style="color: #6b7280;">${branding.businessName}</strong> directly.</p>
-              <p style="margin: 16px 0 0 0; font-size: 11px; color: #d1d5db;">Powered by <a href="https://quikpik.co" style="color: #d1d5db; text-decoration: none; font-weight: 600;">Quikpik</a></p>
+              <p style="margin: 16px 0 0 0; font-size: 11px; color: #d1d5db;">Powered by <a href="https://quikpik.co" style="color: #d1d5db; text-decoration: none; font-weight: 600;">Quikpik Merchant</a></p>
             </td>
           </tr>
         </table>
@@ -212,6 +212,7 @@ export interface OrderEmailData {
     firstName: string;
     lastName: string;
     email: string;
+    logoUrl?: string | null;
   };
   orderDate: string;
   paymentMethod?: string;
@@ -293,7 +294,10 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     ${emailButton('View Order Details', 'https://quikpik.co/orders')}
   `;
 
-  const html = wrapPlatformEmail(body, { preheader: `New order ${data.orderNumber} from ${data.customerName} - £${data.total}` });
+  const html = wrapCustomerEmail(body, {
+    businessName: data.wholesaler.businessName,
+    logoUrl: data.wholesaler.logoUrl,
+  }, { preheader: `New order ${data.orderNumber} from ${data.customerName} - £${data.total}` });
 
   const text = `New Order ${data.orderNumber} - ${data.customerName}
 

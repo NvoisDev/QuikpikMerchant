@@ -134,7 +134,7 @@ import { sendSMS } from "./services/smsService";
 import { sendEmail } from "./sendgrid-service";
 import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
-import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, wrapPlatformEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
+import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
@@ -471,7 +471,7 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
         name: 'Quikpik Team'
       },
       subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
-      html: wrapPlatformEmail(inviteBody, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
+      html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
     };
 
     const response = await sgMail.send(msg);
@@ -2166,7 +2166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: emailSubject,
-            html: wrapPlatformEmail(emailBody, { preheader: `New enquiry from ${customerName}` })
+            html: wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `New enquiry from ${customerName}` })
           });
           
           console.log(`📧 Registration request notification sent to ${wholesaler.email}`);
@@ -5845,7 +5845,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
                 firstName: wholesaler.firstName || '',
                 lastName: wholesaler.lastName || '',
-                email: wholesaler.email
+                email: wholesaler.email,
+                logoUrl: wholesaler.logoUrl
               },
               orderDate: new Date().toISOString(),
               paymentMethod: 'Card Payment'
@@ -5971,7 +5972,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
           firstName: wholesaler.firstName || '',
           lastName: wholesaler.lastName || '',
-          email: wholesaler.email
+          email: wholesaler.email,
+          logoUrl: wholesaler.logoUrl
         },
         orderDate: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
         paymentMethod: 'Card Payment'
@@ -6494,7 +6496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Cancellation Request for Order ${order.orderNumber}`,
-            html: wrapPlatformEmail(cancelRequestBody, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
+            html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
           });
           console.log(`📧 Cancellation request email sent to ${wholesaler.email} for order ${order.orderNumber}`);
         }
@@ -14155,7 +14157,7 @@ https://quikpik.app`;
           name: 'Quikpik Team'
         },
         subject: `Welcome to Quikpik, ${user.firstName}!`,
-        html: wrapPlatformEmail(welcomeBody, { preheader: 'Welcome to Quikpik - your wholesale platform is ready' })
+        html: wrapCustomerEmail(welcomeBody, { businessName: user.businessName || `${user.firstName}'s Business` || 'Quikpik', logoUrl: user.logoUrl }, { preheader: 'Welcome to Quikpik - your wholesale platform is ready' })
       });
 
       console.log(`✅ Welcome email sent to ${user.email}`);
@@ -14511,7 +14513,7 @@ https://quikpik.app`;
       await storage.setPasswordResetToken(email, hashedToken, expiresAt);
       
       // Send password reset email with PLAIN token
-      await sendPasswordResetEmail(email, token, user.firstName);
+      await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: user.logoUrl });
       
       console.log(`🔐 Password reset email sent to ${email}`);
       

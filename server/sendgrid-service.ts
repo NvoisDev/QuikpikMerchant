@@ -226,7 +226,7 @@ export async function sendWholesalerOrderNotification(orderData: {
   postalCode?: string;
   country?: string;
 }): Promise<boolean> {
-  const { wrapPlatformEmail, emailCard, emailTable, emailHeading, emailButton, emailBadge } = await import('./email-templates');
+  const { wrapCustomerEmail, emailCard, emailTable, emailHeading, emailButton, emailBadge } = await import('./email-templates');
 
   const itemRows = orderData.orderItems.map(item => [
     item.productName,
@@ -288,7 +288,7 @@ export async function sendWholesalerOrderNotification(orderData: {
     ${emailButton('View Order Details', 'https://quikpik.co/orders')}
   `;
 
-  const html = wrapPlatformEmail(body, { preheader: `New order ${orderData.orderNumber} from ${orderData.customerName}` });
+  const html = wrapCustomerEmail(body, { businessName: orderData.wholesalerName, logoUrl: undefined }, { preheader: `New order ${orderData.orderNumber} from ${orderData.customerName}` });
 
   return await sendEmail({
     to: orderData.wholesalerEmail,

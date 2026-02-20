@@ -480,7 +480,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
           businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
           firstName: wholesaler.firstName || '',
           lastName: wholesaler.lastName || '',
-          email: wholesaler.email
+          email: wholesaler.email,
+          logoUrl: wholesaler.logoUrl
         },
         orderDate: new Date().toISOString(),
         paymentMethod: 'Card Payment'

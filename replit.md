@@ -10,7 +10,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 ## Recent Changes
 **February 20, 2026 - Complete Email Template Modernisation:**
 - **UNIFIED TEMPLATE SYSTEM**: All emails across the platform now use the centralised template system in `server/email-templates.ts`
-- **TWO LAYOUT MODES**: `wrapCustomerEmail` (customer-facing, branded with wholesaler's business identity + "Powered by Quikpik" footer) and `wrapPlatformEmail` (platform-facing, branded with Quikpik identity)
+- **UNIFIED POWERED-BY MODEL**: ALL emails now use `wrapCustomerEmail` - branded with wholesaler's business identity (logo/initials + business name) with subtle "Powered by Quikpik Merchant" footer. No more separate platform-branded template. `wrapPlatformEmail` kept for backward compatibility but no longer used.
 - **REUSABLE HELPERS**: `emailCard`, `emailButton`, `emailHeading`, `emailBadge`, `emailDivider`, `emailTable` - all inline-styled for email client compatibility
 - **FILES UPDATED**: routes.ts (registration request/approved/rejected, team invitation, welcome, cancellation request/approved/rejected, refund receipt, wholesaler welcome), passwordResetService.ts, orderNotificationService.ts, stockAlertService.ts, emailService.ts
 - **CONTENT PRESERVED**: All original email content (items, addresses, payment breakdowns, next steps) preserved - only design/layout modernised

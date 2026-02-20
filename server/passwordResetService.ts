@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { sendEmail } from './sendgrid-service';
-import { wrapPlatformEmail, emailHeading, emailCard, emailButton, emailDivider } from './email-templates';
+import { wrapCustomerEmail, emailHeading, emailCard, emailButton, emailDivider } from './email-templates';
 
 /**
  * Service for handling password reset functionality
@@ -41,7 +41,7 @@ export function createResetExpiration(): Date {
  * @param token - Reset token
  * @param firstName - User's first name for personalization
  */
-export async function sendPasswordResetEmail(email: string, token: string, firstName?: string): Promise<void> {
+export async function sendPasswordResetEmail(email: string, token: string, firstName?: string, branding?: { businessName?: string; logoUrl?: string | null }): Promise<void> {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${token}`;
   
   const resetBody = `
@@ -66,6 +66,6 @@ export async function sendPasswordResetEmail(email: string, token: string, first
     to: email,
     from: 'hello@quikpik.co',
     subject: 'Reset Your Quikpik Password',
-    html: wrapPlatformEmail(resetBody, { preheader: 'Reset your Quikpik password' })
+    html: wrapCustomerEmail(resetBody, { businessName: branding?.businessName || 'Quikpik', logoUrl: branding?.logoUrl }, { preheader: 'Reset your Quikpik password' })
   });
 }
