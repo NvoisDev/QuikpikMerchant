@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users } from "lucide-react";
+import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users, UserPlus, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty, CommandGroup } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,6 +15,8 @@ interface Wholesaler {
   id: string;
   businessName: string;
   email: string;
+  logoUrl?: string;
+  logoType?: string;
 }
 
 // Dynamic welcome message generator
@@ -79,6 +81,13 @@ export default function CustomerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingWholesalers, setIsLoadingWholesalers] = useState(false);
   const [open, setOpen] = useState(false);
+  const [showEnquiryForm, setShowEnquiryForm] = useState(false);
+  const [enquiryName, setEnquiryName] = useState("");
+  const [enquiryPhone, setEnquiryPhone] = useState("");
+  const [enquiryEmail, setEnquiryEmail] = useState("");
+  const [enquiryBusiness, setEnquiryBusiness] = useState("");
+  const [enquiryMessage, setEnquiryMessage] = useState("");
+  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
   const { toast } = useToast();
   const { backToHome } = useAuth();
 
@@ -135,7 +144,13 @@ export default function CustomerLogin() {
   const handleWholesalerSelect = (wholesaler: Wholesaler) => {
     setSelectedWholesaler(wholesaler);
     setOpen(false);
-    setStep(2); // Go to step 2 (digits entry page) after wholesaler selection
+    setShowEnquiryForm(false);
+    setEnquiryName("");
+    setEnquiryPhone("");
+    setEnquiryEmail("");
+    setEnquiryBusiness("");
+    setEnquiryMessage("");
+    setStep(2);
   };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
@@ -178,6 +193,73 @@ export default function CustomerLogin() {
   const handleBack = () => {
     setStep(1);
     setLastFourDigits("");
+    setShowEnquiryForm(false);
+  };
+
+  const handleEnquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWholesaler || !enquiryName.trim() || !enquiryPhone.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in your name and phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmittingEnquiry(true);
+    try {
+      const response = await fetch('/api/customer/request-wholesaler-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wholesalerId: selectedWholesaler.id,
+          customerName: enquiryName.trim(),
+          customerPhone: enquiryPhone.trim(),
+          customerEmail: enquiryEmail.trim() || undefined,
+          businessName: enquiryBusiness.trim() || undefined,
+          requestMessage: enquiryMessage.trim() || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Request Sent!",
+          description: `Your request has been sent to ${selectedWholesaler.businessName}. They'll review it and get back to you.`,
+        });
+        setShowEnquiryForm(false);
+        setEnquiryName("");
+        setEnquiryPhone("");
+        setEnquiryEmail("");
+        setEnquiryBusiness("");
+        setEnquiryMessage("");
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Request Failed",
+          description: data.error || "Something went wrong. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Connection Error",
+        description: "Unable to send request. Please check your connection.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingEnquiry(false);
+    }
+  };
+
+  const getBusinessInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -198,14 +280,26 @@ export default function CustomerLogin() {
 
           {/* Logo and welcome */}
           <div className="text-center mb-8">
-            <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6 shadow-lg">
-              <Store className="h-10 w-10 text-white" />
-            </div>
+            {step === 2 && selectedWholesaler?.logoUrl ? (
+              <img
+                src={selectedWholesaler.logoUrl}
+                alt={selectedWholesaler.businessName}
+                className="mx-auto h-20 w-20 rounded-2xl object-cover mb-6 shadow-lg"
+              />
+            ) : step === 2 && selectedWholesaler ? (
+              <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6 shadow-lg">
+                <span className="text-2xl font-bold text-white">{getBusinessInitials(selectedWholesaler.businessName)}</span>
+              </div>
+            ) : (
+              <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6 shadow-lg">
+                <Store className="h-10 w-10 text-white" />
+              </div>
+            )}
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {step === 1 ? "Find Your Store" : "Welcome Back"}
+              {step === 1 ? "Find Your Store" : showEnquiryForm ? "Request Access" : "Welcome Back"}
             </h1>
             <p className="text-gray-600 text-lg">
-              {step === 1 ? "Search for your wholesaler to access their products" : `Accessing ${selectedWholesaler?.businessName}`}
+              {step === 1 ? "Search for your wholesaler to access their products" : showEnquiryForm ? `Send a request to ${selectedWholesaler?.businessName}` : `Accessing ${selectedWholesaler?.businessName}`}
             </p>
           </div>
 
@@ -217,7 +311,7 @@ export default function CustomerLogin() {
                 <div className={`h-0.5 w-8 transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
                 <div className={`h-3 w-3 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
               </div>
-              <p className="text-sm text-gray-500">Step {step} of 3</p>
+              <p className="text-sm text-gray-500">{showEnquiryForm ? "Wholesale Enquiry" : `Step ${step} of 3`}</p>
             </CardHeader>
             
             <CardContent className="space-y-6">
@@ -293,56 +387,161 @@ export default function CustomerLogin() {
                     </p>
                   </div>
                 </div>
-              ) : (
-                <form onSubmit={handlePhoneSubmit} className="space-y-6">
+              ) : showEnquiryForm ? (
+                <form onSubmit={handleEnquirySubmit} className="space-y-4">
                   <div className="space-y-3">
-                    <Label htmlFor="phone" className="text-base font-medium">Phone Verification</Label>
-                    <div className="text-center mb-4">
-                      <p className="text-sm text-gray-600">Enter the last 4 digits of your phone number</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-name" className="text-sm font-medium">Your Name *</Label>
+                      <Input
+                        id="enquiry-name"
+                        type="text"
+                        placeholder="Full name"
+                        value={enquiryName}
+                        onChange={(e) => setEnquiryName(e.target.value)}
+                        className="h-11 border-2 focus:border-primary"
+                        required
+                      />
                     </div>
-                    <Input
-                      id="phone"
-                      type="text"
-                      placeholder="••••"
-                      value={lastFourDigits}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                        setLastFourDigits(value);
-                      }}
-                      className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-primary"
-                      disabled={isLoading}
-                      maxLength={4}
-                      autoComplete="off"
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-phone" className="text-sm font-medium">Phone Number *</Label>
+                      <Input
+                        id="enquiry-phone"
+                        type="tel"
+                        placeholder="+44 7xxx xxx xxx"
+                        value={enquiryPhone}
+                        onChange={(e) => setEnquiryPhone(e.target.value)}
+                        className="h-11 border-2 focus:border-primary"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-email" className="text-sm font-medium">Email</Label>
+                      <Input
+                        id="enquiry-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={enquiryEmail}
+                        onChange={(e) => setEnquiryEmail(e.target.value)}
+                        className="h-11 border-2 focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-business" className="text-sm font-medium">Business Name</Label>
+                      <Input
+                        id="enquiry-business"
+                        type="text"
+                        placeholder="Your business name"
+                        value={enquiryBusiness}
+                        onChange={(e) => setEnquiryBusiness(e.target.value)}
+                        className="h-11 border-2 focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-message" className="text-sm font-medium">Message</Label>
+                      <textarea
+                        id="enquiry-message"
+                        placeholder="Tell them about your business and what you're looking for..."
+                        value={enquiryMessage}
+                        onChange={(e) => setEnquiryMessage(e.target.value)}
+                        className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus:border-primary resize-none"
+                        rows={3}
+                      />
+                    </div>
                   </div>
-                  
+
                   <div className="flex space-x-3">
-                    <Button 
+                    <Button
                       type="button"
                       variant="outline"
-                      onClick={handleBack}
-                      disabled={isLoading}
+                      onClick={() => setShowEnquiryForm(false)}
+                      disabled={isSubmittingEnquiry}
                       className="flex-1 h-12"
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back
+                      Back to Login
                     </Button>
-                    <Button 
-                      type="submit" 
-                      className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
-                      disabled={isLoading || lastFourDigits.length !== 4}
+                    <Button
+                      type="submit"
+                      className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                      disabled={isSubmittingEnquiry || !enquiryName.trim() || !enquiryPhone.trim()}
                     >
-                      {isLoading ? (
+                      {isSubmittingEnquiry ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Verifying...
+                          Sending...
                         </>
                       ) : (
-                        "Access Store"
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Request
+                        </>
                       )}
                     </Button>
                   </div>
                 </form>
+              ) : (
+                <div className="space-y-6">
+                  <form onSubmit={handlePhoneSubmit} className="space-y-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="phone" className="text-base font-medium">Phone Verification</Label>
+                      <div className="text-center mb-4">
+                        <p className="text-sm text-gray-600">Enter the last 4 digits of your phone number</p>
+                      </div>
+                      <Input
+                        id="phone"
+                        type="text"
+                        placeholder="••••"
+                        value={lastFourDigits}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setLastFourDigits(value);
+                        }}
+                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-primary"
+                        disabled={isLoading}
+                        maxLength={4}
+                        autoComplete="off"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={handleBack}
+                        disabled={isLoading}
+                        className="flex-1 h-12"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
+                        disabled={isLoading || lastFourDigits.length !== 4}
+                      >
+                        {isLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Verifying...
+                          </>
+                        ) : (
+                          "Access Store"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+
+                  <div className="border-t pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowEnquiryForm(true)}
+                      className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors py-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Not a customer yet? Request wholesale access
+                    </button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
