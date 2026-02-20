@@ -16959,6 +16959,58 @@ https://quikpik.app`;
               .where(eq(orders.id, orderId));
             
             console.log(`✅ Quote order ${orderId} updated: paid=${totalPaidNow}, outstanding=${amountOutstanding}, paymentStatus=${paymentStatus}, orderStatus=${orderStatus}`);
+
+            // Send payment notification emails to wholesaler and customer (with idempotency check)
+            try {
+              const order = existingOrder[0];
+              const prevPaidStr = order?.amountPaid || '0';
+              const alreadyProcessed = parseFloat(prevPaidStr) >= totalPaidNow;
+              if (order && !alreadyProcessed) {
+                const wholesaler = await storage.getUser(order.wholesalerId);
+                const customer = order.retailerId ? await storage.getUser(order.retailerId) : null;
+                const orderNum = order.orderNumber || `#${orderId}`;
+                const isFullyPaid = amountOutstanding <= 0;
+                const branding = { businessName: wholesaler?.businessName || 'Quikpik', logoUrl: wholesaler?.logoUrl };
+
+                // Email to wholesaler
+                if (wholesaler?.email) {
+                  const wBody = emailHeading(isFullyPaid ? 'Payment Received - Fully Paid' : 'Deposit Payment Received', { size: '20px', color: '#10b981' }) +
+                    '<p style="margin:0 0 16px">A payment has been received for order <b>' + orderNum + '</b>.</p>' +
+                    emailCard(
+                      '<p style="margin:0 0 4px"><b>Customer:</b> ' + (order.customerName || 'N/A') + '</p>' +
+                      '<p style="margin:0 0 4px"><b>Amount Paid:</b> £' + amountPaid.toFixed(2) + '</p>' +
+                      '<p style="margin:0 0 4px"><b>Total Paid:</b> £' + totalPaidNow.toFixed(2) + ' of £' + totalAmount.toFixed(2) + '</p>' +
+                      (isFullyPaid
+                        ? '<p style="margin:0"><b>Status:</b> ' + emailBadge('Fully Paid', '#10b981') + '</p>'
+                        : '<p style="margin:0 0 4px"><b>Outstanding:</b> £' + amountOutstanding.toFixed(2) + '</p><p style="margin:0"><b>Status:</b> ' + emailBadge('Partially Paid', '#f59e0b') + '</p>'),
+                      { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
+                    ) +
+                    emailButton('View Order', (process.env.APP_URL || 'https://quikpik.app') + '/orders');
+                  const wHtml = wrapCustomerEmail(wBody, branding, { preheader: (isFullyPaid ? 'Full payment' : 'Deposit') + ' received for ' + orderNum });
+                  await sendEmail({ to: wholesaler.email, from: 'hello@quikpik.co', subject: (isFullyPaid ? 'Payment Received' : 'Deposit Received') + ' - ' + orderNum, html: wHtml });
+                  console.log('📧 Payment notification sent to wholesaler:', wholesaler.email);
+                }
+
+                // Email to customer
+                if (customer?.email) {
+                  const cBody = emailHeading(isFullyPaid ? 'Payment Confirmed' : 'Deposit Payment Confirmed', { size: '20px', color: '#10b981' }) +
+                    '<p style="margin:0 0 16px">Thank you! Your payment for order <b>' + orderNum + '</b> has been received.</p>' +
+                    emailCard(
+                      '<p style="margin:0 0 4px"><b>Amount Paid:</b> £' + amountPaid.toFixed(2) + '</p>' +
+                      (isFullyPaid
+                        ? '<p style="margin:0"><b>Status:</b> ' + emailBadge('Fully Paid', '#10b981') + '</p>'
+                        : '<p style="margin:0 0 4px"><b>Remaining Balance:</b> £' + amountOutstanding.toFixed(2) + '</p><p style="margin:0"><b>Status:</b> ' + emailBadge('Deposit Paid', '#3b82f6') + '</p>'),
+                      { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
+                    ) +
+                    '<p style="margin:16px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + (wholesaler?.businessName || 'your wholesaler') + ' directly.</p>';
+                  const cHtml = wrapCustomerEmail(cBody, branding, { preheader: 'Payment confirmed for ' + orderNum });
+                  await sendEmail({ to: customer.email, from: 'hello@quikpik.co', subject: 'Payment Confirmed - ' + orderNum, html: cHtml });
+                  console.log('📧 Payment confirmation sent to customer:', customer.email);
+                }
+              }
+            } catch (emailErr) {
+              console.error('⚠️ Failed to send payment notification emails:', emailErr);
+            }
           }
           break;
         }
@@ -17399,7 +17451,7 @@ https://quikpik.app`;
       const total = subtotal + customerTransactionFee;
 
       // Calculate deposit amount
-      const validDepositPercentage = [25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
+      const validDepositPercentage = [0, 25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
 
@@ -17485,11 +17537,11 @@ https://quikpik.app`;
         }
       }
 
-      // Create Stripe Payment Link
+      // Create Stripe Payment Link (skip for 0% pay-later quotes)
       let paymentLinkUrl = '';
       let paymentLinkId = '';
       
-      if (stripe) {
+      if (stripe && validDepositPercentage > 0) {
         try {
           // Create line items for Stripe - for deposits, create a single line item for the deposit amount
           const isDeposit = validDepositPercentage < 100;
@@ -17562,8 +17614,9 @@ https://quikpik.app`;
       }
 
       // Send SMS notification
-      if (sendVia === 'sms' && paymentLinkUrl && customer.phoneNumber) {
-        const isDeposit = validDepositPercentage < 100;
+      if (sendVia === 'sms' && customer.phoneNumber) {
+        const isDeposit = validDepositPercentage > 0 && validDepositPercentage < 100;
+        const isPayLater = validDepositPercentage === 0;
         const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
         const storeLink = `https://quikpik.app/store/${wholesalerId}`;
         const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
@@ -17597,7 +17650,9 @@ https://quikpik.app`;
           balanceDueText = '\nBalance due: Immediately';
         }
         
-        const message = isDeposit 
+        const message = isPayLater
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later\n\nPlease arrange payment with ${businessName} directly.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          : isDeposit 
           ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
           : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}\n\nTotal: £${total.toFixed(2)}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
         
@@ -17622,7 +17677,8 @@ https://quikpik.app`;
       // Send confirmation email to wholesaler
       try {
         if (wholesaler.email) {
-          const isDeposit = validDepositPercentage < 100;
+          const isDeposit = validDepositPercentage > 0 && validDepositPercentage < 100;
+          const isPayLater = validDepositPercentage === 0;
           const itemsForEmail: string[] = [];
           for (const item of items) {
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
@@ -17632,8 +17688,8 @@ https://quikpik.app`;
             itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${productName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
           }
 
-          const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <strong>${orderNumber}</strong></p><p style="margin:0 0 20px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`${emailHeading('Customer', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 6px"><strong>Business:</strong> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 6px"><strong>Phone:</strong> <a href="tel:${customer.phoneNumber}" style="color:#10b981;text-decoration:none">${customer.phoneNumber}</a></p>` : ''}${customer.email ? `<p style="margin:0"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color:#10b981;text-decoration:none">${customer.email}</a></p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${emailCard(`${emailHeading('Items', { size: '16px' })}<ul style="margin:0;padding-left:20px">${itemsForEmail.join('')}</ul>`)}${emailCard(`<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0"><strong>Subtotal:</strong></td><td style="padding:6px 0;text-align:right">£${subtotal.toFixed(2)}</td></tr>${isDeposit ? `<tr><td style="padding:6px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:6px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:6px 0">Outstanding Balance:</td><td style="padding:6px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:10px 0 4px;font-size:17px;font-weight:700">Total:</td><td style="padding:10px 0 4px;text-align:right;font-size:17px;font-weight:700;color:#10b981">£${total.toFixed(2)}</td></tr></table>`)}${emailCard(`${emailHeading('Status', { size: '16px', color: '#d97706' })}<p style="margin:0 0 6px"><strong>Sent via:</strong> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0"><strong>Payment:</strong> ${emailBadge('Awaiting Payment', '#f59e0b')}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}${paymentLinkUrl ? emailCard(`${emailHeading('Payment Link', { size: '16px', color: '#059669' })}<p style="margin:0 0 12px">This payment link was sent to the customer:</p>${emailButton('View Payment Link', paymentLinkUrl, '#059669')}`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }) : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
-
+          const paymentStatusText = isPayLater ? emailBadge('Pay Later', '#3b82f6') : emailBadge('Awaiting Payment', '#f59e0b');
+          const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0"><b>Email:</b> ${customer.email}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:0 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0"><b>Subtotal:</b></td><td style="padding:4px 0;text-align:right">£${subtotal.toFixed(2)}</td></tr>${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${total.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({

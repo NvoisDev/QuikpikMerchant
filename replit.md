@@ -8,6 +8,13 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**February 20, 2026 - 0% Pay Later & Payment Notification Emails:**
+- **0% DEPOSIT OPTION**: Wholesalers can now select "Pay Later" (0%) when creating quotes - no Stripe payment link is generated, customer receives "Pay Later" SMS, quote email shows "Pay Later" badge
+- **PAYMENT STATUS EMAILS**: Both wholesaler and customer receive email notifications when payments are received via Stripe (deposit or full payment). Includes amount paid, total paid, outstanding balance, and fully/partially paid status badges
+- **IDEMPOTENCY**: Webhook payment emails include idempotency check to prevent duplicate emails on Stripe webhook retries
+- **EMAIL SIZE FIX**: Base64 data URL logos (265KB+) are now excluded from emails - only hosted http/https logos are included. This was the root cause of Gmail clipping all emails
+- **SIMPLIFIED EMAIL TEMPLATES**: Entire email template system (email-templates.ts) rewritten to use simple string concatenation, minimal HTML structure, no minification function
+
 **February 20, 2026 - Complete Email Template Modernisation:**
 - **UNIFIED TEMPLATE SYSTEM**: All emails across the platform now use the centralised template system in `server/email-templates.ts`
 - **UNIFIED POWERED-BY MODEL**: ALL emails now use `wrapCustomerEmail` - branded with wholesaler's business identity (logo/initials + business name) with subtle "Powered by Quikpik Merchant" footer. No more separate platform-branded template. `wrapPlatformEmail` kept for backward compatibility but no longer used.

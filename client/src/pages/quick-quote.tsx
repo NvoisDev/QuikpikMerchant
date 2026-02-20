@@ -93,7 +93,7 @@ export default function QuickQuote() {
     email: '',
     businessName: '',
   });
-  const [depositPercentage, setDepositPercentage] = useState<25 | 50 | 75 | 100>(100);
+  const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
@@ -141,7 +141,7 @@ export default function QuickQuote() {
       customerId: string;
       items: QuoteItem[];
       sendVia: 'sms' | 'link';
-      depositPercentage: 25 | 50 | 75 | 100;
+      depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
@@ -260,7 +260,7 @@ export default function QuickQuote() {
       items: quoteItems,
       sendVia: sendMethod,
       depositPercentage,
-      balanceDueDays: depositPercentage === 100 ? 0 : balanceDueDays,
+      balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
     });
   };
 
@@ -296,28 +296,37 @@ export default function QuickQuote() {
             </div>
             <CardTitle className="text-xl md:text-2xl">Quote Created!</CardTitle>
             <CardDescription className="text-sm">
-              Order #{createdQuote.orderNumber} is awaiting payment.
+              {createdQuote.paymentLink 
+                ? `Order #${createdQuote.orderNumber} is awaiting payment.`
+                : `Order #${createdQuote.orderNumber} has been created (Pay Later).`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 p-4 md:p-6 pt-0">
-            <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
-              <Label className="text-xs md:text-sm text-gray-600">Payment Link</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input 
-                  value={createdQuote.paymentLink} 
-                  readOnly 
-                  className="flex-1 bg-white text-xs md:text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={copyPaymentLink}
-                  className="shrink-0"
-                >
-                  {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
+            {createdQuote.paymentLink ? (
+              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+                <Label className="text-xs md:text-sm text-gray-600">Payment Link</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input 
+                    value={createdQuote.paymentLink} 
+                    readOnly 
+                    className="flex-1 bg-white text-xs md:text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={copyPaymentLink}
+                    className="shrink-0"
+                  >
+                    {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 p-3 md:p-4 rounded-lg text-center">
+                <p className="text-sm text-blue-800 font-medium">Pay Later - No payment link generated</p>
+                <p className="text-xs text-blue-600 mt-1">Customer will arrange payment with you directly.</p>
+              </div>
+            )}
 
             {sendMethod === 'link' && (
               <p className="text-xs md:text-sm text-gray-600 text-center">
@@ -703,22 +712,32 @@ export default function QuickQuote() {
 
               <div>
                 <Label className="text-sm font-medium mb-2 block">Payment Type</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[25, 50, 75, 100].map((percent) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 25, 50, 75, 100].map((percent) => (
                     <Button
                       key={percent}
                       variant={depositPercentage === percent ? 'default' : 'outline'}
                       className={depositPercentage === percent ? 'bg-green-600 hover:bg-green-700' : ''}
                       size="sm"
-                      onClick={() => setDepositPercentage(percent as 25 | 50 | 75 | 100)}
+                      onClick={() => setDepositPercentage(percent as 0 | 25 | 50 | 75 | 100)}
                     >
-                      {percent === 100 ? 'Full' : `${percent}%`}
+                      {percent === 100 ? 'Full' : percent === 0 ? 'Pay Later' : `${percent}%`}
                     </Button>
                   ))}
                 </div>
               </div>
 
-              {depositPercentage < 100 && (
+              {depositPercentage === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-800 font-medium">Pay Later - No payment required now</span>
+                    <span className="font-semibold text-blue-800">£{calculateTotal().toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">Customer will pay the full amount later. No payment link will be sent.</p>
+                </div>
+              )}
+
+              {depositPercentage > 0 && depositPercentage < 100 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-amber-800">Deposit ({depositPercentage}%)</span>
@@ -731,7 +750,7 @@ export default function QuickQuote() {
                 </div>
               )}
 
-              {depositPercentage < 100 && (
+              {depositPercentage > 0 && depositPercentage < 100 && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Balance Due In</Label>
                   <div className="grid grid-cols-5 gap-1">
