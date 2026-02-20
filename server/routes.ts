@@ -17836,7 +17836,88 @@ https://quikpik.app`;
       }
 
       console.log(`✅ Quote ${orderNumber} created successfully`);
-      
+
+      // Send confirmation email to wholesaler
+      try {
+        if (wholesaler.email) {
+          const isDeposit = validDepositPercentage < 100;
+          const itemsForEmail: string[] = [];
+          for (const item of items) {
+            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+            const productName = product?.name || `Product #${item.productId}`;
+            const sellingType = item.sellingType || 'units';
+            const itemTotal = item.customPrice * item.quantity;
+            itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${productName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
+          }
+
+          const quoteEmailBody = `
+            ${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}
+            <p style="margin: 0 0 4px 0;">Order <strong>${orderNumber}</strong></p>
+            <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280;">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+
+            ${emailCard(`
+              ${emailHeading('Customer', { size: '16px' })}
+              <p style="margin: 0 0 6px 0;"><strong>Name:</strong> ${customer.firstName} ${customer.lastName}</p>
+              ${customer.businessName ? `<p style="margin: 0 0 6px 0;"><strong>Business:</strong> ${customer.businessName}</p>` : ''}
+              ${customer.phoneNumber ? `<p style="margin: 0 0 6px 0;"><strong>Phone:</strong> <a href="tel:${customer.phoneNumber}" style="color: #10b981; text-decoration: none;">${customer.phoneNumber}</a></p>` : ''}
+              ${customer.email ? `<p style="margin: 0;"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color: #10b981; text-decoration: none;">${customer.email}</a></p>` : ''}
+            `, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}
+
+            ${emailCard(`
+              ${emailHeading('Items', { size: '16px' })}
+              <ul style="margin: 0; padding-left: 20px;">${itemsForEmail.join('')}</ul>
+            `)}
+
+            ${emailCard(`
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 6px 0;"><strong>Subtotal:</strong></td>
+                  <td style="padding: 6px 0; text-align: right;">£${subtotal.toFixed(2)}</td>
+                </tr>
+                ${isDeposit ? `
+                <tr>
+                  <td style="padding: 6px 0;">Deposit (${validDepositPercentage}%):</td>
+                  <td style="padding: 6px 0; text-align: right;">£${depositAmount.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0;">Outstanding Balance:</td>
+                  <td style="padding: 6px 0; text-align: right;">£${outstandingAmount.toFixed(2)}</td>
+                </tr>
+                ` : ''}
+                <tr style="border-top: 2px solid #e5e7eb;">
+                  <td style="padding: 10px 0 4px 0; font-size: 17px; font-weight: 700;">Total:</td>
+                  <td style="padding: 10px 0 4px 0; text-align: right; font-size: 17px; font-weight: 700; color: #10b981;">£${total.toFixed(2)}</td>
+                </tr>
+              </table>
+            `)}
+
+            ${emailCard(`
+              ${emailHeading('Status', { size: '16px', color: '#d97706' })}
+              <p style="margin: 0 0 6px 0;"><strong>Sent via:</strong> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p>
+              <p style="margin: 0;"><strong>Payment:</strong> ${emailBadge('Awaiting Payment', '#f59e0b')}</p>
+            `, { borderColor: '#fde68a', bgColor: '#fffbeb' })}
+
+            ${paymentLinkUrl ? emailCard(`
+              ${emailHeading('Payment Link', { size: '16px', color: '#059669' })}
+              <p style="margin: 0 0 8px 0;">This link was sent to the customer:</p>
+              <p style="margin: 0; word-break: break-all;"><a href="${paymentLinkUrl}" style="color: #10b981; text-decoration: none;">${paymentLinkUrl}</a></p>
+            `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }) : ''}
+
+            ${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}
+          `;
+
+          await sendEmail({
+            to: wholesaler.email,
+            from: 'hello@quikpik.co',
+            subject: `Quote ${orderNumber} Sent to ${customer.firstName} ${customer.lastName}`,
+            html: wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${total.toFixed(2)}` })
+          });
+          console.log(`📧 Quote confirmation email sent to ${wholesaler.email}`);
+        }
+      } catch (quoteEmailError) {
+        console.error('Failed to send quote confirmation email:', quoteEmailError);
+      }
+
       res.json({
         success: true,
         orderId: quoteOrder.id,
