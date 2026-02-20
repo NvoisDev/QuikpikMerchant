@@ -178,18 +178,8 @@ export class OrderNotificationService {
       const wholesaler = order ? await storage.getUser(order.wholesalerId) : null;
       const businessName = wholesaler?.businessName || notification.wholesalerName;
 
-      const emailBody = `
-        ${emailHeading('Order Update', { size: '22px', color: '#10b981' })}
-        <p style="margin: 0 0 20px 0;">Hi ${notification.customerName},</p>
+      const emailBody = `${emailHeading('Order Update', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Hi ${notification.customerName},</p>${emailCard(`<p style="margin:0 0 8px"><strong>Order:</strong> ${notification.orderNumber}</p><p style="margin:0 0 8px"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p><p style="margin:0">${emailContent.body}</p>${notification.trackingNumber ? `<p style="margin:8px 0 0"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}${notification.estimatedDelivery ? `<p style="margin:8px 0 0"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}`)}`;
 
-        ${emailCard(`
-          <p style="margin: 0 0 8px 0;"><strong>Order:</strong> ${notification.orderNumber}</p>
-          <p style="margin: 0 0 8px 0;"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p>
-          <p style="margin: 0;">${emailContent.body}</p>
-          ${notification.trackingNumber ? `<p style="margin: 8px 0 0 0;"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}
-          ${notification.estimatedDelivery ? `<p style="margin: 8px 0 0 0;"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}
-        `)}
-      `;
 
       await sendEmail({
         to: notification.customerEmail,

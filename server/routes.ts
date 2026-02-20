@@ -441,28 +441,7 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
     console.log('Team invitation URL will be:', `${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}`);
 
     const inviteUrl = `${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}`;
-    const inviteBody = `
-      ${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}
-      <p style="font-size: 16px; margin: 0 0 8px 0;">Hello ${teamMember.firstName},</p>
-      <p style="margin: 0 0 20px 0;"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the comprehensive wholesale management platform.</p>
-
-      ${emailCard(`
-        <p style="margin: 0 0 6px 0;"><strong>Your Role:</strong> ${emailBadge(teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1))}</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px;">You'll have access to products, orders, customers, and broadcast management.</p>
-      `)}
-
-      <p style="margin: 0 0 20px 0;">As a team member, you'll be able to help manage the wholesale business including inventory, customer communications, and order processing.</p>
-
-      ${emailButton('Accept Invitation & Join Team', inviteUrl)}
-
-      <p style="color: #6b7280; font-size: 13px; text-align: center; margin: 16px 0 0 0;">
-        Or copy and paste this link in your browser:<br>
-        <span style="word-break: break-all;">${inviteUrl}</span>
-      </p>
-
-      ${emailDivider()}
-      <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">This invitation was sent by <strong>${wholesaler.email}</strong>. If you didn't expect this invitation, you can safely ignore this email.</p>
-    `;
+    const inviteBody = `${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${teamMember.firstName},</p><p style="margin:0 0 20px"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the comprehensive wholesale management platform.</p>${emailCard(`<p style="margin:0 0 6px"><strong>Your Role:</strong> ${emailBadge(teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1))}</p><p style="margin:0;color:#6b7280;font-size:14px">You'll have access to products, orders, customers, and broadcast management.</p>`)}<p style="margin:0 0 20px">As a team member, you'll be able to help manage the wholesale business including inventory, customer communications, and order processing.</p>${emailButton('Accept Invitation & Join Team', inviteUrl)}<p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0">Or copy and paste this link in your browser:<br><span style="word-break:break-all">${inviteUrl}</span></p>${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">This invitation was sent by <strong>${wholesaler.email}</strong>. If you didn't expect this invitation, you can safely ignore this email.</p>`;
 
     const msg = {
       to: teamMember.email,
@@ -2143,24 +2122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (wholesaler && wholesaler.email) {
         try {
           const emailSubject = `New Customer Registration Request - ${customerName}`;
-          const emailBody = `
-            ${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}
-            <p style="margin: 0 0 20px 0;">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>
-
-            ${emailCard(`
-              ${emailHeading('Customer Details', { size: '16px' })}
-              <p style="margin: 0 0 6px 0;"><strong>Name:</strong> ${customerName}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Phone:</strong> ${customerPhone}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>
-              ${productsInterested ? `<p style="margin: 0 0 6px 0;"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}
-              ${orderFrequency ? `<p style="margin: 0 0 6px 0;"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}
-              ${requestMessage ? `<p style="margin: 0;"><strong>Message:</strong> ${requestMessage}</p>` : ''}
-            `, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}
-
-            <p style="margin: 20px 0 0 0;">To approve or manage this request, please log into your Quikpik dashboard.</p>
-            ${emailButton('Review Request', 'https://quikpik.co/customers')}
-          `;
+          const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p><p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
           await sendEmail({
             to: wholesaler.email,
@@ -2299,26 +2261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
             
-            const approvedBody = `
-              ${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}
-              <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${requestData.customerName},</p>
-              <p style="margin: 0 0 20px 0;">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>
-
-              ${emailCard(`
-                ${emailHeading('Your Access Details', { size: '16px' })}
-                <p style="margin: 0 0 6px 0;"><strong>Phone Number:</strong> ${requestData.customerPhone}</p>
-                <p style="margin: 0;">Use your phone number to log in and start ordering.</p>
-              `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-
-              ${responseMessage ? emailCard(`
-                <p style="margin: 0 0 4px 0; font-weight: 600;">Message from ${businessName}:</p>
-                <p style="margin: 0; color: #4b5563;">${responseMessage}</p>
-              `) : ''}
-
-              ${emailButton('Start Shopping', `https://quikpik.co/customer/${userId}`)}
-
-              <p style="margin: 20px 0 0 0;">We look forward to serving you!</p>
-            `;
+            const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${requestData.customerPhone}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${businessName}:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.co/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,
@@ -2338,18 +2281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
             
-            const rejectedBody = `
-              ${emailHeading('Registration Update', { size: '22px' })}
-              <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${requestData.customerName},</p>
-              <p style="margin: 0 0 20px 0;">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>
-
-              ${responseMessage ? emailCard(`
-                <p style="margin: 0 0 4px 0; font-weight: 600;">Reason:</p>
-                <p style="margin: 0; color: #4b5563;">${responseMessage}</p>
-              `) : ''}
-
-              <p style="margin: 20px 0 0 0;">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>
-            `;
+            const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,
@@ -6467,30 +6399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const orderTotal = parseFloat(order.total?.toString() || '0');
           const amountPaid = parseFloat(order.amountPaid?.toString() || '0');
           
-          const cancelRequestBody = `
-            ${emailHeading('Cancellation Request', { size: '22px', color: '#EF4444' })}
-            <p style="margin: 0 0 20px 0;">A customer has requested to cancel their order.</p>
-
-            ${emailCard(`
-              ${emailHeading(`Order ${order.orderNumber}`, { size: '16px', color: '#DC2626' })}
-              <p style="margin: 0 0 6px 0;"><strong>Customer:</strong> ${customerName}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Order Total:</strong> £${orderTotal.toFixed(2)}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Amount Paid:</strong> £${amountPaid.toFixed(2)}</p>
-              <p style="margin: 0 0 6px 0;"><strong>Reason:</strong> ${reasonCategory}</p>
-              ${reasonNotes ? `<p style="margin: 0;"><strong>Additional Notes:</strong> ${reasonNotes}</p>` : ''}
-            `, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}
-
-            ${emailCard(`
-              ${emailHeading('What happens next?', { size: '16px', color: '#EA580C' })}
-              <p style="margin: 0 0 8px 0;">Please review this cancellation request in your dashboard and decide whether to:</p>
-              <ul style="margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 4px;"><strong>Approve</strong> - The order will be cancelled and any payments will be refunded</li>
-                <li><strong>Reject</strong> - The order will remain active and the customer will be notified</li>
-              </ul>
-            `, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}
-
-            ${emailButton('Review in Dashboard', 'https://quikpik.co/orders')}
-          `;
+          const cancelRequestBody = `${emailHeading('Cancellation Request', { size: '22px', color: '#EF4444' })}<p style="margin:0 0 20px">A customer has requested to cancel their order.</p>${emailCard(`${emailHeading(`Order ${order.orderNumber}`, { size: '16px', color: '#DC2626' })}<p style="margin:0 0 6px"><strong>Customer:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Order Total:</strong> £${orderTotal.toFixed(2)}</p><p style="margin:0 0 6px"><strong>Amount Paid:</strong> £${amountPaid.toFixed(2)}</p><p style="margin:0 0 6px"><strong>Reason:</strong> ${reasonCategory}</p>${reasonNotes ? `<p style="margin:0"><strong>Additional Notes:</strong> ${reasonNotes}</p>` : ''}`, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}${emailCard(`${emailHeading('What happens next?', { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Please review this cancellation request in your dashboard and decide whether to:</p><ul style="margin:0;padding-left:20px"><li style="margin-bottom:4px"><strong>Approve</strong> - The order will be cancelled and any payments will be refunded</li><li><strong>Reject</strong> - The order will remain active and the customer will be notified</li></ul>`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}${emailButton('Review in Dashboard', 'https://quikpik.co/orders')}`;
 
           await sendEmail({
             to: wholesaler.email,
@@ -6819,24 +6728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               refundDetails = `<p><strong>Store Credit:</strong> £${amountPaid.toFixed(2)}</p><p>Store credit has been applied to your account for future orders.</p>`;
             }
             
-            const approvedCancelBody = `
-              ${emailHeading('Cancellation Approved', { size: '22px', color: '#10B981' })}
-              <p style="margin: 0 0 8px 0;">Hi ${customerName},</p>
-              <p style="margin: 0 0 20px 0;">Your cancellation request for <strong>Order ${order.orderNumber}</strong> has been approved.</p>
-
-              ${emailCard(`
-                ${refundDetails}
-              `, { borderColor: '#A7F3D0', bgColor: '#ECFDF5' })}
-
-              ${emailCard(`
-                ${emailHeading('Order Summary', { size: '16px' })}
-                <p style="margin: 0 0 6px 0;"><strong>Order Number:</strong> ${order.orderNumber}</p>
-                <p style="margin: 0 0 6px 0;"><strong>Original Total:</strong> £${orderTotal.toFixed(2)}</p>
-                <p style="margin: 0;"><strong>Status:</strong> ${emailBadge('Cancelled', '#EF4444')}</p>
-              `)}
-
-              <p style="margin: 20px 0 0 0; text-align: center; color: #6b7280;">Thank you for your understanding. We hope to serve you again soon!</p>
-            `;
+            const approvedCancelBody = `${emailHeading('Cancellation Approved', { size: '22px', color: '#10B981' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">Your cancellation request for <strong>Order ${order.orderNumber}</strong> has been approved.</p>${emailCard(`${refundDetails}`, { borderColor: '#A7F3D0', bgColor: '#ECFDF5' })}${emailCard(`${emailHeading('Order Summary', { size: '16px' })}<p style="margin:0 0 6px"><strong>Order Number:</strong> ${order.orderNumber}</p><p style="margin:0 0 6px"><strong>Original Total:</strong> £${orderTotal.toFixed(2)}</p><p style="margin:0"><strong>Status:</strong> ${emailBadge('Cancelled', '#EF4444')}</p>`)}<p style="margin:20px 0 0;text-align:center;color:#6b7280">Thank you for your understanding. We hope to serve you again soon!</p>`;
 
             await sendEmail({
               to: customerEmail,
@@ -6845,24 +6737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               html: wrapCustomerEmail(approvedCancelBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
             });
           } else {
-            const rejectedCancelBody = `
-              ${emailHeading('Cancellation Request Update', { size: '22px' })}
-              <p style="margin: 0 0 8px 0;">Hi ${customerName},</p>
-              <p style="margin: 0 0 20px 0;">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>
-
-              ${responseMessage ? emailCard(`
-                <p style="margin: 0 0 4px 0; font-weight: 600;">Reason:</p>
-                <p style="margin: 0; color: #4b5563;">${responseMessage}</p>
-              `, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}
-
-              ${emailCard(`
-                ${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}
-                <p style="margin: 0 0 8px 0;">Your order remains active. If you have any questions or concerns, please contact us directly:</p>
-                <p style="margin: 0 0 4px 0;"><strong>${businessName}</strong></p>
-                ${wholesaler?.phoneNumber ? `<p style="margin: 0 0 4px 0;">Phone: ${wholesaler.phoneNumber}</p>` : ''}
-                ${wholesaler?.email ? `<p style="margin: 0;">Email: ${wholesaler.email}</p>` : ''}
-              `, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}
-            `;
+            const rejectedCancelBody = `${emailHeading('Cancellation Request Update', { size: '22px' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}${emailCard(`${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Your order remains active. If you have any questions or concerns, please contact us directly:</p><p style="margin:0 0 4px"><strong>${businessName}</strong></p>${wholesaler?.phoneNumber ? `<p style="margin:0 0 4px">Phone: ${wholesaler.phoneNumber}</p>` : ''}${wholesaler?.email ? `<p style="margin:0">Email: ${wholesaler.email}</p>` : ''}`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}`;
 
             await sendEmail({
               to: customerEmail,
@@ -7829,40 +7704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (customer.email) {
             try {
               const emailSubject = `Welcome to ${businessName} - Your Wholesale Portal Access`;
-              const welcomeBody = `
-                ${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}
-                <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${name},</p>
-                <p style="margin: 0 0 20px 0;">You've been successfully added to our wholesale customer network. We're delighted to have you on board!</p>
-
-                ${emailCard(`
-                  ${emailHeading('Your Benefits', { size: '16px' })}
-                  <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-                    <li style="margin-bottom: 6px;">Browse our complete product catalog</li>
-                    <li style="margin-bottom: 6px;">Access special wholesale pricing</li>
-                    <li style="margin-bottom: 6px;">Place orders 24/7 through our customer portal</li>
-                    <li style="margin-bottom: 6px;">Track your order status and delivery</li>
-                    <li>Receive instant stock updates and promotions</li>
-                  </ul>
-                `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-
-                ${emailCard(`
-                  ${emailHeading('Getting Started', { size: '16px' })}
-                  <p style="margin: 0; font-size: 14px; color: #374151; white-space: pre-line;">${accessInstructions}</p>
-                `)}
-
-                ${emailCard(`
-                  ${emailHeading('What You Can Do', { size: '16px' })}
-                  <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-                    <li style="margin-bottom: 6px;">View real-time product availability</li>
-                    <li style="margin-bottom: 6px;">Compare prices and specifications</li>
-                    <li style="margin-bottom: 6px;">Manage your order history</li>
-                    <li style="margin-bottom: 6px;">Update your delivery preferences</li>
-                    <li>Access your account information</li>
-                  </ul>
-                `)}
-
-                <p style="margin: 20px 0 0 0;">If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!</p>
-              `;
+              const welcomeBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${name},</p><p style="margin:0 0 20px">You've been successfully added to our wholesale customer network. We're delighted to have you on board!</p>${emailCard(`${emailHeading('Your Benefits', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">Browse our complete product catalog</li><li style="margin-bottom:6px">Access special wholesale pricing</li><li style="margin-bottom:6px">Place orders 24/7 through our customer portal</li><li style="margin-bottom:6px">Track your order status and delivery</li><li>Receive instant stock updates and promotions</li></ul>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(`${emailHeading('Getting Started', { size: '16px' })}<p style="margin:0;font-size:14px;color:#374151;white-space:pre-line">${accessInstructions}</p>`)}${emailCard(`${emailHeading('What You Can Do', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">View real-time product availability</li><li style="margin-bottom:6px">Compare prices and specifications</li><li style="margin-bottom:6px">Manage your order history</li><li style="margin-bottom:6px">Update your delivery preferences</li><li>Access your account information</li></ul>`)}<p style="margin:20px 0 0">If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!</p>`;
 
               const emailSuccess = await sendEmail({
                 to: customer.email,
@@ -12865,34 +12707,7 @@ Please contact the customer to confirm this order.
       const isFullRefund = refund ? (refund.amount >= parseFloat(order.total) * 100) : true;
 
       const wholesalerUser = await storage.getUser(order.wholesalerId);
-      const refundBody = `
-        ${emailHeading('Refund Receipt', { size: '22px', color: '#dc2626' })}
-
-        ${emailCard(`
-          <p style="margin: 0; font-size: 15px; color: #7f1d1d;">
-            ${isFullRefund ? 'Full refund' : 'Partial refund'} of <strong>${currencySymbol}${refundAmount.toFixed(2)}</strong> has been processed for Order #${order.id}
-          </p>
-        `, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}
-
-        ${emailCard(`
-          ${emailHeading('Refund Summary', { size: '16px' })}
-          <p style="margin: 0 0 6px 0;"><strong>Original Order Total:</strong> ${currencySymbol}${parseFloat(order.total).toFixed(2)}</p>
-          <p style="margin: 0 0 6px 0;"><strong>Refund Amount:</strong> <span style="color: #dc2626;">${currencySymbol}${refundAmount.toFixed(2)}</span></p>
-          <p style="margin: 0 0 6px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-          <p style="margin: 0;"><strong>Reference:</strong> ${refund ? refund.id : 'Manual Refund'}</p>
-          ${reason ? `<p style="margin: 10px 0 0 0; padding-top: 10px; border-top: 1px solid #e5e7eb;"><strong>Reason:</strong> ${reason}</p>` : ''}
-        `)}
-
-        ${emailCard(`
-          ${emailHeading('Processing Information', { size: '16px', color: '#0369a1' })}
-          <p style="margin: 0; color: #0369a1;">
-            Your refund has been processed and will appear on your original payment method within 5-10 business days.
-            ${isFullRefund ? ' Your order has been cancelled and any items will be restocked.' : ''}
-          </p>
-        `, { borderColor: '#7dd3fc', bgColor: '#f0f9ff' })}
-
-        <p style="margin: 20px 0 0 0; text-align: center; color: #6b7280;">We apologize for any inconvenience.</p>
-      `;
+      const refundBody = `${emailHeading('Refund Receipt', { size: '22px', color: '#dc2626' })}${emailCard(`<p style="margin:0;font-size:15px;color:#7f1d1d">${isFullRefund ? 'Full refund' : 'Partial refund'} of <strong>${currencySymbol}${refundAmount.toFixed(2)}</strong> has been processed for Order #${order.id}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}${emailCard(`${emailHeading('Refund Summary', { size: '16px' })}<p style="margin:0 0 6px"><strong>Original Order Total:</strong> ${currencySymbol}${parseFloat(order.total).toFixed(2)}</p><p style="margin:0 0 6px"><strong>Refund Amount:</strong> <span style="color:#dc2626">${currencySymbol}${refundAmount.toFixed(2)}</span></p><p style="margin:0 0 6px"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p><p style="margin:0"><strong>Reference:</strong> ${refund ? refund.id : 'Manual Refund'}</p>${reason ? `<p style="margin:10px 0 0;padding-top:10px;border-top:1px solid #e5e7eb"><strong>Reason:</strong> ${reason}</p>` : ''}`)}${emailCard(`${emailHeading('Processing Information', { size: '16px', color: '#0369a1' })}<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within 5-10 business days.${isFullRefund ? ' Your order has been cancelled and any items will be restocked.' : ''}</p>`, { borderColor: '#7dd3fc', bgColor: '#f0f9ff' })}<p style="margin:20px 0 0;text-align:center;color:#6b7280">We apologize for any inconvenience.</p>`;
 
       const emailContent = wrapCustomerEmail(refundBody, { businessName, logoUrl: wholesalerUser?.logoUrl }, { preheader: `Refund of ${currencySymbol}${refundAmount.toFixed(2)} processed for Order #${order.id}` });
 
@@ -14114,41 +13929,7 @@ https://quikpik.app`;
     try {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-      const welcomeBody = `
-        ${emailHeading('Welcome to Quikpik!', { size: '22px', color: '#10b981' })}
-        <p style="font-size: 16px; margin: 0 0 8px 0;">Hello ${user.firstName},</p>
-        <p style="margin: 0 0 20px 0;">Congratulations on joining Quikpik! You've taken the first step toward revolutionising your wholesale operations.</p>
-
-        ${emailCard(`
-          ${emailHeading('Our Mission', { size: '16px', color: '#059669' })}
-          <p style="margin: 0;">Empower small and medium wholesalers with enterprise-level tools that streamline operations, boost revenue, and unlock new growth opportunities.</p>
-        `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-
-        ${emailCard(`
-          ${emailHeading('What You Can Do Right Now', { size: '16px', color: '#059669' })}
-          <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
-            <li style="margin-bottom: 6px;"><strong>Add Your Products:</strong> Upload inventory with photos, pricing, and stock levels</li>
-            <li style="margin-bottom: 6px;"><strong>Create Customer Groups:</strong> Organise retail customers for targeted communication</li>
-            <li style="margin-bottom: 6px;"><strong>Send WhatsApp Broadcasts:</strong> Instantly notify customers about new stock and promotions</li>
-            <li style="margin-bottom: 6px;"><strong>Process Orders:</strong> Accept online payments and manage orders efficiently</li>
-            <li><strong>Track Analytics:</strong> Monitor sales performance and customer engagement</li>
-          </ul>
-        `)}
-
-        ${emailButton('Access Your Dashboard', 'https://quikpik.app')}
-
-        ${emailCard(`
-          ${emailHeading('Need Help Getting Started?', { size: '16px' })}
-          <p style="margin: 0 0 8px 0;">Our support team is here to help you succeed:</p>
-          <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
-            <li style="margin-bottom: 4px;">Email: <a href="mailto:support@quikpik.co" style="color: #059669;">support@quikpik.co</a></li>
-            <li style="margin-bottom: 4px;">Quick Setup Session: <a href="https://calendly.com/quikpik-support/setup" style="color: #059669;">Book a free 15-minute call</a></li>
-            <li>Response Time: Within 2 hours during business hours</li>
-          </ul>
-        `)}
-
-        <p style="margin: 20px 0 0 0; text-align: center; color: #6b7280;">Thank you for choosing Quikpik to power your wholesale business!</p>
-      `;
+      const welcomeBody = `${emailHeading('Welcome to Quikpik!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${user.firstName},</p><p style="margin:0 0 20px">Congratulations on joining Quikpik! You've taken the first step toward revolutionising your wholesale operations.</p>${emailCard(`${emailHeading('Our Mission', { size: '16px', color: '#059669' })}<p style="margin:0">Empower small and medium wholesalers with enterprise-level tools that streamline operations, boost revenue, and unlock new growth opportunities.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(`${emailHeading('What You Can Do Right Now', { size: '16px', color: '#059669' })}<ul style="margin:0;padding-left:20px;font-size:14px"><li style="margin-bottom:6px"><strong>Add Your Products:</strong> Upload inventory with photos, pricing, and stock levels</li><li style="margin-bottom:6px"><strong>Create Customer Groups:</strong> Organise retail customers for targeted communication</li><li style="margin-bottom:6px"><strong>Send WhatsApp Broadcasts:</strong> Instantly notify customers about new stock and promotions</li><li style="margin-bottom:6px"><strong>Process Orders:</strong> Accept online payments and manage orders efficiently</li><li><strong>Track Analytics:</strong> Monitor sales performance and customer engagement</li></ul>`)}${emailButton('Access Your Dashboard', 'https://quikpik.app')}${emailCard(`${emailHeading('Need Help Getting Started?', { size: '16px' })}<p style="margin:0 0 8px">Our support team is here to help you succeed:</p><ul style="margin:0;padding-left:20px;font-size:14px"><li style="margin-bottom:4px">Email: <a href="mailto:support@quikpik.co" style="color:#059669">support@quikpik.co</a></li><li style="margin-bottom:4px">Quick Setup Session: <a href="https://calendly.com/quikpik-support/setup" style="color:#059669">Book a free 15-minute call</a></li><li>Response Time: Within 2 hours during business hours</li></ul>`)}<p style="margin:20px 0 0;text-align:center;color:#6b7280">Thank you for choosing Quikpik to power your wholesale business!</p>`;
 
       await sgMail.send({
         to: user.email,
@@ -17850,61 +17631,7 @@ https://quikpik.app`;
             itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${productName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
           }
 
-          const quoteEmailBody = `
-            ${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}
-            <p style="margin: 0 0 4px 0;">Order <strong>${orderNumber}</strong></p>
-            <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280;">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-
-            ${emailCard(`
-              ${emailHeading('Customer', { size: '16px' })}
-              <p style="margin: 0 0 6px 0;"><strong>Name:</strong> ${customer.firstName} ${customer.lastName}</p>
-              ${customer.businessName ? `<p style="margin: 0 0 6px 0;"><strong>Business:</strong> ${customer.businessName}</p>` : ''}
-              ${customer.phoneNumber ? `<p style="margin: 0 0 6px 0;"><strong>Phone:</strong> <a href="tel:${customer.phoneNumber}" style="color: #10b981; text-decoration: none;">${customer.phoneNumber}</a></p>` : ''}
-              ${customer.email ? `<p style="margin: 0;"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color: #10b981; text-decoration: none;">${customer.email}</a></p>` : ''}
-            `, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}
-
-            ${emailCard(`
-              ${emailHeading('Items', { size: '16px' })}
-              <ul style="margin: 0; padding-left: 20px;">${itemsForEmail.join('')}</ul>
-            `)}
-
-            ${emailCard(`
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 6px 0;"><strong>Subtotal:</strong></td>
-                  <td style="padding: 6px 0; text-align: right;">£${subtotal.toFixed(2)}</td>
-                </tr>
-                ${isDeposit ? `
-                <tr>
-                  <td style="padding: 6px 0;">Deposit (${validDepositPercentage}%):</td>
-                  <td style="padding: 6px 0; text-align: right;">£${depositAmount.toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0;">Outstanding Balance:</td>
-                  <td style="padding: 6px 0; text-align: right;">£${outstandingAmount.toFixed(2)}</td>
-                </tr>
-                ` : ''}
-                <tr style="border-top: 2px solid #e5e7eb;">
-                  <td style="padding: 10px 0 4px 0; font-size: 17px; font-weight: 700;">Total:</td>
-                  <td style="padding: 10px 0 4px 0; text-align: right; font-size: 17px; font-weight: 700; color: #10b981;">£${total.toFixed(2)}</td>
-                </tr>
-              </table>
-            `)}
-
-            ${emailCard(`
-              ${emailHeading('Status', { size: '16px', color: '#d97706' })}
-              <p style="margin: 0 0 6px 0;"><strong>Sent via:</strong> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p>
-              <p style="margin: 0;"><strong>Payment:</strong> ${emailBadge('Awaiting Payment', '#f59e0b')}</p>
-            `, { borderColor: '#fde68a', bgColor: '#fffbeb' })}
-
-            ${paymentLinkUrl ? emailCard(`
-              ${emailHeading('Payment Link', { size: '16px', color: '#059669' })}
-              <p style="margin: 0 0 8px 0;">This link was sent to the customer:</p>
-              <p style="margin: 0; word-break: break-all;"><a href="${paymentLinkUrl}" style="color: #10b981; text-decoration: none;">${paymentLinkUrl}</a></p>
-            `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }) : ''}
-
-            ${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}
-          `;
+          const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <strong>${orderNumber}</strong></p><p style="margin:0 0 20px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`${emailHeading('Customer', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 6px"><strong>Business:</strong> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 6px"><strong>Phone:</strong> <a href="tel:${customer.phoneNumber}" style="color:#10b981;text-decoration:none">${customer.phoneNumber}</a></p>` : ''}${customer.email ? `<p style="margin:0"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color:#10b981;text-decoration:none">${customer.email}</a></p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${emailCard(`${emailHeading('Items', { size: '16px' })}<ul style="margin:0;padding-left:20px">${itemsForEmail.join('')}</ul>`)}${emailCard(`<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0"><strong>Subtotal:</strong></td><td style="padding:6px 0;text-align:right">£${subtotal.toFixed(2)}</td></tr>${isDeposit ? `<tr><td style="padding:6px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:6px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:6px 0">Outstanding Balance:</td><td style="padding:6px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:10px 0 4px;font-size:17px;font-weight:700">Total:</td><td style="padding:10px 0 4px;text-align:right;font-size:17px;font-weight:700;color:#10b981">£${total.toFixed(2)}</td></tr></table>`)}${emailCard(`${emailHeading('Status', { size: '16px', color: '#d97706' })}<p style="margin:0 0 6px"><strong>Sent via:</strong> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0"><strong>Payment:</strong> ${emailBadge('Awaiting Payment', '#f59e0b')}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}${paymentLinkUrl ? emailCard(`${emailHeading('Payment Link', { size: '16px', color: '#059669' })}<p style="margin:0 0 8px">This link was sent to the customer:</p><p style="margin:0;word-break:break-all"><a href="${paymentLinkUrl}" style="color:#10b981;text-decoration:none">${paymentLinkUrl}</a></p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }) : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
 
           await sendEmail({
             to: wholesaler.email,

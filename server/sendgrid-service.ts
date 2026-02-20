@@ -87,64 +87,10 @@ export async function sendOrderConfirmationEmail(orderData: {
     dueDate.setDate(dueDate.getDate() + (orderData.balanceDueDays || 0));
     const formattedDueDate = dueDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     
-    paymentTermsHtml = emailCard(`
-      ${emailHeading('Payment Terms', { color: '#92400e' })}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-        <tr>
-          <td style="padding: 6px 0; color: #92400e;">Deposit Paid (${orderData.depositPercentage}%):</td>
-          <td style="padding: 6px 0; text-align: right; color: #92400e; font-weight: 600;">£${orderData.totalPaid.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #92400e;">Balance Outstanding:</td>
-          <td style="padding: 6px 0; text-align: right; color: #92400e; font-weight: 600;">£${orderData.amountOutstanding.toFixed(2)}</td>
-        </tr>
-        <tr style="border-top: 1px solid #f59e0b;">
-          <td style="padding: 10px 0 4px 0; color: #92400e; font-weight: 700;">Balance Due By:</td>
-          <td style="padding: 10px 0 4px 0; text-align: right; color: #92400e; font-weight: 700;">${formattedDueDate}</td>
-        </tr>
-      </table>
-      <p style="margin: 10px 0 0 0; font-size: 13px; color: #92400e;">
-        ${orderData.balanceDueDays === 0 ? 'Payment is due immediately upon order confirmation.' : `You have ${orderData.balanceDueDays} days to pay the remaining balance.`}
-      </p>
-    `, { borderColor: '#f59e0b', bgColor: '#fffbeb' });
+    paymentTermsHtml = emailCard(`${emailHeading('Payment Terms', { color: '#92400e' })}<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0;color:#92400e">Deposit Paid (${orderData.depositPercentage}%):</td><td style="padding:6px 0;text-align:right;color:#92400e;font-weight:600">£${orderData.totalPaid.toFixed(2)}</td></tr><tr><td style="padding:6px 0;color:#92400e">Balance Outstanding:</td><td style="padding:6px 0;text-align:right;color:#92400e;font-weight:600">£${orderData.amountOutstanding.toFixed(2)}</td></tr><tr style="border-top:1px solid #f59e0b"><td style="padding:10px 0 4px;color:#92400e;font-weight:700">Balance Due By:</td><td style="padding:10px 0 4px;text-align:right;color:#92400e;font-weight:700">${formattedDueDate}</td></tr></table><p style="margin:10px 0 0;font-size:13px;color:#92400e">${orderData.balanceDueDays === 0 ? 'Payment is due immediately upon order confirmation.' : `You have ${orderData.balanceDueDays} days to pay the remaining balance.`}</p>`, { borderColor: '#f59e0b', bgColor: '#fffbeb' });
   }
 
-  const body = `
-    <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${orderData.customerName},</p>
-    <p style="margin: 0 0 20px 0;">Thank you for your order. We're pleased to confirm your order has been received and is being processed.</p>
-
-    ${emailCard(`
-      ${emailHeading('Order Details')}
-      <p style="margin: 0 0 6px 0;"><strong>Order Number:</strong> ${orderData.orderNumber}</p>
-      ${orderData.shippingAddress ? `<p style="margin: 0 0 6px 0;"><strong>Shipping to:</strong> ${orderData.shippingAddress}</p>` : ''}
-      ${orderData.estimatedDelivery ? `<p style="margin: 0 0 6px 0;"><strong>Estimated Delivery:</strong> ${orderData.estimatedDelivery}</p>` : ''}
-    `)}
-
-    ${emailTable(['Product', 'Qty', 'Unit Price', 'Total'], itemRows)}
-
-    ${emailCard(`
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-        <tr>
-          <td style="padding: 6px 0;"><strong>Subtotal:</strong></td>
-          <td style="padding: 6px 0; text-align: right; font-weight: 600;">£${orderData.subtotal.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Transaction Fee (5.5% + £0.50):</td>
-          <td style="padding: 6px 0; text-align: right; color: #6b7280; font-size: 14px;">£${orderData.transactionFee.toFixed(2)}</td>
-        </tr>
-        <tr style="border-top: 2px solid #e5e7eb;">
-          <td style="padding: 12px 0 4px 0; font-size: 17px; font-weight: 700;">Total Paid:</td>
-          <td style="padding: 12px 0 4px 0; text-align: right; font-size: 17px; font-weight: 700; color: #10b981;">£${orderData.totalPaid.toFixed(2)}</td>
-        </tr>
-      </table>
-    `)}
-
-    ${paymentTermsHtml}
-
-    ${emailCard(`
-      <p style="margin: 0; color: #0f766e; font-size: 14px;"><strong>Stripe Receipt:</strong> You'll receive a separate payment receipt from Stripe at this email address.</p>
-    `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-  `;
+  const body = `<p style="font-size:16px;margin:0 0 8px">Dear ${orderData.customerName},</p><p style="margin:0 0 20px">Thank you for your order. We're pleased to confirm your order has been received and is being processed.</p>${emailCard(`${emailHeading('Order Details')}<p style="margin:0 0 6px"><strong>Order Number:</strong> ${orderData.orderNumber}</p>${orderData.shippingAddress ? `<p style="margin:0 0 6px"><strong>Shipping to:</strong> ${orderData.shippingAddress}</p>` : ''}${orderData.estimatedDelivery ? `<p style="margin:0 0 6px"><strong>Estimated Delivery:</strong> ${orderData.estimatedDelivery}</p>` : ''}`)}${emailTable(['Product', 'Qty', 'Unit Price', 'Total'], itemRows)}${emailCard(`<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0"><strong>Subtotal:</strong></td><td style="padding:6px 0;text-align:right;font-weight:600">£${orderData.subtotal.toFixed(2)}</td></tr><tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Transaction Fee (5.5% + £0.50):</td><td style="padding:6px 0;text-align:right;color:#6b7280;font-size:14px">£${orderData.transactionFee.toFixed(2)}</td></tr><tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:17px;font-weight:700">Total Paid:</td><td style="padding:12px 0 4px;text-align:right;font-size:17px;font-weight:700;color:#10b981">£${orderData.totalPaid.toFixed(2)}</td></tr></table>`)}${paymentTermsHtml}${emailCard(`<p style="margin:0;color:#0f766e;font-size:14px"><strong>Stripe Receipt:</strong> You'll receive a separate payment receipt from Stripe at this email address.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}`;
 
   const html = wrapCustomerEmail(body, {
     businessName: orderData.wholesalerName,
@@ -171,23 +117,7 @@ export async function sendOrderPhotoNotificationEmail(orderData: {
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailButton, emailHeading } = await import('./email-templates');
 
-  const body = `
-    <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${orderData.customerName},</p>
-    <p style="margin: 0 0 20px 0;">New photos have been added to your order. Here are the details:</p>
-
-    ${emailCard(`
-      ${emailHeading('Order Details')}
-      <p style="margin: 0 0 6px 0;"><strong>Order Number:</strong> ${orderData.orderNumber}</p>
-      <p style="margin: 0 0 6px 0;"><strong>Photos Added:</strong> ${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's' : ''}</p>
-    `)}
-
-    ${emailCard(`
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: #0f766e;">Your order items have been photographed to document them before ${orderData.orderNumber.includes('delivery') ? 'delivery' : 'collection'}.</p>
-      <p style="margin: 0; color: #0f766e; font-size: 14px;">${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's are' : ' is'} now available for you to view.</p>
-    `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-
-    ${orderData.orderPortalUrl ? emailButton('View Order Photos', orderData.orderPortalUrl) : '<p style="text-align: center; color: #6b7280; font-size: 14px;">Log into your customer portal to view the photos.</p>'}
-  `;
+  const body = `<p style="font-size:16px;margin:0 0 8px">Dear ${orderData.customerName},</p><p style="margin:0 0 20px">New photos have been added to your order. Here are the details:</p>${emailCard(`${emailHeading('Order Details')}<p style="margin:0 0 6px"><strong>Order Number:</strong> ${orderData.orderNumber}</p><p style="margin:0 0 6px"><strong>Photos Added:</strong> ${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's' : ''}</p>`)}${emailCard(`<p style="margin:0 0 8px;font-weight:600;color:#0f766e">Your order items have been photographed to document them before ${orderData.orderNumber.includes('delivery') ? 'delivery' : 'collection'}.</p><p style="margin:0;color:#0f766e;font-size:14px">${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's are' : ' is'} now available for you to view.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${orderData.orderPortalUrl ? emailButton('View Order Photos', orderData.orderPortalUrl) : '<p style="text-align:center;color:#6b7280;font-size:14px">Log into your customer portal to view the photos.</p>'}`;
 
   const html = wrapCustomerEmail(body, {
     businessName: orderData.wholesalerName,
@@ -237,56 +167,12 @@ export async function sendWholesalerOrderNotification(orderData: {
 
   let addressHtml = '';
   if (orderData.addressLine1 || orderData.city) {
-    addressHtml = `<p style="margin: 0 0 6px 0;"><strong>Delivery Address:</strong></p>
-      <p style="margin: 0 0 6px 0; padding-left: 16px; color: #4b5563; line-height: 1.5;">
-        ${orderData.addressLine1 ? `${orderData.addressLine1}<br>` : ''}
-        ${orderData.addressLine2 ? `${orderData.addressLine2}<br>` : ''}
-        ${orderData.city || ''}${orderData.state ? `, ${orderData.state}` : ''}<br>
-        ${orderData.postalCode ? `${orderData.postalCode}<br>` : ''}
-        ${orderData.country || 'United Kingdom'}
-      </p>`;
+    addressHtml = `<p style="margin:0 0 6px"><strong>Delivery Address:</strong></p><p style="margin:0 0 6px;padding-left:16px;color:#4b5563;line-height:1.5">${orderData.addressLine1 ? `${orderData.addressLine1}<br>` : ''}${orderData.addressLine2 ? `${orderData.addressLine2}<br>` : ''}${orderData.city || ''}${orderData.state ? `, ${orderData.state}` : ''}<br>${orderData.postalCode ? `${orderData.postalCode}<br>` : ''}${orderData.country || 'United Kingdom'}</p>`;
   } else if (orderData.fulfillmentType === 'delivery') {
-    addressHtml = `<p style="margin: 0 0 6px 0;"><strong>Delivery Address:</strong> Address to be confirmed</p>`;
+    addressHtml = `<p style="margin:0 0 6px"><strong>Delivery Address:</strong> Address to be confirmed</p>`;
   }
 
-  const body = `
-    ${emailHeading('New Order Received', { size: '22px', color: '#10b981' })}
-    <p style="margin: 0 0 20px 0;">You have a new order from <strong>${orderData.customerName}</strong>.</p>
-
-    ${emailCard(`
-      ${emailHeading('Customer Information', { size: '16px' })}
-      <p style="margin: 0 0 6px 0;"><strong>Name:</strong> ${orderData.customerName}</p>
-      <p style="margin: 0 0 6px 0;"><strong>Email:</strong> <a href="mailto:${orderData.customerEmail}" style="color: #10b981; text-decoration: none;">${orderData.customerEmail}</a></p>
-      <p style="margin: 0 0 6px 0;"><strong>Phone:</strong> <a href="tel:${orderData.customerPhone}" style="color: #10b981; text-decoration: none;">${orderData.customerPhone}</a></p>
-      <p style="margin: 0 0 6px 0;"><strong>Fulfillment:</strong> ${emailBadge(orderData.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup', orderData.fulfillmentType === 'delivery' ? '#3b82f6' : '#10b981')}</p>
-      ${addressHtml}
-    `, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}
-
-    ${emailTable(['Product', 'Qty', 'Price', 'Total'], itemRows)}
-
-    ${emailCard(`
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-        <tr>
-          <td style="padding: 6px 0;"><strong>Subtotal:</strong></td>
-          <td style="padding: 6px 0; text-align: right;">£${orderData.subtotal.toFixed(2)}</td>
-        </tr>
-        <tr style="border-top: 2px solid #e5e7eb;">
-          <td style="padding: 12px 0 4px 0; font-size: 17px; font-weight: 700;">Total Order Value:</td>
-          <td style="padding: 12px 0 4px 0; text-align: right; font-size: 17px; font-weight: 700; color: #10b981;">£${orderData.totalAmount.toFixed(2)}</td>
-        </tr>
-      </table>
-    `)}
-
-    ${emailCard(`
-      ${emailHeading('Next Steps', { size: '16px', color: '#0f766e' })}
-      <p style="margin: 0; color: #0f766e;">${orderData.fulfillmentType === 'delivery'
-        ? 'Contact the customer within 24 hours to arrange delivery details.'
-        : 'Contact the customer to arrange pickup details.'
-      }</p>
-    `, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}
-
-    ${emailButton('View Order Details', 'https://quikpik.co/orders')}
-  `;
+  const body = `${emailHeading('New Order Received', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">You have a new order from <strong>${orderData.customerName}</strong>.</p>${emailCard(`${emailHeading('Customer Information', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${orderData.customerName}</p><p style="margin:0 0 6px"><strong>Email:</strong> <a href="mailto:${orderData.customerEmail}" style="color:#10b981;text-decoration:none">${orderData.customerEmail}</a></p><p style="margin:0 0 6px"><strong>Phone:</strong> <a href="tel:${orderData.customerPhone}" style="color:#10b981;text-decoration:none">${orderData.customerPhone}</a></p><p style="margin:0 0 6px"><strong>Fulfillment:</strong> ${emailBadge(orderData.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup', orderData.fulfillmentType === 'delivery' ? '#3b82f6' : '#10b981')}</p>${addressHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${emailTable(['Product', 'Qty', 'Price', 'Total'], itemRows)}${emailCard(`<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0"><strong>Subtotal:</strong></td><td style="padding:6px 0;text-align:right">£${orderData.subtotal.toFixed(2)}</td></tr><tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:17px;font-weight:700">Total Order Value:</td><td style="padding:12px 0 4px;text-align:right;font-size:17px;font-weight:700;color:#10b981">£${orderData.totalAmount.toFixed(2)}</td></tr></table>`)}${emailCard(`${emailHeading('Next Steps', { size: '16px', color: '#0f766e' })}<p style="margin:0;color:#0f766e">${orderData.fulfillmentType === 'delivery' ? 'Contact the customer within 24 hours to arrange delivery details.' : 'Contact the customer to arrange pickup details.'}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order Details', 'https://quikpik.co/orders')}`;
 
   const html = wrapCustomerEmail(body, { businessName: orderData.wholesalerName, logoUrl: undefined }, { preheader: `New order ${orderData.orderNumber} from ${orderData.customerName}` });
 
@@ -334,25 +220,7 @@ export async function sendPaymentReminderEmail(data: {
     headingText = 'Overdue Payment Notice';
   }
   
-  const body = `
-    ${emailHeading(headingText, { color: urgencyColor, size: '22px' })}
-
-    <p style="font-size: 16px; margin: 0 0 8px 0;">Dear ${customerName},</p>
-    <p style="margin: 0 0 20px 0;">${urgencyMessage}</p>
-
-    ${emailCard(`
-      <div style="text-align: center;">
-        <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Amount Due</p>
-        <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 800; color: ${urgencyColor}; letter-spacing: -0.5px;">£${amountOutstanding.toFixed(2)}</p>
-        <p style="margin: 0; font-size: 14px; color: #6b7280;">Order: ${orderNumber}</p>
-      </div>
-    `, { borderColor: urgencyColor })}
-    
-    ${paymentLink ? emailButton('Pay Now', paymentLink, '#10b981') : `<p style="text-align: center; color: #6b7280;">Please contact ${businessName} to arrange payment.</p>`}
-    
-    <p style="margin: 20px 0 0 0;">Thank you for your continued business.</p>
-    <p style="margin: 4px 0 0 0; font-weight: 600;">${businessName}</p>
-  `;
+  const body = `${emailHeading(headingText, { color: urgencyColor, size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${customerName},</p><p style="margin:0 0 20px">${urgencyMessage}</p>${emailCard(`<div style="text-align:center"><p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Amount Due</p><p style="margin:0 0 8px;font-size:32px;font-weight:800;color:${urgencyColor};letter-spacing:-0.5px">£${amountOutstanding.toFixed(2)}</p><p style="margin:0;font-size:14px;color:#6b7280">Order: ${orderNumber}</p></div>`, { borderColor: urgencyColor })}${paymentLink ? emailButton('Pay Now', paymentLink, '#10b981') : `<p style="text-align:center;color:#6b7280">Please contact ${businessName} to arrange payment.</p>`}<p style="margin:20px 0 0">Thank you for your continued business.</p><p style="margin:4px 0 0;font-weight:600">${businessName}</p>`;
 
   const html = wrapCustomerEmail(body, {
     businessName,
