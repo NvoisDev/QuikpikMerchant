@@ -31,12 +31,10 @@ function getInitials(name: string): string {
 }
 
 function buildLogoBlock(branding: EmailBranding): string {
-  const accent = branding.accentColor || '#10b981';
   if (branding.logoUrl) {
     return `<img src="${branding.logoUrl}" alt="${branding.businessName}" style="max-height: 56px; max-width: 180px; object-fit: contain;" />`;
   }
-  const initials = getInitials(branding.businessName);
-  return `<div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background: ${accent}; color: #ffffff; font-size: 22px; font-weight: 700; line-height: 56px; text-align: center; letter-spacing: 1px;">${initials}</div>`;
+  return '';
 }
 
 export function wrapCustomerEmail(body: string, branding: EmailBranding, options?: { preheader?: string }): string {
