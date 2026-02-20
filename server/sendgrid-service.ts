@@ -19,13 +19,22 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
     console.log('📧 Sending email via SendGrid:', { to: params.to, subject: params.subject });
     
+    const content: Array<{type: string; value: string}> = [];
+    if (params.text) {
+      content.push({ type: 'text/plain', value: params.text });
+    }
+    if (params.html) {
+      content.push({ type: 'text/html', value: params.html });
+    }
+    if (content.length === 0) {
+      content.push({ type: 'text/plain', value: ' ' });
+    }
     await mailService.send({
       to: params.to,
       from: params.from || 'hello@quikpik.co',
       subject: params.subject,
-      text: params.text || '',
-      html: params.html || '',
-    });
+      content,
+    } as any);
     
     console.log('✅ Email sent successfully via SendGrid');
     return true;
