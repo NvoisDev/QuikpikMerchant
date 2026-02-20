@@ -2115,7 +2115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for existing pending request
       const existingRequest = await storage.getCustomerRegistrationRequest(wholesalerId, customerPhone);
       if (existingRequest && existingRequest.status === 'pending') {
-        return res.status(400).json({ error: "You already have a pending request with this wholesaler" });
+        return res.status(400).json({ error: `There is already a pending request with the number ${customerPhone}. Please wait for the wholesaler to review it.` });
       }
       
       // Allow customers to request again after rejection (re-request capability)
