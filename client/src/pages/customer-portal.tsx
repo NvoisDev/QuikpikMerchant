@@ -715,28 +715,29 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
           View All Orders
         </Button>
       </div>
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {recentOrders.map((order: Order) => (
-          <div key={order.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm">{order.orderNumber}</span>
-                <Badge className={`${getStatusColor(order.status)} text-xs`}>
-                  {getStatusIcon(order.status)}
-                  <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
-                </Badge>
-                {order.paymentStatus && (
-                  <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
-                    {getPaymentStatusLabel(order.paymentStatus)}
-                  </Badge>
-                )}
-              </div>
+          <div key={order.id} className="border rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-sm">{order.orderNumber}</span>
               <span className="text-xs text-gray-500">
                 {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : ''}
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-gray-600">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                {getStatusIcon(order.status)}
+                <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
+              </Badge>
+              {order.paymentStatus && (
+                <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
+                  {getPaymentStatusLabel(order.paymentStatus)}
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-gray-600">
               {order.fulfillmentType === 'delivery' ? (
                 <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Delivery</span>
               ) : (
@@ -748,10 +749,10 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                     <Eye className="h-3 w-3 mr-1" />
                     Details
                   </Button>
@@ -763,7 +764,9 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
                 />
               </Dialog>
 
-              <PayBalanceButton order={order} customerPhone={customerPhone} />
+              {order.paymentStatus !== 'paid' && (
+                <PayBalanceButton order={order} customerPhone={customerPhone} />
+              )}
 
               <CancellationRequestButton
                 order={order}
