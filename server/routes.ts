@@ -1897,6 +1897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
       const { wholesalerId, phoneNumber } = req.params;
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       
       if (!wholesalerId || !phoneNumber) {
         console.log('❌ Missing parameters:', { wholesalerId, phoneNumber });
@@ -1988,8 +1989,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
+      const ordersToProcess = limitParam && limitParam > 0 ? orderResults.slice(0, limitParam) : orderResults;
+
       // Get order items and product details for each order
-      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
+      const ordersWithDetails = await Promise.all(ordersToProcess.map(async (order) => {
         const items = await db
           .select({
             orderItemId: orderItems.id,

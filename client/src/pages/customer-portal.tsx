@@ -680,11 +680,11 @@ const PaymentFormContent = ({
 };
 
 function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void }) {
-  const { data: recentOrdersData = [] } = useQuery({
-    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
+  const { data: recentOrders = [] } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone, 'recent'],
     queryFn: async () => {
       const encodedPhone = encodeURIComponent(customerPhone);
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?limit=3`, {
         credentials: 'include',
       });
       if (!response.ok) return [];
@@ -693,14 +693,10 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
     enabled: !!wholesalerId && !!customerPhone,
   });
 
-  const recentOrders = [...recentOrdersData]
-    .sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3);
-
   if (recentOrders.length === 0) return null;
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
+    queryClient.invalidateQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone, 'recent'] });
   };
 
   return (
