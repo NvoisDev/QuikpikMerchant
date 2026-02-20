@@ -2218,7 +2218,7 @@ The Quikpik Team
           
           await sendEmail({
             to: wholesaler.email,
-            from: 'notifications@quikpik.app',
+            from: wholesaler.email,
             subject: emailSubject,
             text: emailContent
           });
@@ -2355,7 +2355,7 @@ The Quikpik Team
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'notifications@quikpik.app',
+              from: wholesaler?.email || 'notifications@quikpik.app',
               subject: `Registration Approved - Welcome to ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -2386,7 +2386,7 @@ The Quikpik Team`
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'notifications@quikpik.app',
+              from: wholesaler?.email || 'notifications@quikpik.app',
               subject: `Registration Request Update - ${businessName}`,
               text: `Hello ${requestData.customerName},
 
