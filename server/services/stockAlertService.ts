@@ -232,7 +232,7 @@ export class StockAlertService {
     try {
       await sendEmail({
         to: wholesaler.wholesalerEmail,
-        from: 'alerts@quikpik.co',
+        from: 'hello@quikpik.co',
         subject: emailContent.subject,
         text: emailContent.body.replace(/<[^>]*>/g, ''), // Strip HTML for text version
         html: emailContent.body

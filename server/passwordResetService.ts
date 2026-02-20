@@ -87,7 +87,7 @@ export async function sendPasswordResetEmail(email: string, token: string, first
 
   await sendEmail({
     to: email,
-    from: process.env.SENDGRID_FROM_EMAIL || 'noreply@quikpik.co',
+    from: 'hello@quikpik.co',
     subject: 'Reset Your Quikpik Password',
     html: emailContent
   });

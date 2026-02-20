@@ -2218,7 +2218,7 @@ The Quikpik Team
           
           await sendEmail({
             to: wholesaler.email,
-            from: wholesaler.email,
+            from: 'hello@quikpik.co',
             subject: emailSubject,
             text: emailContent
           });
@@ -2355,7 +2355,7 @@ The Quikpik Team
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: wholesaler?.email || 'notifications@quikpik.app',
+              from: 'hello@quikpik.co',
               subject: `Registration Approved - Welcome to ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -2386,7 +2386,7 @@ The Quikpik Team`
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: wholesaler?.email || 'notifications@quikpik.app',
+              from: 'hello@quikpik.co',
               subject: `Registration Request Update - ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -6390,7 +6390,7 @@ The Quikpik Team`
                 to: customer.email,
                 subject: emailSubject,
                 html: emailBody,
-                from: `${businessName} via Quikpik <orders@quikpik.app>`
+                from: `${businessName} via Quikpik <hello@quikpik.co>`
               });
               console.log(`📧 Cancellation email sent to ${customer.email}`);
             } catch (emailError) {
@@ -7932,7 +7932,7 @@ This message was sent by Quikpik Merchant Platform
 
               const emailSuccess = await sendEmail({
                 to: customer.email,
-                from: wholesaler?.email || 'notifications@quikpik.app',
+                from: 'hello@quikpik.co',
                 subject: emailSubject,
                 text: emailContent
               });
@@ -13014,7 +13014,7 @@ Please contact the customer to confirm this order.
 
       await sgMail.send({
         to: customer.email,
-        from: 'invoices@quikpik.co',
+        from: 'hello@quikpik.co',
         subject: `Refund Receipt for Order #${order.id} - ${businessName}`,
         html: emailContent
       });
