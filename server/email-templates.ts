@@ -18,7 +18,8 @@ export interface EmailBranding {
 }
 
 function buildHeader(branding: EmailBranding): string {
-  if (branding.logoUrl) {
+  const hasHostedLogo = branding.logoUrl && branding.logoUrl.startsWith('http');
+  if (hasHostedLogo) {
     return '<div style="text-align:center;padding:24px 20px 16px">' +
       '<img src="' + branding.logoUrl + '" alt="' + branding.businessName + '" style="max-height:50px;max-width:160px">' +
       '<div style="margin-top:8px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
