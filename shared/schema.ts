@@ -624,6 +624,8 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   customerEmail: varchar("customer_email", { length: 255 }),
   businessName: varchar("business_name", { length: 255 }),
   requestMessage: text("request_message"),
+  productsInterested: text("products_interested"),
+  orderFrequency: varchar("order_frequency", { length: 255 }),
   status: varchar("status").$type<'pending' | 'approved' | 'rejected'>().notNull().default('pending'),
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
   respondedAt: timestamp("responded_at"),

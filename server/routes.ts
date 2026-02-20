@@ -2148,7 +2148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit customer registration request to wholesaler
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {
-      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage } = req.body;
+      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage, productsInterested, orderFrequency } = req.body;
       
       console.log("🔍 Customer registration request:", { wholesalerId, customerPhone: customerPhone?.slice(-4) + "****", customerName });
       
@@ -2183,7 +2183,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerName,
         customerEmail,
         businessName: req.body.businessName || null,
-        requestMessage
+        requestMessage,
+        productsInterested: productsInterested || null,
+        orderFrequency: orderFrequency || null,
       });
       
       console.log("✅ Registration request created with ID:", request.id);
@@ -2204,6 +2206,8 @@ Customer Details:
 • Phone: ${customerPhone}
 • Email: ${customerEmail || 'Not provided'}
 
+${productsInterested ? `Products Interested In: ${productsInterested}` : ''}
+${orderFrequency ? `Estimated Order Quantity/Frequency: ${orderFrequency}` : ''}
 ${requestMessage ? `Message: ${requestMessage}` : ''}
 
 To approve or manage this request, please log into your Quikpik dashboard.

@@ -87,6 +87,8 @@ export default function CustomerLogin() {
   const [enquiryEmail, setEnquiryEmail] = useState("");
   const [enquiryBusiness, setEnquiryBusiness] = useState("");
   const [enquiryMessage, setEnquiryMessage] = useState("");
+  const [enquiryProducts, setEnquiryProducts] = useState("");
+  const [enquiryOrderFrequency, setEnquiryOrderFrequency] = useState("");
   const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
   const { toast } = useToast();
   const { backToHome } = useAuth();
@@ -150,6 +152,8 @@ export default function CustomerLogin() {
     setEnquiryEmail("");
     setEnquiryBusiness("");
     setEnquiryMessage("");
+    setEnquiryProducts("");
+    setEnquiryOrderFrequency("");
     setStep(2);
   };
 
@@ -219,6 +223,8 @@ export default function CustomerLogin() {
           customerEmail: enquiryEmail.trim() || undefined,
           businessName: enquiryBusiness.trim() || undefined,
           requestMessage: enquiryMessage.trim() || undefined,
+          productsInterested: enquiryProducts.trim() || undefined,
+          orderFrequency: enquiryOrderFrequency.trim() || undefined,
         }),
       });
 
@@ -233,6 +239,8 @@ export default function CustomerLogin() {
         setEnquiryEmail("");
         setEnquiryBusiness("");
         setEnquiryMessage("");
+        setEnquiryProducts("");
+        setEnquiryOrderFrequency("");
       } else {
         const data = await response.json();
         toast({
@@ -437,14 +445,25 @@ export default function CustomerLogin() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="enquiry-message" className="text-sm font-medium">Message</Label>
+                      <Label htmlFor="enquiry-products" className="text-sm font-medium">Products you're interested in</Label>
                       <textarea
-                        id="enquiry-message"
-                        placeholder="Tell them about your business and what you're looking for..."
-                        value={enquiryMessage}
-                        onChange={(e) => setEnquiryMessage(e.target.value)}
+                        id="enquiry-products"
+                        placeholder="e.g. 10x 10kg rice, frozen fish, palm oil, malt drinks..."
+                        value={enquiryProducts}
+                        onChange={(e) => setEnquiryProducts(e.target.value)}
                         className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus:border-primary resize-none"
                         rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="enquiry-frequency" className="text-sm font-medium">Estimated order quantity / frequency</Label>
+                      <Input
+                        id="enquiry-frequency"
+                        type="text"
+                        placeholder="e.g. Weekly pallet, monthly mixed order"
+                        value={enquiryOrderFrequency}
+                        onChange={(e) => setEnquiryOrderFrequency(e.target.value)}
+                        className="h-11 border-2 focus:border-primary"
                       />
                     </div>
                   </div>
