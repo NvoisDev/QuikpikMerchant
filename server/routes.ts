@@ -2124,13 +2124,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const emailSubject = `New Customer Registration Request - ${customerName}`;
           const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p><p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
+          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `New enquiry from ${customerName}` });
+          console.log(`📏 Registration email size: ${Buffer.byteLength(regHtml, 'utf8')} bytes`);
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: emailSubject,
-            html: wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `New enquiry from ${customerName}` })
+            html: regHtml
           });
-          
           console.log(`📧 Registration request notification sent to ${wholesaler.email}`);
         } catch (emailError) {
           console.error('Failed to send registration request notification:', emailError);
