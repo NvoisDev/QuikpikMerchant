@@ -431,6 +431,7 @@ export const products = pgTable("products", {
   pallet_weight: decimal("pallet_weight_legacy", { precision: 10, scale: 2 }), // Legacy field for compatibility
   deliveryExcluded: boolean("delivery_excluded").default(false), // Whether item can be delivered or pickup only
   lowStockThreshold: integer("low_stock_threshold").notNull().default(50), // Alert when stock falls below this number
+  lastStockAlertSentAt: timestamp("last_stock_alert_sent_at"), // Track when last stock alert was sent for this product
   
   // Units and measurements
   unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)

@@ -98,17 +98,17 @@ app.use((req, res, next) => {
     startDatabaseMaintenance();
     console.log(`🧹 Database maintenance scheduler enabled`);
     
-    // Start stock alert monitoring (runs every 2 hours)
+    // Start stock alert monitoring (runs once daily at 8 AM)
     const { stockAlertService } = await import("./services/stockAlertService");
-    cron.schedule('0 */2 * * *', async () => {
-      console.log('📦 Running automated stock level check...');
+    cron.schedule('0 8 * * *', async () => {
+      console.log('📦 Running daily stock level check...');
       try {
         await stockAlertService.checkAndSendLowStockAlerts();
       } catch (error) {
         console.error('❌ Stock alert check failed:', error);
       }
     });
-    console.log(`🔔 Stock alert system enabled (every 2 hours)`);
+    console.log(`🔔 Stock alert system enabled (daily at 8 AM)`);
     
     // Start payment reminder scheduler (runs daily at 9 AM)
     cron.schedule('0 9 * * *', async () => {

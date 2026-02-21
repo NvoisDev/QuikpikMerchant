@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { products, users } from "../../shared/schema";
-import { eq, lt, and } from "drizzle-orm";
+import { eq, lt, and, or, isNull, lte, inArray } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { ReliableSMSService } from "../sms-service";
 import { whatsAppBusinessService } from "../whatsapp-simple";
@@ -32,7 +32,8 @@ export class StockAlertService {
     try {
       console.log('🔍 Checking for low stock products...');
 
-      // Get all active products with stock below their minimum threshold (MOQ)
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       const lowStockProducts = await db
         .select({
           id: products.id,
@@ -46,8 +47,11 @@ export class StockAlertService {
         .from(products)
         .where(and(
           eq(products.status, 'active'),
-          // Consider both unit stock and MOQ for alerts
-          lt(products.stock, products.moq)
+          lt(products.stock, products.moq),
+          or(
+            isNull(products.lastStockAlertSentAt),
+            lte(products.lastStockAlertSentAt, twentyFourHoursAgo)
+          )
         ));
 
       if (lowStockProducts.length === 0) {
@@ -93,13 +97,22 @@ export class StockAlertService {
         alertsByWholesaler.get(product.wholesalerId)!.push(alert);
       }
 
-      // Send alerts to each wholesaler
+      const allAlertedProductIds: number[] = [];
+
       for (const entry of Array.from(alertsByWholesaler.entries())) {
         const [wholesalerId, alerts] = entry;
         await this.sendStockAlerts(alerts);
+        allAlertedProductIds.push(...alerts.map(a => a.productId));
       }
 
-      console.log(`📧 Stock alerts sent to ${alertsByWholesaler.size} wholesalers`);
+      if (allAlertedProductIds.length > 0) {
+        await db
+          .update(products)
+          .set({ lastStockAlertSentAt: new Date() })
+          .where(inArray(products.id, allAlertedProductIds));
+      }
+
+      console.log(`📧 Stock alerts sent to ${alertsByWholesaler.size} wholesalers for ${allAlertedProductIds.length} products`);
 
     } catch (error) {
       console.error('❌ Error checking low stock:', error);
