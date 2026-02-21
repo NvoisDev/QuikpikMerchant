@@ -8,6 +8,11 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**February 21, 2026 - Stock Alert Frequency Fix:**
+- **DAILY SCHEDULE**: Stock alert cron changed from every 2 hours to once daily at 8 AM
+- **24-HOUR SUPPRESSION**: Added `lastStockAlertSentAt` timestamp to products table - products that were already alerted within the last 24 hours are skipped
+- **PARAMETERIZED QUERIES**: Uses Drizzle `inArray` for safe product ID updates after alerting
+
 **February 20, 2026 - 0% Pay Later & Payment Notification Emails:**
 - **0% DEPOSIT OPTION**: Wholesalers can now select "Pay Later" (0%) when creating quotes - no Stripe payment link is generated, customer receives "Pay Later" SMS, quote email shows "Pay Later" badge
 - **PAYMENT STATUS EMAILS**: Both wholesaler and customer receive email notifications when payments are received via Stripe (deposit or full payment). Includes amount paid, total paid, outstanding balance, and fully/partially paid status badges
