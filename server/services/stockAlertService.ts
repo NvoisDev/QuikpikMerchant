@@ -187,7 +187,7 @@ export class StockAlertService {
 
     body += emailCard(`${emailHeading('Quick Actions', { size: '16px' })}<ul style="margin:0;padding-left:20px"><li style="margin-bottom:6px">Log into your dashboard to place reorders immediately</li><li style="margin-bottom:6px">Contact your suppliers to ensure timely delivery</li><li>Consider adjusting minimum stock thresholds for better planning</li></ul>`);
 
-    body += emailButton('View Dashboard', 'https://quikpik.co/products');
+    body += emailButton('View Dashboard', 'https://quikpik.app/login');
 
     return wrapCustomerEmail(body, { businessName: wholesaler.wholesalerName, logoUrl: undefined }, { preheader: `${alerts.length} products need restocking` });
   }
