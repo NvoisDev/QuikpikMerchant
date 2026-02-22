@@ -4431,9 +4431,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         and(eq(orders.status, 'fulfilled'), eq(orders.paymentStatus, 'paid'))
       );
 
-      const tabFilter = archiveTab === 'archived'
-        ? and(...searchConditions, archivedCondition!)
-        : and(...searchConditions, sql`NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid'))`);
+      const tabFilter = archiveTab === 'all'
+        ? and(...searchConditions)
+        : archiveTab === 'archived'
+          ? and(...searchConditions, archivedCondition!)
+          : and(...searchConditions, sql`NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid'))`);
 
       // Also get counts for both tabs (using search filter but not tab filter)
       const baseFilter = and(...searchConditions);
@@ -4501,9 +4503,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const archivedCount = allOrdersForStats.filter(o => isArchivedOrder(o)).length;
       
       // Calculate stats for current tab's orders
-      const tabOrders = archiveTab === 'archived'
-        ? allOrdersForStats.filter(o => isArchivedOrder(o))
-        : allOrdersForStats.filter(o => !isArchivedOrder(o));
+      const tabOrders = archiveTab === 'all'
+        ? allOrdersForStats
+        : archiveTab === 'archived'
+          ? allOrdersForStats.filter(o => isArchivedOrder(o))
+          : allOrdersForStats.filter(o => !isArchivedOrder(o));
       const paidOrdersCount = tabOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
       const pendingOrdersCount = tabOrders.filter(o => o.status === 'pending').length;
       
@@ -4568,9 +4572,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
       
       // Filter by active/archived based on tab
-      const filteredOrders = archiveTab === 'archived'
-        ? allOrders.filter(order => isArchivedOrder(order))
-        : allOrders.filter(order => !isArchivedOrder(order));
+      const filteredOrders = archiveTab === 'all'
+        ? allOrders
+        : archiveTab === 'archived'
+          ? allOrders.filter(order => isArchivedOrder(order))
+          : allOrders.filter(order => !isArchivedOrder(order));
       
       console.log(`📊 Found ${filteredOrders.length} ${archiveTab} orders for statistics`);
 

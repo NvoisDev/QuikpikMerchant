@@ -184,7 +184,7 @@ export default function OrdersFresh() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerIdFilter, setCustomerIdFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [archiveTab, setArchiveTab] = useState<'active' | 'archived'>('active');
+  const [archiveTab, setArchiveTab] = useState<'active' | 'archived' | 'all'>('active');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('');
@@ -230,7 +230,7 @@ export default function OrdersFresh() {
     { value: 'other', label: 'Other' }
   ];
 
-  const loadOrderStats = async (tab: 'active' | 'archived' = 'active') => {
+  const loadOrderStats = async (tab: 'active' | 'archived' | 'all' = 'active') => {
     try {
       const response = await fetch(`/api/orders/stats?archiveTab=${tab}`, {
         credentials: 'include',
@@ -307,9 +307,11 @@ export default function OrdersFresh() {
     const customerIdParam = urlParams.get('customerId');
     const searchParam = urlParams.get('search');
 
+    const initialTab = customerIdParam ? 'all' : 'active';
     if (customerIdParam) {
       setCustomerIdFilter(customerIdParam);
       customerIdRef.current = customerIdParam;
+      setArchiveTab('all');
     }
     if (searchParam) {
       setSearchQuery(searchParam);
@@ -332,8 +334,10 @@ export default function OrdersFresh() {
     }
 
     loadCancellationRequests();
-    loadOrderStats(archiveTab);
-    loadOrders(1, searchParam || '');
+    if (!customerIdParam) {
+      loadOrderStats(initialTab as any);
+    }
+    loadOrders(1, searchParam || '', initialTab as any);
   }, []);
 
   // Load cancellation requests
@@ -928,9 +932,9 @@ export default function OrdersFresh() {
           <h1 className="text-xl md:text-2xl font-bold">Orders</h1>
           <span className="text-xs text-gray-500 whitespace-nowrap">
             {statusFilter ? (
-              <>Showing {displayedOrders} {statusFilter} ({archiveTab === 'archived' ? 'Archived' : 'Active'})</>
+              <>Showing {displayedOrders} {statusFilter} ({archiveTab === 'all' ? 'All' : archiveTab === 'archived' ? 'Archived' : 'Active'})</>
             ) : (
-              <>Showing {displayedOrders} {archiveTab === 'archived' ? 'Archived' : 'Active'} orders</>
+              <>Showing {totalOrders} {archiveTab === 'all' ? '' : archiveTab === 'archived' ? 'Archived ' : 'Active '}orders</>
             )}
           </span>
         </div>
@@ -950,8 +954,23 @@ export default function OrdersFresh() {
 
       {/* Archive Tabs */}
       <div className="flex border-b border-gray-200">
+        {customerIdFilter && (
+          <button
+            onClick={() => { setArchiveTab('all'); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              archiveTab === 'all'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            All Orders
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">
+              {orderStats ? (orderStats.activeCount + orderStats.archivedCount) : '...'}
+            </span>
+          </button>
+        )}
         <button
-          onClick={() => { setArchiveTab('active'); loadOrders(1, searchQuery, 'active'); loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('active'); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -964,7 +983,7 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); loadOrders(1, searchQuery, 'archived'); loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('archived'); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-green-600 text-green-600'
