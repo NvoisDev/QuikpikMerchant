@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Search, 
   Users, 
@@ -20,7 +22,15 @@ import {
   UserPlus,
   Edit3,
   TrendingUp,
-  Activity
+  Activity,
+  Plus,
+  Trash2,
+  Home,
+  Building2,
+  Warehouse,
+  Pencil,
+  X,
+  Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,6 +61,21 @@ interface CustomerStats {
   topCustomers: { customerId: string; name: string; totalSpent: number }[];
 }
 
+interface DeliveryAddress {
+  id: number;
+  customerId: string;
+  wholesalerId: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state?: string;
+  postalCode: string;
+  country: string;
+  label?: string;
+  instructions?: string;
+  isDefault: boolean;
+}
+
 export default function CustomerAddressBook() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -58,23 +83,19 @@ export default function CustomerAddressBook() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all customers
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
   });
 
-  // Fetch customer stats
   const { data: stats } = useQuery<CustomerStats>({
     queryKey: ['/api/customers/stats'],
   });
 
-  // Search customers
   const { data: searchResults = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers/search', searchQuery],
     enabled: searchQuery.length > 2,
   });
 
-  // Update customer mutation
   const updateCustomerMutation = useMutation({
     mutationFn: async ({ customerId, updates }: { customerId: string; updates: Partial<Customer> }) => {
       const response = await fetch(`/api/customers/${customerId}`, {
@@ -150,7 +171,6 @@ export default function CustomerAddressBook() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Customer Address Book</h1>
@@ -158,7 +178,6 @@ export default function CustomerAddressBook() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -211,7 +230,6 @@ export default function CustomerAddressBook() {
         </div>
       )}
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -222,7 +240,6 @@ export default function CustomerAddressBook() {
         />
       </div>
 
-      {/* Customer List */}
       <div className="grid gap-4">
         {displayedCustomers.map((customer) => (
           <Card key={customer.id} className="hover:shadow-md transition-shadow">
@@ -302,15 +319,17 @@ export default function CustomerAddressBook() {
                       Edit
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Edit Customer</DialogTitle>
+                      <DialogTitle>Edit Customer - {getCustomerFullName(customer)}</DialogTitle>
                     </DialogHeader>
                     <CustomerEditForm 
                       customer={customer} 
                       onSave={handleUpdateCustomer}
                       isLoading={updateCustomerMutation.isPending}
                     />
+                    <Separator className="my-2" />
+                    <CustomerDeliveryAddresses customerId={customer.id} />
                   </DialogContent>
                 </Dialog>
               </div>
@@ -462,5 +481,246 @@ function CustomerEditForm({ customer, onSave, isLoading }: CustomerEditFormProps
         </Button>
       </div>
     </form>
+  );
+}
+
+function CustomerDeliveryAddresses({ customerId }: { customerId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'United Kingdom',
+    label: '',
+  });
+
+  const { data: addresses = [], isLoading } = useQuery<DeliveryAddress[]>({
+    queryKey: [`/api/wholesaler/customers/${customerId}/addresses`],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await apiRequest('POST', `/api/wholesaler/customers/${customerId}/addresses`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/wholesaler/customers/${customerId}/addresses`] });
+      toast({ title: 'Address added' });
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: 'Failed to add address', variant: 'destructive' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ addressId, data }: { addressId: number; data: typeof formData }) => {
+      const response = await apiRequest('PUT', `/api/wholesaler/customers/${customerId}/addresses/${addressId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/wholesaler/customers/${customerId}/addresses`] });
+      toast({ title: 'Address updated' });
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: 'Failed to update address', variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (addressId: number) => {
+      await apiRequest('DELETE', `/api/wholesaler/customers/${customerId}/addresses/${addressId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/wholesaler/customers/${customerId}/addresses`] });
+      toast({ title: 'Address deleted' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to delete address', variant: 'destructive' });
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({ addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: 'United Kingdom', label: '' });
+    setShowAddForm(false);
+    setEditingId(null);
+  };
+
+  const startEdit = (addr: DeliveryAddress) => {
+    setEditingId(addr.id);
+    setShowAddForm(true);
+    setFormData({
+      addressLine1: addr.addressLine1 || '',
+      addressLine2: addr.addressLine2 || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      postalCode: addr.postalCode || '',
+      country: addr.country || 'United Kingdom',
+      label: addr.label || '',
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      updateMutation.mutate({ addressId: editingId, data: formData });
+    } else {
+      addMutation.mutate(formData);
+    }
+  };
+
+  const getLabelIcon = (label?: string) => {
+    switch (label?.toLowerCase()) {
+      case 'home': return <Home className="h-4 w-4" />;
+      case 'office': return <Building2 className="h-4 w-4" />;
+      case 'warehouse': return <Warehouse className="h-4 w-4" />;
+      default: return <MapPin className="h-4 w-4" />;
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-green-600" />
+          Delivery Addresses ({addresses.length})
+        </h3>
+        {!showAddForm && (
+          <Button variant="outline" size="sm" onClick={() => { resetForm(); setShowAddForm(true); }}>
+            <Plus className="h-3 w-3 mr-1" />
+            Add Address
+          </Button>
+        )}
+      </div>
+
+      {isLoading && <p className="text-sm text-muted-foreground">Loading addresses...</p>}
+
+      {addresses.length === 0 && !isLoading && !showAddForm && (
+        <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed">
+          <MapPin className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+          <p className="text-xs text-muted-foreground">No delivery addresses saved</p>
+          <Button variant="ghost" size="sm" className="mt-1 text-xs text-green-600" onClick={() => setShowAddForm(true)}>
+            Add first address
+          </Button>
+        </div>
+      )}
+
+      {addresses.map((addr) => (
+        <div key={addr.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border">
+          <div className="flex items-start gap-2 flex-1">
+            {getLabelIcon(addr.label)}
+            <div className="text-sm">
+              {addr.label && <Badge variant="outline" className="text-xs mb-1">{addr.label}</Badge>}
+              <p>{addr.addressLine1}</p>
+              {addr.addressLine2 && <p className="text-muted-foreground">{addr.addressLine2}</p>}
+              <p className="text-muted-foreground">{addr.city}, {addr.state && `${addr.state}, `}{addr.postalCode}</p>
+              <p className="text-muted-foreground text-xs">{addr.country}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 ml-2">
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => startEdit(addr)}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+              onClick={() => deleteMutation.mutate(addr.id)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
+
+      {showAddForm && (
+        <form onSubmit={handleSubmit} className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-blue-900">{editingId ? 'Edit Address' : 'Add New Address'}</p>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={resetForm}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div>
+            <Label className="text-xs">Label (e.g. Home, Office, Warehouse)</Label>
+            <Input
+              value={formData.label}
+              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+              placeholder="e.g. Home, Office"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Address Line 1 *</Label>
+            <Input
+              value={formData.addressLine1}
+              onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
+              required
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Address Line 2</Label>
+            <Input
+              value={formData.addressLine2}
+              onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">City *</Label>
+              <Input
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                required
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">County/State</Label>
+              <Input
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Postal Code *</Label>
+              <Input
+                value={formData.postalCode}
+                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                required
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Country</Label>
+              <Input
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={resetForm}>Cancel</Button>
+            <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700" disabled={addMutation.isPending || updateMutation.isPending}>
+              <Check className="h-3 w-3 mr-1" />
+              {editingId ? 'Update' : 'Save'} Address
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

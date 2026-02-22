@@ -2453,6 +2453,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wholesaler endpoint: Get customer's delivery addresses (simplified URL)
+  app.get('/api/wholesaler/customers/:customerId/addresses', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const { customerId } = req.params;
+      const addresses = await storage.getDeliveryAddresses(customerId, wholesalerId);
+      res.json(addresses);
+    } catch (error) {
+      console.error("❌ Error fetching customer addresses:", error);
+      res.status(500).json({ error: "Failed to fetch addresses" });
+    }
+  });
+
+  // Wholesaler endpoint: Add delivery address for a customer
+  app.post('/api/wholesaler/customers/:customerId/addresses', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const { customerId } = req.params;
+      const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
+
+      if (!addressLine1 || !city || !postalCode) {
+        return res.status(400).json({ error: "Address line 1, city, and postal code are required" });
+      }
+
+      const address = await storage.createDeliveryAddress({
+        customerId,
+        wholesalerId,
+        addressLine1,
+        addressLine2: addressLine2 || null,
+        city,
+        state: state || null,
+        postalCode,
+        country: country || 'United Kingdom',
+        label: label || null,
+        instructions: instructions || null,
+        isDefault: isDefault || false,
+      });
+
+      console.log(`📍 Wholesaler ${wholesalerId} added address for customer ${customerId}: ${addressLine1}, ${city}`);
+      res.json(address);
+    } catch (error) {
+      console.error("❌ Error creating customer address:", error);
+      res.status(500).json({ error: "Failed to create address" });
+    }
+  });
+
+  // Wholesaler endpoint: Update a customer's delivery address
+  app.put('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const { customerId, addressId } = req.params;
+      const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
+
+      const existing = await storage.getDeliveryAddressForCustomer(parseInt(addressId), customerId, wholesalerId);
+      if (!existing) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      const updated = await storage.updateDeliveryAddress(parseInt(addressId), {
+        addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault,
+      });
+
+      console.log(`📍 Wholesaler ${wholesalerId} updated address ${addressId} for customer ${customerId}`);
+      res.json(updated);
+    } catch (error) {
+      console.error("❌ Error updating customer address:", error);
+      res.status(500).json({ error: "Failed to update address" });
+    }
+  });
+
+  // Wholesaler endpoint: Delete a customer's delivery address
+  app.delete('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const { customerId, addressId } = req.params;
+
+      const existing = await storage.getDeliveryAddressForCustomer(parseInt(addressId), customerId, wholesalerId);
+      if (!existing) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      await storage.deleteDeliveryAddress(parseInt(addressId));
+      console.log(`📍 Wholesaler ${wholesalerId} deleted address ${addressId} for customer ${customerId}`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("❌ Error deleting customer address:", error);
+      res.status(500).json({ error: "Failed to delete address" });
+    }
+  });
+
   // Get customer's delivery addresses for a specific wholesaler
   app.get('/api/customer/delivery-addresses/:wholesalerId', async (req, res) => {
     try {
@@ -17382,7 +17472,7 @@ https://quikpik.app`;
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryAddressId = null, deliveryAddress = null } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryAddressId = null, deliveryAddress = null, customAddressFields = null } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
       
@@ -17390,8 +17480,14 @@ https://quikpik.app`;
         return res.status(400).json({ error: 'Customer and items are required' });
       }
 
-      if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddress) {
+      if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddress && !customAddressFields?.addressLine1) {
         return res.status(400).json({ error: 'Delivery address is required for delivery orders' });
+      }
+
+      if (fulfillmentType === 'delivery' && !deliveryAddressId && customAddressFields) {
+        if (!customAddressFields.addressLine1 || !customAddressFields.city || !customAddressFields.postalCode) {
+          return res.status(400).json({ error: 'Address line, city, and postal code are required for custom addresses' });
+        }
       }
 
       // Get customer details
@@ -17424,6 +17520,33 @@ https://quikpik.app`;
       // Generate unified order number (same sequence as regular orders)
       const orderNumber = await generateOrderNumber(wholesalerId);
 
+      // Auto-save custom delivery address to customer profile
+      let resolvedDeliveryAddressId = deliveryAddressId ? (typeof deliveryAddressId === 'number' ? deliveryAddressId : parseInt(deliveryAddressId)) : null;
+      let resolvedDeliveryAddress = deliveryAddress;
+      
+      if (fulfillmentType === 'delivery' && !deliveryAddressId && customAddressFields && customAddressFields.addressLine1 && customAddressFields.city && customAddressFields.postalCode) {
+        try {
+          const savedAddress = await storage.createDeliveryAddress({
+            customerId,
+            wholesalerId,
+            addressLine1: customAddressFields.addressLine1,
+            addressLine2: null,
+            city: customAddressFields.city,
+            state: customAddressFields.state || null,
+            postalCode: customAddressFields.postalCode,
+            country: 'United Kingdom',
+            label: customAddressFields.label || null,
+            instructions: null,
+            isDefault: false,
+          });
+          resolvedDeliveryAddressId = savedAddress.id;
+          resolvedDeliveryAddress = deliveryAddress || `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}`;
+          console.log(`📍 Auto-saved delivery address ${savedAddress.id} for customer ${customerId}`);
+        } catch (addrErr) {
+          console.error('⚠️ Failed to auto-save delivery address, continuing with text:', addrErr);
+        }
+      }
+
       // Create the quote order in pending status
       const [quoteOrder] = await db.insert(orders).values({
         orderNumber,
@@ -17438,8 +17561,8 @@ https://quikpik.app`;
         customerTransactionFee: customerTransactionFee.toFixed(2),
         total: total.toFixed(2),
         fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
-        ...(fulfillmentType === 'delivery' && deliveryAddressId ? { deliveryAddressId: typeof deliveryAddressId === 'number' ? deliveryAddressId : parseInt(deliveryAddressId) } : {}),
-        ...(fulfillmentType === 'delivery' && deliveryAddress ? { deliveryAddress } : {}),
+        ...(fulfillmentType === 'delivery' && resolvedDeliveryAddressId ? { deliveryAddressId: resolvedDeliveryAddressId } : {}),
+        ...(fulfillmentType === 'delivery' && resolvedDeliveryAddress ? { deliveryAddress: resolvedDeliveryAddress } : {}),
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',

@@ -111,6 +111,13 @@ export default function QuickQuote() {
   const [deliveryAddressId, setDeliveryAddressId] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState('');
   const [useCustomAddress, setUseCustomAddress] = useState(false);
+  const [customAddressFields, setCustomAddressFields] = useState({
+    addressLine1: '',
+    city: '',
+    postalCode: '',
+    state: '',
+    label: '',
+  });
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -122,8 +129,8 @@ export default function QuickQuote() {
   });
 
   const { data: customerAddresses = [] } = useQuery<DeliveryAddress[]>({
-    queryKey: ['/api/wholesaler/customer-delivery-addresses', selectedCustomer?.id, user?.id],
-    enabled: !!selectedCustomer && !!user && fulfillmentType === 'delivery',
+    queryKey: [`/api/wholesaler/customers/${selectedCustomer?.id}/addresses`],
+    enabled: !!selectedCustomer && fulfillmentType === 'delivery',
   });
 
   useEffect(() => {
@@ -173,6 +180,7 @@ export default function QuickQuote() {
       fulfillmentType: 'delivery' | 'pickup';
       deliveryAddressId?: number | null;
       deliveryAddress?: string;
+      customAddressFields?: { addressLine1: string; city: string; postalCode: string; state: string; label: string };
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       return response.json();
@@ -285,10 +293,19 @@ export default function QuickQuote() {
       return;
     }
 
-    if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddressText.trim()) {
+    if (fulfillmentType === 'delivery' && !deliveryAddressId && !customAddressFields.addressLine1.trim()) {
       toast({
         title: "Delivery Address Required",
         description: "Please select or enter a delivery address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fulfillmentType === 'delivery' && useCustomAddress && (!customAddressFields.city.trim() || !customAddressFields.postalCode.trim())) {
+      toast({
+        title: "Address Incomplete",
+        description: "Please enter the city and postal code",
         variant: "destructive",
       });
       return;
@@ -303,7 +320,8 @@ export default function QuickQuote() {
       fulfillmentType,
       ...(fulfillmentType === 'delivery' && {
         deliveryAddressId: useCustomAddress ? null : deliveryAddressId,
-        deliveryAddress: useCustomAddress ? deliveryAddressText.trim() : undefined,
+        deliveryAddress: useCustomAddress ? `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}` : undefined,
+        ...(useCustomAddress ? { customAddressFields } : {}),
       }),
     });
   };
@@ -332,6 +350,7 @@ export default function QuickQuote() {
     setDeliveryAddressId(null);
     setDeliveryAddressText('');
     setUseCustomAddress(false);
+    setCustomAddressFields({ addressLine1: '', city: '', postalCode: '', state: '', label: '' });
   };
 
   if (createdQuote) {
@@ -505,6 +524,9 @@ export default function QuickQuote() {
                 onValueChange={(value) => {
                   const customer = customers.find(c => c.id === value);
                   setSelectedCustomer(customer || null);
+                  setDeliveryAddressId(null);
+                  setDeliveryAddressText('');
+                  setUseCustomAddress(false);
                 }}
               >
                 <SelectTrigger>
@@ -813,17 +835,46 @@ export default function QuickQuote() {
                   ) : (
                     <div className="space-y-2">
                       <Input
-                        placeholder="Enter full delivery address"
-                        value={deliveryAddressText}
-                        onChange={(e) => setDeliveryAddressText(e.target.value)}
-                        className="text-sm"
+                        placeholder="Label (e.g. Home, Office)"
+                        value={customAddressFields.label}
+                        onChange={(e) => setCustomAddressFields({ ...customAddressFields, label: e.target.value })}
+                        className="text-xs h-8"
                       />
+                      <Input
+                        placeholder="Address line *"
+                        value={customAddressFields.addressLine1}
+                        onChange={(e) => setCustomAddressFields({ ...customAddressFields, addressLine1: e.target.value })}
+                        className="text-xs h-8"
+                        required
+                      />
+                      <div className="grid grid-cols-3 gap-1">
+                        <Input
+                          placeholder="City *"
+                          value={customAddressFields.city}
+                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, city: e.target.value })}
+                          className="text-xs h-8"
+                          required
+                        />
+                        <Input
+                          placeholder="County"
+                          value={customAddressFields.state}
+                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, state: e.target.value })}
+                          className="text-xs h-8"
+                        />
+                        <Input
+                          placeholder="Postcode *"
+                          value={customAddressFields.postalCode}
+                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, postalCode: e.target.value })}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
                       {customerAddresses.length > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="text-xs text-blue-600"
-                          onClick={() => { setUseCustomAddress(false); setDeliveryAddressText(''); setDeliveryAddressId(customerAddresses[0]?.id || null); }}
+                          onClick={() => { setUseCustomAddress(false); setDeliveryAddressText(''); setCustomAddressFields({ addressLine1: '', city: '', postalCode: '', state: '', label: '' }); setDeliveryAddressId(customerAddresses[0]?.id || null); }}
                         >
                           Use saved address instead
                         </Button>
