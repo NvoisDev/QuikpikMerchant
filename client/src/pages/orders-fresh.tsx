@@ -455,8 +455,7 @@ export default function OrdersFresh() {
   };
 
   const handlePageChange = (newPage: number) => {
-    const searchTerm = statusFilter || searchQuery;
-    loadOrders(newPage, searchTerm);
+    loadOrders(newPage, searchQuery);
   };
 
   // Fetch detailed order information with items
