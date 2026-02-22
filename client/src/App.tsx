@@ -55,6 +55,7 @@ import { LoadingDemo } from "@/pages/loading-demo";
 import { LoadingOverlay } from "@/components/ui/loading-spinner";
 import SubscriptionPricing from "@/pages/SubscriptionPricing";
 import QuickQuote from "@/pages/quick-quote";
+import CustomerDetail from "@/pages/customer-detail";
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -109,6 +110,7 @@ function AuthenticatedRoutes() {
             <Route path="/" component={WholesalerDashboard} />
             <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
+            <Route path="/customers/:customerId" component={CustomerDetail} />
             <Route path="/customers" component={Customers} />
             <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
             <Route path="/orders" component={OrdersFresh} />

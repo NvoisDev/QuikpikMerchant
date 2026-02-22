@@ -174,7 +174,7 @@ export default function Customers() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   
   // Get tab from URL parameter or default to "groups"
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
@@ -1490,7 +1490,7 @@ export default function Customers() {
           ) : (
             <div className="space-y-4">
               {sortedCustomers.map((customer) => (
-                <Card key={customer?.id} className="hover:shadow-md transition-shadow">
+                <Card key={customer?.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
@@ -1552,11 +1552,11 @@ export default function Customers() {
                         >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                                 <ChevronDown className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenuItem onClick={() => handleViewCustomerOrders(customer)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View Orders
@@ -1648,7 +1648,7 @@ export default function Customers() {
                           )}
                         </div>
                         
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"
                             size="sm"
