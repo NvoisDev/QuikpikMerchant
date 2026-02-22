@@ -378,7 +378,7 @@ export default function CustomerDetail() {
               <FileText className="h-4 w-4 mr-2" />
               Create quote
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/orders?search=${encodeURIComponent(fullName)}`)}>
+            <DropdownMenuItem onClick={() => navigate(`/orders?customerId=${customerId}&search=${encodeURIComponent(fullName)}`)}>
               <ShoppingBag className="h-4 w-4 mr-2" />
               View orders
             </DropdownMenuItem>
@@ -608,9 +608,9 @@ export default function CustomerDetail() {
               variant="ghost"
               size="sm"
               className="text-xs text-blue-600 h-auto p-0"
-              onClick={() => navigate(`/orders?search=${encodeURIComponent(fullName)}`)}
+              onClick={() => navigate(`/orders?customerId=${customerId}&search=${encodeURIComponent(fullName)}`)}
             >
-              View all ({customerOrders.length})
+              View all ({customer?.totalOrders || customerOrders.length})
             </Button>
           )}
         </div>

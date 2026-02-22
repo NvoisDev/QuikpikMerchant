@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +182,7 @@ export default function OrdersFresh() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customerIdFilter, setCustomerIdFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [archiveTab, setArchiveTab] = useState<'active' | 'archived'>('active');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
@@ -248,16 +249,21 @@ export default function OrdersFresh() {
     }
   };
 
+  const customerIdRef = useRef(customerIdFilter);
+  customerIdRef.current = customerIdFilter;
+
   const loadOrders = async (page = 1, search = '', tab = archiveTab) => {
     setLoading(true);
     setError(null);
     
     try {
+      const custId = customerIdRef.current;
       const params = new URLSearchParams({
         page: page.toString(),
         limit: ordersPerPage.toString(),
         archiveTab: tab,
-        ...(search && { search })
+        ...(search && { search }),
+        ...(custId && { customerId: custId })
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -298,17 +304,17 @@ export default function OrdersFresh() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
+    const customerIdParam = urlParams.get('customerId');
     const searchParam = urlParams.get('search');
+
+    if (customerIdParam) {
+      setCustomerIdFilter(customerIdParam);
+      customerIdRef.current = customerIdParam;
+    }
     if (searchParam) {
       setSearchQuery(searchParam);
-      loadOrders(1, searchParam);
-    } else {
-      loadOrders(1, searchQuery);
     }
 
-    loadCancellationRequests();
-    loadOrderStats(archiveTab);
-    
     const orderId = urlParams.get('id');
     if (orderId) {
       fetch(`/api/orders/${orderId}`, {
@@ -324,6 +330,10 @@ export default function OrdersFresh() {
         })
         .catch(err => console.error('Failed to load order from URL:', err));
     }
+
+    loadCancellationRequests();
+    loadOrderStats(archiveTab);
+    loadOrders(1, searchParam || '');
   }, []);
 
   // Load cancellation requests

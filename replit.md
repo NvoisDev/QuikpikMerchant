@@ -8,6 +8,11 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**February 22, 2026 - Customer Order Filtering Fix:**
+- **EXACT CUSTOMER MATCHING**: Added `customerId` parameter to `orders-paginated` endpoint that filters by `retailerId` for exact matching instead of name-based `ILIKE` search
+- **VIEW ALL ORDERS**: Customer detail page "View all" and "View orders" links now pass `customerId` for precise order matching, showing ALL orders for that customer
+- **REF-BASED SYNC**: Uses `useRef` to ensure `customerIdFilter` is immediately available to `loadOrders` even before React state updates propagate
+
 **February 21, 2026 - Stock Alert Frequency Fix:**
 - **DAILY SCHEDULE**: Stock alert cron changed from every 2 hours to once daily at 8 AM
 - **24-HOUR SUPPRESSION**: Added `lastStockAlertSentAt` timestamp to products table - products that were already alerted within the last 24 hours are skipped

@@ -4401,26 +4401,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page || '1');
       const limit = parseInt(req.query.limit || '20');
       const search = req.query.search;
+      const customerId = req.query.customerId;
       const archiveTab = req.query.archiveTab || 'active';
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}, tab: ${archiveTab}`);
+      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}, customerId: ${customerId || 'none'}, tab: ${archiveTab}`);
       
-      // Build search conditions
-      const searchConditions = search && search.trim()
-        ? [
-            eq(orders.wholesalerId, wholesalerId),
-            or(
-              sql`${orders.orderNumber} ILIKE ${'%' + search.trim() + '%'}`,
-              sql`${orders.customerName} ILIKE ${'%' + search.trim() + '%'}`,
-              sql`${orders.customerEmail} ILIKE ${'%' + search.trim() + '%'}`,
-              sql`${orders.customerPhone} ILIKE ${'%' + search.trim() + '%'}`
-            )
-          ]
-        : [eq(orders.wholesalerId, wholesalerId)];
+      // Build search conditions - customerId takes priority over text search
+      const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId)];
+      if (customerId) {
+        searchConditions.push(eq(orders.retailerId, customerId));
+      } else if (search && search.trim()) {
+        const searchValue = '%' + search.trim() + '%';
+        searchConditions.push(or(
+          sql`${orders.orderNumber} ILIKE ${searchValue}`,
+          sql`${orders.customerName} ILIKE ${searchValue}`,
+          sql`${orders.customerEmail} ILIKE ${searchValue}`,
+          sql`${orders.customerPhone} ILIKE ${searchValue}`
+        ));
+      }
 
       // Archived = cancelled OR (fulfilled AND paid)
       // Active = everything else
