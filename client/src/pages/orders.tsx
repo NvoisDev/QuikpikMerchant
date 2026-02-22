@@ -791,10 +791,23 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        <div className="flex gap-1">
-                          <Badge className={getStatusColor(order.status) + " text-xs"}>
-                            {getStatusLabel(order.status)}
-                          </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {(order as any).paymentStatus === 'paid' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
+                          ) : (order as any).paymentStatus === 'part_paid' ? (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
+                          )}
+                          {order.status === 'fulfilled' ? (
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                          ) : order.status === 'ready_for_collection' ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                          ) : order.status === 'cancelled' ? (
+                            <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
+                          )}
                           {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
@@ -807,7 +820,7 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {order.status !== 'fulfilled' ? (
+                        {order.status !== 'fulfilled' && order.status !== 'cancelled' ? (
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -820,12 +833,12 @@ export default function OrdersFresh() {
                           >
                             {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
                           </Button>
-                        ) : (
+                        ) : order.status === 'fulfilled' ? (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">
                             <CheckCircle className="w-2 h-2 mr-1" />
-                            Fulfilled
+                            Done
                           </Badge>
-                        )}
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500">
                         <div className="flex items-center justify-between">
@@ -864,9 +877,22 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge className={getStatusColor(order.status) + " text-xs"}>
-                          {getStatusLabel(order.status)}
-                        </Badge>
+                        {(order as any).paymentStatus === 'paid' ? (
+                          <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
+                        ) : (order as any).paymentStatus === 'part_paid' ? (
+                          <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
+                        )}
+                        {order.status === 'fulfilled' ? (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                        ) : order.status === 'ready_for_collection' ? (
+                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                        ) : order.status === 'cancelled' ? (
+                          <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
+                        )}
                         {order.fulfillmentType && (
                           <Badge variant="outline" className="text-xs">
                             {order.fulfillmentType === 'delivery' ? (
@@ -878,7 +904,7 @@ export default function OrdersFresh() {
                         )}
                       </div>
                       
-                      {order.status !== 'fulfilled' && (
+                      {order.status !== 'fulfilled' && order.status !== 'cancelled' && (
                         <Button 
                           size="sm" 
                           variant="outline"

@@ -17382,7 +17382,7 @@ https://quikpik.app`;
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0 } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup' } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
       
@@ -17433,7 +17433,7 @@ https://quikpik.app`;
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
         total: total.toFixed(2),
-        fulfillmentType: 'pickup',
+        fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',

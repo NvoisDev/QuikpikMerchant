@@ -38,7 +38,9 @@ import {
   Copy,
   Check,
   ArrowLeft,
-  UserPlus
+  UserPlus,
+  Truck,
+  MapPin
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -95,6 +97,7 @@ export default function QuickQuote() {
   });
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
+  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -143,6 +146,7 @@ export default function QuickQuote() {
       sendVia: 'sms' | 'link';
       depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
+      fulfillmentType: 'delivery' | 'pickup';
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       return response.json();
@@ -261,6 +265,7 @@ export default function QuickQuote() {
       sendVia: sendMethod,
       depositPercentage,
       balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
+      fulfillmentType,
     });
   };
 
@@ -284,6 +289,7 @@ export default function QuickQuote() {
     setSendMethod('sms');
     setDepositPercentage(100);
     setBalanceDueDays(0);
+    setFulfillmentType('pickup');
   };
 
   if (createdQuote) {
@@ -706,6 +712,32 @@ export default function QuickQuote() {
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
                 <span>£{calculateTotal().toFixed(2)}</span>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Delivery Method</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={fulfillmentType === 'pickup' ? 'default' : 'outline'}
+                    className={fulfillmentType === 'pickup' ? 'bg-green-600 hover:bg-green-700' : ''}
+                    size="sm"
+                    onClick={() => setFulfillmentType('pickup')}
+                  >
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Collection
+                  </Button>
+                  <Button
+                    variant={fulfillmentType === 'delivery' ? 'default' : 'outline'}
+                    className={fulfillmentType === 'delivery' ? 'bg-green-600 hover:bg-green-700' : ''}
+                    size="sm"
+                    onClick={() => setFulfillmentType('delivery')}
+                  >
+                    <Truck className="w-3 h-3 mr-1" />
+                    Delivery
+                  </Button>
+                </div>
               </div>
 
               <Separator />
