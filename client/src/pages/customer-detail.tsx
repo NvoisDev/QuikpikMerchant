@@ -31,6 +31,12 @@ import {
   Building2,
   Warehouse,
   Copy,
+  Package,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Truck,
+  FileText,
 } from "lucide-react";
 
 interface Customer {
@@ -66,6 +72,20 @@ interface DeliveryAddress {
   label?: string;
   instructions?: string;
   isDefault: boolean;
+}
+
+interface Order {
+  id: number;
+  orderNumber?: string;
+  retailerId?: string;
+  customerName?: string;
+  total: string;
+  status: string;
+  createdAt: string;
+  fulfillmentType?: string;
+  paymentStatus?: string;
+  depositPercentage?: number;
+  amountPaid?: string;
 }
 
 const formatCurrency = (amount: number) =>
@@ -113,6 +133,15 @@ export default function CustomerDetail() {
     queryKey: [`/api/wholesaler/customers/${customerId}/addresses`],
     enabled: !!customerId,
   });
+
+  const { data: allOrders = [] } = useQuery<Order[]>({
+    queryKey: ["/api/orders"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const customerOrders = allOrders
+    .filter((o) => o.retailerId === customerId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (updates: Partial<Customer>) => {
@@ -410,6 +439,54 @@ export default function CustomerDetail() {
             >
               Add first address
             </Button>
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">Recent orders</h2>
+          {customerOrders.length > 0 && (
+            <span className="text-xs text-muted-foreground">{customerOrders.length} total</span>
+          )}
+        </div>
+        {customerOrders.length > 0 ? (
+          <div className="space-y-2">
+            {customerOrders.slice(0, 5).map((order) => {
+              const statusColor = order.status === "completed" ? "text-green-600 bg-green-50" :
+                order.status === "cancelled" ? "text-red-600 bg-red-50" :
+                order.status === "processing" ? "text-blue-600 bg-blue-50" :
+                "text-yellow-600 bg-yellow-50";
+              const StatusIcon = order.status === "completed" ? CheckCircle :
+                order.status === "cancelled" ? XCircle :
+                order.status === "processing" ? Package : Clock;
+              return (
+                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-1.5 rounded-full ${statusColor}`}>
+                      <StatusIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{order.orderNumber || `#${order.id}`}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">{formatCurrency(parseFloat(order.total))}</p>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColor} border-0`}>
+                      {order.status}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
+            <ShoppingBag className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No orders yet</p>
           </div>
         )}
       </div>
