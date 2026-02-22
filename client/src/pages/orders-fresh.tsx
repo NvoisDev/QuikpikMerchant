@@ -1068,47 +1068,23 @@ export default function OrdersFresh() {
 
       {/* Statistics Cards - only show on Active tab */}
       {archiveTab === 'active' && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-[10px] sm:text-xs font-medium">Active Orders</CardTitle>
-              <Package className="h-3 w-3 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
-              <div className="text-base sm:text-xl font-bold">{orderStats?.ordersCount ?? displayedOrders}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-[10px] sm:text-xs font-medium">Net Revenue</CardTitle>
-              <DollarSign className="h-3 w-3 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
-              <div className="text-base sm:text-xl font-bold">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</div>
-              <p className="text-[9px] sm:text-xs text-muted-foreground">After platform fees</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-[10px] sm:text-xs font-medium">Paid Orders</CardTitle>
-              <Users className="h-3 w-3 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
-              <div className="text-base sm:text-xl font-bold">{orderStats?.paidOrdersCount ?? paidOrders}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-[10px] sm:text-xs font-medium">Pending</CardTitle>
-              <Clock className="h-3 w-3 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
-              <div className="text-base sm:text-xl font-bold">{orderStats?.pendingOrdersCount ?? pendingOrders}</div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="rounded-lg bg-green-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-green-700">Net Revenue</p>
+            <p className="text-sm font-bold text-green-800">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</p>
+          </div>
+          <div className="rounded-lg bg-blue-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-blue-700">Paid Orders</p>
+            <p className="text-sm font-bold text-blue-800">{orderStats?.paidOrdersCount ?? paidOrders}</p>
+          </div>
+          <div className="rounded-lg bg-yellow-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-yellow-700">Active Orders</p>
+            <p className="text-sm font-bold text-yellow-800">{orderStats?.ordersCount ?? displayedOrders}</p>
+          </div>
+          <div className="rounded-lg bg-orange-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-orange-700">Pending</p>
+            <p className="text-sm font-bold text-orange-800">{orderStats?.pendingOrdersCount ?? pendingOrders}</p>
+          </div>
         </div>
       )}
 
