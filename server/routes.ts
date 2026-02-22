@@ -8267,44 +8267,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
-    try {
-      // Check subscription tier for Business Performance access (Standard or Premium required)
-      if (req.user.subscriptionTier === 'free') {
-        return res.status(403).json({ 
-          error: 'Standard or Premium plan required for Business Performance analytics',
-          required: 'standard'
-        });
-      }
-
-      // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-        
-      const { timeRange = '30d' } = req.query;
-      
-      // Generate sample customer growth data
-      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-      const customerData = [];
-      
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        customerData.push({
-          date: date.toISOString().split('T')[0],
-          new: Math.floor(Math.random() * 3) + 1,
-          returning: Math.floor(Math.random() * 5) + 2
-        });
-      }
-      
-      res.json(customerData);
-    } catch (error) {
-      console.error("Error fetching customer data:", error);
-      res.status(500).json({ message: "Failed to fetch customer data" });
-    }
-  });
-
   app.get('/api/analytics/products', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
