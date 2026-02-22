@@ -39,6 +39,10 @@ import {
   FileText,
   MessageSquare,
   ExternalLink,
+  Send,
+  ShieldX,
+  UserPlus,
+  Users,
 } from "lucide-react";
 
 interface Customer {
@@ -264,6 +268,70 @@ export default function CustomerDetail() {
     updateCustomerMutation.mutate(contactFormData);
   };
 
+  const sendWelcomeMessageMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('POST', `/api/customers/${id}/send-welcome`),
+    onSuccess: (data: any) => {
+      const { welcomeMessages } = data;
+      const parts = [];
+      if (welcomeMessages?.emailSent) parts.push("email");
+      if (welcomeMessages?.smsSent) parts.push("SMS");
+      if (welcomeMessages?.whatsappSent) parts.push("WhatsApp");
+      toast({ title: "Welcome Sent", description: parts.length ? `Sent via ${parts.join(", ")}` : "Welcome message sent" });
+    },
+    onError: () => toast({ title: "Failed to send welcome", variant: "destructive" }),
+  });
+
+  const removeCustomerAccessMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/wholesaler/customer/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: "Access removed" });
+    },
+    onError: () => toast({ title: "Failed to remove access", variant: "destructive" }),
+  });
+
+  const allowCustomerAccessMutation = useMutation({
+    mutationFn: (data: { email: string; phoneNumber?: string; firstName?: string; lastName?: string }) =>
+      apiRequest('POST', '/api/wholesaler/invite', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: "Access granted" });
+    },
+    onError: () => toast({ title: "Failed to grant access", variant: "destructive" }),
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/customers/${id}`),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: data.archived ? "Customer archived" : "Customer deleted" });
+      navigate("/customers");
+    },
+    onError: () => toast({ title: "Failed to delete customer", variant: "destructive" }),
+  });
+
+  const addCustomerToGroupMutation = useMutation({
+    mutationFn: ({ groupId, customerId: cId }: { groupId: number; customerId: string }) =>
+      apiRequest('POST', `/api/customer-groups/${groupId}/members/${cId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: "Added to group" });
+      setIsAddToGroupOpen(false);
+    },
+    onError: (error: any) => toast({ title: "Error", description: error.message || "Failed to add to group", variant: "destructive" }),
+  });
+
+  const [isAddToGroupOpen, setIsAddToGroupOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
+
+  interface CustomerGroup { id: number; name: string; }
+  const { data: customerGroups = [] } = useQuery<CustomerGroup[]>({
+    queryKey: ['/api/customer-groups'],
+  });
+
+  const hasPortalAccess = !!customer?.email;
+
   const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
 
   const getInitials = () => {
@@ -310,9 +378,13 @@ export default function CustomerDetail() {
               <FileText className="h-4 w-4 mr-2" />
               Create quote
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/orders?customer=${encodeURIComponent(fullName)}`)}>
+            <DropdownMenuItem onClick={() => navigate(`/orders?search=${encodeURIComponent(fullName)}`)}>
               <ShoppingBag className="h-4 w-4 mr-2" />
               View orders
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsAddToGroupOpen(true)}>
+              <Users className="h-4 w-4 mr-2" />
+              Add to Group
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={openEditContact}>
@@ -322,6 +394,13 @@ export default function CustomerDetail() {
             <DropdownMenuItem onClick={() => setIsEditAddressesOpen(true)}>
               <MapPin className="h-4 w-4 mr-2" />
               Edit addresses
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => sendWelcomeMessageMutation.mutate(customerId)}
+              disabled={sendWelcomeMessageMutation.isPending}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Send Welcome
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {customer?.phoneNumber && (
@@ -342,6 +421,52 @@ export default function CustomerDetail() {
                 Email
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator />
+            {hasPortalAccess ? (
+              <DropdownMenuItem
+                className="text-orange-600"
+                onClick={() => {
+                  if (confirm(`Remove portal access for ${fullName}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
+                    removeCustomerAccessMutation.mutate(customerId);
+                  }
+                }}
+                disabled={removeCustomerAccessMutation.isPending}
+              >
+                <ShieldX className="h-4 w-4 mr-2" />
+                Remove Access
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-green-600"
+                onClick={() => {
+                  if (customer?.email) {
+                    allowCustomerAccessMutation.mutate({
+                      email: customer.email,
+                      phoneNumber: customer.phoneNumber,
+                      firstName: customer.firstName,
+                      lastName: customer.lastName,
+                    });
+                  } else {
+                    toast({ title: "Email Required", description: "Customer must have an email address to grant access.", variant: "destructive" });
+                  }
+                }}
+                disabled={allowCustomerAccessMutation.isPending || !customer?.email}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Allow Access
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${fullName}? This action cannot be undone.`)) {
+                  deleteCustomerMutation.mutate(customerId);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -483,7 +608,7 @@ export default function CustomerDetail() {
               variant="ghost"
               size="sm"
               className="text-xs text-blue-600 h-auto p-0"
-              onClick={() => navigate(`/orders?customer=${encodeURIComponent(fullName)}`)}
+              onClick={() => navigate(`/orders?search=${encodeURIComponent(fullName)}`)}
             >
               View all ({customerOrders.length})
             </Button>
@@ -509,7 +634,7 @@ export default function CustomerDetail() {
                 order.paymentStatus === "paid" ? "Paid" :
                 order.paymentStatus === "part_paid" ? "Part Paid" : "Unpaid";
               return (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => navigate(`/orders?id=${order.id}`)}>
                   <div className="flex items-center space-x-3">
                     <div className={`p-1.5 rounded-full ${statusColor}`}>
                       <StatusIcon className="h-3.5 w-3.5" />
@@ -736,6 +861,50 @@ export default function CustomerDetail() {
                 </div>
               </form>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddToGroupOpen} onOpenChange={setIsAddToGroupOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add to Group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {customer?.groupNames && customer.groupNames.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Current groups</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {customer.groupNames.map((g, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">{g}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">Select group</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(Number(e.target.value))}
+              >
+                <option value={0}>Choose a group...</option>
+                {customerGroups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsAddToGroupOpen(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!selectedGroupId || addCustomerToGroupMutation.isPending}
+                onClick={() => addCustomerToGroupMutation.mutate({ groupId: selectedGroupId, customerId })}
+              >
+                {addCustomerToGroupMutation.isPending ? "Adding..." : "Add to Group"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

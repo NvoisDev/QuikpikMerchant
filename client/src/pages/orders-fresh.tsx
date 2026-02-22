@@ -295,15 +295,21 @@ export default function OrdersFresh() {
   };
 
   useEffect(() => {
-    loadOrders(1, searchQuery);
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+      loadOrders(1, searchParam);
+    } else {
+      loadOrders(1, searchQuery);
+    }
+
     loadCancellationRequests();
     loadOrderStats(archiveTab);
     
-    // Check for order ID in URL params to auto-open order details
-    const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('id');
     if (orderId) {
-      // Fetch and display the order details directly
       fetch(`/api/orders/${orderId}`, {
         method: 'GET',
         credentials: 'include',
