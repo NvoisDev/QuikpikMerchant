@@ -1068,45 +1068,45 @@ export default function OrdersFresh() {
 
       {/* Statistics Cards - only show on Active tab */}
       {archiveTab === 'active' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium">Total Active Orders</CardTitle>
-              <Package className="h-3 w-3 text-muted-foreground" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-xs font-medium">Active Orders</CardTitle>
+              <Package className="h-3 w-3 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{orderStats?.ordersCount ?? displayedOrders}</div>
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-base sm:text-xl font-bold">{orderStats?.ordersCount ?? displayedOrders}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium">Net Revenue</CardTitle>
-              <DollarSign className="h-3 w-3 text-muted-foreground" />
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-xs font-medium">Net Revenue</CardTitle>
+              <DollarSign className="h-3 w-3 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</div>
-              <p className="text-xs text-muted-foreground">After platform fees</p>
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-base sm:text-xl font-bold">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</div>
+              <p className="text-[9px] sm:text-xs text-muted-foreground">After platform fees</p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium">Paid Orders</CardTitle>
-              <Users className="h-3 w-3 text-muted-foreground" />
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-xs font-medium">Paid Orders</CardTitle>
+              <Users className="h-3 w-3 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{orderStats?.paidOrdersCount ?? paidOrders}</div>
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-base sm:text-xl font-bold">{orderStats?.paidOrdersCount ?? paidOrders}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium">Pending</CardTitle>
-              <Clock className="h-3 w-3 text-muted-foreground" />
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-xs font-medium">Pending</CardTitle>
+              <Clock className="h-3 w-3 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{orderStats?.pendingOrdersCount ?? pendingOrders}</div>
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-base sm:text-xl font-bold">{orderStats?.pendingOrdersCount ?? pendingOrders}</div>
             </CardContent>
           </Card>
         </div>
