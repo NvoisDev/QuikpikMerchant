@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -37,6 +37,8 @@ import {
   XCircle,
   Truck,
   FileText,
+  MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 
 interface Customer {
@@ -304,14 +306,42 @@ export default function CustomerDetail() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate(`/quick-quote?customerId=${customerId}`)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Create quote
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/orders?customer=${encodeURIComponent(fullName)}`)}>
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              View orders
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={openEditContact}>
               <Edit3 className="h-4 w-4 mr-2" />
-              Edit contact information
+              Edit contact info
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setIsEditAddressesOpen(true)}>
               <MapPin className="h-4 w-4 mr-2" />
               Edit addresses
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {customer?.phoneNumber && (
+              <DropdownMenuItem onClick={() => window.open(`https://wa.me/${customer.phoneNumber.replace(/[^0-9]/g, '')}`, '_blank')}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                WhatsApp
+              </DropdownMenuItem>
+            )}
+            {customer?.phoneNumber && (
+              <DropdownMenuItem onClick={() => window.open(`tel:${customer.phoneNumber}`)}>
+                <Phone className="h-4 w-4 mr-2" />
+                Call
+              </DropdownMenuItem>
+            )}
+            {customer?.email && (
+              <DropdownMenuItem onClick={() => window.open(`mailto:${customer.email}`)}>
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -449,19 +479,35 @@ export default function CustomerDetail() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-muted-foreground">Recent orders</h2>
           {customerOrders.length > 0 && (
-            <span className="text-xs text-muted-foreground">{customerOrders.length} total</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-blue-600 h-auto p-0"
+              onClick={() => navigate(`/orders?customer=${encodeURIComponent(fullName)}`)}
+            >
+              View all ({customerOrders.length})
+            </Button>
           )}
         </div>
         {customerOrders.length > 0 ? (
           <div className="space-y-2">
             {customerOrders.slice(0, 5).map((order) => {
-              const statusColor = order.status === "completed" ? "text-green-600 bg-green-50" :
-                order.status === "cancelled" ? "text-red-600 bg-red-50" :
-                order.status === "processing" ? "text-blue-600 bg-blue-50" :
-                "text-yellow-600 bg-yellow-50";
-              const StatusIcon = order.status === "completed" ? CheckCircle :
-                order.status === "cancelled" ? XCircle :
-                order.status === "processing" ? Package : Clock;
+              const statusColor =
+                order.status === "paid" ? "bg-green-100 text-green-800" :
+                order.status === "fulfilled" ? "bg-blue-100 text-blue-800" :
+                order.status === "cancelled" ? "bg-red-100 text-red-800" :
+                "bg-yellow-100 text-yellow-800";
+              const StatusIcon =
+                order.status === "paid" ? CheckCircle :
+                order.status === "fulfilled" ? Package :
+                order.status === "cancelled" ? XCircle : Clock;
+              const paymentColor =
+                order.paymentStatus === "paid" ? "bg-green-100 text-green-800" :
+                order.paymentStatus === "part_paid" ? "bg-amber-100 text-amber-800" :
+                "bg-red-100 text-red-800";
+              const paymentLabel =
+                order.paymentStatus === "paid" ? "Paid" :
+                order.paymentStatus === "part_paid" ? "Part Paid" : "Unpaid";
               return (
                 <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
                   <div className="flex items-center space-x-3">
@@ -473,10 +519,10 @@ export default function CustomerDetail() {
                       <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <p className="text-sm font-semibold">{formatCurrency(parseFloat(order.total))}</p>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColor} border-0`}>
-                      {order.status}
+                    <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
+                      {paymentLabel}
                     </Badge>
                   </div>
                 </div>
