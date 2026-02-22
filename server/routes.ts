@@ -17382,12 +17382,16 @@ https://quikpik.app`;
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup' } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryAddressId = null, deliveryAddress = null } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
+      }
+
+      if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddress) {
+        return res.status(400).json({ error: 'Delivery address is required for delivery orders' });
       }
 
       // Get customer details
@@ -17434,6 +17438,8 @@ https://quikpik.app`;
         customerTransactionFee: customerTransactionFee.toFixed(2),
         total: total.toFixed(2),
         fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
+        ...(fulfillmentType === 'delivery' && deliveryAddressId ? { deliveryAddressId: typeof deliveryAddressId === 'number' ? deliveryAddressId : parseInt(deliveryAddressId) } : {}),
+        ...(fulfillmentType === 'delivery' && deliveryAddress ? { deliveryAddress } : {}),
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',

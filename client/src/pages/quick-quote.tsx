@@ -64,6 +64,16 @@ interface Customer {
   phoneNumber?: string;
 }
 
+interface DeliveryAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  postalCode: string;
+  country?: string;
+  label?: string;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -98,6 +108,9 @@ export default function QuickQuote() {
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
+  const [deliveryAddressId, setDeliveryAddressId] = useState<number | null>(null);
+  const [deliveryAddressText, setDeliveryAddressText] = useState('');
+  const [useCustomAddress, setUseCustomAddress] = useState(false);
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -107,6 +120,17 @@ export default function QuickQuote() {
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });
+
+  const { data: customerAddresses = [] } = useQuery<DeliveryAddress[]>({
+    queryKey: ['/api/wholesaler/customer-delivery-addresses', selectedCustomer?.id, user?.id],
+    enabled: !!selectedCustomer && !!user && fulfillmentType === 'delivery',
+  });
+
+  useEffect(() => {
+    if (customerAddresses.length > 0 && !useCustomAddress && !deliveryAddressId) {
+      setDeliveryAddressId(customerAddresses[0].id);
+    }
+  }, [customerAddresses, useCustomAddress, deliveryAddressId]);
 
   const addCustomerMutation = useMutation({
     mutationFn: async (data: typeof newCustomer) => {
@@ -147,6 +171,8 @@ export default function QuickQuote() {
       depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
       fulfillmentType: 'delivery' | 'pickup';
+      deliveryAddressId?: number | null;
+      deliveryAddress?: string;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       return response.json();
@@ -259,6 +285,15 @@ export default function QuickQuote() {
       return;
     }
 
+    if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddressText.trim()) {
+      toast({
+        title: "Delivery Address Required",
+        description: "Please select or enter a delivery address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createQuoteMutation.mutate({
       customerId: selectedCustomer.id,
       items: quoteItems,
@@ -266,6 +301,10 @@ export default function QuickQuote() {
       depositPercentage,
       balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
+      ...(fulfillmentType === 'delivery' && {
+        deliveryAddressId: useCustomAddress ? null : deliveryAddressId,
+        deliveryAddress: useCustomAddress ? deliveryAddressText.trim() : undefined,
+      }),
     });
   };
 
@@ -290,6 +329,9 @@ export default function QuickQuote() {
     setDepositPercentage(100);
     setBalanceDueDays(0);
     setFulfillmentType('pickup');
+    setDeliveryAddressId(null);
+    setDeliveryAddressText('');
+    setUseCustomAddress(false);
   };
 
   if (createdQuote) {
@@ -739,6 +781,63 @@ export default function QuickQuote() {
                   </Button>
                 </div>
               </div>
+
+              {fulfillmentType === 'delivery' && selectedCustomer && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                  <Label className="text-sm font-medium block text-blue-900">Delivery Address</Label>
+                  {customerAddresses.length > 0 && !useCustomAddress ? (
+                    <div className="space-y-2">
+                      {customerAddresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          onClick={() => setDeliveryAddressId(addr.id)}
+                          className={`p-2 rounded border cursor-pointer text-xs ${
+                            deliveryAddressId === addr.id
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          {addr.label && <span className="font-medium">{addr.label}: </span>}
+                          {addr.addressLine1}, {addr.city}, {addr.postalCode}
+                        </div>
+                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-blue-600"
+                        onClick={() => { setUseCustomAddress(true); setDeliveryAddressId(null); }}
+                      >
+                        + Enter a different address
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Enter full delivery address"
+                        value={deliveryAddressText}
+                        onChange={(e) => setDeliveryAddressText(e.target.value)}
+                        className="text-sm"
+                      />
+                      {customerAddresses.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-blue-600"
+                          onClick={() => { setUseCustomAddress(false); setDeliveryAddressText(''); setDeliveryAddressId(customerAddresses[0]?.id || null); }}
+                        >
+                          Use saved address instead
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {fulfillmentType === 'delivery' && !selectedCustomer && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-700">Select a customer first to set the delivery address</p>
+                </div>
+              )}
 
               <Separator />
 
