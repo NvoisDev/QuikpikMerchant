@@ -4401,16 +4401,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page || '1');
       const limit = parseInt(req.query.limit || '20');
       const search = req.query.search;
+      const archiveTab = req.query.archiveTab || 'active';
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}`);
+      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}, tab: ${archiveTab}`);
       
-      // Build the base where condition, applying search filter if present
-      const searchFilter = search && search.trim()
-        ? and(
+      // Build search conditions
+      const searchConditions = search && search.trim()
+        ? [
             eq(orders.wholesalerId, wholesalerId),
             or(
               sql`${orders.orderNumber} ILIKE ${'%' + search.trim() + '%'}`,
@@ -4418,24 +4419,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sql`${orders.customerEmail} ILIKE ${'%' + search.trim() + '%'}`,
               sql`${orders.customerPhone} ILIKE ${'%' + search.trim() + '%'}`
             )
-          )
-        : eq(orders.wholesalerId, wholesalerId);
+          ]
+        : [eq(orders.wholesalerId, wholesalerId)];
 
-      // Get total count with search filter applied
+      // Archived = cancelled OR (fulfilled AND paid)
+      // Active = everything else
+      const archivedCondition = or(
+        eq(orders.status, 'cancelled'),
+        and(eq(orders.status, 'fulfilled'), eq(orders.paymentStatus, 'paid'))
+      );
+
+      const tabFilter = archiveTab === 'archived'
+        ? and(...searchConditions, archivedCondition!)
+        : and(...searchConditions, sql`NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid'))`);
+
+      // Also get counts for both tabs (using search filter but not tab filter)
+      const baseFilter = and(...searchConditions);
+
+      // Get total count for current tab
       const totalCountQuery = await db
         .select({ count: count() })
         .from(orders)
-        .where(searchFilter);
+        .where(tabFilter);
       const totalOrders = totalCountQuery[0].count;
       const totalPages = Math.ceil(totalOrders / limit);
       
-      // Get paginated orders
-      const orderQuery = db
+      // Get paginated orders for current tab
+      const ordersResult = await db
         .select()
         .from(orders)
-        .where(searchFilter);
-      
-      const ordersResult = await orderQuery
+        .where(tabFilter)
         .orderBy(desc(orders.createdAt))
         .limit(limit)
         .offset((page - 1) * limit);
@@ -4471,10 +4484,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancellationRequest: cancellationRequestsMap[order.id] || null
       }));
       
-      // Calculate stats for active/archived tabs from matching orders (respects search filter)
-      // Archived = cancelled OR (fulfilled AND fully paid)
-      // Active = everything else (including part paid fulfilled orders with outstanding balance)
-      const allOrdersForStats = await db.select().from(orders).where(searchFilter);
+      // Calculate tab counts using base filter (search but no tab filter)
+      const allOrdersForStats = await db.select().from(orders).where(baseFilter);
       
       const isArchivedOrder = (order: any) => {
         const status = (order.status || '').toLowerCase();
@@ -4487,13 +4498,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeCount = allOrdersForStats.filter(o => !isArchivedOrder(o)).length;
       const archivedCount = allOrdersForStats.filter(o => isArchivedOrder(o)).length;
       
-      // Calculate stats for active orders
-      const activeOrders = allOrdersForStats.filter(o => !isArchivedOrder(o));
-      const paidOrdersCount = activeOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
-      const pendingOrdersCount = activeOrders.filter(o => o.status === 'pending').length;
+      // Calculate stats for current tab's orders
+      const tabOrders = archiveTab === 'archived'
+        ? allOrdersForStats.filter(o => isArchivedOrder(o))
+        : allOrdersForStats.filter(o => !isArchivedOrder(o));
+      const paidOrdersCount = tabOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
+      const pendingOrdersCount = tabOrders.filter(o => o.status === 'pending').length;
       
-      // Calculate net revenue for non-cancelled orders
-      const revenueOrders = activeOrders.filter(o => o.status !== 'cancelled');
+      // Calculate net revenue for non-cancelled orders in current tab
+      const revenueOrders = tabOrders.filter(o => o.status !== 'cancelled');
       const totalRevenue = revenueOrders.reduce((sum, order) => {
         const total = parseFloat(order.total || '0');
         const platformFee = parseFloat(order.platformFee || '0');

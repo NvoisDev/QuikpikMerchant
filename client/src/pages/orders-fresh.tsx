@@ -248,7 +248,7 @@ export default function OrdersFresh() {
     }
   };
 
-  const loadOrders = async (page = 1, search = '') => {
+  const loadOrders = async (page = 1, search = '', tab = archiveTab) => {
     setLoading(true);
     setError(null);
     
@@ -256,6 +256,7 @@ export default function OrdersFresh() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: ordersPerPage.toString(),
+        archiveTab: tab,
         ...(search && { search })
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
@@ -815,16 +816,11 @@ export default function OrdersFresh() {
     return false;
   };
   
-  // Filter orders based on archive tab
-  // Active tab shows all orders EXCEPT archived ones (including part paid fulfilled with outstanding balance)
-  const filteredByTab = archiveTab === 'archived' 
-    ? orders.filter(o => isArchivedOrder(o))
-    : orders.filter(o => !isArchivedOrder(o));
-  
-  // Then apply status filter if selected - with null safety
+  // Orders are already filtered by active/archived tab on the server
+  // Apply status filter client-side if selected - with null safety
   const filteredByStatus = statusFilter 
-    ? filteredByTab.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase())
-    : filteredByTab;
+    ? orders.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase())
+    : orders;
   
   // Apply payment status filter (archive tab only)
   const filteredByPayment = paymentStatusFilter
@@ -861,9 +857,9 @@ export default function OrdersFresh() {
   const paidOrders = filteredByDate.filter(o => (o.status || '') === 'paid').length;
   const pendingOrders = filteredByDate.filter(o => (o.status || '') === 'pending').length;
   
-  // Count orders for tab badges using the same isArchivedOrder function
-  const archivedCount = orders.filter(o => isArchivedOrder(o)).length;
-  const activeCount = orders.filter(o => !isArchivedOrder(o)).length;
+  // Tab badge counts come from server stats (accurate across all pages)
+  const activeCount = orderStats?.activeCount ?? 0;
+  const archivedCount = orderStats?.archivedCount ?? 0;
 
   // Show loading state for auth or orders loading
   if (authLoading || loading) {
@@ -945,7 +941,7 @@ export default function OrdersFresh() {
       {/* Archive Tabs */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => { setArchiveTab('active'); loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('active'); loadOrders(1, searchQuery, 'active'); loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -958,7 +954,7 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('archived'); loadOrders(1, searchQuery, 'archived'); loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-green-600 text-green-600'
