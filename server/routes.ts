@@ -17474,7 +17474,7 @@ https://quikpik.app`;
       
       const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryAddressId = null, deliveryAddress = null, customAddressFields = null } = req.body;
       
-      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage });
+      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage, fulfillmentType, deliveryAddressId, hasDeliveryAddress: !!deliveryAddress, hasCustomAddressFields: !!customAddressFields });
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
