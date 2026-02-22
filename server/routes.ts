@@ -4408,38 +4408,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}`);
       
-      // Get total count first
+      // Build the base where condition, applying search filter if present
+      const searchFilter = search && search.trim()
+        ? and(
+            eq(orders.wholesalerId, wholesalerId),
+            or(
+              sql`${orders.orderNumber} ILIKE ${'%' + search.trim() + '%'}`,
+              sql`${orders.customerName} ILIKE ${'%' + search.trim() + '%'}`,
+              sql`${orders.customerEmail} ILIKE ${'%' + search.trim() + '%'}`,
+              sql`${orders.customerPhone} ILIKE ${'%' + search.trim() + '%'}`
+            )
+          )
+        : eq(orders.wholesalerId, wholesalerId);
+
+      // Get total count with search filter applied
       const totalCountQuery = await db
         .select({ count: count() })
         .from(orders)
-        .where(eq(orders.wholesalerId, wholesalerId));
+        .where(searchFilter);
       const totalOrders = totalCountQuery[0].count;
       const totalPages = Math.ceil(totalOrders / limit);
       
-      // Get paginated orders with properly combined where conditions
-      let orderQuery;
-      
-      // Apply search filter - combine all conditions in single where clause
-      if (search && search.trim()) {
-        const searchValue = `%${search.trim()}%`;
-        orderQuery = db
-          .select()
-          .from(orders)
-          .where(and(
-            eq(orders.wholesalerId, wholesalerId),
-            or(
-              sql`${orders.orderNumber} ILIKE ${searchValue}`,
-              sql`${orders.customerName} ILIKE ${searchValue}`,
-              sql`${orders.customerEmail} ILIKE ${searchValue}`,
-              sql`${orders.customerPhone} ILIKE ${searchValue}`
-            )
-          ));
-      } else {
-        orderQuery = db
-          .select()
-          .from(orders)
-          .where(eq(orders.wholesalerId, wholesalerId));
-      }
+      // Get paginated orders
+      const orderQuery = db
+        .select()
+        .from(orders)
+        .where(searchFilter);
       
       const ordersResult = await orderQuery
         .orderBy(desc(orders.createdAt))
@@ -4477,10 +4471,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancellationRequest: cancellationRequestsMap[order.id] || null
       }));
       
-      // Calculate stats for active/archived tabs from ALL orders (not just current page)
+      // Calculate stats for active/archived tabs from matching orders (respects search filter)
       // Archived = cancelled OR (fulfilled AND fully paid)
       // Active = everything else (including part paid fulfilled orders with outstanding balance)
-      const allOrdersForStats = await db.select().from(orders).where(eq(orders.wholesalerId, wholesalerId));
+      const allOrdersForStats = await db.select().from(orders).where(searchFilter);
       
       const isArchivedOrder = (order: any) => {
         const status = (order.status || '').toLowerCase();
