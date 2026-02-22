@@ -137,7 +137,11 @@ export default function QuickQuote() {
     if (customerAddresses.length > 0 && !useCustomAddress && !deliveryAddressId) {
       setDeliveryAddressId(customerAddresses[0].id);
     }
-  }, [customerAddresses, useCustomAddress, deliveryAddressId]);
+    if (customerAddresses.length === 0) {
+      setUseCustomAddress(true);
+      setDeliveryAddressId(null);
+    }
+  }, [customerAddresses]);
 
   const addCustomerMutation = useMutation({
     mutationFn: async (data: typeof newCustomer) => {
@@ -293,7 +297,9 @@ export default function QuickQuote() {
       return;
     }
 
-    if (fulfillmentType === 'delivery' && !deliveryAddressId && !customAddressFields.addressLine1.trim()) {
+    const isUsingCustomAddress = useCustomAddress || customerAddresses.length === 0;
+
+    if (fulfillmentType === 'delivery' && !deliveryAddressId && !isUsingCustomAddress) {
       toast({
         title: "Delivery Address Required",
         description: "Please select or enter a delivery address",
@@ -302,7 +308,16 @@ export default function QuickQuote() {
       return;
     }
 
-    if (fulfillmentType === 'delivery' && useCustomAddress && (!customAddressFields.city.trim() || !customAddressFields.postalCode.trim())) {
+    if (fulfillmentType === 'delivery' && isUsingCustomAddress && !customAddressFields.addressLine1.trim()) {
+      toast({
+        title: "Delivery Address Required",
+        description: "Please enter the address line",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fulfillmentType === 'delivery' && isUsingCustomAddress && (!customAddressFields.city.trim() || !customAddressFields.postalCode.trim())) {
       toast({
         title: "Address Incomplete",
         description: "Please enter the city and postal code",
@@ -319,9 +334,9 @@ export default function QuickQuote() {
       balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
       ...(fulfillmentType === 'delivery' && {
-        deliveryAddressId: useCustomAddress ? null : deliveryAddressId,
-        deliveryAddress: useCustomAddress ? `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}` : undefined,
-        ...(useCustomAddress ? { customAddressFields } : {}),
+        deliveryAddressId: isUsingCustomAddress ? null : deliveryAddressId,
+        deliveryAddress: isUsingCustomAddress ? `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}` : undefined,
+        ...(isUsingCustomAddress ? { customAddressFields } : {}),
       }),
     });
   };
