@@ -41,13 +41,17 @@ export class StockAlertService {
           stock: products.stock,
           palletStock: products.palletStock,
           moq: products.moq,
+          lowStockThreshold: products.lowStockThreshold,
           wholesalerId: products.wholesalerId,
           price: products.price
         })
         .from(products)
         .where(and(
           eq(products.status, 'active'),
-          lt(products.stock, products.moq),
+          or(
+            lt(products.stock, products.moq),
+            lt(products.stock, products.lowStockThreshold)
+          ),
           or(
             isNull(products.lastStockAlertSentAt),
             lte(products.lastStockAlertSentAt, twentyFourHoursAgo)
@@ -79,11 +83,12 @@ export class StockAlertService {
           100 // Minimum suggestion of 100 units
         );
 
+        const threshold = Math.max(product.moq || 1, product.lowStockThreshold || 50);
         const alert: StockAlert = {
           productId: product.id,
           productName: product.name,
           currentStock: product.stock || 0,
-          minimumThreshold: product.moq || 10,
+          minimumThreshold: threshold,
           wholesalerId: product.wholesalerId,
           wholesalerName: wholesalerData.businessName || `${wholesalerData.firstName} ${wholesalerData.lastName}`.trim(),
           wholesalerEmail: wholesalerData.email || undefined,
