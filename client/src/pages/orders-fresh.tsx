@@ -1277,19 +1277,21 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex gap-1 flex-wrap">
-                          {order.status === 'cancelled' ? (
-                            <Badge className="bg-red-100 text-red-800 text-xs">
-                              <X className="w-2 h-2 mr-1" />
-                              Cancelled
-                            </Badge>
-                          ) : order.paymentStatus ? (
-                            <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
-                              {getPaymentStatusLabel(order.paymentStatus)}
-                            </Badge>
+                          {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
+                          ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
                           ) : (
-                            <Badge className={getStatusColor(order.status) + " text-xs"}>
-                              {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                            </Badge>
+                            <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
+                          )}
+                          {order.status === 'fulfilled' ? (
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                          ) : order.status === 'ready_for_collection' ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                          ) : order.status === 'cancelled' ? (
+                            <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
                           )}
                           {order.isQuote ? (
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
@@ -1371,19 +1373,21 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {order.status === 'cancelled' ? (
-                          <Badge className="bg-red-100 text-red-800 text-xs">
-                            <X className="w-2 h-2 mr-1" />
-                            Cancelled
-                          </Badge>
-                        ) : order.isQuote && order.paymentStatus ? (
-                          <Badge className={getPaymentStatusColor(order.paymentStatus) + " text-xs"}>
-                            {getPaymentStatusLabel(order.paymentStatus)}
-                          </Badge>
+                        {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
+                          <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
+                        ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
+                          <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
                         ) : (
-                          <Badge className={getStatusColor(order.status) + " text-xs"}>
-                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                          </Badge>
+                          <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
+                        )}
+                        {order.status === 'fulfilled' ? (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                        ) : order.status === 'ready_for_collection' ? (
+                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                        ) : order.status === 'cancelled' ? (
+                          <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
                         )}
                         {order.isQuote ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
@@ -1477,34 +1481,30 @@ export default function OrdersFresh() {
               {/* Status & Fulfillment */}
               <div>
                 <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
-                <div className="flex gap-2">
-                  {selectedOrder.status === 'cancelled' ? (
-                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">
-                      <X className="w-3 h-3 mr-1" />
-                      Cancelled
-                    </Badge>
-                  ) : selectedOrder.paymentStatus ? (
-                    <Badge className={`${getPaymentStatusColor(selectedOrder.paymentStatus)} text-xs px-2 py-1`}>
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      {getPaymentStatusLabel(selectedOrder.paymentStatus)}
-                    </Badge>
+                <div className="flex gap-2 flex-wrap">
+                  {(selectedOrder.paymentStatus || '').toLowerCase() === 'paid' ? (
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">Paid</Badge>
+                  ) : (selectedOrder.paymentStatus || '').toLowerCase() === 'part_paid' ? (
+                    <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-1">Part Paid</Badge>
                   ) : (
-                    <Badge className={`${getStatusColor(selectedOrder.status)} text-xs px-2 py-1`}>
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      {selectedOrder.status?.charAt(0).toUpperCase() + selectedOrder.status?.slice(1)}
-                    </Badge>
+                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">Unpaid</Badge>
                   )}
-                  <Badge variant="outline" className="text-xs px-2 py-1">
-                    {selectedOrder.fulfillmentType === 'delivery' ? (
-                      <><Truck className="w-3 h-3 mr-1" />Delivery</>
-                    ) : (
-                      <><MapPin className="w-3 h-3 mr-1" />Collection</>
-                    )}
-                  </Badge>
-                  {selectedOrder.status === 'fulfilled' && (
-                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Fulfilled
+                  {selectedOrder.status === 'fulfilled' ? (
+                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">Fulfilled</Badge>
+                  ) : selectedOrder.status === 'ready_for_collection' ? (
+                    <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1">Ready</Badge>
+                  ) : selectedOrder.status === 'cancelled' ? (
+                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">Cancelled</Badge>
+                  ) : (
+                    <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Pending</Badge>
+                  )}
+                  {selectedOrder.fulfillmentType && (
+                    <Badge variant="outline" className="text-xs px-2 py-1">
+                      {selectedOrder.fulfillmentType === 'delivery' ? (
+                        <><Truck className="w-3 h-3 mr-1" />Delivery</>
+                      ) : (
+                        <><MapPin className="w-3 h-3 mr-1" />Collection</>
+                      )}
                     </Badge>
                   )}
                 </div>
