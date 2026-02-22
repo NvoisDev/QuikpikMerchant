@@ -1278,62 +1278,35 @@ export default function Customers() {
         <TabsContent value="address-book" className="space-y-6">
           {/* Customer Stats */}
           {stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <Card>
-                <CardContent className="flex items-center p-4 sm:p-6">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-600">Total Customers</p>
-                      <p className="text-lg sm:text-xl font-bold">{stats.totalCustomers}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center p-4 sm:p-6">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
-                      <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-600">Active Customers</p>
-                      <p className="text-lg sm:text-xl font-bold">{stats.activeCustomers}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center p-4 sm:p-6">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-600">New This Month</p>
-                      <p className="text-lg sm:text-xl font-bold">{stats.newCustomersThisMonth}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center p-4 sm:p-6">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
-                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
-                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="rounded-lg bg-blue-50 px-3 py-2 flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-medium text-blue-700">Total Customers</p>
+                  <p className="text-sm font-bold text-blue-800">{stats.totalCustomers}</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-green-50 px-3 py-2 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-medium text-green-700">Active Customers</p>
+                  <p className="text-sm font-bold text-green-800">{stats.activeCustomers}</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-purple-50 px-3 py-2 flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-purple-600 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-medium text-purple-700">New This Month</p>
+                  <p className="text-sm font-bold text-purple-800">{stats.newCustomersThisMonth}</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-orange-50 px-3 py-2 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-orange-600 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-medium text-orange-700">Total Revenue</p>
+                  <p className="text-sm font-bold text-orange-800">{formatCurrency(stats.totalRevenue)}</p>
+                </div>
+              </div>
             </div>
           )}
 
