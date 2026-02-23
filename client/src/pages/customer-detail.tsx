@@ -345,7 +345,7 @@ export default function CustomerDetail() {
 
   if (!customer) {
     return (
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
+      <div className="max-w-2xl mx-auto p-4 space-y-4 bg-white min-h-screen">
         <Button variant="ghost" size="sm" onClick={() => navigate("/customers?tab=address-book")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -361,7 +361,7 @@ export default function CustomerDetail() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
+    <div className="max-w-2xl mx-auto p-4 space-y-4 bg-white min-h-screen">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => navigate("/customers?tab=address-book")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
