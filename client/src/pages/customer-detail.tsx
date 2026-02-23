@@ -570,7 +570,7 @@ export default function CustomerDetail() {
           </Button>
         </div>
         {defaultAddress ? (
-          <div className="bg-gray-50 rounded-lg p-3 border text-sm space-y-0.5">
+          <div className="bg-white rounded-lg p-3 border text-sm space-y-0.5">
             <p className="font-medium">{fullName}</p>
             <p>{defaultAddress.addressLine1}</p>
             {defaultAddress.addressLine2 && <p>{defaultAddress.addressLine2}</p>}
@@ -634,7 +634,7 @@ export default function CustomerDetail() {
                 order.paymentStatus === "paid" ? "Paid" :
                 order.paymentStatus === "part_paid" ? "Part Paid" : "Unpaid";
               return (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => navigate(`/orders?id=${order.id}`)}>
+                <div key={order.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/orders?id=${order.id}`)}>
                   <div className="flex items-center space-x-3">
                     <div className={`p-1.5 rounded-full ${statusColor}`}>
                       <StatusIcon className="h-3.5 w-3.5" />
