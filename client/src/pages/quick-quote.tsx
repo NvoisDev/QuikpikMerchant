@@ -53,6 +53,7 @@ interface QuoteItem {
   quantity: number;
   sellingType: 'units' | 'pallets';
   unitsPerPallet?: number;
+  promotionalOffers?: any[];
 }
 
 interface Customer {
@@ -235,6 +236,7 @@ export default function QuickQuote() {
         quantity: 1,
         sellingType,
         unitsPerPallet: product.unitsPerPallet,
+        promotionalOffers: product.promotionalOffers || [],
       }]);
       setInputValues(prev => ({
         ...prev,
@@ -675,6 +677,18 @@ export default function QuickQuote() {
                               </Badge>
                             )}
                           </div>
+                          {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {item.promotionalOffers.map((offer: any, oi: number) => (
+                                <Badge key={oi} variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
+                                  {offer.type === 'bogof' ? `Buy ${offer.buyQuantity} Get ${offer.freeQuantity} Free` :
+                                   offer.type === 'percentage_discount' ? `Buy ${offer.buyQuantity}+ Get ${offer.discountPercentage}% Off` :
+                                   offer.type === 'fixed_price' ? `Buy ${offer.buyQuantity}+ @ £${offer.fixedPrice} each` :
+                                   offer.label || 'Promo Active'}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
