@@ -20,8 +20,6 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { PromotionAnalytics } from "@/components/PromotionAnalytics";
-import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
@@ -2385,7 +2383,6 @@ export default function ProductManagement() {
                     onDelete={handleDelete}
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
-                    showPromotionAnalytics={false}
                   />
                 </div>
               ))}

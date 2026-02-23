@@ -113,7 +113,6 @@ function parseAddressForEmail(address: string | null | undefined): {
   
   return defaultComponents;
 }
-import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
@@ -4745,18 +4744,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // CRITICAL FIX: Use promotional pricing calculator to match payment processing
         const basePrice = parseFloat(product.price);
-        const promotionalPricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          basePrice,
-          item.quantity,
-          product.promotionalOffers || [],
-          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-          Boolean(product.promoActive)
-        );
-        
-        const effectivePrice = promotionalPricing.effectivePrice;
-        const itemTotal = promotionalPricing.totalCost;
+        const effectivePrice = basePrice;
+        const itemTotal = effectivePrice * item.quantity;
         subtotal += itemTotal;
 
         orderItems.push({
@@ -4766,8 +4756,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unitPrice: effectivePrice.toFixed(2),
           total: itemTotal.toFixed(2),
           sellingType: item.sellingType || 'units',
-          appliedOfferLabel: promotionalPricing.appliedOffers?.length > 0 ? promotionalPricing.appliedOffers.join(', ') : null,
-          freeItems: promotionalPricing.freeItems || 0
+          appliedOfferLabel: null,
+          freeItems: 0
         });
       }
 
@@ -4880,21 +4870,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: `Product ${item.productId} not found` });
         }
 
-        // CRITICAL FIX: Use promotional pricing calculator to determine correct expected price
         const basePrice = parseFloat(product.price);
-        const promotionalPricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          basePrice,
-          item.quantity,
-          product.promotionalOffers || [],
-          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-          Boolean(product.promoActive)
-        );
         
-        // CRITICAL FIX: Use the sellingType field sent from frontend instead of guessing from price
-        const sellingType = item.sellingType || 'units'; // Default to units if not specified
+        // Use the sellingType field sent from frontend instead of guessing from price
+        const sellingType = item.sellingType || 'units';
         const isPalletOrder = sellingType === 'pallets';
-        const isUnitOrder = sellingType === 'units' && parseFloat(item.unitPrice) === promotionalPricing.effectivePrice;
-        const isPromotionalOrder = isUnitOrder && promotionalPricing.effectivePrice !== basePrice;
+        const isUnitOrder = sellingType === 'units' && parseFloat(item.unitPrice) === basePrice;
+        const isPromotionalOrder = false;
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
           itemQuantity: item.quantity,
@@ -4962,17 +4944,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalQuantity: item.quantity
           };
         } else {
-          // For unit and promotional orders, apply promotional pricing calculations
-          const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
           calculationPrice = parseFloat(product.price);
-          
-          pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-            calculationPrice,
-            item.quantity,
-            product.promotionalOffers || [],
-            product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-            Boolean(product.promoActive)
-          );
+          pricing = {
+            originalPrice: calculationPrice,
+            effectivePrice: calculationPrice,
+            totalCost: calculationPrice * item.quantity,
+            totalDiscount: 0,
+            discountPercentage: 0,
+            appliedOffers: [],
+            freeItems: 0,
+            totalQuantity: item.quantity
+          };
         }
         
         console.log(`🧮 CALCULATION DEBUG for product ${product.id}:`, {
@@ -5718,20 +5700,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Create order items with orderId for storage, including promo labels
             const orderItemsData = await Promise.all(items.map(async (item: any) => {
-              const product = await storage.getProduct(item.productId);
-              let appliedOfferLabel: string | null = null;
-              let freeItemsCount = 0;
-              if (product && product.promotionalOffers && product.promotionalOffers.length > 0 && item.sellingType !== 'pallets') {
-                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                  parseFloat(product.price),
-                  item.quantity,
-                  product.promotionalOffers || [],
-                  product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-                  Boolean(product.promoActive)
-                );
-                if (pricing.appliedOffers?.length > 0) appliedOfferLabel = pricing.appliedOffers.join(', ');
-                freeItemsCount = pricing.freeItems || 0;
-              }
               return {
                 orderId: 0,
                 productId: item.productId,
@@ -5739,8 +5707,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 unitPrice: parseFloat(item.unitPrice).toFixed(2),
                 total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
                 sellingType: item.sellingType || 'units',
-                appliedOfferLabel,
-                freeItems: freeItemsCount
+                appliedOfferLabel: null,
+                freeItems: 0
               };
             }));
 
@@ -10977,18 +10945,6 @@ Return only the taglines, one per line, without numbers or formatting.`;
             result.messageId
           );
           
-          // Apply promotional offers to the actual product so they show in customer portal
-          if (promotionalOffers && promotionalOffers.length > 0) {
-            try {
-              console.log(`🎯 Applying ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}:`, promotionalOffers);
-              await storage.updateProductPromotionalOffers(broadcast.product.id, promotionalOffers);
-              console.log(`✅ Applied ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}`);
-            } catch (error) {
-              console.error('❌ Error applying promotional offers to product:', error);
-            }
-          } else {
-            console.log(`ℹ️ No promotional offers to apply for product ${broadcast.product.id}. Raw data:`, broadcast.promotionalOffers);
-          }
         }
 
         res.json({
@@ -11076,14 +11032,6 @@ Return only the taglines, one per line, without numbers or formatting.`;
                 console.log(`📋 No promotional offers data for product ${templateProduct.productId}`);
               }
               
-              // Apply promotional offers to the actual product
-              if (promotionalOffers.length > 0) {
-                console.log(`🎯 Applying ${promotionalOffers.length} promotional offers to product ${templateProduct.productId}:`, promotionalOffers);
-                await storage.updateProductPromotionalOffers(templateProduct.productId, promotionalOffers);
-                console.log(`✅ Applied ${promotionalOffers.length} promotional offers to product ${templateProduct.productId} from template campaign`);
-              } else {
-                console.log(`ℹ️ No promotional offers to apply for product ${templateProduct.productId}. Raw data:`, templateProduct.promotionalOffers);
-              }
             } catch (error) {
               console.error(`Error applying promotional offers to product ${templateProduct.productId}:`, error);
             }
@@ -12092,16 +12040,6 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       const itemQty = parseInt(quantity);
       const itemSellingType = sellingType || 'units';
-      let itemAppliedOfferLabel: string | null = null;
-      let itemFreeItems = 0;
-      if (itemSellingType !== 'pallets' && product.promotionalOffers && product.promotionalOffers.length > 0) {
-        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          parseFloat(product.price), itemQty, product.promotionalOffers || [],
-          product.promoPrice ? parseFloat(product.promoPrice) : undefined, Boolean(product.promoActive)
-        );
-        if (pricing.appliedOffers?.length > 0) itemAppliedOfferLabel = pricing.appliedOffers.join(', ');
-        itemFreeItems = pricing.freeItems || 0;
-      }
       const orderItems = [{
         productId: product.id,
         quantity: itemQty,
@@ -12109,8 +12047,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         total: totalAmount.toString(),
         sellingType: itemSellingType,
         orderId: 0,
-        appliedOfferLabel: itemAppliedOfferLabel,
-        freeItems: itemFreeItems
+        appliedOfferLabel: null,
+        freeItems: 0
       }];
       
       // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
@@ -12337,25 +12275,14 @@ Please contact the customer to confirm this order.
         notes: notes || ''
       };
 
-      const orderItems = await Promise.all(items.map(async (item: any) => {
-        const product = await storage.getProduct(item.productId);
-        let appliedOfferLabel: string | null = null;
-        let freeItemsCount = 0;
-        if (product && product.promotionalOffers && product.promotionalOffers.length > 0 && (item.sellingType || 'units') !== 'pallets') {
-          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-            parseFloat(product.price), item.quantity, product.promotionalOffers || [],
-            product.promoPrice ? parseFloat(product.promoPrice) : undefined, Boolean(product.promoActive)
-          );
-          if (pricing.appliedOffers?.length > 0) appliedOfferLabel = pricing.appliedOffers.join(', ');
-          freeItemsCount = pricing.freeItems || 0;
-        }
+      const orderItems = items.map((item: any) => {
         return {
           ...item,
           orderId: 0,
-          appliedOfferLabel,
-          freeItems: freeItemsCount
+          appliedOfferLabel: null,
+          freeItems: 0
         };
-      }));
+      });
 
       const order = await db.transaction(async (trx) => {
         return await storage.createOrderWithTransaction(trx, orderData, orderItems);
@@ -15843,33 +15770,6 @@ https://quikpik.app`;
     }
   });
 
-  // Promotion Analytics Routes
-  app.get('/api/promotion-analytics/:productId', requireAuth, async (req: any, res) => {
-    try {
-      const productId = parseInt(req.params.productId);
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
-      
-      const analytics = await storage.getPromotionAnalyticsByProduct(targetUserId, productId);
-      res.json(analytics);
-    } catch (error) {
-      console.error('Error fetching promotion analytics:', error);
-      res.status(500).json({ error: 'Failed to fetch promotion analytics' });
-    }
-  });
-
-  app.get('/api/promotion-analytics/summary/:productId', requireAuth, async (req: any, res) => {
-    try {
-      const productId = parseInt(req.params.productId);
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
-      
-      const summary = await storage.getProductPerformanceSummary(targetUserId, productId);
-      res.json(summary);
-    } catch (error) {
-      console.error('Error fetching product performance summary:', error);
-      res.status(500).json({ error: 'Failed to fetch product performance summary' });
-    }
-  });
-
   // Customer Address Book routes
   app.get('/api/customers', requireAuth, async (req: any, res) => {
     try {
@@ -16353,31 +16253,6 @@ https://quikpik.app`;
     } catch (error) {
       console.error('Error bulk updating customers:', error);
       res.status(500).json({ error: 'Failed to bulk update customers' });
-    }
-  });
-
-  app.get('/api/promotion-analytics/dashboard', requireAuth, async (req: any, res) => {
-    try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
-      
-      const dashboardData = await storage.getPromotionDashboard(targetUserId);
-      res.json(dashboardData);
-    } catch (error) {
-      console.error('Error fetching promotion dashboard:', error);
-      res.status(500).json({ error: 'Failed to fetch promotion dashboard data' });
-    }
-  });
-
-  app.post('/api/promotion-analytics/track', requireAuth, async (req: any, res) => {
-    try {
-      const { campaignId, productId, action, metadata } = req.body;
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
-      
-      await storage.trackPromotionActivity(targetUserId, campaignId, productId, action, metadata);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error tracking promotion activity:', error);
-      res.status(500).json({ error: 'Failed to track promotion activity' });
     }
   });
 

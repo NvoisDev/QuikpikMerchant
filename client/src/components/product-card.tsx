@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StockTracker from "@/components/stock-tracker";
-import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { useState } from "react";
 
 interface Product {
@@ -71,7 +70,6 @@ interface ProductCardProps {
   onDelete: (id: number) => void;
   onDuplicate?: (product: Product) => void;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
-  showPromotionAnalytics?: boolean;
 }
 
 export default function ProductCard({ 
@@ -80,10 +78,8 @@ export default function ProductCard({
   onDelete, 
   onDuplicate,
   onStatusChange,
-  showPromotionAnalytics = false
 }: ProductCardProps) {
   const [showStockTracker, setShowStockTracker] = useState(false);
-  const [showPromotionModal, setShowPromotionModal] = useState(false);
 
   // Get subscription data from authenticated user (no separate API call needed)
   const { user } = useAuth();

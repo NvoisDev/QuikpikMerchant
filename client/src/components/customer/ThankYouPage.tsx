@@ -3,7 +3,6 @@ import { CheckCircle, Mail, Package, ArrowLeft, ShoppingBag, Sparkles, Gift, Par
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
@@ -260,35 +259,6 @@ export const ThankYouPage = ({
                           <p className="text-sm text-gray-500">
                             QTY: {item.quantity} {item.sellingType === "pallets" ? "pallets" : "units"}
                           </p>
-                          {(() => {
-                            if (item.sellingType !== "pallets" && item.product.promotionalOffers?.length > 0) {
-                              const basePrice = parseFloat(item.product.price) || 0;
-                              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                                basePrice,
-                                item.quantity,
-                                item.product.promotionalOffers || [],
-                                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                                item.product.promoActive
-                              );
-                              if (pricing.appliedOffers?.length > 0) {
-                                return (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {pricing.appliedOffers.map((offer: string, i: number) => (
-                                      <span key={i} className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
-                                        🎁 {offer}
-                                      </span>
-                                    ))}
-                                    {pricing.freeItems > 0 && (
-                                      <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                                        +{pricing.freeItems} free
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              }
-                            }
-                            return null;
-                          })()}
                         </div>
                       </div>
                       <div className="text-right">
@@ -298,14 +268,7 @@ export const ThankYouPage = ({
                               return formatCurrency(parseFloat(item.product.palletPrice || "0") * item.quantity);
                             } else {
                               const basePrice = parseFloat(item.product.price) || 0;
-                              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                                basePrice,
-                                item.quantity,
-                                item.product.promotionalOffers || [],
-                                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                                item.product.promoActive
-                              );
-                              return formatCurrency(pricing.totalCost);
+                              return formatCurrency(basePrice * item.quantity);
                             }
                           })()}
                         </p>

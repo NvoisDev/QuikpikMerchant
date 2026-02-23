@@ -103,7 +103,6 @@ export interface IStorage {
   getProduct(id: number): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
-  updateProductPromotionalOffers(id: number, promotionalOffers: any[]): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
   
   // Order operations
@@ -374,11 +373,6 @@ export interface IStorage {
   completeMilestone(milestoneId: string, userId: string): Promise<{ milestone: OnboardingMilestone; badge?: UserBadge; experienceGained: number }>;
   checkMilestoneProgress(userId: string, action: string): Promise<{ completedMilestones: string[]; newBadges: UserBadge[]; experienceGained: number }>;
   
-  // Promotion Analytics operations
-  getPromotionAnalyticsByProduct(wholesalerId: string, productId: number): Promise<any[]>;
-  getProductPerformanceSummary(wholesalerId: string, productId: number): Promise<any>;
-  getPromotionDashboard(wholesalerId: string): Promise<any>;
-  trackPromotionActivity(wholesalerId: string, campaignId: number, productId: number, action: string, metadata?: any): Promise<void>;
   
   // Customer profile update notification operations
   createCustomerProfileUpdateNotification(notification: InsertCustomerProfileUpdateNotification): Promise<SelectCustomerProfileUpdateNotification>;
@@ -824,45 +818,6 @@ export class DatabaseStorage implements IStorage {
     return updatedProduct;
   }
 
-  async updateProductPromotionalOffers(id: number, promotionalOffers: any[]): Promise<Product> {
-    // Get current product to calculate promotional pricing
-    const currentProduct = await this.getProduct(id);
-    if (!currentProduct) {
-      throw new Error('Product not found');
-    }
-
-    console.log(`📊 Calculating promotional pricing for product ${id} with ${promotionalOffers.length} offers:`, promotionalOffers);
-
-    // Calculate promotional pricing using the imported calculator
-    const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
-    const basePrice = parseFloat(currentProduct.price.toString()) || 0;
-    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-      basePrice,
-      1, // quantity of 1 for base calculation
-      promotionalOffers,
-      currentProduct.promoPrice ? parseFloat(currentProduct.promoPrice.toString()) : undefined,
-      currentProduct.promoActive ?? false
-    );
-
-    console.log(`💰 Promotional pricing calculated: original=${pricing.originalPrice}, effective=${pricing.effectivePrice}, hasPromo=${pricing.effectivePrice < pricing.originalPrice}`);
-
-    // Apply promotional pricing if there's a difference
-    const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
-    const promoPrice = hasPromotion ? pricing.effectivePrice : null;
-
-    const [updatedProduct] = await db
-      .update(products)
-      .set({ 
-        promoActive: hasPromotion,
-        promoPrice: promoPrice?.toString() || null,
-        updatedAt: new Date() 
-      })
-      .where(eq(products.id, id))
-      .returning();
-
-    console.log(`✅ Updated product ${id}: promoActive=${hasPromotion}, promoPrice=${promoPrice}`);
-    return updatedProduct;
-  }
 
   async deleteProduct(id: number): Promise<void> {
     await db.delete(products).where(eq(products.id, id));
@@ -3946,92 +3901,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Promotion Analytics methods
-  async getPromotionAnalyticsByProduct(wholesalerId: string, productId: number): Promise<any[]> {
-    try {
-      // Mock data for now - will be replaced with real data when database is ready
-      return [
-        {
-          campaignId: 1,
-          promotionType: 'percentage_discount',
-          discountPercentage: 15,
-          orderCount: 12,
-          revenue: 2400,
-          startDate: '2025-01-01',
-          endDate: '2025-01-15',
-          effectiveness: 'high'
-        },
-        {
-          campaignId: 2,
-          promotionType: 'fixed_amount_discount',
-          discountAmount: 50,
-          orderCount: 8,
-          revenue: 1600,
-          startDate: '2025-01-10',
-          endDate: '2025-01-20',
-          effectiveness: 'medium'
-        }
-      ];
-    } catch (error) {
-      console.error('Error fetching promotion analytics:', error);
-      return [];
-    }
-  }
-
-  async getProductPerformanceSummary(wholesalerId: string, productId: number): Promise<any> {
-    try {
-      // Mock data for now - will be replaced with real data when database is ready
-      return {
-        totalPromotions: 5,
-        bestPerformingPromotion: 'percentage_discount',
-        averageOrderIncrease: 45,
-        totalPromotionalRevenue: 8500,
-        promotionalOrderCount: 34,
-        conversionRate: 12.5,
-        averageOrderValue: 250
-      };
-    } catch (error) {
-      console.error('Error fetching product performance summary:', error);
-      return {};
-    }
-  }
-
-  async getPromotionDashboard(wholesalerId: string): Promise<any> {
-    try {
-      // Mock data for now - will be replaced with real data when database is ready
-      return {
-        activePromotions: 3,
-        totalRevenue: 15000,
-        topPerformingProduct: 'Premium Basmati Rice',
-        averageConversionRate: 18.7,
-        totalOrders: 67,
-        recentPromotions: [
-          { productName: 'Premium Basmati Rice', type: 'percentage_discount', performance: 'excellent' },
-          { productName: 'Organic Quinoa', type: 'bogo', performance: 'good' },
-          { productName: 'Brown Rice', type: 'fixed_price', performance: 'average' }
-        ]
-      };
-    } catch (error) {
-      console.error('Error fetching promotion dashboard:', error);
-      return {};
-    }
-  }
-
-  async trackPromotionActivity(wholesalerId: string, campaignId: number, productId: number, action: string, metadata?: any): Promise<void> {
-    try {
-      // Mock implementation for now - will be replaced with real logging when database is ready
-      console.log('Tracking promotion activity:', {
-        wholesalerId,
-        campaignId,
-        productId,
-        action,
-        metadata,
-        timestamp: new Date()
-      });
-    } catch (error) {
-      console.error('Error tracking promotion activity:', error);
-    }
-  }
 
   // SMS verification operations
   async createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode> {

@@ -54,7 +54,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Shared utilities and types
-import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { cleanAIDescription } from "@shared/utils";
 
@@ -272,7 +271,7 @@ interface Product {
   total_package_weight?: string;
   
   // Promotional offers
-  promotionalOffers?: PromotionalOffer[];
+  promotionalOffers?: any[];
   
   wholesaler: {
     id: string;
@@ -1327,16 +1326,18 @@ export default function CustomerPortal() {
     refetchOnMount: false,
   });
 
-  // Helper function to calculate promotional pricing for display
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
     const basePrice = parseFloat(product.price) || 0;
-    return PromotionalPricingCalculator.calculatePromotionalPricing(
-      basePrice,
-      quantity,
-      product.promotionalOffers || [],
-      product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-      product.promoActive
-    );
+    return {
+      originalPrice: basePrice,
+      effectivePrice: basePrice,
+      totalCost: basePrice * quantity,
+      totalDiscount: 0,
+      discountPercentage: 0,
+      appliedOffers: [] as string[],
+      freeItems: 0,
+      totalQuantity: quantity
+    };
   };
 
   // Memoized calculations
@@ -1404,19 +1405,10 @@ export default function CustomerPortal() {
         subtotal += itemPrice * itemQuantity;
       } else {
         const basePrice = parseFloat(item.product.price) || 0;
-        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          basePrice,
-          itemQuantity,
-          item.product.promotionalOffers || [],
-          item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-          Boolean(item.product.promoActive)
-        );
-        
-        // Use effective price and total quantity (includes free items from BOGOFF)
-        itemPrice = pricing.effectivePrice;
-        totalItems += itemQuantity; // Only user-selected quantity for display
-        totalPromotionalItems += pricing.totalQuantity; // Includes free items for calculations
-        subtotal += pricing.totalCost;
+        itemPrice = basePrice;
+        totalItems += itemQuantity;
+        totalPromotionalItems += itemQuantity;
+        subtotal += basePrice * itemQuantity;
         
 
         
@@ -1641,15 +1633,7 @@ export default function CustomerPortal() {
           if (item.sellingType === 'pallets') {
             return parseFloat((item.product as any).palletPrice || "0") || 0;
           } else {
-            const basePrice = parseFloat(item.product.price) || 0;
-            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-              basePrice,
-              item.quantity,
-              item.product.promotionalOffers || [],
-              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-              item.product.promoActive
-            );
-            return pricing.effectivePrice;
+            return parseFloat(item.product.price) || 0;
           }
         })();
         return total + (unitPrice * item.quantity);
@@ -1686,15 +1670,7 @@ export default function CustomerPortal() {
             if (item.sellingType === 'pallets') {
               return parseFloat((item.product as any).palletPrice || "0") || 0;
             } else {
-              const basePrice = parseFloat(item.product.price) || 0;
-              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                basePrice,
-                item.quantity,
-                item.product.promotionalOffers || [],
-                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                item.product.promoActive
-              );
-              return pricing.effectivePrice;
+              return parseFloat(item.product.price) || 0;
             }
           })(),
           sellingType: item.sellingType
@@ -1781,15 +1757,7 @@ export default function CustomerPortal() {
           if (item.sellingType === 'pallets') {
             return parseFloat((item.product as any).palletPrice || "0") || 0;
           } else {
-            const basePrice = parseFloat(item.product.price) || 0;
-            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-              basePrice,
-              item.quantity,
-              item.product.promotionalOffers || [],
-              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-              item.product.promoActive
-            );
-            return pricing.effectivePrice;
+            return parseFloat(item.product.price) || 0;
           }
         })();
         return total + (unitPrice * item.quantity);
@@ -1816,15 +1784,7 @@ export default function CustomerPortal() {
             if (item.sellingType === 'pallets') {
               return parseFloat((item.product as any).palletPrice || "0") || 0;
             } else {
-              const basePrice = parseFloat(item.product.price) || 0;
-              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                basePrice,
-                item.quantity,
-                item.product.promotionalOffers || [],
-                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                item.product.promoActive
-              );
-              return pricing.effectivePrice;
+              return parseFloat(item.product.price) || 0;
             }
           })(),
           sellingType: item.sellingType
@@ -4380,15 +4340,8 @@ export default function CustomerPortal() {
                         totalCost = itemPrice * item.quantity;
                       } else {
                         const basePrice = parseFloat(item.product.price);
-                        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                          basePrice,
-                          item.quantity,
-                          item.product.promotionalOffers || [],
-                          item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                          item.product.promoActive
-                        );
-                        itemPrice = pricing.effectivePrice;
-                        totalCost = pricing.totalCost;
+                        itemPrice = basePrice;
+                        totalCost = basePrice * item.quantity;
                       }
                       
                       return (

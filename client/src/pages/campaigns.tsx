@@ -39,10 +39,7 @@ import {
   XCircle,
   Clock,
   Tag,
-  Percent,
   TrendingUp,
-  AlertTriangle,
-  Gift,
   Zap,
   Star,
   Target
@@ -51,10 +48,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
-// Removed PromotionalOffersManager - promotions managed at product level
-import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
-import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
-import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
+import type { Product, CustomerGroup } from "@shared/schema";
 
 const campaignFormSchema = z.object({
   title: z.string().min(1, "Campaign title is required"),
@@ -66,69 +60,11 @@ const campaignFormSchema = z.object({
   productId: z.number().optional(),
   quantity: z.number().optional(),
   specialPrice: z.string().optional(),
-  promotionalOffers: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    isActive: z.boolean(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    discountPercentage: z.number().optional(),
-    discountAmount: z.number().optional(),
-    fixedPrice: z.number().optional(),
-    buyQuantity: z.number().optional(),
-    getQuantity: z.number().optional(),
-    minQuantity: z.number().optional(),
-    maxQuantity: z.number().optional(),
-    bulkTiers: z.array(z.object({
-      minQuantity: z.number(),
-      discountPercentage: z.number(),
-      discountAmount: z.number().optional(),
-    })).optional(),
-    bundleProducts: z.array(z.number()).optional(),
-    bundlePrice: z.number().optional(),
-    maxUses: z.number().optional(),
-    usesCount: z.number().optional(),
-    maxUsesPerCustomer: z.number().optional(),
-    description: z.string().optional(),
-    termsAndConditions: z.string().optional(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })).optional(),
   // For multi-product campaigns
   products: z.array(z.object({
     productId: z.number(),
     quantity: z.number().min(1),
     specialPrice: z.string().optional(),
-    promotionalOffers: z.array(z.object({
-      id: z.string(),
-      name: z.string(),
-      type: z.string(),
-      isActive: z.boolean(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      discountPercentage: z.number().optional(),
-      discountAmount: z.number().optional(),
-      fixedPrice: z.number().optional(),
-      buyQuantity: z.number().optional(),
-      getQuantity: z.number().optional(),
-      minQuantity: z.number().optional(),
-      maxQuantity: z.number().optional(),
-      bulkTiers: z.array(z.object({
-        minQuantity: z.number(),
-        discountPercentage: z.number(),
-        discountAmount: z.number().optional(),
-      })).optional(),
-      bundleProducts: z.array(z.number()).optional(),
-      bundlePrice: z.number().optional(),
-      maxUses: z.number().optional(),
-      usesCount: z.number().optional(),
-      maxUsesPerCustomer: z.number().optional(),
-      description: z.string().optional(),
-      termsAndConditions: z.string().optional(),
-      createdAt: z.string(),
-      updatedAt: z.string(),
-    })).optional(),
   })).optional(),
 });
 
@@ -163,51 +99,7 @@ interface Campaign {
   }>;
 }
 
-// Helper functions for promotional offers (now uses product-level offers only)
-const hasPromotionalOffers = (campaign: Campaign) => {
-  if (campaign.campaignType === 'single') {
-    // Check if product has promotional offers
-    return campaign.product && campaign.product.promotionalOffers && campaign.product.promotionalOffers.length > 0;
-  } else {
-    // Check if any products have promotional offers
-    return campaign.products?.some((productItem: any) => 
-      productItem.product && productItem.product.promotionalOffers && productItem.product.promotionalOffers.length > 0
-    ) || false;
-  }
-};
-
 export default function Campaigns() {
-  // Helper function to calculate promotional pricing for products
-  const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
-    const basePrice = parseFloat(product.price) || 0;
-    return PromotionalPricingCalculator.calculatePromotionalPricing(
-      basePrice,
-      quantity,
-      product.promotionalOffers || [],
-      product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-      product.promoActive || false
-    );
-  };
-
-  // Helper function to check if product has existing promotional offers
-  const getProductExistingOffers = (productId: number) => {
-    const product = (products as Product[])?.find(p => p.id === productId);
-    if (!product) return { hasOffers: false, offers: [], campaigns: [] };
-    
-    const hasOffers = product.promotionalOffers && product.promotionalOffers.length > 0;
-    const offers = product.promotionalOffers || [];
-    
-    // Find campaigns that might be using this product
-    const relatedCampaigns = (campaigns as Campaign[])?.filter(campaign => {
-      if (campaign.campaignType === 'single') {
-        return campaign.product?.id === productId;
-      } else {
-        return campaign.products?.some(p => p.productId === productId);
-      }
-    }) || [];
-    
-    return { hasOffers, offers, campaigns: relatedCampaigns };
-  };
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -228,7 +120,6 @@ export default function Campaigns() {
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
-  // Removed campaign-level promotional offers - now managed at product level only
   const [activeTab, setActiveTab] = useState<'campaigns'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
@@ -427,15 +318,12 @@ export default function Campaigns() {
     const updated = [...selectedProducts];
     
     if (field === 'productId') {
-      // When product is selected, set quantity to stock amount and populate existing offers
       const selectedProduct = (products as Product[]).find(p => p.id === parseInt(value));
-      const existingOffers = getProductExistingOffers(parseInt(value));
       
       updated[index] = { 
         ...updated[index], 
         [field]: value,
         quantity: selectedProduct?.stock || 1,
-        // promotionalOffers removed - managed at product level
       };
     } else {
       updated[index] = { ...updated[index], [field]: value };
@@ -445,74 +333,6 @@ export default function Campaigns() {
   };
 
 
-
-  // Helper function to generate promotional offers messaging
-  const generatePromotionalOffersMessage = (promotionalOffers: any[], currencySymbol: string = '£'): string => {
-    if (!promotionalOffers || promotionalOffers.length === 0) {
-      return '';
-    }
-
-    let promoMessage = '\n\n🎉 *SPECIAL OFFERS ACTIVE:*';
-    
-    promotionalOffers.forEach((offer, index) => {
-      switch (offer.type) {
-        case 'percentage_discount':
-          const percentageDiscount = offer.value || offer.discountPercentage;
-          promoMessage += `\n💥 ${percentageDiscount}% OFF - Save big on your order!`;
-          break;
-        case 'fixed_discount':
-        case 'fixed_amount_discount':
-          const fixedDiscount = offer.value || offer.discountAmount;
-          promoMessage += `\n💥 ${currencySymbol}${fixedDiscount} OFF each unit - Instant savings!`;
-          break;
-        case 'fixed_price':
-          promoMessage += `\n🔥 SPECIAL PRICE: Only ${currencySymbol}${offer.fixedPrice} each!`;
-          break;
-        case 'bogo':
-        case 'buy_x_get_y_free':
-          promoMessage += `\n🎁 AMAZING DEAL: Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
-          break;
-        case 'multi_buy':
-          promoMessage += `\n📦 BULK DISCOUNT: Buy ${offer.quantity}+ and get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${currencySymbol}${offer.discountValue} OFF`} each!`;
-          break;
-        case 'bulk_tier':
-          promoMessage += `\n📊 WHOLESALE PRICING: ${offer.quantity}+ units = ${currencySymbol}${offer.pricePerUnit} each!`;
-          break;
-        case 'bulk_discount':
-          if (offer.bulkTiers && offer.bulkTiers.length > 0) {
-            const firstTier = offer.bulkTiers[0];
-            if (firstTier.pricePerUnit) {
-              promoMessage += `\n📊 TIERED PRICING: Starting from ${currencySymbol}${firstTier.pricePerUnit} each!`;
-            } else if (firstTier.discountPercentage) {
-              promoMessage += `\n📊 BULK SAVINGS: Up to ${firstTier.discountPercentage}% OFF on bulk orders!`;
-            } else if (firstTier.discountAmount) {
-              promoMessage += `\n📊 BULK SAVINGS: Up to ${currencySymbol}${firstTier.discountAmount} OFF each!`;
-            }
-          }
-          break;
-        case 'free_shipping':
-          promoMessage += `\n🚚 FREE DELIVERY on orders over ${currencySymbol}${offer.minimumOrderValue}!`;
-          break;
-        case 'bundle_deal':
-          if (offer.bundlePrice) {
-            promoMessage += `\n🎁 BUNDLE SPECIAL: ${currencySymbol}${offer.bundlePrice} each when bought together!`;
-          } else if (offer.discountType === 'percentage' && offer.discountValue) {
-            promoMessage += `\n🎁 BUNDLE DEAL: Save ${offer.discountValue}% when buying together!`;
-          } else if (offer.discountType === 'fixed' && offer.discountValue) {
-            promoMessage += `\n🎁 BUNDLE DEAL: Save ${currencySymbol}${offer.discountValue} each when buying together!`;
-          }
-          break;
-        default:
-          if (offer.name) {
-            promoMessage += `\n✨ ${offer.name} - Special offer available!`;
-          }
-          break;
-      }
-    });
-
-    promoMessage += `\n⏰ *Limited time offer - Order now!*`;
-    return promoMessage;
-  };
 
   const generatePreviewMessage = (campaign: Campaign) => {
     const businessName = user?.businessName || "Your Business";
@@ -530,30 +350,12 @@ export default function Campaigns() {
     if (campaign.campaignType === 'single' && campaign.product) {
       message += `📦 *Featured Products:*\n\n`;
       
-      // Use special price if provided, otherwise use promotional price if active, otherwise use regular price
-      const basePrice = campaign.specialPrice ? parseFloat(campaign.specialPrice) : parseFloat(campaign.product.price) || 0;
-      const promoPrice = campaign.product.promoPrice ? parseFloat(campaign.product.promoPrice) : undefined;
+      const price = campaign.specialPrice ? parseFloat(campaign.specialPrice) : parseFloat(campaign.product.price) || 0;
+      const priceDisplay = `${currencySymbol}${price.toFixed(2)}`;
       
-      // Use product's own promotional offers (not campaign-level offers)
-      const promotionalOffers = campaign.product.promotionalOffers || [];
-      const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-        basePrice,
-        1,
-        promotionalOffers,
-        promoPrice,
-        campaign.product.promoActive || false
-      );
-      
-      // Format price display with promotional pricing
-      const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
-      const priceDisplay = hasPromotion 
-        ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ 🔥PROMO🔥`
-        : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
-      
-      message += `1. ${campaign.product.name}${hasPromotion ? ' 🔥' : ''}\n`;
+      message += `1. ${campaign.product.name}\n`;
       message += `   💰 Unit Price: ${priceDisplay}\n`;
       
-      // Add negotiation information if enabled
       if (campaign.product.negotiationEnabled) {
         message += `   💬 Price Negotiable - Request Custom Quote Available!\n`;
         if (campaign.product.minimumBidPrice) {
@@ -564,38 +366,15 @@ export default function Campaigns() {
       message += `   📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
       message += `   📦 In Stock: ${formatNumber(campaign.product.stock)} packs available\n`;
       
-      // Add promotional offers for single product campaigns
-      const promoMessaging = generatePromotionalOffersMessage(promotionalOffers, currencySymbol);
-      if (promoMessaging) {
-        message += `   ${promoMessaging.replace(/\n/g, '\n   ')}\n`;
-      }
-      
     } else if (campaign.campaignType === 'multi' && campaign.products) {
       message += `📦 *Featured Products:*\n\n`;
       campaign.products.forEach((item, index) => {
-        const basePrice = item.specialPrice ? parseFloat(item.specialPrice) : parseFloat(item.product.price) || 0;
-        const promoPrice = item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined;
+        const price = item.specialPrice ? parseFloat(item.specialPrice) : parseFloat(item.product.price) || 0;
+        const priceDisplay = `${currencySymbol}${price.toFixed(2)}`;
         
-        // Use product's own promotional offers (not campaign-level offers)
-        const promotionalOffers = item.product.promotionalOffers || [];
-        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          basePrice,
-          1,
-          promotionalOffers,
-          promoPrice,
-          item.product.promoActive || false
-        );
-        
-        // Format price display with promotional pricing
-        const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
-        const priceDisplay = hasPromotion 
-          ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ 🔥PROMO🔥`
-          : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
-        
-        message += `${index + 1}. ${item.product.name}${hasPromotion ? ' 🔥' : ''}\n`;
+        message += `${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${priceDisplay}\n`;
         
-        // Add negotiation information if enabled
         if (item.product.negotiationEnabled) {
           message += `   💬 Price Negotiable - Request Custom Quote Available!\n`;
           if (item.product.minimumBidPrice) {
@@ -605,12 +384,6 @@ export default function Campaigns() {
         
         message += `   📦 MOQ: ${formatNumber(item.product.moq)} units\n`;
         message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available\n`;
-        
-        // Add promotional offers for this product
-        const promoMessaging = generatePromotionalOffersMessage(promotionalOffers, currencySymbol);
-        if (promoMessaging) {
-          message += `   ${promoMessaging.replace(/\n/g, '\n   ')}\n`;
-        }
       });
     }
 
@@ -636,7 +409,6 @@ export default function Campaigns() {
     const payload = {
       ...data,
       campaignType,
-      // Remove campaign-level promotional offers - now managed at product level
       products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
     };
 
@@ -668,15 +440,11 @@ export default function Campaigns() {
       specialPrice: campaign.specialPrice || "",
     });
 
-    // Promotional offers are now managed at the product level only
-
-    // Set up products for multi-product campaigns
     if (campaign.campaignType === 'multi' && campaign.products) {
       setSelectedProducts(campaign.products.map(p => ({
         productId: p.productId,
         quantity: p.quantity,
         specialPrice: p.specialPrice || '',
-        promotionalOffers: (p as any).promotionalOffers || []
       })));
     } else {
       setSelectedProducts([]);
@@ -818,8 +586,8 @@ export default function Campaigns() {
                 <p className="text-sm font-medium text-gray-600">Total Stock Value</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency((products || []).reduce((total: number, product: any) => {
-                    const pricing = calculatePromotionalPricing(product);
-                    return total + (pricing.effectivePrice * (Number(product.stock) || 0));
+                    const price = parseFloat(product.price) || 0;
+                    return total + (price * (Number(product.stock) || 0));
                   }, 0))}
                 </p>
               </div>
@@ -953,10 +721,6 @@ export default function Campaigns() {
                             <Select onValueChange={(value) => {
                               const productId = parseInt(value);
                               field.onChange(productId);
-                              
-                              // Populate existing promotional offers when product is selected
-                              const existingOffers = getProductExistingOffers(productId);
-                              // No longer managing campaign-level promotional offers
                             }}>
                               <FormControl>
                                 <SelectTrigger>
@@ -972,48 +736,6 @@ export default function Campaigns() {
                               </SelectContent>
                             </Select>
                             <FormMessage />
-                            
-                            {/* Cross-campaign promotional offer warning */}
-                            {form.watch('productId') && (() => {
-                              const selectedProductId = form.watch('productId');
-                              const existingOffers = getProductExistingOffers(selectedProductId);
-                              
-                              if (existingOffers.hasOffers) {
-                                return (
-                                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <div className="flex items-start space-x-2">
-                                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                                      <div>
-                                        <p className="text-sm font-medium text-amber-800">
-                                          Existing Promotional Offers Detected
-                                        </p>
-                                        <p className="text-sm text-amber-700 mt-1">
-                                          This product already has promotional offers configured. Any changes you make here will update the product's promotional pricing across all campaigns.
-                                        </p>
-                                        <div className="mt-2">
-                                          <p className="text-xs text-amber-600">Current offers:</p>
-                                          <div className="flex flex-wrap gap-1 mt-1">
-                                            {existingOffers.offers.map((offer: any, index: number) => (
-                                              <Badge key={index} variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                                                {offer.type === 'percentage_discount' && `${offer.discountPercentage}% off`}
-                                                {offer.type === 'fixed_amount_discount' && `£${offer.discountAmount} off`}
-                                                {offer.type === 'fixed_price' && `£${offer.fixedPrice} fixed`}
-                                                {offer.type === 'bogo' && 'Buy 1 Get 1'}
-                                                {offer.type === 'buy_x_get_y_free' && `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`}
-                                                {offer.type === 'bulk_discount' && 'Bulk Discount'}
-                                                {offer.type === 'free_shipping' && 'Free Shipping'}
-                                                {offer.type === 'bundle_deal' && 'Bundle Deal'}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
                           </FormItem>
                         )}
                       />
@@ -1064,16 +786,6 @@ export default function Campaigns() {
                         )}
                       />
                       
-                      {/* Note: Promotional offers are now managed at the product level only */}
-                      {form.watch('productId') && (
-                        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <h4 className="font-medium text-green-800 mb-2">Promotional Offers</h4>
-                          <p className="text-sm text-green-700">
-                            This product's promotional offers are managed in the Product Management section. 
-                            Any active promotions will automatically be included in this campaign.
-                          </p>
-                        </div>
-                      )}
                     </TabsContent>
 
                     <TabsContent value="multi" className="space-y-4">
@@ -1138,56 +850,6 @@ export default function Campaigns() {
                               </div>
                             </div>
                             
-                            {/* Cross-campaign promotional offer warning for multi-product */}
-                            {item.productId > 0 && (() => {
-                              const existingOffers = getProductExistingOffers(item.productId);
-                              
-                              if (existingOffers.hasOffers) {
-                                return (
-                                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <div className="flex items-start space-x-2">
-                                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                                      <div>
-                                        <p className="text-sm font-medium text-amber-800">
-                                          Existing Promotional Offers Detected
-                                        </p>
-                                        <p className="text-sm text-amber-700 mt-1">
-                                          This product already has promotional offers configured. Any changes you make here will update the product's promotional pricing across all campaigns.
-                                        </p>
-                                        <div className="mt-2">
-                                          <p className="text-xs text-amber-600">Current offers:</p>
-                                          <div className="flex flex-wrap gap-1 mt-1">
-                                            {existingOffers.offers.map((offer: any, index: number) => (
-                                              <Badge key={index} variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                                                {offer.type === 'percentage_discount' && `${offer.discountPercentage}% off`}
-                                                {offer.type === 'fixed_amount_discount' && `£${offer.discountAmount} off`}
-                                                {offer.type === 'fixed_price' && `£${offer.fixedPrice} fixed`}
-                                                {offer.type === 'bogo' && 'Buy 1 Get 1'}
-                                                {offer.type === 'buy_x_get_y_free' && `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`}
-                                                {offer.type === 'bulk_discount' && 'Bulk Discount'}
-                                                {offer.type === 'free_shipping' && 'Free Shipping'}
-                                                {offer.type === 'bundle_deal' && 'Bundle Deal'}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-                            
-                            {/* Note: Promotional offers are managed at product level */}
-                            {selectedProduct && (
-                              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <p className="text-xs text-green-700">
-                                  Promotional offers for this product are managed in Product Management. 
-                                  Any active promotions will be included automatically.
-                                </p>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
@@ -1264,13 +926,6 @@ export default function Campaigns() {
                       {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
                     </Badge>
                     
-                    {/* Promotional Offers Badge */}
-                    {hasPromotionalOffers(campaign) && (
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                        <Percent className="h-3 w-3 mr-1" />
-                        Offers
-                      </Badge>
-                    )}
                   </div>
                   <span className="flex items-center text-gray-600">
                     <Send className="h-4 w-4 mr-1" />
@@ -1306,22 +961,8 @@ export default function Campaigns() {
                     <span className="text-gray-600">
                       💰 {(() => {
                         if (campaign.product) {
-                          const pricing = calculatePromotionalPricing(campaign.product);
-                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
-                          
-                          return hasDiscounts ? (
-                            <span className="flex items-center space-x-1">
-                              <span className="text-red-600 font-semibold">
-                                {formatCurrency(pricing.effectivePrice)}
-                              </span>
-                              <span className="text-gray-400 line-through text-xs">
-                                {formatCurrency(pricing.originalPrice)}
-                              </span>
-                              <span className="text-red-600 font-medium">PROMO</span>
-                            </span>
-                          ) : (
-                            <span>{formatCurrency(pricing.originalPrice)}</span>
-                          );
+                          const price = parseFloat(campaign.product.price) || 0;
+                          return <span>{formatCurrency(price)}</span>;
                         }
                         return <span>£0.00</span>;
                       })()}
@@ -1345,13 +986,8 @@ export default function Campaigns() {
                             return sum + ((Number(p.specialPrice) || 0) * (Number(p.quantity) || 0));
                           }
                           if (p.product) {
-                            // Include promotional offers from the campaign product item
-                            const productWithOffers = {
-                              ...p.product,
-                              promotionalOffers: p.promotionalOffers || []
-                            };
-                            const pricing = calculatePromotionalPricing(productWithOffers, Number(p.quantity) || 1);
-                            return sum + pricing.totalCost;
+                            const price = parseFloat(p.product.price) || 0;
+                            return sum + (price * (Number(p.quantity) || 1));
                           }
                           return sum;
                         }, 0) || 0
@@ -1380,27 +1016,8 @@ export default function Campaigns() {
                               );
                             }
                             if (productItem.product) {
-                              // Include promotional offers from the campaign product item
-                              const productWithOffers = {
-                                ...productItem.product,
-                                promotionalOffers: productItem.promotionalOffers || []
-                              };
-                              const pricing = calculatePromotionalPricing(productWithOffers);
-                              const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
-                              
-                              return hasDiscounts ? (
-                                <span className="flex items-center space-x-1">
-                                  <span className="text-red-600 font-semibold">
-                                    {formatCurrency(pricing.effectivePrice)}
-                                  </span>
-                                  <span className="text-gray-400 line-through text-xs">
-                                    {formatCurrency(pricing.originalPrice)}
-                                  </span>
-                                  <span className="text-red-600 font-medium">PROMO</span>
-                                </span>
-                              ) : (
-                                <span>{formatCurrency(pricing.originalPrice)}</span>
-                              );
+                              const price = parseFloat(productItem.product.price) || 0;
+                              return <span>{formatCurrency(price)}</span>;
                             }
                             return <span>£0.00</span>;
                           })()}
@@ -1428,8 +1045,8 @@ export default function Campaigns() {
                         }
                         if (campaign.product) {
                           const quantity = Number(campaign.quantity) || Number(campaign.product.stock) || 0;
-                          const pricing = calculatePromotionalPricing(campaign.product, quantity);
-                          return pricing.totalCost;
+                          const price = parseFloat(campaign.product.price) || 0;
+                          return price * quantity;
                         }
                         return 0;
                       })()
@@ -1453,13 +1070,8 @@ export default function Campaigns() {
                         }
                         if (p.product) {
                           const quantity = Number(p.quantity) || 0;
-                          // Include promotional offers from the campaign product item
-                          const productWithOffers = {
-                            ...p.product,
-                            promotionalOffers: p.promotionalOffers || []
-                          };
-                          const pricing = calculatePromotionalPricing(productWithOffers, quantity);
-                          return sum + pricing.totalCost;
+                          const price = parseFloat(p.product.price) || 0;
+                          return sum + (price * quantity);
                         }
                         return sum;
                       }, 0) || 0
