@@ -1430,6 +1430,15 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     >
                       {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
                     </Badge>
+                    {order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
+                      <Badge className="bg-purple-100 text-purple-800 text-xs">
+                        Refunded
+                      </Badge>
+                    ) : (
+                      <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'unpaid')} text-xs`}>
+                        {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Wholesaler info */}
