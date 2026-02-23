@@ -22,7 +22,8 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
@@ -2366,8 +2367,8 @@ export default function ProductManagement() {
               {filteredProducts.map((product: any) => (
                 <div key={product.id} className="space-y-3">
                   <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-center space-x-6">
+                    <CardContent className="p-3 sm:p-6">
+                      <div className="flex items-start gap-3 sm:gap-4">
                         <img 
                           src={
                             (product.images && product.images.length > 0) 
@@ -2375,51 +2376,61 @@ export default function ProductManagement() {
                               : (product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100")
                           } 
                           alt={product.name}
-                          className="w-20 h-20 object-cover rounded-lg"
+                          className="w-14 h-14 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
                         />
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="secondary">{product.category}</Badge>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
+                                  {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">{product.category}</Badge>
                                 {product.packQuantity && product.unitSize && product.unitOfMeasure && (
-                                  <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                  <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
                                     {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                   </Badge>
                                 )}
                               </div>
-                              {product.description && (
-                                <p className="text-gray-600 text-sm mt-2 max-w-md">{product.description}</p>
-                              )}
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")}>
-                                {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
-                              </Badge>
-                              <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
-                                Edit
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDuplicate(product)}>
-                                Duplicate
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700">
-                                Delete
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => handleEdit(product)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicate(product)}>
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-red-600 focus:text-red-600">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+                          {product.description && (
+                            <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
+                          )}
+                          <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-3 text-xs sm:text-sm">
                             <div>
                               <span className="text-gray-500">Price:</span>
                               <div className="font-semibold">
                                 {product.priceVisible ? (
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-1">
                                     {product.promoActive && product.promoPrice ? (
                                       <>
                                         <span className="text-green-600">
                                           {formatCurrency(parseFloat(product.promoPrice), product.currency || "GBP")}
                                         </span>
-                                        <span className="text-gray-500 line-through text-sm">
+                                        <span className="text-gray-500 line-through text-xs">
                                           {formatCurrency(parseFloat(product.price), product.currency || "GBP")}
                                         </span>
                                         <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
