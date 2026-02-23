@@ -2663,7 +2663,7 @@ export default function ProductManagement() {
                             </span>
                           </div>
                           <p className="text-gray-600 mt-0.5 truncate">
-                            {movement.reason || movement.movementType.replace(/_/g, ' ')}
+                            {movement.reason || (movement.movementType ? movement.movementType.replace(/_/g, ' ') : 'stock update')}
                           </p>
                           {movement.customerName && (
                             <p className="text-gray-500 truncate">Customer: {movement.customerName}</p>
