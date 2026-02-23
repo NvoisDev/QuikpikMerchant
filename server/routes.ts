@@ -2018,6 +2018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shippingTotal: order.shippingTotal,
           notes: order.notes,
           orderImages: order.orderImages, // CRITICAL FIX: Include order images for customer display
+          isQuote: order.isQuote,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt
         };

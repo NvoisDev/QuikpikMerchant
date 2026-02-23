@@ -730,8 +730,8 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
                   {getPaymentStatusLabel(order.paymentStatus)}
                 </Badge>
               )}
-              <Badge variant="outline" className={`text-xs ${(order.isQuote === true || (order as any).isQuote === 'true') ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-                {(order.isQuote === true || (order as any).isQuote === 'true') ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}
+              <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+                {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}
               </Badge>
             </div>
 

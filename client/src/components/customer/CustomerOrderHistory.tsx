@@ -705,8 +705,8 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                 {getPaymentStatusLabel(order.paymentStatus || 'paid')}
               </Badge>
             )}
-            <Badge variant="outline" className={`text-xs ${(order.isQuote === true || (order as any).isQuote === 'true') ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-              {(order.isQuote === true || (order as any).isQuote === 'true') ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+            <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
             </Badge>
           </div>
         </div>
@@ -955,7 +955,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                 <span className="font-medium break-words">
                   {parseFloat(order.amountPaid || '0') > 0
                     ? 'Payment processed successfully'
-                    : (order.isQuote === true || (order as any).isQuote === 'true')
+                    : order.isQuote
                       ? 'Quote received - awaiting payment'
                       : 'Order placed - awaiting payment'}
                 </span>
@@ -1449,8 +1449,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
                       </Badge>
                     )}
-                    <Badge variant="outline" className={`text-xs ${(order.isQuote === true || (order as any).isQuote === 'true') ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-                      {(order.isQuote === true || (order as any).isQuote === 'true') ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+                    <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+                      {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
                     </Badge>
                   </div>
 
