@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -862,6 +862,19 @@ export default function OrdersFresh() {
       })
     : filteredByDelivery;
   
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const orderDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.floor((today.getTime() - orderDay.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return date.toLocaleDateString('en-GB', { weekday: 'long' });
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  };
+
   const displayedOrders = filteredByDate.length;
   // Net Revenue excludes cancelled orders (they represent £0 actual revenue) - with null safety
   const totalValue = filteredByDate
@@ -1264,8 +1277,20 @@ export default function OrdersFresh() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredByStatus.slice(0, 50).map((order) => (
-                    <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
+                  {filteredByStatus.slice(0, 50).map((order, index, arr) => {
+                    const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
+                    const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
+                    const showSeparator = index === 0 || currentLabel !== prevLabel;
+                    return (
+                      <Fragment key={order.id}>
+                        {showSeparator && (
+                          <TableRow className="bg-gray-50 hover:bg-gray-50">
+                            <TableCell colSpan={6} className="py-2 px-4">
+                              <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                    <TableRow className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
                       </TableCell>
@@ -1349,15 +1374,27 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                      </Fragment>
+                    );
+                  })}
                 </TableBody>
                 </Table>
               </div>
               
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-3">
-                {filteredByStatus.slice(0, 50).map((order) => (
-                  <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
+                {filteredByStatus.slice(0, 50).map((order, index, arr) => {
+                  const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
+                  const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
+                  const showSeparator = index === 0 || currentLabel !== prevLabel;
+                  return (
+                    <div key={order.id}>
+                      {showSeparator && (
+                        <div className="py-2 px-1 border-b border-gray-200 mb-3">
+                          <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
+                        </div>
+                      )}
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
@@ -1431,7 +1468,9 @@ export default function OrdersFresh() {
                       )}
                     </CardContent>
                   </Card>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
               
               {/* Pagination Controls */}
