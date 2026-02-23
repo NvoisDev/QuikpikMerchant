@@ -1077,6 +1077,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   stock: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
   lowStockThreshold: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : 50),
   shelfLife: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  promotionalOffers: z.array(z.any()).optional().default([]),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
