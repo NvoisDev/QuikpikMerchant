@@ -1409,23 +1409,6 @@ export default function CustomerPortal() {
         totalItems += itemQuantity;
         totalPromotionalItems += itemQuantity;
         subtotal += basePrice * itemQuantity;
-        
-
-        
-        // Track applied promotions
-        if (pricing.appliedOffers.length > 0) {
-          appliedPromotions.push(...pricing.appliedOffers);
-        }
-        
-        // Track BOGOFF details
-        if (pricing.bogoffDetails) {
-          bogoffDetails.push({
-            productName: item.product.name,
-            ...pricing.bogoffDetails
-          });
-        }
-        
-        // Note: Free shipping offers removed - delivery handled directly by supplier
       }
     });
     
