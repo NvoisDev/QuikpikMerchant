@@ -129,7 +129,7 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -1394,9 +1394,9 @@ export default function ProductManagement() {
               
               <Button 
                 size="sm"
-                className="flex-1 sm:flex-none"
+                variant="outline"
+                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
                 onClick={() => {
-                console.log('🔥 ADD PRODUCT BUTTON CLICKED!');
                 setEditingProduct(null);
                 form.reset({
                   name: "",
@@ -1419,8 +1419,7 @@ export default function ProductManagement() {
               }}
               data-onboarding="add-product-button">
                 <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden xs:inline">Add Product</span>
-                <span className="xs:hidden">Add</span>
+                Add Product
               </Button>
             </div>
 
