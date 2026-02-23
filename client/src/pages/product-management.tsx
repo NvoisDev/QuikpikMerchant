@@ -127,7 +127,6 @@ export default function ProductManagement() {
   const effectiveUser = user;
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -654,10 +653,9 @@ export default function ProductManagement() {
     filteredProductsCount: products?.filter((product: any) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-      const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
       
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesStatus;
     }).length
   });
 
@@ -1208,10 +1206,9 @@ export default function ProductManagement() {
   const filteredProducts = products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
     
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesStatus;
   }) || [];
 
   return (
@@ -1248,39 +1245,29 @@ export default function ProductManagement() {
             {/* Action Buttons Section */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                <DynamicTooltip 
-                  content="Preview your customer store exactly as customers will see it. Test the shopping experience without needing customer authentication."
-                  type="feature"
-                  placement="bottom"
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-green-700 border-green-200 hover:bg-green-50"
+                  onClick={() => {
+                    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+                    window.open(`/preview-store/${effectiveUserId}`, '_blank');
+                  }}
                 >
-                  <AnimatedButton 
-                    size="sm"
-                    variant="outline" 
-                    animation="scale"
-                    className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
-                    onClick={() => {
-                      const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
-                      window.open(`/preview-store/${effectiveUserId}`, '_blank');
-                    }}
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    <span className="hidden xs:inline">Preview Store</span>
-                    <span className="xs:hidden">Preview</span>
-                  </AnimatedButton>
-                </DynamicTooltip>
+                  <Package className="h-4 w-4 mr-1" />
+                  Preview Store
+                </Button>
                 
-                <Button variant="outline" size="sm" onClick={downloadTemplate} className="flex-1 sm:flex-none">
-                  <Download className="mr-2 h-4 w-4" />
-                  <span className="hidden xs:inline">CSV Template</span>
-                  <span className="xs:hidden">CSV</span>
+                <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                  <Download className="mr-1 h-4 w-4" />
+                  CSV Template
                 </Button>
                 
                 <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-                      <Upload className="mr-2 h-4 w-4" />
-                      <span className="hidden xs:inline">Bulk Upload</span>
-                      <span className="xs:hidden">Upload</span>
+                    <Button variant="outline" size="sm">
+                      <Upload className="mr-1 h-4 w-4" />
+                      Bulk Upload
                     </Button>
                   </DialogTrigger>
 
@@ -2314,32 +2301,17 @@ export default function ProductManagement() {
                 
                 {/* Filters and View Toggle */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="All Categories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {productCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
                   
                   <div className="flex items-center justify-center sm:justify-start space-x-2">
                     <span className="text-xs sm:text-sm text-gray-600">View:</span>
@@ -2486,11 +2458,11 @@ export default function ProductManagement() {
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">No products found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || categoryFilter !== "all" || statusFilter !== "all"
+                {searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first product"}
               </p>
-              {!(searchQuery || categoryFilter !== "all" || statusFilter !== "all") && (
+              {!(searchQuery || statusFilter !== "all") && (
                 <div className="mt-6">
                   <Button onClick={() => {
                     setEditingProduct(null);
