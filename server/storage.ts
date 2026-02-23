@@ -2337,7 +2337,7 @@ export class DatabaseStorage implements IStorage {
     // Calculate net revenue by subtracting platform fees from total
     const [revenueStats] = await db
       .select({
-        totalRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         ordersCount: count(orders.id)
       })
       .from(orders)
@@ -2349,7 +2349,7 @@ export class DatabaseStorage implements IStorage {
     // Get current month stats
     const [currentMonthStats] = await db
       .select({
-        currentRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        currentRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         currentOrders: count(orders.id)
       })
       .from(orders)
@@ -2362,7 +2362,7 @@ export class DatabaseStorage implements IStorage {
     // Get previous month stats
     const [previousMonthStats] = await db
       .select({
-        previousRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        previousRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         previousOrders: count(orders.id)
       })
       .from(orders)
