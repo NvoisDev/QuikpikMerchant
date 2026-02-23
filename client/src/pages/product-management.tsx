@@ -2284,29 +2284,7 @@ export default function ProductManagement() {
                         </div>
                       </div>
 
-                      {/* Promotional Offers Section */}
-                      <FormField
-                        control={form.control}
-                        name="promotionalOffers"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base font-semibold">🎯 Promotional Offers</FormLabel>
-                            <div className="text-sm text-muted-foreground mb-3">
-                              Create and manage promotional offers for this product
-                            </div>
-                            <FormControl>
-                              <PromotionalOffersManager
-                                offers={field.value || []}
-                                onOffersChange={field.onChange}
-                                productPrice={parseFloat(form.watch("price")) || 0}
-                                currency={form.watch("currency") || "GBP"}
-                                className="mt-4"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* Promotional Offers Section - temporarily hidden until fully working */}
 
                       <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
                         <Button
