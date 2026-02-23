@@ -4156,11 +4156,11 @@ export class DatabaseStorage implements IStorage {
       customerRelationships.map(async (row) => {
         const customerId = row.user.id;
         
-        // Get order stats specific to this wholesaler (net amount after platform fees)
+        // Get order stats specific to this wholesaler (net amount: subtotal - platform fee)
         const orderStats = await db
           .select({
             totalOrders: count(orders.id),
-            totalSpent: sql<number>`COALESCE(SUM(${orders.total} - COALESCE(${orders.platformFee}, 0)), 0)`,
+            totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
             lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
           })
           .from(orders)
@@ -4228,11 +4228,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.retailerId, customerId))
       .orderBy(desc(orders.createdAt));
 
-    // Calculate stats
+    // Calculate stats (net amount: subtotal - platform fee for paid orders)
     const paidOrders = customerOrders.filter(order => 
       ['paid', 'fulfilled', 'completed'].includes(order.status)
     );
-    const totalSpent = paidOrders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
+    const totalSpent = paidOrders.reduce((sum, order) => {
+      const subtotal = parseFloat(order.subtotal || order.total || '0');
+      const platformFee = parseFloat(order.platformFee || '0');
+      return sum + (subtotal - platformFee);
+    }, 0);
 
     return {
       ...customer,
@@ -4334,7 +4338,7 @@ export class DatabaseStorage implements IStorage {
         AND u.created_at >= ${thisMonth}
     `);
 
-    // Get top customers by spending (using wholesaler earnings: subtotal * 96.7%)
+    // Get top customers by spending (net amount after actual platform fee deduction)
     const topCustomersResult = await db.execute(sql`
       SELECT 
         u.id as customer_id,
@@ -4343,7 +4347,7 @@ export class DatabaseStorage implements IStorage {
           u.first_name, 
           'Customer'
         ) as name,
-        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (o.subtotal::numeric * 0.967) ELSE 0 END), 0) as total_spent
+        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(o.subtotal::numeric, o.total::numeric) - COALESCE(o.platform_fee::numeric, 0)) ELSE 0 END), 0) as total_spent
       FROM users u
       INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
@@ -4351,7 +4355,7 @@ export class DatabaseStorage implements IStorage {
       WHERE cg.wholesaler_id = ${wholesalerId}
         AND u.role IN ('customer', 'retailer')
       GROUP BY u.id, u.first_name, u.last_name
-      HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (o.subtotal::numeric * 0.967) ELSE 0 END) > 0
+      HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(o.subtotal::numeric, o.total::numeric) - COALESCE(o.platform_fee::numeric, 0)) ELSE 0 END) > 0
       ORDER BY total_spent DESC
       LIMIT 5
     `);

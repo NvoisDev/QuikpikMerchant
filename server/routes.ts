@@ -3170,7 +3170,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(orders.createdAt));
 
       const totalOrders = orderResults.length;
-      const totalSpent = orderResults.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
+      const paidOrderResults = orderResults.filter(order => ['paid', 'fulfilled', 'completed'].includes(order.status));
+      const totalSpent = paidOrderResults.reduce((sum, order) => {
+        const subtotal = parseFloat(order.subtotal || order.total || '0');
+        const platformFee = parseFloat(order.platformFee || '0');
+        return sum + (subtotal - platformFee);
+      }, 0);
       
       // Calculate days since last order
       let daysSinceLastOrder = undefined;
@@ -16566,8 +16571,10 @@ https://quikpik.app`;
         };
 
         current.orderCount++;
-        // Use wholesaler earnings (subtotal * 96.7%) instead of customer payment amount
-        current.totalSpent += parseFloat(order.subtotal || '0') * 0.967;
+        // Use actual net amount (subtotal - platform fee) for wholesaler earnings
+        const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
+        const orderPlatformFee = parseFloat(order.platformFee || '0');
+        current.totalSpent += (orderSubtotal - orderPlatformFee);
         
         const orderDate = new Date(order.createdAt);
         if (!current.firstOrderDate || orderDate < current.firstOrderDate) {
@@ -16625,7 +16632,7 @@ https://quikpik.app`;
         topCustomers,
         metrics: {
           averageOrderValue: validOrders.length > 0 ? 
-            Math.round((validOrders.reduce((sum, order) => sum + (parseFloat(order.subtotal || '0') * 0.967), 0) / validOrders.length) * 100) / 100 : 0,
+            Math.round((validOrders.reduce((sum, order) => sum + (parseFloat(order.subtotal || order.total || '0') - parseFloat(order.platformFee || '0')), 0) / validOrders.length) * 100) / 100 : 0,
           repeatCustomerRate: customers.length > 0 ? 
             Math.round((returningCustomers / customers.length) * 100) : 0
         }
