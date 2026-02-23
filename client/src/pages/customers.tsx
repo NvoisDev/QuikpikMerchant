@@ -1274,21 +1274,33 @@ export default function Customers() {
         <TabsContent value="address-book" className="space-y-6">
           {stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2">
-                <p className="text-[11px] text-green-700">Total Revenue</p>
-                <p className="text-sm font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+              <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-500 shrink-0" />
+                <div>
+                  <p className="text-[11px] text-green-700">Total Revenue</p>
+                  <p className="text-sm font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+                </div>
               </div>
-              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-                <p className="text-[11px] text-blue-700">Customers</p>
-                <p className="text-sm font-bold text-blue-600">{stats.totalCustomers}</p>
+              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                <div>
+                  <p className="text-[11px] text-blue-700">Customers</p>
+                  <p className="text-sm font-bold text-blue-600">{stats.totalCustomers}</p>
+                </div>
               </div>
-              <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2">
-                <p className="text-[11px] text-orange-700">Active</p>
-                <p className="text-sm font-bold text-orange-600">{stats.activeCustomers}</p>
+              <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-orange-500 shrink-0" />
+                <div>
+                  <p className="text-[11px] text-orange-700">Active</p>
+                  <p className="text-sm font-bold text-orange-600">{stats.activeCustomers}</p>
+                </div>
               </div>
-              <div className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2">
-                <p className="text-[11px] text-yellow-700">New This Month</p>
-                <p className="text-sm font-bold text-yellow-600">{stats.newCustomersThisMonth}</p>
+              <div className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2 flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-yellow-500 shrink-0" />
+                <div>
+                  <p className="text-[11px] text-yellow-700">New This Month</p>
+                  <p className="text-sm font-bold text-yellow-600">{stats.newCustomersThisMonth}</p>
+                </div>
               </div>
             </div>
           )}
