@@ -22,7 +22,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -134,6 +134,10 @@ export default function ProductManagement() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState<any>(null);
+  const [stockAdjustmentType, setStockAdjustmentType] = useState<"increase" | "decrease">("increase");
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockReason, setStockReason] = useState("");
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -913,6 +917,51 @@ export default function ProductManagement() {
     updateProductStatusMutation.mutate({ id, status });
   };
 
+  const { data: stockMovements, isLoading: isLoadingMovements } = useQuery({
+    queryKey: ['/api/products', stockProduct?.id, 'stock-movements'],
+    enabled: !!stockProduct,
+  });
+
+  const stockAdjustmentMutation = useMutation({
+    mutationFn: async ({ productId, adjustmentType, quantity, reason }: { productId: number; adjustmentType: string; quantity: number; reason: string }) => {
+      return apiRequest('POST', `/api/products/${productId}/stock-adjustment`, { adjustmentType, quantity, reason });
+    },
+    onSuccess: async (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products', stockProduct?.id, 'stock-movements'] });
+      const qty = variables.quantity;
+      const newStock = variables.adjustmentType === 'increase'
+        ? stockProduct.stock + qty
+        : Math.max(0, stockProduct.stock - qty);
+      setStockProduct((prev: any) => prev ? { ...prev, stock: newStock } : null);
+      toast({ title: "Stock updated", description: `Stock ${stockAdjustmentType === 'increase' ? 'increased' : 'decreased'} by ${stockQuantity} units` });
+      setStockQuantity("");
+      setStockReason("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update stock", variant: "destructive" });
+    },
+  });
+
+  const handleStockAdjustment = () => {
+    if (!stockProduct || !stockQuantity || !stockReason) return;
+    const qty = parseInt(stockQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: "Invalid quantity", description: "Please enter a positive number", variant: "destructive" });
+      return;
+    }
+    if (stockAdjustmentType === "decrease" && qty > stockProduct.stock) {
+      toast({ title: "Insufficient stock", description: `Cannot remove more than ${stockProduct.stock} units`, variant: "destructive" });
+      return;
+    }
+    stockAdjustmentMutation.mutate({
+      productId: stockProduct.id,
+      adjustmentType: stockAdjustmentType,
+      quantity: qty,
+      reason: stockReason,
+    });
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1213,6 +1262,7 @@ export default function ProductManagement() {
   }) || [];
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
 
       
@@ -2404,6 +2454,10 @@ export default function ProductManagement() {
                                   <Pencil className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); }}>
+                                  <PackagePlus className="h-4 w-4 mr-2" />
+                                  Update Stock
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDuplicate(product)}>
                                   <Copy className="h-4 w-4 mr-2" />
                                   Duplicate
@@ -2504,5 +2558,132 @@ export default function ProductManagement() {
           )}
         </div>
       </div>
+
+      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) setStockProduct(null); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackagePlus className="h-5 w-5 text-green-600" />
+              Update Stock - {stockProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {stockProduct && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Current Stock</span>
+                <span className={`text-lg font-bold ${stockProduct.stock > 10 ? 'text-green-600' : stockProduct.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {formatNumber(stockProduct.stock)} units
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant={stockAdjustmentType === "increase" ? "default" : "outline"}
+                  size="sm"
+                  className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
+                  onClick={() => setStockAdjustmentType("increase")}
+                >
+                  <ArrowUpCircle className="h-4 w-4 mr-1" />
+                  Add Stock
+                </Button>
+                <Button
+                  variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
+                  size="sm"
+                  className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
+                  onClick={() => setStockAdjustmentType("decrease")}
+                >
+                  <ArrowDownCircle className="h-4 w-4 mr-1" />
+                  Remove Stock
+                </Button>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Quantity</label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Enter quantity"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Reason</label>
+                <Input
+                  placeholder={stockAdjustmentType === "increase" ? "e.g. New shipment received" : "e.g. Damaged goods removed"}
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              {stockQuantity && (
+                <div className="p-3 bg-blue-50 rounded-lg text-sm">
+                  <span className="text-gray-600">New stock will be: </span>
+                  <span className="font-bold text-blue-700">
+                    {stockAdjustmentType === "increase" 
+                      ? formatNumber(stockProduct.stock + parseInt(stockQuantity || "0"))
+                      : formatNumber(Math.max(0, stockProduct.stock - parseInt(stockQuantity || "0")))
+                    } units
+                  </span>
+                </div>
+              )}
+
+              <Button
+                onClick={handleStockAdjustment}
+                disabled={!stockQuantity || !stockReason || stockAdjustmentMutation.isPending}
+                className={stockAdjustmentType === "increase" ? "w-full bg-green-600 hover:bg-green-700" : "w-full bg-orange-600 hover:bg-orange-700"}
+              >
+                {stockAdjustmentMutation.isPending ? "Updating..." : `${stockAdjustmentType === "increase" ? "Add" : "Remove"} ${stockQuantity || 0} units`}
+              </Button>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  Stock Movement History
+                </h4>
+                {isLoadingMovements ? (
+                  <p className="text-sm text-gray-500 text-center py-4">Loading history...</p>
+                ) : stockMovements && (stockMovements as any[]).length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {(stockMovements as any[]).slice(0, 20).map((movement: any) => (
+                      <div key={movement.id} className="flex items-start justify-between p-2 rounded-lg bg-gray-50 text-xs">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {movement.quantity > 0 ? (
+                              <ArrowUpCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <ArrowDownCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                            )}
+                            <span className={`font-semibold ${movement.quantity > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                              {movement.quantity > 0 ? '+' : ''}{movement.quantity} units
+                            </span>
+                          </div>
+                          <p className="text-gray-600 mt-0.5 truncate">
+                            {movement.reason || movement.movementType.replace(/_/g, ' ')}
+                          </p>
+                          {movement.customerName && (
+                            <p className="text-gray-500 truncate">Customer: {movement.customerName}</p>
+                          )}
+                        </div>
+                        <div className="text-right text-gray-400 flex-shrink-0 ml-2">
+                          <div>{movement.stockBefore} → {movement.stockAfter}</div>
+                          <div>{new Date(movement.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">No stock movements recorded yet</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
