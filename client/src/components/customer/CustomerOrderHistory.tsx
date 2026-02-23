@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
@@ -72,6 +72,7 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   readyToCollectAt?: string;
+  isQuote?: boolean;
   orderImages?: Array<{
     id: string;
     url: string;
@@ -704,6 +705,9 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                 {getPaymentStatusLabel(order.paymentStatus || 'paid')}
               </Badge>
             )}
+            <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+            </Badge>
           </div>
         </div>
 
@@ -1439,6 +1443,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
                       </Badge>
                     )}
+                    <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+                      {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+                    </Badge>
                   </div>
 
                   {/* Wholesaler info */}
