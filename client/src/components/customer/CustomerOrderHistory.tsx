@@ -729,9 +729,9 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                     <span className="font-medium">{formatCurrency(order.total)}</span>
                   </div>
                   {order.depositPercentage && order.depositPercentage < 100 && (
-                    <div className="flex justify-between text-green-700">
-                      <span>Deposit ({order.depositPercentage}%):</span>
-                      <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Deposit Required ({order.depositPercentage}%):</span>
+                      <span className="font-medium">{formatCurrency((parseFloat(order.total) * (order.depositPercentage / 100)).toFixed(2))}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-green-700">
@@ -949,10 +949,16 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
           <h3 className="font-medium mb-2 text-sm sm:text-base">Order Timeline</h3>
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-2">
             <div className="flex items-start space-x-2 text-xs">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className={`w-2 h-2 ${parseFloat(order.amountPaid || '0') > 0 ? 'bg-green-500' : 'bg-orange-400'} rounded-full mt-1 flex-shrink-0`}></div>
               <div className="flex-1 min-w-0">
                 <span className="text-gray-600 block">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
-                <span className="font-medium break-words">Payment processed successfully</span>
+                <span className="font-medium break-words">
+                  {parseFloat(order.amountPaid || '0') > 0
+                    ? 'Payment processed successfully'
+                    : order.isQuote
+                      ? 'Quote received - awaiting payment'
+                      : 'Order placed - awaiting payment'}
+                </span>
               </div>
             </div>
             <div className="flex items-start space-x-2 text-xs">
