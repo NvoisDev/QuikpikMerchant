@@ -17730,9 +17730,18 @@ https://quikpik.app`;
           }
 
           const paymentStatusText = isPayLater ? emailBadge('Pay Later', '#3b82f6') : emailBadge('Awaiting Payment', '#f59e0b');
+          let fullDeliveryAddressText = resolvedDeliveryAddress || '';
+          if (fulfillmentType === 'delivery' && !fullDeliveryAddressText && resolvedDeliveryAddressId) {
+            try {
+              const addr = await storage.getDeliveryAddress(resolvedDeliveryAddressId);
+              if (addr) {
+                fullDeliveryAddressText = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean).join(', ');
+              }
+            } catch (e) { /* ignore */ }
+          }
           const deliveryLineHtml = fulfillmentType === 'delivery'
-            ? `<p style="margin:4px 0 0"><b>Delivery:</b> ${emailBadge('Delivery', '#059669')}</p>${resolvedDeliveryAddress ? `<p style="margin:4px 0 0;font-size:13px;color:#374151">${resolvedDeliveryAddress}</p>` : ''}`
-            : `<p style="margin:4px 0 0"><b>Delivery:</b> ${emailBadge('Collection', '#7c3aed')}</p>`;
+            ? `<p style="margin:4px 0 0"><b>Fulfillment:</b> Delivery</p>${fullDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Address:</b> ${fullDeliveryAddressText}</p>` : ''}`
+            : `<p style="margin:4px 0 0"><b>Fulfillment:</b> Collection</p>`;
           const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0"><b>Subtotal:</b></td><td style="padding:4px 0;text-align:right">£${subtotal.toFixed(2)}</td></tr>${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${total.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
