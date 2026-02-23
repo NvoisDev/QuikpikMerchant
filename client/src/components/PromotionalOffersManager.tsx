@@ -37,71 +37,35 @@ interface PromotionalOffersManagerProps {
 
 const offerTypeConfigs = {
   percentage_discount: {
-    name: "Percentage Discount",
+    name: "% Off",
     icon: Percent,
     color: "bg-blue-500",
-    description: "Percentage off the original price"
-  },
-  fixed_discount: {
-    name: "Fixed Amount Off",
-    icon: Tag,
-    color: "bg-green-500",
-    description: "Fixed amount discount (legacy)"
+    description: "e.g. 10% off"
   },
   fixed_amount_discount: {
-    name: "Fixed Amount Off",
+    name: "Amount Off",
     icon: Tag,
     color: "bg-green-500",
-    description: "Fixed amount discount"
+    description: "e.g. £5 off"
   },
   bogo: {
-    name: "Buy One Get One Free",
+    name: "BOGOF",
     icon: Gift,
     color: "bg-purple-500",
-    description: "Buy one, get one free"
+    description: "Buy 1 get 1 free"
   },
   buy_x_get_y_free: {
-    name: "Multi-Buy Deal",
+    name: "Buy X Get Y",
     icon: ShoppingCart,
     color: "bg-orange-500",
-    description: "Buy X items, get Y free"
-  },
-  multi_buy: {
-    name: "Multi-Buy Discount",
-    icon: ShoppingCart,
-    color: "bg-orange-400",
-    description: "Volume discount for multiple purchases"
-  },
-  bulk_tier: {
-    name: "Bulk Tier Pricing",
-    icon: Package,
-    color: "bg-yellow-600",
-    description: "Different pricing levels based on quantity"
+    description: "e.g. Buy 3 get 1 free"
   },
   bulk_discount: {
     name: "Bulk Discount",
     icon: Package,
     color: "bg-yellow-500",
-    description: "Tiered pricing for bulk orders"
+    description: "Tiered pricing for larger orders"
   },
-  fixed_price: {
-    name: "Fixed Price",
-    icon: Zap,
-    color: "bg-red-500",
-    description: "Set a fixed promotional price"
-  },
-  free_shipping: {
-    name: "Free Shipping",
-    icon: TrendingUp,
-    color: "bg-indigo-500",
-    description: "Free delivery on this product"
-  },
-  bundle_deal: {
-    name: "Bundle Deal",
-    icon: Package,
-    color: "bg-pink-500",
-    description: "Special price when bought with other products"
-  }
 };
 
 export function PromotionalOffersManager({ 
@@ -193,29 +157,27 @@ export function PromotionalOffersManager({
             <DialogHeader>
               <DialogTitle>Choose Promotional Offer Type</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
               {Object.entries(offerTypeConfigs).map(([type, config]) => {
                 const Icon = config.icon;
-                const emojiConfig = getOfferTypeConfig(type as PromotionalOfferType);
                 return (
                   <Button
                     key={type}
                     type="button"
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50"
+                    className="h-auto p-3 flex items-center justify-start text-left hover:bg-gray-50 w-full"
                     onClick={() => {
                       addOffer(type as PromotionalOfferType);
                       setIsCreateOpen(false);
                     }}
                   >
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="text-2xl">{emojiConfig.emoji}</span>
-                      <div className={`h-6 w-6 rounded-full ${config.color} flex items-center justify-center`}>
-                        <Icon className="h-3 w-3 text-white" />
-                      </div>
+                    <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center mr-3 shrink-0`}>
+                      <Icon className="h-4 w-4 text-white" />
                     </div>
-                    <span className="font-medium text-sm">{config.name}</span>
-                    <span className="text-xs text-gray-500 mt-1">{config.description}</span>
+                    <div>
+                      <span className="font-medium text-sm">{config.name}</span>
+                      <span className="text-xs text-gray-500 ml-2">{config.description}</span>
+                    </div>
                   </Button>
                 );
               })}
@@ -246,7 +208,12 @@ export function PromotionalOffersManager({
       ) : (
         <div className="space-y-3">
           {offers.map((offer) => {
-            const config = offerTypeConfigs[offer.type];
+            const config = offerTypeConfigs[offer.type as keyof typeof offerTypeConfigs] || {
+              name: offer.type?.replace(/_/g, ' ') || 'Offer',
+              icon: Tag,
+              color: 'bg-gray-500',
+              description: ''
+            };
             const emojiConfig = getOfferTypeConfig(offer.type);
             const Icon = config.icon;
             
