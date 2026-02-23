@@ -50,7 +50,8 @@ import {
   Send,
   Shield,
   ShieldX,
-  UserX
+  UserX,
+  MoreHorizontal
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -917,29 +918,23 @@ export default function Customers() {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
-      {/* Mobile-friendly header */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Customer Management</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage your customer groups and address book</p>
-        </div>
-        
-        {/* Mobile-responsive button layout */}
-        <div className="flex flex-col gap-2 sm:gap-3">
-          <Link href="/customer-registration-requests" className="flex-1 sm:flex-initial">
-            <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center space-x-2">
-              <UserPlus className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Registration Requests</span>
-              <span className="xs:hidden sm:hidden">Requests</span>
-            </Button>
-          </Link>
-          
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">Customers</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/customer-registration-requests">
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+                <UserPlus className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Requests</span>
+              </Button>
+            </Link>
           <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto flex items-center justify-center space-x-2">
-                <UserPlus className="h-4 w-4" />
-                <span className="hidden xs:inline sm:inline">Add Customer</span>
-                <span className="xs:hidden sm:hidden">Add</span>
+              <Button size="sm" className="text-xs sm:text-sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Add
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -1043,6 +1038,7 @@ export default function Customers() {
               </Form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 
@@ -1276,42 +1272,19 @@ export default function Customers() {
 
         {/* Address Book Tab */}
         <TabsContent value="address-book" className="space-y-6">
-          {/* Customer Stats */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="rounded-lg bg-blue-50 px-3 py-2 flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-medium text-blue-700">Total Customers</p>
-                  <p className="text-sm font-bold text-blue-800">{stats.totalCustomers}</p>
-                </div>
-              </div>
-              <div className="rounded-lg bg-green-50 px-3 py-2 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-green-600 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-medium text-green-700">Active Customers</p>
-                  <p className="text-sm font-bold text-green-800">{stats.activeCustomers}</p>
-                </div>
-              </div>
-              <div className="rounded-lg bg-purple-50 px-3 py-2 flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-purple-600 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-medium text-purple-700">New This Month</p>
-                  <p className="text-sm font-bold text-purple-800">{stats.newCustomersThisMonth}</p>
-                </div>
-              </div>
-              <div className="rounded-lg bg-orange-50 px-3 py-2 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-orange-600 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-medium text-orange-700">Total Revenue</p>
-                  <p className="text-sm font-bold text-orange-800">{formatCurrency(stats.totalRevenue)}</p>
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 py-1">
+              <span><span className="font-semibold text-gray-900">{stats.totalCustomers}</span> customers</span>
+              <span className="text-gray-300">|</span>
+              <span><span className="font-semibold text-gray-900">{stats.activeCustomers}</span> active</span>
+              <span className="text-gray-300">|</span>
+              <span><span className="font-semibold text-gray-900">{stats.newCustomersThisMonth}</span> new this month</span>
+              <span className="text-gray-300">|</span>
+              <span><span className="font-semibold text-gray-900">{formatCurrency(stats.totalRevenue)}</span> revenue</span>
             </div>
           )}
 
-          {/* Search Bar and Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -1321,116 +1294,73 @@ export default function Customers() {
                 className="pl-10"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ContextualHelpBubble 
-                topic="Customer Directory"
-                title="Customer Directory & Groups"
-                steps={helpContent.customerDirectory.steps}
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
-                  >
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Merge Customers</span>
-                    <span className="sm:hidden">Merge</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => {
-                    // CRITICAL FIX: Check if customers array exists and has data
-                    if (!customers || customers.length === 0) {
-                      toast({
-                        title: "No customers found",
-                        description: "Please wait for customer data to load",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    // Find potential duplicates by phone number last 4 digits
-                    const phoneNumbers = customers.map(c => c?.phoneNumber || '');
-                    const duplicatePhoneGroups = new Map<string, Customer[]>();
-                    
-                    customers.forEach(customer => {
-                      if (!customer?.phoneNumber) return;
-                      const lastFour = customer?.phoneNumber?.slice(-4) || '';
-                      if (!duplicatePhoneGroups.has(lastFour)) {
-                        duplicatePhoneGroups.set(lastFour, []);
-                      }
-                      duplicatePhoneGroups.get(lastFour)!.push(customer);
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  if (!customers || customers.length === 0) {
+                    toast({
+                      title: "No customers found",
+                      description: "Please wait for customer data to load",
+                      variant: "destructive",
                     });
-                    
-                    // Find groups with more than one customer (duplicates)
-                    const duplicateGroups = Array.from(duplicatePhoneGroups.values())
-                      .filter(group => group.length > 1);
-                    
-                    if (duplicateGroups.length > 0) {
-                      // Show the first duplicate group found
-                      const firstDuplicateGroup = duplicateGroups[0];
-                      setSelectedDuplicates(firstDuplicateGroup.sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)));
+                    return;
+                  }
+                  const duplicatePhoneGroups = new Map<string, Customer[]>();
+                  customers.forEach(customer => {
+                    if (!customer?.phoneNumber) return;
+                    const lastFour = customer?.phoneNumber?.slice(-4) || '';
+                    if (!duplicatePhoneGroups.has(lastFour)) {
+                      duplicatePhoneGroups.set(lastFour, []);
+                    }
+                    duplicatePhoneGroups.get(lastFour)!.push(customer);
+                  });
+                  const duplicateGroups = Array.from(duplicatePhoneGroups.values()).filter(group => group.length > 1);
+                  if (duplicateGroups.length > 0) {
+                    const firstDuplicateGroup = duplicateGroups[0];
+                    setSelectedDuplicates(firstDuplicateGroup.sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)));
+                    setMergeMode('automatic');
+                    setIsMergeDialogOpen(true);
+                  } else {
+                    const michaelAccounts = customers.filter(customer => 
+                      customer?.firstName?.toLowerCase().includes('michael') || 
+                      customer?.firstName?.toLowerCase().includes('john')
+                    ).sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0));
+                    if (michaelAccounts.length > 1) {
+                      setSelectedDuplicates(michaelAccounts);
                       setMergeMode('automatic');
                       setIsMergeDialogOpen(true);
                     } else {
-                      // Check for Michael test accounts
-                      const michaelAccounts = customers.filter(customer => 
-                        customer?.firstName?.toLowerCase().includes('michael') || 
-                        customer?.firstName?.toLowerCase().includes('john')
-                      ).sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)); // Sort by orders descending
-                      
-                      if (michaelAccounts.length > 1) {
-                        setSelectedDuplicates(michaelAccounts);
-                        setMergeMode('automatic');
-                        setIsMergeDialogOpen(true);
-                      } else {
-                        toast({
-                          title: "No duplicates found",
-                          description: "No duplicate customer accounts detected",
-                        });
-                      }
+                      toast({ title: "No duplicates found", description: "No duplicate customer accounts detected" });
                     }
-                  }}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Auto-Detect Duplicates
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSelectedCustomersForMerge([]);
-                    setMergeSearchQuery('');
-                    setMergeMode('manual');
-                    // Show search interface in the merge dialog
-                    setSelectedDuplicates([]);
-                    setIsMergeDialogOpen(true);
-                  }}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Search & Select Customers
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DynamicTooltip 
-                content="Import customers from your phone contacts or CSV file. Bulk add customers to save time."
-                type="help"
-                placement="bottom"
-              >
-                <Button
-                  onClick={() => {
-                    // Set a default group for directory additions (or create a general one)
-                    setSelectedGroup({ id: 0, name: 'All Customers', description: 'General customer directory' } as CustomerGroup);
-                    setIsImportContactsDialogOpen(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
-                >
-                  <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Import Contacts</span>
-                  <span className="sm:hidden">Import</span>
-                </Button>
-              </DynamicTooltip>
-            </div>
+                  }
+                }}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Auto-Detect Duplicates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedCustomersForMerge([]);
+                  setMergeSearchQuery('');
+                  setMergeMode('manual');
+                  setSelectedDuplicates([]);
+                  setIsMergeDialogOpen(true);
+                }}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search & Merge Customers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedGroup({ id: 0, name: 'All Customers', description: 'General customer directory' } as CustomerGroup);
+                  setIsImportContactsDialogOpen(true);
+                }}>
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Import Contacts
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Customer List */}
@@ -1461,219 +1391,123 @@ export default function Customers() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {sortedCustomers.map((customer) => (
-                <Card key={customer?.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-                      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
-                          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm sm:text-base">
-                            {getInitials(customer?.firstName || '', customer?.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="space-y-2 sm:space-y-1 flex-1 min-w-0">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
-                          </h3>
-                          
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-600">
-                            <div className="flex items-center space-x-1">
-                              <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span className="truncate">{customer?.phoneNumber || 'No phone'}</span>
-                            </div>
-                            
-                            {customer?.email && (
-                              <div className="flex items-center space-x-1">
-                                <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                <span className="truncate">{customer.email}</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {customer?.groupNames && customer.groupNames.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                              {Array.from(new Set(customer?.groupNames || [])).map((groupName, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {groupName}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                      {getInitials(customer?.firstName || '', customer?.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
+                      </h3>
+                      {customer?.groupNames && customer.groupNames.length > 0 && (
+                        <div className="hidden sm:flex gap-1">
+                          {Array.from(new Set(customer?.groupNames || [])).slice(0, 2).map((groupName, index) => (
+                            <Badge key={index} variant="outline" className="text-[10px] py-0 px-1.5">
+                              {groupName}
+                            </Badge>
+                          ))}
                         </div>
-                      </div>
-                      
-                      {/* Mobile Stats */}
-                      <div className="flex items-center justify-between sm:hidden">
-                        <div className="flex items-center space-x-4 text-xs">
-                          <div className="flex items-center space-x-1">
-                            <ShoppingBag className="h-3 w-3 text-blue-500" />
-                            <span className="font-medium">{customer?.totalOrders || 0}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <DollarSign className="h-3 w-3 text-green-500" />
-                            <span className="font-medium">{formatCurrency(customer?.totalSpent || 0)}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Mobile Actions Dropdown */}
-                        <DynamicTooltip 
-                          content="More actions for this customer - view orders, edit details, add to groups, or delete."
-                          type="info"
-                          placement="left"
-                        >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem onClick={() => handleViewCustomerOrders(customer)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Orders
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAddToGroup(customer)}>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Add to Group
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
-                              <Edit3 className="h-4 w-4 mr-2" />
-                              Edit Customer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
-                              disabled={sendWelcomeMessageMutation.isPending}
-                            >
-                              <Send className="h-4 w-4 mr-2" />
-                              Send Welcome
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-orange-600"
-                              onClick={() => {
-                                if (confirm(`Remove portal access for ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
-                                  removeCustomerAccessMutation.mutate(customer?.id);
-                                }
-                              }}
-                              disabled={removeCustomerAccessMutation.isPending}
-                            >
-                              <ShieldX className="h-4 w-4 mr-2" />
-                              Remove Access
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-green-600"
-                              onClick={() => {
-                                if (customer?.email) {
-                                  allowCustomerAccessMutation.mutate({
-                                    email: customer.email,
-                                    phoneNumber: customer.phoneNumber,
-                                    firstName: customer.firstName,
-                                    lastName: customer.lastName
-                                  });
-                                } else {
-                                  toast({
-                                    title: "Email Required",
-                                    description: "Customer must have an email address to restore access.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                              disabled={allowCustomerAccessMutation.isPending || !customer?.email}
-                            >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Allow Access
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
-                                  deleteCustomerMutation.mutate(customer?.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </DynamicTooltip>
-                      </div>
-                      
-                      {/* Desktop Stats & Actions */}
-                      <div className="hidden sm:flex sm:items-center sm:space-x-6">
-                        <div className="text-right space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <ShoppingBag className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{customer?.totalOrders || 0} orders</span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <DollarSign className="h-4 w-4 text-green-500" />
-                            <span className="font-medium">{formatCurrency(customer?.totalSpent || 0)}</span>
-                          </div>
-                          
-                          {customer?.lastOrderDate && (
-                            <div className="flex items-center space-x-2 text-sm text-gray-500">
-                              <Calendar className="h-4 w-4" />
-                              <span>Last: {formatDate(customer?.lastOrderDate || new Date())}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewCustomerOrders(customer)}
-                            title="View All Orders"
-                          >
-                            <Eye className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                      <span>{customer?.phoneNumber || 'No phone'}</span>
+                      {customer?.email && <span className="hidden sm:inline truncate">{customer.email}</span>}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-medium">{customer?.totalOrders || 0} orders</p>
+                      <p className="text-xs text-gray-500">{formatCurrency(customer?.totalSpent || 0)}</p>
+                    </div>
+                    <div className="sm:hidden text-right">
+                      <p className="text-xs font-medium">{customer?.totalOrders || 0}</p>
+                      <p className="text-[10px] text-gray-500">{formatCurrency(customer?.totalSpent || 0)}</p>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddToGroup(customer)}
-                            title="Add to Group"
-                          >
-                            <UserCheck className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditCustomer(customer)}
-                            title="Edit Customer"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={() => handleViewCustomerOrders(customer)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Orders
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleAddToGroup(customer)}>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Add to Group
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit Customer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
                             onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
-                            title="Send Welcome Message"
                             disabled={sendWelcomeMessageMutation.isPending}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
                           >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Welcome
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-orange-600"
+                            onClick={() => {
+                              if (confirm(`Remove portal access for ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
+                                removeCustomerAccessMutation.mutate(customer?.id);
+                              }
+                            }}
+                            disabled={removeCustomerAccessMutation.isPending}
+                          >
+                            <ShieldX className="h-4 w-4 mr-2" />
+                            Remove Access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-green-600"
+                            onClick={() => {
+                              if (customer?.email) {
+                                allowCustomerAccessMutation.mutate({
+                                  email: customer.email,
+                                  phoneNumber: customer.phoneNumber,
+                                  firstName: customer.firstName,
+                                  lastName: customer.lastName
+                                });
+                              } else {
+                                toast({
+                                  title: "Email Required",
+                                  description: "Customer must have an email address to restore access.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            disabled={allowCustomerAccessMutation.isPending || !customer?.email}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Allow Access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-600"
                             onClick={() => {
                               if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
                                 deleteCustomerMutation.mutate(customer?.id);
                               }
                             }}
-                            title="Delete Customer"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}
