@@ -2561,7 +2561,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "increase" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
-                  onClick={() => setStockAdjustmentType("increase")}
+                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); }}
                 >
                   <ArrowUpCircle className="h-4 w-4 mr-1" />
                   Add Stock
@@ -2570,7 +2570,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
-                  onClick={() => setStockAdjustmentType("decrease")}
+                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); }}
                 >
                   <ArrowDownCircle className="h-4 w-4 mr-1" />
                   Remove Stock
@@ -2590,13 +2590,26 @@ export default function ProductManagement() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Reason</label>
-                <Input
-                  placeholder={stockAdjustmentType === "increase" ? "e.g. New shipment received" : "e.g. Damaged goods removed"}
-                  value={stockReason}
-                  onChange={(e) => setStockReason(e.target.value)}
-                  className="mt-1"
-                />
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(stockAdjustmentType === "increase" 
+                    ? ["New shipment", "Restock", "Stock correction", "Return from customer"]
+                    : ["Damaged goods", "Expired stock", "Stock correction", "Customer return"]
+                  ).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setStockReason(preset)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        stockReason === preset 
+                          ? 'bg-green-600 text-white border-green-600' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {stockQuantity && (

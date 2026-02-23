@@ -7438,17 +7438,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update product stock
       await storage.updateProduct(productId, { stock: stockAfter });
       
-      // Create stock movement record
       await storage.createStockMovement({
         productId,
         wholesalerId: userId,
         movementType,
         quantity: movementQuantity,
+        unitType: 'units',
         stockBefore,
         stockAfter,
         reason,
-        orderId: null,
-        customerName: null,
       });
       
       res.json({ 
