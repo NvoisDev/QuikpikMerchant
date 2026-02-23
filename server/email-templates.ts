@@ -150,12 +150,16 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     pickupHtml = emailCard('<p style="margin:0;color:#92400e"><b>Customer Collection</b> - Customer will collect from your business address.</p>', { borderColor: '#f59e0b', bgColor: '#fffbeb' });
   }
 
-  const itemRows = data.items.map(item => [
-    item.productName,
-    item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'units'),
-    '\u00A3' + item.unitPrice,
-    '\u00A3' + item.total
-  ]);
+  const itemRows = data.items.map(item => {
+    const promoNote = (item as any).appliedOfferLabel ? ' 🎁 ' + (item as any).appliedOfferLabel : '';
+    const freeNote = (item as any).freeItems > 0 ? ' (+' + (item as any).freeItems + ' free)' : '';
+    return [
+      item.productName + promoNote + freeNote,
+      item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'units'),
+      '\u00A3' + item.unitPrice,
+      '\u00A3' + item.total
+    ];
+  });
 
   const shippingRow = data.shippingTotal && parseFloat(data.shippingTotal) > 0
     ? '<tr><td style="padding:4px 0">Shipping:</td><td style="padding:4px 0;text-align:right">\u00A3' + data.shippingTotal + '</td></tr>' : '';

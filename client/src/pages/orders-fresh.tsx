@@ -1644,6 +1644,16 @@ export default function OrdersFresh() {
                         <div className="text-xs text-gray-500">
                           Quantity: {item.quantity} units × {formatCurrency(parseFloat(item.unitPrice))}
                         </div>
+                        {(item as any).appliedOfferLabel && (
+                          <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full mt-0.5">
+                            🎁 {(item as any).appliedOfferLabel}
+                          </span>
+                        )}
+                        {((item as any).freeItems || 0) > 0 && (
+                          <span className="inline-flex items-center text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full mt-0.5 ml-1">
+                            +{(item as any).freeItems} free
+                          </span>
+                        )}
                       </div>
                       <div className="font-medium text-sm ml-4">
                         {formatCurrency(parseFloat(item.total))}

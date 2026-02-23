@@ -4405,6 +4405,16 @@ export default function CustomerPortal() {
                                 </span>
                               )}
                             </p>
+                            {(item as any).appliedOfferLabel && (
+                              <span className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mt-1">
+                                🎁 {(item as any).appliedOfferLabel}
+                              </span>
+                            )}
+                            {((item as any).freeItems || 0) > 0 && (
+                              <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 ml-1">
+                                +{(item as any).freeItems} free
+                              </span>
+                            )}
                             {item.sellingType === 'pallets' && (
                               <p className="text-xs text-gray-500">
                                 ({item.quantity * ((item.product as any).unitsPerPallet || 1)} total units)

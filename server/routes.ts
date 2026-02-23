@@ -4054,7 +4054,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const total = parseFloat(item.total || '0');
               const unitPrice = parseFloat(item.unitPrice || '0');
               const sellingType = item.sellingType || 'units';
-              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}`);
+              const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
+              const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {
@@ -4758,12 +4760,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subtotal += itemTotal;
 
         orderItems.push({
-          orderId: 0, // Will be set after order creation
+          orderId: 0,
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: effectivePrice.toFixed(2),
           total: itemTotal.toFixed(2),
-          sellingType: item.sellingType || 'units'
+          sellingType: item.sellingType || 'units',
+          appliedOfferLabel: promotionalPricing.appliedOffers?.length > 0 ? promotionalPricing.appliedOffers.join(', ') : null,
+          freeItems: promotionalPricing.freeItems || 0
         });
       }
 
@@ -5712,14 +5716,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
 
-            // Create order items with orderId for storage
-            const orderItemsData = items.map((item: any) => ({
-              orderId: 0, // Will be set after order creation
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice).toFixed(2),
-              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
-              sellingType: item.sellingType || 'units' // Add missing sellingType column
+            // Create order items with orderId for storage, including promo labels
+            const orderItemsData = await Promise.all(items.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              let appliedOfferLabel: string | null = null;
+              let freeItemsCount = 0;
+              if (product && product.promotionalOffers && product.promotionalOffers.length > 0 && item.sellingType !== 'pallets') {
+                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                  parseFloat(product.price),
+                  item.quantity,
+                  product.promotionalOffers || [],
+                  product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+                  Boolean(product.promoActive)
+                );
+                if (pricing.appliedOffers?.length > 0) appliedOfferLabel = pricing.appliedOffers.join(', ');
+                freeItemsCount = pricing.freeItems || 0;
+              }
+              return {
+                orderId: 0,
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unitPrice).toFixed(2),
+                total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
+                sellingType: item.sellingType || 'units',
+                appliedOfferLabel,
+                freeItems: freeItemsCount
+              };
             }));
 
             console.log(`🚨 WEBHOOK TRANSACTION DEBUG: About to call createOrderWithTransaction`);
@@ -5767,8 +5789,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send customer confirmation email and Stripe invoice
         if (wholesaler && customerEmail) {
           try {
-            // Enrich items with product details for email
-            const enrichedItems = await Promise.all(items.map(async (item: any) => {
+            const savedOrderItems = await storage.getOrderItems(order.id);
+            const enrichedItems = await Promise.all(savedOrderItems.map(async (item: any) => {
               const product = await storage.getProduct(item.productId);
               return {
                 ...item,
@@ -12070,13 +12092,27 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         notes: notes || `Order placed via marketplace for ${product.name}`
       };
       
+      const itemQty = parseInt(quantity);
+      const itemSellingType = sellingType || 'units';
+      let itemAppliedOfferLabel: string | null = null;
+      let itemFreeItems = 0;
+      if (itemSellingType !== 'pallets' && product.promotionalOffers && product.promotionalOffers.length > 0) {
+        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          parseFloat(product.price), itemQty, product.promotionalOffers || [],
+          product.promoPrice ? parseFloat(product.promoPrice) : undefined, Boolean(product.promoActive)
+        );
+        if (pricing.appliedOffers?.length > 0) itemAppliedOfferLabel = pricing.appliedOffers.join(', ');
+        itemFreeItems = pricing.freeItems || 0;
+      }
       const orderItems = [{
         productId: product.id,
-        quantity: parseInt(quantity),
+        quantity: itemQty,
         unitPrice: product.price,
         total: totalAmount.toString(),
-        sellingType: sellingType || 'units', // CRITICAL FIX: Include selling type for stock reduction
-        orderId: 0 // Will be set after order creation
+        sellingType: itemSellingType,
+        orderId: 0,
+        appliedOfferLabel: itemAppliedOfferLabel,
+        freeItems: itemFreeItems
       }];
       
       // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
@@ -12303,17 +12339,30 @@ Please contact the customer to confirm this order.
         notes: notes || ''
       };
 
-      const orderItems = items.map((item: any) => ({
-        ...item,
-        orderId: 0 // Will be set by the storage layer
+      const orderItems = await Promise.all(items.map(async (item: any) => {
+        const product = await storage.getProduct(item.productId);
+        let appliedOfferLabel: string | null = null;
+        let freeItemsCount = 0;
+        if (product && product.promotionalOffers && product.promotionalOffers.length > 0 && (item.sellingType || 'units') !== 'pallets') {
+          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+            parseFloat(product.price), item.quantity, product.promotionalOffers || [],
+            product.promoPrice ? parseFloat(product.promoPrice) : undefined, Boolean(product.promoActive)
+          );
+          if (pricing.appliedOffers?.length > 0) appliedOfferLabel = pricing.appliedOffers.join(', ');
+          freeItemsCount = pricing.freeItems || 0;
+        }
+        return {
+          ...item,
+          orderId: 0,
+          appliedOfferLabel,
+          freeItems: freeItemsCount
+        };
       }));
 
-      // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
       const order = await db.transaction(async (trx) => {
         return await storage.createOrderWithTransaction(trx, orderData, orderItems);
       });
 
-      // Get wholesaler info for email
       const wholesaler = await storage.getUser(firstProduct.wholesalerId);
 
       // Send email invoice to customer
@@ -12441,9 +12490,14 @@ Please contact the customer to confirm this order.
         
         console.log(`Email item debug: ${productName}, qty: ${item.quantity}, price: ${unitPrice}, total: ${total}`);
         
+        const promoLabel = item.appliedOfferLabel || '';
+        const freeItemsCount = item.freeItems || 0;
+        const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;padding:2px 8px;border-radius:12px;margin-top:4px;">🎁 ${promoLabel}</span>` : '';
+        const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} free</span>` : '';
+        
         return `
           <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${productName}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${productName}${promoBadge}${freeBadge}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${unitPrice}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${total}</td>
@@ -17948,7 +18002,9 @@ https://quikpik.app`;
               const total = parseFloat(item.total || '0');
               const unitPrice = parseFloat(item.unitPrice || '0');
               const sellingType = item.sellingType || 'units';
-              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}`);
+              const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
+              const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {
@@ -18234,6 +18290,8 @@ https://quikpik.app`;
         unitPrice: item.unitPrice,
         total: item.total,
         sellingType: item.sellingType || 'units',
+        appliedOfferLabel: (item as any).appliedOfferLabel || null,
+        freeItems: (item as any).freeItems || 0,
       }));
 
       const createdOrder = await storage.createOrderWithTransaction(

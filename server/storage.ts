@@ -1481,14 +1481,17 @@ export class DatabaseStorage implements IStorage {
           console.log(`📦 PRODUCT: ${currentProduct.name} (ID: ${item.productId})`);
           console.log(`📊 CURRENT STOCK: units: ${currentProduct.stock}, pallets: ${currentProduct.palletStock}`);
           
-          // CRITICAL FIX: Use proper separate stock tracking based on selling type
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;
+          const freeItemsQty = (item as any).freeItems || 0;
+          const totalStockToReduce = orderedQuantity + freeItemsQty;
           
-          console.log(`🛒 ORDER: ${orderedQuantity} ${sellingType}`);
+          if (freeItemsQty > 0) {
+            console.log(`🎁 BOGOF: ${orderedQuantity} ordered + ${freeItemsQty} free = ${totalStockToReduce} total stock reduction`);
+          }
+          console.log(`🛒 ORDER: ${totalStockToReduce} ${sellingType} (includes ${freeItemsQty} free items)`);
           
-          // Use InventoryCalculator for proper separate stock tracking
-          const orderResult = InventoryCalculator.processOrder(orderedQuantity, sellingType, {
+          const orderResult = InventoryCalculator.processOrder(totalStockToReduce, sellingType, {
             stock: currentProduct.stock,
             palletStock: currentProduct.palletStock,
             quantityInPack: currentProduct.quantityInPack,
@@ -1517,11 +1520,13 @@ export class DatabaseStorage implements IStorage {
             productId: item.productId,
             wholesalerId: orderData.wholesalerId,
             movementType: 'purchase',
-            quantity: -orderedQuantity, // Negative for stock reduction
+            quantity: -totalStockToReduce,
             unitType: sellingType === 'pallets' ? 'pallets' : 'units',
             stockBefore: stockBefore,
             stockAfter: stockAfter,
-            reason: `Order sale - ${orderedQuantity} ${sellingType}`,
+            reason: freeItemsQty > 0 
+              ? `Order sale - ${orderedQuantity} ${sellingType} + ${freeItemsQty} free (promo)`
+              : `Order sale - ${orderedQuantity} ${sellingType}`,
             orderId: newOrder.id
           });
           
