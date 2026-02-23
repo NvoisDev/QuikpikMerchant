@@ -476,17 +476,6 @@ export default function ProductCard({
         {/* Actions Row */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="flex items-center space-x-1">
-            {showPromotionAnalytics && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7"
-                onClick={() => setShowPromotionModal(true)}
-                title="View Promotion Analytics"
-              >
-                <BarChart3 className="h-3 w-3 text-purple-600" />
-              </Button>
-            )}
           </div>
           
           {/* Quick Actions */}
@@ -534,15 +523,6 @@ export default function ProductCard({
         </DialogContent>
       </Dialog>
 
-      {/* Promotion Analytics Dialog */}
-      <Dialog open={showPromotionModal} onOpenChange={setShowPromotionModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Promotion Analytics - {product.name}</DialogTitle>
-          </DialogHeader>
-          <PromotionAnalytics productId={product.id} />
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

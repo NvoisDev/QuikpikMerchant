@@ -2385,7 +2385,7 @@ export default function ProductManagement() {
                     onDelete={handleDelete}
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
-                    showPromotionAnalytics={true}
+                    showPromotionAnalytics={false}
                   />
                 </div>
               ))}
