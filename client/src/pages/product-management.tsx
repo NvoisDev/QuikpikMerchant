@@ -919,7 +919,7 @@ export default function ProductManagement() {
   };
 
   const { data: stockMovements, isLoading: isLoadingMovements } = useQuery({
-    queryKey: ['/api/products', stockProduct?.id, 'stock-movements'],
+    queryKey: [`/api/products/${stockProduct?.id}/stock-movements`],
     enabled: !!stockProduct,
   });
 
@@ -929,7 +929,7 @@ export default function ProductManagement() {
     },
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ['/api/products', stockProduct?.id, 'stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
       const qty = variables.quantity;
       const newStock = variables.adjustmentType === 'increase'
         ? stockProduct.stock + qty
