@@ -917,7 +917,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0 bg-white min-h-screen">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
@@ -1273,14 +1273,23 @@ export default function Customers() {
         {/* Address Book Tab */}
         <TabsContent value="address-book" className="space-y-6">
           {stats && (
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 py-1">
-              <span><span className="font-semibold text-gray-900">{stats.totalCustomers}</span> customers</span>
-              <span className="text-gray-300">|</span>
-              <span><span className="font-semibold text-gray-900">{stats.activeCustomers}</span> active</span>
-              <span className="text-gray-300">|</span>
-              <span><span className="font-semibold text-gray-900">{stats.newCustomersThisMonth}</span> new this month</span>
-              <span className="text-gray-300">|</span>
-              <span><span className="font-semibold text-gray-900">{formatCurrency(stats.totalRevenue)}</span> revenue</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2">
+                <p className="text-[11px] text-green-700">Total Revenue</p>
+                <p className="text-sm font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+              </div>
+              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+                <p className="text-[11px] text-blue-700">Customers</p>
+                <p className="text-sm font-bold text-blue-600">{stats.totalCustomers}</p>
+              </div>
+              <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2">
+                <p className="text-[11px] text-orange-700">Active</p>
+                <p className="text-sm font-bold text-orange-600">{stats.activeCustomers}</p>
+              </div>
+              <div className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2">
+                <p className="text-[11px] text-yellow-700">New This Month</p>
+                <p className="text-sm font-bold text-yellow-600">{stats.newCustomersThisMonth}</p>
+              </div>
             </div>
           )}
 
@@ -1393,7 +1402,7 @@ export default function Customers() {
           ) : (
             <div className="space-y-2">
               {sortedCustomers.map((customer) => (
-                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
                   <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
                       {getInitials(customer?.firstName || '', customer?.lastName)}
@@ -1468,29 +1477,6 @@ export default function Customers() {
                           >
                             <ShieldX className="h-4 w-4 mr-2" />
                             Remove Access
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-green-600"
-                            onClick={() => {
-                              if (customer?.email) {
-                                allowCustomerAccessMutation.mutate({
-                                  email: customer.email,
-                                  phoneNumber: customer.phoneNumber,
-                                  firstName: customer.firstName,
-                                  lastName: customer.lastName
-                                });
-                              } else {
-                                toast({
-                                  title: "Email Required",
-                                  description: "Customer must have an email address to restore access.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            disabled={allowCustomerAccessMutation.isPending || !customer?.email}
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Allow Access
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600"
