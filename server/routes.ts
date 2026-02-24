@@ -3829,6 +3829,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all promotions for wholesaler's products
+  app.get('/api/promotions', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const userProducts = await storage.getProducts(targetUserId);
+      
+      const promotions: any[] = [];
+      for (const product of userProducts) {
+        const offers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
+        for (const offer of offers) {
+          promotions.push({
+            ...offer,
+            productId: product.id,
+            productName: product.name,
+            productPrice: product.price,
+            productImage: product.images?.[0] || null,
+            productStock: product.stock,
+          });
+        }
+      }
+      
+      res.json(promotions);
+    } catch (error) {
+      console.error("Error fetching promotions:", error);
+      res.status(500).json({ message: "Failed to fetch promotions" });
+    }
+  });
+
+  // Add a promotion to a product
+  app.post('/api/products/:id/promotions', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const productId = parseInt(req.params.id);
+      const product = await storage.getProduct(productId);
+      
+      if (!product || product.wholesalerId !== targetUserId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const promotion = req.body;
+      const newOffer = {
+        id: `promo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...promotion,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const currentOffers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
+      const updatedOffers = [...currentOffers, newOffer];
+      
+      const now = new Date();
+      const startDate = promotion.startDate ? new Date(promotion.startDate) : null;
+      const endDate = promotion.endDate ? new Date(promotion.endDate) : null;
+      const isCurrentlyActive = (!startDate || startDate <= now) && (!endDate || endDate >= now);
+      
+      let promoPrice = product.promoPrice;
+      if (isCurrentlyActive) {
+        if (promotion.type === 'fixed_price' && promotion.fixedPrice) {
+          promoPrice = String(promotion.fixedPrice);
+        } else if (promotion.type === 'percentage_discount' && promotion.discountPercentage) {
+          const originalPrice = parseFloat(product.price || '0');
+          promoPrice = String(Math.round((originalPrice * (1 - promotion.discountPercentage / 100)) * 100) / 100);
+        } else if (promotion.type === 'clearance' && promotion.fixedPrice) {
+          promoPrice = String(promotion.fixedPrice);
+        }
+      }
+      
+      await db.update(products).set({
+        promotionalOffers: updatedOffers,
+        promoActive: isCurrentlyActive,
+        promoPrice: promoPrice ? promoPrice : null,
+        updatedAt: new Date(),
+      }).where(eq(products.id, productId));
+      
+      res.json({ success: true, promotion: newOffer });
+    } catch (error) {
+      console.error("Error adding promotion:", error);
+      res.status(500).json({ message: "Failed to add promotion" });
+    }
+  });
+
+  // Update a promotion on a product
+  app.patch('/api/products/:id/promotions/:promoId', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const productId = parseInt(req.params.id);
+      const promoId = req.params.promoId;
+      const product = await storage.getProduct(productId);
+      
+      if (!product || product.wholesalerId !== targetUserId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const updates = req.body;
+      const currentOffers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
+      const updatedOffers = currentOffers.map((offer: any) => {
+        if (offer.id === promoId) {
+          return { ...offer, ...updates, updatedAt: new Date().toISOString() };
+        }
+        return offer;
+      });
+      
+      const activeOffer = updatedOffers.find((o: any) => {
+        if (!o.isActive) return false;
+        const now = new Date();
+        const start = o.startDate ? new Date(o.startDate) : null;
+        const end = o.endDate ? new Date(o.endDate) : null;
+        return (!start || start <= now) && (!end || end >= now);
+      });
+      
+      let promoPrice = null;
+      if (activeOffer) {
+        if (activeOffer.type === 'fixed_price' && activeOffer.fixedPrice) {
+          promoPrice = String(activeOffer.fixedPrice);
+        } else if (activeOffer.type === 'percentage_discount' && activeOffer.discountPercentage) {
+          const originalPrice = parseFloat(product.price || '0');
+          promoPrice = String(Math.round((originalPrice * (1 - activeOffer.discountPercentage / 100)) * 100) / 100);
+        } else if (activeOffer.type === 'clearance' && activeOffer.fixedPrice) {
+          promoPrice = String(activeOffer.fixedPrice);
+        }
+      }
+      
+      await db.update(products).set({
+        promotionalOffers: updatedOffers,
+        promoActive: !!activeOffer,
+        promoPrice: promoPrice,
+        updatedAt: new Date(),
+      }).where(eq(products.id, productId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating promotion:", error);
+      res.status(500).json({ message: "Failed to update promotion" });
+    }
+  });
+
+  // Delete a promotion from a product
+  app.delete('/api/products/:id/promotions/:promoId', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const productId = parseInt(req.params.id);
+      const promoId = req.params.promoId;
+      const product = await storage.getProduct(productId);
+      
+      if (!product || product.wholesalerId !== targetUserId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const currentOffers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
+      const updatedOffers = currentOffers.filter((offer: any) => offer.id !== promoId);
+      
+      const activeOffer = updatedOffers.find((o: any) => {
+        if (!o.isActive) return false;
+        const now = new Date();
+        const start = o.startDate ? new Date(o.startDate) : null;
+        const end = o.endDate ? new Date(o.endDate) : null;
+        return (!start || start <= now) && (!end || end >= now);
+      });
+      
+      let promoPrice = null;
+      if (activeOffer) {
+        if (activeOffer.type === 'fixed_price' && activeOffer.fixedPrice) {
+          promoPrice = String(activeOffer.fixedPrice);
+        } else if (activeOffer.type === 'percentage_discount' && activeOffer.discountPercentage) {
+          const originalPrice = parseFloat(product.price || '0');
+          promoPrice = String(Math.round((originalPrice * (1 - activeOffer.discountPercentage / 100)) * 100) / 100);
+        } else if (activeOffer.type === 'clearance' && activeOffer.fixedPrice) {
+          promoPrice = String(activeOffer.fixedPrice);
+        }
+      }
+      
+      await db.update(products).set({
+        promotionalOffers: updatedOffers,
+        promoActive: !!activeOffer,
+        promoPrice: promoPrice,
+        updatedAt: new Date(),
+      }).where(eq(products.id, productId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting promotion:", error);
+      res.status(500).json({ message: "Failed to delete promotion" });
+    }
+  });
+
   // Reset all promotional pricing for wholesaler's products
   app.post('/api/products/reset-promotions', requireAuth, async (req: any, res) => {
     try {
