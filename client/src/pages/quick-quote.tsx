@@ -988,16 +988,16 @@ export default function QuickQuote() {
 
               <div>
                 <Label className="text-sm font-medium mb-2 block">Payment Type</Label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {[0, 25, 50, 75, 100].map((percent) => (
                     <Button
                       key={percent}
                       variant={depositPercentage === percent ? 'default' : 'outline'}
-                      className={depositPercentage === percent ? 'bg-green-600 hover:bg-green-700' : ''}
+                      className={`${depositPercentage === percent ? 'bg-green-600 hover:bg-green-700' : ''} text-xs px-1 whitespace-nowrap`}
                       size="sm"
                       onClick={() => setDepositPercentage(percent as 0 | 25 | 50 | 75 | 100)}
                     >
-                      {percent === 100 ? 'Full' : percent === 0 ? 'Pay Later' : `${percent}%`}
+                      {percent === 100 ? 'Full' : percent === 0 ? 'Later' : `${percent}%`}
                     </Button>
                   ))}
                 </div>
