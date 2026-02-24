@@ -599,9 +599,47 @@ export default function QuickQuote() {
                       <DialogTitle>Select Product</DialogTitle>
                     </DialogHeader>
                     <div className="grid grid-cols-1 gap-3 mt-4">
-                      {products.map((product) => (
+                      {products.map((product) => {
+                        const now = new Date();
+                        const activePromos = (product.promotionalOffers || []).filter((o: any) => {
+                          if (o.isActive === false) return false;
+                          if (o.startDate && new Date(o.startDate) > now) return false;
+                          if (o.endDate && new Date(o.endDate) < now) return false;
+                          return true;
+                        });
+                        const bestPromo = activePromos.find((o: any) => 
+                          o.type === 'percentage_discount' || o.type === 'fixed_price' || o.type === 'clearance'
+                        );
+                        let promoUnitPrice: number | null = null;
+                        if (bestPromo) {
+                          if (bestPromo.type === 'percentage_discount' && bestPromo.discountPercentage) {
+                            promoUnitPrice = parseFloat(product.price) * (1 - bestPromo.discountPercentage / 100);
+                          } else if ((bestPromo.type === 'fixed_price' || bestPromo.type === 'clearance') && bestPromo.fixedPrice) {
+                            promoUnitPrice = bestPromo.fixedPrice;
+                          }
+                        }
+                        return (
                         <div key={product.id} className="p-3 border rounded-lg">
-                          <div className="font-medium mb-2">{product.name}</div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium">{product.name}</span>
+                            {activePromos.map((offer: any, oi: number) => (
+                              <Badge key={oi} variant="secondary" className={
+                                offer.type === 'percentage_discount' ? 'bg-red-100 text-red-700 text-xs' :
+                                offer.type === 'fixed_price' ? 'bg-green-100 text-green-700 text-xs' :
+                                offer.type === 'buy_x_get_y_free' ? 'bg-purple-100 text-purple-700 text-xs' :
+                                offer.type === 'bundle_deal' ? 'bg-blue-100 text-blue-700 text-xs' :
+                                offer.type === 'clearance' ? 'bg-orange-100 text-orange-700 text-xs' :
+                                'bg-gray-100 text-gray-700 text-xs'
+                              }>
+                                {offer.type === 'percentage_discount' ? `${offer.discountPercentage}% Off` :
+                                 offer.type === 'fixed_price' ? `£${offer.fixedPrice} each` :
+                                 offer.type === 'buy_x_get_y_free' ? `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free` :
+                                 offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ £${offer.fixedPrice}` :
+                                 offer.type === 'clearance' ? `Clearance £${offer.fixedPrice}` :
+                                 offer.name || 'Promo'}
+                              </Badge>
+                            ))}
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             <div
                               className="flex-1 min-w-[140px] p-2 border rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
@@ -610,7 +648,14 @@ export default function QuickQuote() {
                               <div className="text-xs text-gray-500">Per Unit</div>
                               <div className="flex items-center justify-between mt-1">
                                 <span className="text-green-600 font-semibold">
-                                  £{parseFloat(product.price).toFixed(2)}
+                                  {promoUnitPrice !== null ? (
+                                    <>
+                                      <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.price).toFixed(2)}</span>
+                                      £{promoUnitPrice.toFixed(2)}
+                                    </>
+                                  ) : (
+                                    <>£{parseFloat(product.price).toFixed(2)}</>
+                                  )}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
                                   {product.stock || 0} units
@@ -640,7 +685,8 @@ export default function QuickQuote() {
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -677,18 +723,37 @@ export default function QuickQuote() {
                               </Badge>
                             )}
                           </div>
-                          {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {item.promotionalOffers.map((offer: any, oi: number) => (
-                                <Badge key={oi} variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
-                                  {offer.type === 'bogof' ? `Buy ${offer.buyQuantity} Get ${offer.freeQuantity} Free` :
-                                   offer.type === 'percentage_discount' ? `Buy ${offer.buyQuantity}+ Get ${offer.discountPercentage}% Off` :
-                                   offer.type === 'fixed_price' ? `Buy ${offer.buyQuantity}+ @ £${offer.fixedPrice} each` :
-                                   offer.label || 'Promo Active'}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                          {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
+                            const now = new Date();
+                            const activeOffers = item.promotionalOffers.filter((o: any) => {
+                              if (o.isActive === false) return false;
+                              if (o.startDate && new Date(o.startDate) > now) return false;
+                              if (o.endDate && new Date(o.endDate) < now) return false;
+                              return true;
+                            });
+                            if (activeOffers.length === 0) return null;
+                            return (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {activeOffers.map((offer: any, oi: number) => (
+                                  <Badge key={oi} variant="secondary" className={
+                                    offer.type === 'percentage_discount' ? 'bg-red-100 text-red-700 text-xs' :
+                                    offer.type === 'fixed_price' ? 'bg-green-100 text-green-700 text-xs' :
+                                    offer.type === 'buy_x_get_y_free' ? 'bg-purple-100 text-purple-700 text-xs' :
+                                    offer.type === 'bundle_deal' ? 'bg-blue-100 text-blue-700 text-xs' :
+                                    offer.type === 'clearance' ? 'bg-orange-100 text-orange-700 text-xs' :
+                                    'bg-purple-100 text-purple-700 text-xs'
+                                  }>
+                                    {offer.type === 'percentage_discount' ? `${offer.discountPercentage}% Off` :
+                                     offer.type === 'fixed_price' ? `£${offer.fixedPrice} each` :
+                                     offer.type === 'buy_x_get_y_free' ? `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free` :
+                                     offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ £${offer.fixedPrice} each` :
+                                     offer.type === 'clearance' ? `Clearance £${offer.fixedPrice}` :
+                                     offer.name || 'Promo Active'}
+                                  </Badge>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                         <Button
                           variant="ghost"
