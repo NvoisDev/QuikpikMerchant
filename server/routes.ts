@@ -5898,8 +5898,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 unitPrice: parseFloat(item.unitPrice).toFixed(2),
                 total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
                 sellingType: item.sellingType || 'units',
-                appliedOfferLabel: null,
-                freeItems: 0
+                appliedOfferLabel: item.appliedOfferLabel || null,
+                freeItems: item.freeItems || 0
               };
             }));
 
@@ -12470,8 +12470,8 @@ Please contact the customer to confirm this order.
         return {
           ...item,
           orderId: 0,
-          appliedOfferLabel: null,
-          freeItems: 0
+          appliedOfferLabel: item.appliedOfferLabel || null,
+          freeItems: item.freeItems || 0
         };
       });
 
