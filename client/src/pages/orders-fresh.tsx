@@ -1602,7 +1602,7 @@ export default function OrdersFresh() {
                         totalPaid
                       )
                     : totalPaid;
-                  const isPartial = calculatedRefund < totalPaid && totalPaid > 0;
+                  const isPartial = returnItems.some(ri => ri.quantity < ri.maxQty);
                   return (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
