@@ -21,7 +21,9 @@ import {
   BarChart3,
   DollarSign,
   Target,
-  TrendingUp
+  TrendingUp,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { SocialShare } from "@/components/social-share";
 import {
@@ -364,6 +366,13 @@ export default function ProductCard({
               <DropdownMenuItem onClick={() => setShowStockTracker(true)}>
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Stock Tracker
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}>
+                {product.status === 'active' ? (
+                  <><ToggleLeft className="mr-2 h-4 w-4" />Set Inactive</>
+                ) : (
+                  <><ToggleRight className="mr-2 h-4 w-4" />Set Active</>
+                )}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 

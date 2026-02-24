@@ -20,7 +20,7 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -1642,6 +1642,29 @@ export default function ProductManagement() {
 
                       <FormField
                         control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
                         name="images"
                         render={({ field }) => (
                           <FormItem>
@@ -2019,29 +2042,6 @@ export default function ProductManagement() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="status"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Status</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="active">Active</SelectItem>
-                                  <SelectItem value="inactive">Inactive</SelectItem>
-                                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
                         <FormField
                           control={form.control}
                           name="sellingFormat"
@@ -2422,6 +2422,13 @@ export default function ProductManagement() {
                                 <DropdownMenuItem onClick={() => { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); }}>
                                   <PackagePlus className="h-4 w-4 mr-2" />
                                   Update Stock
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}>
+                                  {product.status === 'active' ? (
+                                    <><ToggleLeft className="h-4 w-4 mr-2" />Set Inactive</>
+                                  ) : (
+                                    <><ToggleRight className="h-4 w-4 mr-2" />Set Active</>
+                                  )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDuplicate(product)}>
                                   <Copy className="h-4 w-4 mr-2" />
