@@ -16495,8 +16495,12 @@ https://quikpik.app`;
           orderCount: 0,
           totalSpent: 0,
           lastOrderDate: null,
-          firstOrderDate: null
+          firstOrderDate: null,
+          customerName: ''
         };
+        if (!current.customerName && order.customerName) {
+          current.customerName = order.customerName;
+        }
 
         current.orderCount++;
         // Use actual net amount (subtotal - platform fee) for wholesaler earnings
@@ -16539,7 +16543,7 @@ https://quikpik.app`;
           const customer = customers.find(c => c.id === customerId);
           return {
             id: customerId,
-            name: customer?.name || 'Unknown Customer',
+            name: customer?.name || data.customerName || 'Unknown Customer',
             phone: customer?.phone || '',
             orderCount: data.orderCount,
             totalSpent: Math.round(data.totalSpent * 100) / 100,
