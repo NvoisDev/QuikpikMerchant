@@ -199,7 +199,7 @@ export default function OrdersFresh() {
   const ordersPerPage = 20;
   const { toast } = useToast();
   
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
   const [processRefund, setProcessRefund] = useState(false);
@@ -409,8 +409,8 @@ export default function OrdersFresh() {
     setRestockInventory(true);
     setSendNotification(true);
     
-    // Open the cancel dialog
-    setShowCancelDialog(true);
+    // Open the cancel form
+    setShowCancelForm(true);
   };
 
   // Reject cancellation request
@@ -570,7 +570,7 @@ export default function OrdersFresh() {
           order.id === selectedOrder.id ? { ...order, status: 'cancelled' } : order
         ));
         setSelectedOrder({ ...selectedOrder, status: 'cancelled' });
-        setShowCancelDialog(false);
+        setShowCancelForm(false);
         setCancelReason('');
         setCancelReasonCategory('');
         setProcessRefund(false);
@@ -1507,21 +1507,154 @@ export default function OrdersFresh() {
       </Card>
 
       {/* Order Details Modal */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+      <Dialog open={!!selectedOrder} onOpenChange={() => { setSelectedOrder(null); setShowCancelForm(false); }}>
         <DialogContent className="order-detail-mobile-fullscreen sm:max-w-lg sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:hidden">
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold">Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
-                <p className="text-sm text-gray-500">Order ID: {selectedOrder?.id}</p>
+                {showCancelForm ? (
+                  <DialogTitle className="text-lg font-semibold">Cancel Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
+                ) : (
+                  <>
+                    <DialogTitle className="text-lg font-semibold">Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
+                    <p className="text-sm text-gray-500">Order ID: {selectedOrder?.id}</p>
+                  </>
+                )}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(null)}>
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedOrder(null); setShowCancelForm(false); }}>
                 Close
               </Button>
             </div>
           </DialogHeader>
 
           {selectedOrder && (
+            showCancelForm ? (
+              <div className="space-y-4 text-sm">
+                {/* Cancellation Reason */}
+                <div>
+                  <label className="text-sm font-medium">Reason for cancellation *</label>
+                  <select
+                    value={cancelReasonCategory}
+                    onChange={(e) => setCancelReasonCategory(e.target.value)}
+                    className="w-full mt-1 p-2 border rounded-md text-sm bg-white"
+                  >
+                    <option value="">Select a reason...</option>
+                    {cancellationReasons.map((reason) => (
+                      <option key={reason.value} value={reason.value}>{reason.label}</option>
+                    ))}
+                  </select>
+                  {!cancelReasonCategory && (
+                    <p className="text-xs text-amber-600 mt-1">Please select a reason to continue</p>
+                  )}
+                </div>
+
+                {/* Additional Notes */}
+                <div>
+                  <label className="text-sm font-medium">Additional notes (optional)</label>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Add any additional details..."
+                    className="w-full mt-1 p-2 border rounded-md text-sm min-h-[60px]"
+                  />
+                </div>
+
+                {/* Items to return */}
+                {selectedOrder?.items && selectedOrder.items.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">Items to return (adjust for partial return)</label>
+                    <div className="mt-2 space-y-2">
+                      {returnItems.map((item, index) => {
+                        const orderItem = selectedOrder.items?.find(oi => oi.productId === item.productId);
+                        return (
+                          <div key={item.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-sm truncate max-w-[140px]">{orderItem?.product?.name || `Product ${item.productId}`}</span>
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const newItems = [...returnItems];
+                                newItems[index].quantity = Math.max(0, newItems[index].quantity - 1);
+                                setReturnItems(newItems);
+                              }}>-</Button>
+                              <span className="text-sm w-8 text-center">{item.quantity}</span>
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const newItems = [...returnItems];
+                                newItems[index].quantity = Math.min(item.maxQty, newItems[index].quantity + 1);
+                                setReturnItems(newItems);
+                              }}>+</Button>
+                              <span className="text-xs text-gray-500">/ {item.maxQty}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Refund payments */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('card'); setProcessRefund(true); }}>
+                    <input type="radio" name="refundType" checked={refundType === 'card'} onChange={() => { setRefundType('card'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
+                    <div className="ml-3 flex-1">
+                      <span className="text-sm font-medium">Original payment method</span>
+                      <p className="text-xs text-gray-500 mt-0.5">Refund {formatCurrency(parseFloat(selectedOrder?.amountPaid || selectedOrder?.total || '0'))} GBP to card</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'credit' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('credit'); setProcessRefund(true); }}>
+                    <input type="radio" name="refundType" checked={refundType === 'credit'} onChange={() => { setRefundType('credit'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
+                    <div className="ml-3">
+                      <span className="text-sm font-medium">Store credit</span>
+                      <p className="text-xs text-gray-500 mt-0.5">Applied immediately to customer's account</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('later'); setProcessRefund(false); }}>
+                    <input type="radio" name="refundType" checked={refundType === 'later'} onChange={() => { setRefundType('later'); setProcessRefund(false); }} className="w-4 h-4 text-green-600" />
+                    <div className="ml-3">
+                      <span className="text-sm font-medium">Later</span>
+                      <p className="text-xs text-gray-500 mt-0.5">Process refund at a different time</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Staff Note */}
+                <div>
+                  <label className="text-sm font-medium">Staff note (optional)</label>
+                  <textarea value={staffNote} onChange={(e) => setStaffNote(e.target.value)} placeholder="Internal notes — not visible to customer..." className="w-full mt-1 p-2 border rounded-md text-sm min-h-[50px]" />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={restockInventory} onChange={(e) => setRestockInventory(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
+                    <span className="text-sm text-gray-700">Restock inventory</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={sendNotification} onChange={(e) => setSendNotification(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
+                    <span className="text-sm text-gray-700">Send a <span className="text-green-600">notification</span> to the customer</span>
+                  </label>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2 pt-3 border-t">
+                  <Button variant="destructive" className="w-full" onClick={cancelOrder} disabled={isCancelling || !cancelReasonCategory}>
+                    {isCancelling ? 'Cancelling...' : 'Cancel order'}
+                  </Button>
+                  <Button variant="ghost" className="w-full text-gray-500" onClick={() => {
+                    setShowCancelForm(false);
+                    setCancelReasonCategory('');
+                    setCancelReason('');
+                    setProcessRefund(false);
+                    setRefundType('card');
+                    setRestockInventory(true);
+                    setSendNotification(true);
+                    setStaffNote('');
+                    setPendingCancellationRequestId(null);
+                  }}>
+                    ← Back to order
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4 text-sm">
               {/* Status & Fulfillment */}
               <div>
@@ -2096,8 +2229,8 @@ export default function OrdersFresh() {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between pt-2 border-t gap-3">
-                  {/* Cancel Button - Left side */}
+                <div className="flex flex-wrap pt-2 border-t gap-2">
+                  {/* Cancel Button */}
                   {selectedOrder.status !== 'fulfilled' && (
                     <Button
                       variant="destructive"
@@ -2111,7 +2244,7 @@ export default function OrdersFresh() {
                             maxQty: item.quantity
                           })));
                         }
-                        setShowCancelDialog(true);
+                        setShowCancelForm(true);
                       }}
                     >
                       <X className="w-4 h-4 mr-1" />
@@ -2119,7 +2252,7 @@ export default function OrdersFresh() {
                     </Button>
                   )}
                   
-                  <div className="flex gap-3 ml-auto">
+                  <div className="flex gap-2 ml-auto flex-wrap">
                     {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
                     {selectedOrder.fulfillmentType === 'pickup' && 
                      selectedOrder.status !== 'ready_for_collection' && 
@@ -2131,7 +2264,8 @@ export default function OrdersFresh() {
                         className="bg-orange-500 hover:bg-orange-600 text-white"
                       >
                         <Clock className="h-4 w-4 mr-1" />
-                        {updatingOrderId === selectedOrder.id ? '...' : 'Ready for Collection'}
+                        <span className="hidden sm:inline">{updatingOrderId === selectedOrder.id ? '...' : 'Ready for Collection'}</span>
+                        <span className="sm:hidden">{updatingOrderId === selectedOrder.id ? '...' : 'Ready to Collect'}</span>
                       </Button>
                     )}
 
@@ -2151,242 +2285,8 @@ export default function OrdersFresh() {
                 </div>
               )}
             </div>
+            )
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Order Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Cancel Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Cancellation Reason Dropdown */}
-            <div>
-              <label className="text-sm font-medium">Reason for cancellation *</label>
-              <Select value={cancelReasonCategory} onValueChange={setCancelReasonCategory}>
-                <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder="Select a reason..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cancellationReasons.map((reason) => (
-                    <SelectItem key={reason.value} value={reason.value}>
-                      {reason.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Additional Notes (Optional) */}
-            <div>
-              <label className="text-sm font-medium">Additional notes (optional)</label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Add any additional details..."
-                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[60px]"
-              />
-            </div>
-
-            {selectedOrder?.items && selectedOrder.items.length > 0 && (
-              <div>
-                <label className="text-sm font-medium">Items to return (adjust quantities if partial return)</label>
-                <div className="mt-2 space-y-2 max-h-[150px] overflow-y-auto">
-                  {returnItems.map((item, index) => {
-                    const orderItem = selectedOrder.items?.find(oi => oi.productId === item.productId);
-                    return (
-                      <div key={item.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm truncate max-w-[150px]">{orderItem?.product?.name || `Product ${item.productId}`}</span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newItems = [...returnItems];
-                              newItems[index].quantity = Math.max(0, newItems[index].quantity - 1);
-                              setReturnItems(newItems);
-                            }}
-                          >
-                            -
-                          </Button>
-                          <span className="text-sm w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newItems = [...returnItems];
-                              newItems[index].quantity = Math.min(item.maxQty, newItems[index].quantity + 1);
-                              setReturnItems(newItems);
-                            }}
-                          >
-                            +
-                          </Button>
-                          <span className="text-xs text-gray-500">/ {item.maxQty}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Refund Payments - Shopify Style */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
-              
-              {/* Original Payment Method Option */}
-              <label 
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                  refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => { setRefundType('card'); setProcessRefund(true); }}
-              >
-                <input
-                  type="radio"
-                  name="refundType"
-                  checked={refundType === 'card'}
-                  onChange={() => { setRefundType('card'); setProcessRefund(true); }}
-                  className="w-4 h-4 text-green-600 border-gray-300"
-                />
-                <div className="ml-3 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">Original payment method</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-gray-600">
-                      Refund {formatCurrency(parseFloat(selectedOrder?.amountPaid || selectedOrder?.total || '0'))} GBP
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <div className="w-8 h-5 bg-gradient-to-r from-red-500 to-yellow-500 rounded text-white text-[8px] font-bold flex items-center justify-center">MC</div>
-                    </div>
-                  </div>
-                </div>
-              </label>
-
-              {/* Store Credit Option */}
-              <label 
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                  refundType === 'credit' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => { setRefundType('credit'); setProcessRefund(true); }}
-              >
-                <input
-                  type="radio"
-                  name="refundType"
-                  checked={refundType === 'credit'}
-                  onChange={() => { setRefundType('credit'); setProcessRefund(true); }}
-                  className="w-4 h-4 text-green-600 border-gray-300"
-                />
-                <div className="ml-3">
-                  <span className="text-sm font-medium text-gray-900">Store credit</span>
-                  <p className="text-xs text-gray-500 mt-0.5">Applied immediately to customer's account</p>
-                </div>
-              </label>
-
-              {/* Later Option */}
-              <label 
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                  refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => { setRefundType('later'); setProcessRefund(false); }}
-              >
-                <input
-                  type="radio"
-                  name="refundType"
-                  checked={refundType === 'later'}
-                  onChange={() => { setRefundType('later'); setProcessRefund(false); }}
-                  className="w-4 h-4 text-green-600 border-gray-300"
-                />
-                <div className="ml-3">
-                  <span className="text-sm font-medium text-gray-900">Later</span>
-                  <p className="text-xs text-gray-500 mt-0.5">Process refund at a different time</p>
-                </div>
-              </label>
-
-              {/* Refund Timeline Info */}
-              {refundType === 'card' && (
-                <div className="p-2 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2">
-                  <Clock className="w-3 h-3 flex-shrink-0" />
-                  Refunds typically take 5-10 business days to appear on the customer's statement.
-                </div>
-              )}
-              
-              {refundType === 'credit' && (
-                <div className="p-2 bg-green-50 rounded text-xs text-green-700 flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                  Store credit will be applied immediately and can be used on future orders.
-                </div>
-              )}
-            </div>
-
-            {/* Staff Note */}
-            <div>
-              <label className="text-sm font-medium">Staff note</label>
-              <textarea
-                value={staffNote}
-                onChange={(e) => setStaffNote(e.target.value)}
-                placeholder="Add internal notes (not visible to customer)..."
-                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[50px]"
-              />
-              <p className="text-xs text-gray-500 mt-1">Only you and other staff can see this note.</p>
-            </div>
-
-            {/* Checkboxes */}
-            <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={restockInventory}
-                  onChange={(e) => setRestockInventory(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-green-600"
-                />
-                <span className="text-sm text-gray-700">Restock inventory</span>
-              </label>
-              
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={sendNotification}
-                  onChange={(e) => setSendNotification(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-green-600"
-                />
-                <span className="text-sm text-gray-700">
-                  Send a <span className="text-green-600">notification</span> to the customer
-                </span>
-              </label>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-3 border-t">
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={cancelOrder}
-                disabled={isCancelling || !cancelReasonCategory}
-              >
-                {isCancelling ? 'Cancelling...' : 'Cancel order'}
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full text-gray-500"
-                onClick={() => {
-                  setShowCancelDialog(false);
-                  setCancelReasonCategory('');
-                  setCancelReason('');
-                  setProcessRefund(false);
-                  setRefundType('card');
-                  setRestockInventory(true);
-                  setSendNotification(true);
-                  setStaffNote('');
-                  setPendingCancellationRequestId(null);
-                }}
-              >
-                Keep order
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
