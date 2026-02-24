@@ -60,6 +60,8 @@ export async function sendOrderConfirmationEmail(orderData: {
     quantity: number;
     unitPrice: number;
     total: number;
+    appliedOfferLabel?: string | null;
+    freeItems?: number;
   }>;
   subtotal: number;
   transactionFee: number;
@@ -74,12 +76,16 @@ export async function sendOrderConfirmationEmail(orderData: {
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailTable, emailDivider, emailHeading, emailBadge } = await import('./email-templates');
 
-  const itemRows = orderData.orderItems.map(item => [
-    item.productName,
-    `${item.quantity}`,
-    `£${item.unitPrice.toFixed(2)}`,
-    `£${item.total.toFixed(2)}`
-  ]);
+  const itemRows = orderData.orderItems.map(item => {
+    const promoNote = item.appliedOfferLabel ? '<br/><span style="color:#10b981;font-size:12px">🎁 ' + item.appliedOfferLabel + '</span>' : '';
+    const freeNote = item.freeItems && item.freeItems > 0 ? ' <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:8px;font-size:11px">+' + item.freeItems + ' free</span>' : '';
+    return [
+      item.productName + promoNote + freeNote,
+      `${item.quantity}`,
+      `£${item.unitPrice.toFixed(2)}`,
+      `£${item.total.toFixed(2)}`
+    ];
+  });
 
   let paymentTermsHtml = '';
   if (orderData.depositPercentage !== undefined && orderData.depositPercentage < 100 && orderData.amountOutstanding !== undefined && orderData.amountOutstanding > 0) {
@@ -145,6 +151,8 @@ export async function sendWholesalerOrderNotification(orderData: {
     quantity: number;
     unitPrice: number;
     total: number;
+    appliedOfferLabel?: string | null;
+    freeItems?: number;
   }>;
   subtotal: number;
   totalAmount: number;
@@ -158,12 +166,16 @@ export async function sendWholesalerOrderNotification(orderData: {
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailTable, emailHeading, emailButton, emailBadge } = await import('./email-templates');
 
-  const itemRows = orderData.orderItems.map(item => [
-    item.productName,
-    `${item.quantity}`,
-    `£${item.unitPrice.toFixed(2)}`,
-    `£${item.total.toFixed(2)}`
-  ]);
+  const itemRows = orderData.orderItems.map(item => {
+    const promoNote = item.appliedOfferLabel ? '<br/><span style="color:#10b981;font-size:12px">🎁 ' + item.appliedOfferLabel + '</span>' : '';
+    const freeNote = item.freeItems && item.freeItems > 0 ? ' <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:8px;font-size:11px">+' + item.freeItems + ' free</span>' : '';
+    return [
+      item.productName + promoNote + freeNote,
+      `${item.quantity}`,
+      `£${item.unitPrice.toFixed(2)}`,
+      `£${item.total.toFixed(2)}`
+    ];
+  });
 
   let addressHtml = '';
   if (orderData.addressLine1 || orderData.city) {

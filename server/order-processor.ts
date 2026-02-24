@@ -401,7 +401,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         productName: product?.name || `Product #${orderItem.productId}`,
         quantity: orderItem.quantity,
         unitPrice: parseFloat(orderItem.unitPrice),
-        total: parseFloat(orderItem.total)
+        total: parseFloat(orderItem.total),
+        appliedOfferLabel: orderItem.appliedOfferLabel || null,
+        freeItems: orderItem.freeItems || 0
       };
     }));
 
@@ -604,7 +606,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         productName: item.productName || 'Product',
         quantity: item.quantity,
         unitPrice: parseFloat(item.unitPrice),
-        total: parseFloat(item.unitPrice) * item.quantity
+        total: parseFloat(item.unitPrice) * item.quantity,
+        appliedOfferLabel: item.appliedOfferLabel || null,
+        freeItems: item.freeItems || 0
       })),
       subtotal: parseFloat(orderData.subtotal),
       transactionFee: parseFloat(orderData.customerTransactionFee),
@@ -631,12 +635,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
           productName: item.productName || 'Product',
           quantity: item.quantity,
           unitPrice: parseFloat(item.unitPrice),
-          total: parseFloat(item.unitPrice) * item.quantity
+          total: parseFloat(item.unitPrice) * item.quantity,
+          appliedOfferLabel: item.appliedOfferLabel || null,
+          freeItems: item.freeItems || 0
         })),
         subtotal: parseFloat(orderData.subtotal),
         totalAmount: parseFloat(orderData.total),
         fulfillmentType: fulfillmentType,
-        // FIXED: Use same complete address as customer email (WORKING APPROACH)
         shippingAddress: completeShippingAddress
       });
 
