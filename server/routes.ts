@@ -5067,7 +5067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sellingType = item.sellingType || 'units';
         const isPalletOrder = sellingType === 'pallets';
         const isUnitOrder = sellingType === 'units' && parseFloat(item.unitPrice) === basePrice;
-        const isPromotionalOrder = false;
+        const hasActivePromos = product.promoActive && Array.isArray((product as any).promotionalOffers) && (product as any).promotionalOffers.length > 0;
+        const isPromotionalOrder = sellingType === 'units' && !isUnitOrder && hasActivePromos;
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
           itemQuantity: item.quantity,
@@ -5122,7 +5123,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let calculationPrice;
         
         if (isPalletOrder) {
-          // For pallet orders, use the sent unitPrice directly (no promotional calculations on pallets)
           calculationPrice = parseFloat(item.unitPrice);
           pricing = {
             originalPrice: calculationPrice,
@@ -5130,7 +5130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalCost: calculationPrice * item.quantity,
             totalDiscount: 0,
             discountPercentage: 0,
-            appliedOffers: [],
+            appliedOffers: [] as string[],
             freeItems: 0,
             totalQuantity: item.quantity
           };
@@ -5142,10 +5142,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalCost: calculationPrice * item.quantity,
             totalDiscount: 0,
             discountPercentage: 0,
-            appliedOffers: [],
+            appliedOffers: [] as string[],
             freeItems: 0,
             totalQuantity: item.quantity
           };
+
+          // Apply promotional pricing if product has active promotions
+          const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+          const now = new Date();
+          for (const offer of offers) {
+            if (!offer.isActive) continue;
+            const start = offer.startDate ? new Date(offer.startDate) : null;
+            const end = offer.endDate ? new Date(offer.endDate) : null;
+            if (start && start > now) continue;
+            if (end && end < now) continue;
+
+            if (offer.type === 'percentage_discount' && offer.discountPercentage) {
+              pricing.effectivePrice = Math.round(calculationPrice * (1 - offer.discountPercentage / 100) * 100) / 100;
+              pricing.totalCost = pricing.effectivePrice * item.quantity;
+              pricing.totalDiscount = (calculationPrice - pricing.effectivePrice) * item.quantity;
+              pricing.discountPercentage = offer.discountPercentage;
+              pricing.appliedOffers.push(offer.name || `${offer.discountPercentage}% off`);
+              break;
+            } else if (offer.type === 'fixed_price' && offer.fixedPrice) {
+              pricing.effectivePrice = offer.fixedPrice;
+              pricing.totalCost = offer.fixedPrice * item.quantity;
+              pricing.totalDiscount = (calculationPrice - offer.fixedPrice) * item.quantity;
+              pricing.appliedOffers.push(offer.name || 'Special Price');
+              break;
+            } else if (offer.type === 'buy_x_get_y_free' && offer.buyQuantity && offer.getQuantity) {
+              const sets = Math.floor(item.quantity / offer.buyQuantity);
+              pricing.freeItems = sets * offer.getQuantity;
+              pricing.totalQuantity = item.quantity + pricing.freeItems;
+              pricing.totalCost = calculationPrice * item.quantity;
+              pricing.appliedOffers.push(offer.name || `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`);
+              break;
+            } else if (offer.type === 'bundle_deal' && offer.minQuantity && offer.fixedPrice) {
+              if (item.quantity >= offer.minQuantity) {
+                pricing.effectivePrice = offer.fixedPrice;
+                pricing.totalCost = offer.fixedPrice * item.quantity;
+                pricing.totalDiscount = (calculationPrice - offer.fixedPrice) * item.quantity;
+                pricing.appliedOffers.push(offer.name || `${offer.minQuantity}+ deal`);
+                break;
+              }
+              continue;
+            } else if (offer.type === 'clearance' && offer.fixedPrice) {
+              pricing.effectivePrice = offer.fixedPrice;
+              pricing.totalCost = offer.fixedPrice * item.quantity;
+              pricing.totalDiscount = (calculationPrice - offer.fixedPrice) * item.quantity;
+              pricing.appliedOffers.push(offer.name || 'Clearance');
+              break;
+            }
+          }
         }
         
         console.log(`🧮 CALCULATION DEBUG for product ${product.id}:`, {
@@ -5212,7 +5260,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...item,
           product,
           unitPrice: unitPrice,
-          total: itemTotal.toFixed(2)
+          total: itemTotal.toFixed(2),
+          appliedOfferLabel: pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : (item.appliedOfferLabel || null),
+          freeItems: pricing.freeItems || item.freeItems || 0
         });
       }
 
