@@ -28,7 +28,7 @@ interface StockMovement {
   id: number;
   productId: number;
   wholesalerId: string;
-  movementType: 'purchase' | 'manual_increase' | 'manual_decrease' | 'initial';
+  movementType: 'purchase' | 'manual_increase' | 'manual_decrease' | 'initial' | 'return';
   quantity: number;
   unitType: string;
   stockBefore: number;
@@ -123,6 +123,8 @@ export default function StockTracker({ product }: StockTrackerProps) {
     switch (type) {
       case 'purchase':
         return <ShoppingCart className="w-4 h-4 text-red-600" />;
+      case 'return':
+        return <TrendingUp className="w-4 h-4 text-green-600" />;
       case 'manual_increase':
         return <TrendingUp className="w-4 h-4 text-green-600" />;
       case 'manual_decrease':
@@ -142,6 +144,8 @@ export default function StockTracker({ product }: StockTrackerProps) {
         return 'Manual Increase';
       case 'manual_decrease':
         return 'Manual Decrease';
+      case 'return':
+        return 'Customer Return';
       case 'initial':
         return 'Initial Stock';
       default:

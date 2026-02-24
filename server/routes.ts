@@ -6437,12 +6437,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Restore stock based on selling type
               if (returnItem.sellingType === 'pallets') {
-                const currentPalletStock = product.palletStock || 0;
+                const stockBefore = product.palletStock || 0;
+                const stockAfter = stockBefore + returnQty;
                 await db.update(products)
-                  .set({ palletStock: currentPalletStock + returnQty })
+                  .set({ palletStock: stockAfter })
                   .where(eq(products.id, product.id));
+                await db.insert(stockMovements).values({
+                  productId: product.id,
+                  wholesalerId: order.wholesalerId,
+                  movementType: 'return',
+                  quantity: returnQty,
+                  unitType: 'pallets',
+                  stockBefore,
+                  stockAfter,
+                  reason: `Order cancellation - ${returnQty} pallets returned`,
+                  orderId: id,
+                });
               } else {
-                await storage.updateProductStock(product.id, product.stock + returnQty);
+                const stockBefore = product.stock;
+                const stockAfter = stockBefore + returnQty;
+                await storage.updateProductStock(product.id, stockAfter);
+                await db.insert(stockMovements).values({
+                  productId: product.id,
+                  wholesalerId: order.wholesalerId,
+                  movementType: 'return',
+                  quantity: returnQty,
+                  unitType: 'units',
+                  stockBefore,
+                  stockAfter,
+                  reason: `Order cancellation - ${returnQty} units returned`,
+                  orderId: id,
+                });
               }
               
               // Calculate refund for this item
@@ -6459,12 +6484,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const product = await storage.getProduct(item.productId);
           if (product) {
             if (item.sellingType === 'pallets') {
-              const currentPalletStock = product.palletStock || 0;
+              const stockBefore = product.palletStock || 0;
+              const stockAfter = stockBefore + item.quantity;
               await db.update(products)
-                .set({ palletStock: currentPalletStock + item.quantity })
+                .set({ palletStock: stockAfter })
                 .where(eq(products.id, product.id));
+              await db.insert(stockMovements).values({
+                productId: product.id,
+                wholesalerId: order.wholesalerId,
+                movementType: 'return',
+                quantity: item.quantity,
+                unitType: 'pallets',
+                stockBefore,
+                stockAfter,
+                reason: `Order cancelled - ${item.quantity} pallets returned`,
+                orderId: id,
+              });
             } else {
-              await storage.updateProductStock(item.productId, product.stock + item.quantity);
+              const stockBefore = product.stock;
+              const stockAfter = stockBefore + item.quantity;
+              await storage.updateProductStock(item.productId, stockAfter);
+              await db.insert(stockMovements).values({
+                productId: product.id,
+                wholesalerId: order.wholesalerId,
+                movementType: 'return',
+                quantity: item.quantity,
+                unitType: 'units',
+                stockBefore,
+                stockAfter,
+                reason: `Order cancelled - ${item.quantity} units returned`,
+                orderId: id,
+              });
             }
             stockRestoredCount += item.quantity;
           }
@@ -6555,7 +6605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cancelledAt: isFullCancellation ? new Date() : undefined,
           notes: order.notes 
             ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
-            : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. ${refundNote}`
+            : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}`
         })
         .where(eq(orders.id, id));
 

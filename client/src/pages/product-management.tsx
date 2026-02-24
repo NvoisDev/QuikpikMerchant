@@ -2637,6 +2637,7 @@ export default function ProductManagement() {
                     {(stockMovements as any[]).slice(0, 20).map((movement: any) => {
                       const isIncrease = movement.quantity > 0;
                       const typeLabel = movement.movementType === 'purchase' ? 'Order'
+                        : movement.movementType === 'return' ? 'Return'
                         : movement.movementType === 'manual_increase' ? 'Restocked'
                         : movement.movementType === 'manual_decrease' ? 'Removed'
                         : movement.movementType === 'initial' ? 'Initial Stock'
