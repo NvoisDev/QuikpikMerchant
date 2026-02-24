@@ -646,8 +646,8 @@ export default function QuickQuote() {
                               onClick={() => addProduct(product, 'units')}
                             >
                               <div className="text-xs text-gray-500">Per Unit</div>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-green-600 font-semibold">
+                              <div className="mt-1">
+                                <div className="text-green-600 font-semibold">
                                   {promoUnitPrice !== null ? (
                                     <>
                                       <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.price).toFixed(2)}</span>
@@ -656,33 +656,49 @@ export default function QuickQuote() {
                                   ) : (
                                     <>£{parseFloat(product.price).toFixed(2)}</>
                                   )}
-                                </span>
-                                <Badge variant="secondary" className="text-xs">
-                                  {product.stock || 0} units
-                                </Badge>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">{product.stock || 0} units</div>
                               </div>
                             </div>
-                            {product.palletPrice && parseFloat(product.palletPrice) > 0 && (
+                            {product.palletPrice && parseFloat(product.palletPrice) > 0 && (() => {
+                              const palletInStock = (product.palletStock || 0) > 0;
+                              let promoPalletPrice: number | null = null;
+                              if (bestPromo && product.unitsPerPallet) {
+                                if (bestPromo.type === 'percentage_discount' && bestPromo.discountPercentage) {
+                                  promoPalletPrice = parseFloat(product.palletPrice) * (1 - bestPromo.discountPercentage / 100);
+                                } else if ((bestPromo.type === 'fixed_price' || bestPromo.type === 'clearance') && bestPromo.fixedPrice) {
+                                  promoPalletPrice = bestPromo.fixedPrice * product.unitsPerPallet;
+                                }
+                              }
+                              return (
                               <div
-                                className="flex-1 min-w-[140px] p-2 border rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors border-blue-200 bg-blue-50/30"
-                                onClick={() => addProduct(product, 'pallets')}
+                                className={`flex-1 min-w-[140px] p-2 border rounded-lg transition-colors ${palletInStock ? 'cursor-pointer hover:border-blue-500 hover:bg-blue-50 border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'}`}
+                                onClick={() => palletInStock && addProduct(product, 'pallets')}
                               >
-                                <div className="text-xs text-blue-600 font-medium">Per Pallet</div>
-                                <div className="flex items-center justify-between mt-1">
-                                  <span className="text-blue-600 font-semibold">
-                                    £{parseFloat(product.palletPrice).toFixed(2)}
-                                  </span>
-                                  <Badge variant="secondary" className="text-xs bg-blue-100">
-                                    {product.palletStock || 0} pallets
-                                  </Badge>
+                                <div className={`text-xs font-medium ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>Per Pallet</div>
+                                <div className="mt-1">
+                                  <div className={`font-semibold ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>
+                                    {promoPalletPrice !== null ? (
+                                      <>
+                                        <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.palletPrice).toFixed(2)}</span>
+                                        £{promoPalletPrice.toFixed(2)}
+                                      </>
+                                    ) : (
+                                      <>£{parseFloat(product.palletPrice).toFixed(2)}</>
+                                    )}
+                                  </div>
+                                  <div className={`text-xs mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
+                                    {palletInStock ? `${product.palletStock} pallets` : 'Out of stock'}
+                                  </div>
                                 </div>
                                 {product.unitsPerPallet && (
-                                  <div className="text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-gray-400 mt-1">
                                     ({product.unitsPerPallet} units/pallet)
                                   </div>
                                 )}
                               </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         </div>
                         );
