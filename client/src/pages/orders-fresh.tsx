@@ -1687,6 +1687,12 @@ export default function OrdersFresh() {
                   ) : (
                     <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Pending</Badge>
                   )}
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status !== 'cancelled' && (
+                    <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Partially Refunded</Badge>
+                  )}
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status === 'cancelled' && (
+                    <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Refunded</Badge>
+                  )}
                   {selectedOrder.fulfillmentType && (
                     <Badge variant="outline" className="text-xs px-2 py-1">
                       {selectedOrder.fulfillmentType === 'delivery' ? (
@@ -1819,10 +1825,22 @@ export default function OrdersFresh() {
                     <span>Platform Fee (3.3%):</span>
                     <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || '0') * 0.033)}</span>
                   </div>
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
+                    const rawRefunded = parseFloat(selectedOrder.amountRefunded || '0');
+                    const subtotalAmt = parseFloat(selectedOrder.subtotal || '0');
+                    const refundDisplay = Math.min(rawRefunded, subtotalAmt);
+                    const isPartialRefund = refundDisplay < subtotalAmt;
+                    return (
+                      <div className="flex justify-between text-purple-600">
+                        <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
+                        <span>-{formatCurrency(refundDisplay)}</span>
+                      </div>
+                    );
+                  })()}
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
-                      <span>{formatCurrency(calculateNetAmount(selectedOrder))}</span>
+                      <span>{formatCurrency(Math.max(0, calculateNetAmount(selectedOrder) - Math.min(parseFloat(selectedOrder.amountRefunded || '0'), parseFloat(selectedOrder.subtotal || '0'))))}</span>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
@@ -2190,22 +2208,36 @@ export default function OrdersFresh() {
                     </div>
                   )}
 
-                  {/* Refund Entry - Show if refund was processed */}
-                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 rounded-full mt-1.5 bg-purple-500"></div>
-                      <div>
-                        <div className="text-xs font-medium text-purple-700">
-                          Refunded: {formatCurrency(parseFloat(selectedOrder.amountRefunded || '0'))}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {selectedOrder.refundedAt 
-                            ? new Date(selectedOrder.refundedAt).toLocaleDateString() 
-                            : 'Processing'}
+                  {/* Refund Entry - Show if refund amount is recorded */}
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
+                    const refundedAmt = parseFloat(selectedOrder.amountRefunded || '0');
+                    const paidAmt = parseFloat(selectedOrder.amountPaid || '0');
+                    const isPartial = paidAmt > 0 && refundedAmt < paidAmt;
+                    const isProcessed = !!selectedOrder.refundedAt;
+                    const label = isPartial
+                      ? (isProcessed ? 'Partial refund to card' : 'Partial refund pending')
+                      : (isProcessed ? 'Refund to card' : 'Refund pending');
+                    const dotColor = isProcessed ? 'bg-purple-500' : 'bg-amber-400';
+                    const textColor = isProcessed ? 'text-purple-700' : 'text-amber-700';
+                    return (
+                      <div className="flex items-start gap-2">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 ${dotColor}`}></div>
+                        <div>
+                          <div className={`text-xs font-medium ${textColor}`}>
+                            {label}: {formatCurrency(refundedAmt)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {isProcessed
+                              ? new Date(selectedOrder.refundedAt!).toLocaleDateString()
+                              : 'Will be processed separately'}
+                          </div>
+                          {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
+                            <div className="text-xs text-gray-400 mt-0.5">{selectedOrder.refundReason}</div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Order Cancelled Entry - Show if order was cancelled */}
                   {selectedOrder.status === 'cancelled' && (

@@ -6531,6 +6531,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRefunded = amountPaidNum;
       }
       
+      // For partial returns with "later" refund, record the calculated refund amount for display
+      if (!isFullCancellation && totalRefunded === 0 && refundAmount > 0) {
+        totalRefunded = refundAmount;
+      }
+      
       const refundNote = stripeRefund 
         ? `Stripe refund: £${stripeRefundAmount.toFixed(2)}` 
         : amountPaidNum > 0 
