@@ -1360,7 +1360,8 @@ export default function CustomerPortal() {
         result.totalCost = result.effectivePrice * quantity;
         result.totalDiscount = (basePrice - result.effectivePrice) * quantity;
         result.discountPercentage = offer.discountPercentage;
-        result.appliedOffers.push(offer.name || `${offer.discountPercentage}% off`);
+        const detailText = `${offer.discountPercentage}% off`;
+        result.appliedOffers.push(offer.name ? `${offer.name} - ${detailText}` : detailText);
         result.promoType = 'percentage_discount';
         result.promoLabel = `${offer.discountPercentage}% OFF`;
         break;
@@ -1369,7 +1370,8 @@ export default function CustomerPortal() {
         result.totalCost = offer.fixedPrice * quantity;
         result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
         result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        result.appliedOffers.push(offer.name || 'Special Price');
+        const fixedDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        result.appliedOffers.push(offer.name ? `${offer.name} - ${fixedDetail}` : fixedDetail);
         result.promoType = 'fixed_price';
         result.promoLabel = 'SPECIAL PRICE';
         break;
@@ -1379,7 +1381,8 @@ export default function CustomerPortal() {
         result.freeItems = freeItems;
         result.totalQuantity = quantity + freeItems;
         result.totalCost = basePrice * quantity;
-        result.appliedOffers.push(offer.name || `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`);
+        const bogofDetail = `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`;
+        result.appliedOffers.push(offer.name ? `${offer.name} - ${bogofDetail}` : bogofDetail);
         result.promoType = 'buy_x_get_y_free';
         result.promoLabel = `BUY ${offer.buyQuantity} GET ${offer.getQuantity} FREE`;
         break;
@@ -1389,7 +1392,8 @@ export default function CustomerPortal() {
           result.totalCost = offer.fixedPrice * quantity;
           result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
           result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-          result.appliedOffers.push(offer.name || `${offer.minQuantity}+ for £${offer.fixedPrice} each`);
+          const bundleDetail = `${offer.minQuantity}+ for £${offer.fixedPrice.toFixed(2)} each`;
+          result.appliedOffers.push(offer.name ? `${offer.name} - ${bundleDetail}` : bundleDetail);
           result.promoType = 'bundle_deal';
           result.promoLabel = `${offer.minQuantity}+ DEAL`;
           break;
@@ -1400,7 +1404,8 @@ export default function CustomerPortal() {
         result.totalCost = offer.fixedPrice * quantity;
         result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
         result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        result.appliedOffers.push(offer.name || 'Clearance');
+        const clearanceDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        result.appliedOffers.push(offer.name ? `${offer.name} - ${clearanceDetail}` : `Clearance - ${clearanceDetail}`);
         result.promoType = 'clearance';
         result.promoLabel = 'CLEARANCE';
         break;
