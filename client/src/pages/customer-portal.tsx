@@ -1685,16 +1685,15 @@ export default function CustomerPortal() {
     setIsCreatingIntent(true);
     
     try {
-      // Calculate total amount for cart
+      // Calculate total amount for cart using promotional pricing
       const totalAmount = cart.reduce((total, item) => {
-        const unitPrice = (() => {
-          if (item.sellingType === 'pallets') {
-            return parseFloat((item.product as any).palletPrice || "0") || 0;
-          } else {
-            return parseFloat(item.product.price) || 0;
-          }
-        })();
-        return total + (unitPrice * item.quantity);
+        if (item.sellingType === 'pallets') {
+          const palletPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
+          return total + (palletPrice * item.quantity);
+        } else {
+          const pricing = calculatePromotionalPricing(item.product, item.quantity);
+          return total + pricing.totalCost;
+        }
       }, 0);
 
       // CRITICAL: Validate address data before payment intent creation
@@ -1720,19 +1719,28 @@ export default function CustomerPortal() {
           selectedDeliveryAddress: customerData.selectedDeliveryAddress,
           selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id
         },
-        items: cart.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          quantity: item.quantity || 0,
-          unitPrice: (() => {
-            if (item.sellingType === 'pallets') {
-              return parseFloat((item.product as any).palletPrice || "0") || 0;
-            } else {
-              return parseFloat(item.product.price) || 0;
-            }
-          })(),
-          sellingType: item.sellingType
-        })),
+        items: cart.map(item => {
+          if (item.sellingType === 'pallets') {
+            return {
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity || 0,
+              unitPrice: parseFloat((item.product as any).palletPrice || "0") || 0,
+              sellingType: item.sellingType
+            };
+          } else {
+            const pricing = calculatePromotionalPricing(item.product, item.quantity || 0);
+            return {
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity || 0,
+              unitPrice: pricing.effectivePrice,
+              sellingType: item.sellingType,
+              appliedOfferLabel: pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined,
+              freeItems: pricing.freeItems || 0
+            };
+          }
+        }),
         shippingInfo: {
           option: shippingOption
         }
@@ -1809,16 +1817,15 @@ export default function CustomerPortal() {
     setIsCreatingIntent(true);
     
     try {
-      // Calculate total amount for cart
+      // Calculate total amount for cart using promotional pricing
       const totalAmount = cart.reduce((total, item) => {
-        const unitPrice = (() => {
-          if (item.sellingType === 'pallets') {
-            return parseFloat((item.product as any).palletPrice || "0") || 0;
-          } else {
-            return parseFloat(item.product.price) || 0;
-          }
-        })();
-        return total + (unitPrice * item.quantity);
+        if (item.sellingType === 'pallets') {
+          const palletPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
+          return total + (palletPrice * item.quantity);
+        } else {
+          const pricing = calculatePromotionalPricing(item.product, item.quantity);
+          return total + pricing.totalCost;
+        }
       }, 0);
 
       const requestPayload = {
@@ -1834,19 +1841,28 @@ export default function CustomerPortal() {
           selectedDeliveryAddress: customData.selectedDeliveryAddress,
           selectedDeliveryAddressId: customData.selectedDeliveryAddress?.id
         },
-        items: cart.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          quantity: item.quantity || 0,
-          unitPrice: (() => {
-            if (item.sellingType === 'pallets') {
-              return parseFloat((item.product as any).palletPrice || "0") || 0;
-            } else {
-              return parseFloat(item.product.price) || 0;
-            }
-          })(),
-          sellingType: item.sellingType
-        })),
+        items: cart.map(item => {
+          if (item.sellingType === 'pallets') {
+            return {
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity || 0,
+              unitPrice: parseFloat((item.product as any).palletPrice || "0") || 0,
+              sellingType: item.sellingType
+            };
+          } else {
+            const pricing = calculatePromotionalPricing(item.product, item.quantity || 0);
+            return {
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity || 0,
+              unitPrice: pricing.effectivePrice,
+              sellingType: item.sellingType,
+              appliedOfferLabel: pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined,
+              freeItems: pricing.freeItems || 0
+            };
+          }
+        }),
         shippingInfo: {
           option: shippingOption
         }
@@ -4827,21 +4843,34 @@ export default function CustomerPortal() {
                       const totalAmount = beforeFees + transactionFee;
                       
                       // CRITICAL FIX: Map cart to backend-compatible order items with correct selling types
-                      const orderItems = cart.map(cartItem => ({
-                        product: {
-                          ...cartItem.product,
-                          id: cartItem.product.id,
-                          name: cartItem.product.name,
-                          price: cartItem.product.price,
-                          image: cartItem.product.image,
-                          promoPrice: cartItem.product.promoPrice,
-                          promoActive: cartItem.product.promoActive,
-                          promotionalOffers: cartItem.product.promotionalOffers,
-                          palletPrice: (cartItem.product as any).palletPrice
-                        },
-                        quantity: cartItem.quantity,
-                        sellingType: cartItem.sellingType // Preserve the correct selling type from cart
-                      }));
+                      const orderItems = cart.map(cartItem => {
+                        let computedTotal: number;
+                        let promoLabel: string | undefined;
+                        if (cartItem.sellingType === 'pallets') {
+                          computedTotal = parseFloat((cartItem.product as any).palletPrice || '0') * cartItem.quantity;
+                        } else {
+                          const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
+                          computedTotal = pricing.totalCost;
+                          promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
+                        }
+                        return {
+                          product: {
+                            ...cartItem.product,
+                            id: cartItem.product.id,
+                            name: cartItem.product.name,
+                            price: cartItem.product.price,
+                            image: cartItem.product.image,
+                            promoPrice: cartItem.product.promoPrice,
+                            promoActive: cartItem.product.promoActive,
+                            promotionalOffers: cartItem.product.promotionalOffers,
+                            palletPrice: (cartItem.product as any).palletPrice
+                          },
+                          quantity: cartItem.quantity,
+                          sellingType: cartItem.sellingType,
+                          computedTotal,
+                          promoLabel
+                        };
+                      });
                       
                       // CRITICAL FIX: Capture current shipping option before resetting
                       const currentShippingOption = customerData.shippingOption;
@@ -5054,11 +5083,16 @@ export default function CustomerPortal() {
 
                   <div className="space-y-4 mb-6">
                     {/* Individual Units Option */}
+                    {(() => {
+                      const moq = selectedProductForModal.moq || 1;
+                      const originalUnitPrice = parseFloat(selectedProductForModal.price);
+                      const promoPricing = calculatePromotionalPricing(selectedProductForModal as any, moq);
+                      const hasPromo = promoPricing.effectivePrice !== promoPricing.originalPrice;
+                      return (
                     <div 
                       className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-emerald-500 bg-emerald-50"
                       onClick={() => {
                         setSelectedModalType('units');
-                        // Set quantity to available stock if it's less than MOQ, otherwise use MOQ
                         const availableStock = selectedProductForModal.stock || 0;
                         const minQuantity = selectedProductForModal.moq || 1;
                         setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
@@ -5069,22 +5103,41 @@ export default function CustomerPortal() {
                         <div>
                           <h4 className="font-medium text-gray-900">Individual Units</h4>
                           <p className="text-sm text-gray-600">
-                            £{parseFloat(selectedProductForModal.price).toFixed(2)} per unit
+                            {hasPromo ? (
+                              <>
+                                <span className="line-through text-gray-400 mr-1">£{originalUnitPrice.toFixed(2)}</span>
+                                <span className="text-emerald-600 font-semibold">£{promoPricing.effectivePrice.toFixed(2)}</span> per unit
+                              </>
+                            ) : (
+                              <>£{originalUnitPrice.toFixed(2)} per unit</>
+                            )}
                           </p>
+                          {hasPromo && promoPricing.promoLabel && (
+                            <span className="inline-block text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                              {promoPricing.promoLabel}
+                            </span>
+                          )}
                           <p className="text-xs text-gray-500 mt-1">
-                            Minimum: {selectedProductForModal.moq} units
+                            Minimum: {moq} units
                           </p>
                         </div>
                         <div className="text-right">
+                          {hasPromo && (
+                            <div className="text-xs text-gray-400 line-through">
+                              £{(originalUnitPrice * moq).toFixed(2)}
+                            </div>
+                          )}
                           <div className="text-lg font-semibold text-emerald-600">
-                            £{(parseFloat(selectedProductForModal.price) * selectedProductForModal.moq).toFixed(2)}
+                            £{promoPricing.totalCost.toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            for {selectedProductForModal.moq} units
+                            for {moq} units
                           </div>
                         </div>
                       </div>
                     </div>
+                      );
+                    })()}
 
                     {/* Pallet Option */}
                     <div 
@@ -5175,10 +5228,33 @@ export default function CustomerPortal() {
                         </h4>
                         <p className="text-sm text-gray-600">
                           {selectedModalType === 'units' 
-                            ? `£${parseFloat(selectedProductForModal.price).toFixed(2)} per unit`
+                            ? (() => {
+                                const qtyPricing = calculatePromotionalPricing(selectedProductForModal as any, 1);
+                                const hasPromo = qtyPricing.effectivePrice !== qtyPricing.originalPrice;
+                                if (hasPromo) {
+                                  return (
+                                    <>
+                                      <span className="line-through text-gray-400 mr-1">£{qtyPricing.originalPrice.toFixed(2)}</span>
+                                      <span className="text-emerald-600 font-semibold">£{qtyPricing.effectivePrice.toFixed(2)}</span> per unit
+                                    </>
+                                  );
+                                }
+                                return `£${qtyPricing.originalPrice.toFixed(2)} per unit`;
+                              })()
                             : `£${parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0').toFixed(2)} per pallet`
                           }
                         </p>
+                        {selectedModalType === 'units' && (() => {
+                          const qtyPricing = calculatePromotionalPricing(selectedProductForModal as any, 1);
+                          if (qtyPricing.promoLabel && qtyPricing.effectivePrice !== qtyPricing.originalPrice) {
+                            return (
+                              <span className="inline-block text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                                {qtyPricing.promoLabel}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 mb-1">
@@ -5336,12 +5412,34 @@ export default function CustomerPortal() {
                     {/* Total Price */}
                     <div className="text-center mt-4 pt-3 border-t border-gray-200">
                       <div className="text-xs text-gray-500 mb-1">Total</div>
-                      <div className="text-2xl font-bold text-emerald-600">
-                        £{(selectedModalType === 'units' 
-                          ? parseFloat(selectedProductForModal.price) * modalQuantity
-                          : parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * modalQuantity
-                        ).toFixed(2)}
-                      </div>
+                      {(() => {
+                        if (selectedModalType === 'units') {
+                          const totalPricing = calculatePromotionalPricing(selectedProductForModal as any, modalQuantity);
+                          const hasPromo = totalPricing.effectivePrice !== totalPricing.originalPrice;
+                          return (
+                            <>
+                              {hasPromo && (
+                                <div className="text-sm text-gray-400 line-through">
+                                  £{(totalPricing.originalPrice * modalQuantity).toFixed(2)}
+                                </div>
+                              )}
+                              <div className="text-2xl font-bold text-emerald-600">
+                                £{totalPricing.totalCost.toFixed(2)}
+                              </div>
+                              {hasPromo && totalPricing.promoLabel && (
+                                <div className="text-xs text-green-600 mt-1">
+                                  {totalPricing.promoLabel} applied
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+                        return (
+                          <div className="text-2xl font-bold text-emerald-600">
+                            £{(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * modalQuantity).toFixed(2)}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

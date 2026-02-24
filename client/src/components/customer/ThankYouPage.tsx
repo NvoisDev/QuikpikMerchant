@@ -21,6 +21,8 @@ interface CartItem {
   };
   quantity: number;
   sellingType: "units" | "pallets";
+  computedTotal?: number;
+  promoLabel?: string;
 }
 
 interface ThankYouPageProps {
@@ -259,17 +261,23 @@ export const ThankYouPage = ({
                           <p className="text-sm text-gray-500">
                             QTY: {item.quantity} {item.sellingType === "pallets" ? "pallets" : "units"}
                           </p>
+                          {item.promoLabel && (
+                            <span className="inline-block text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1">
+                              {item.promoLabel}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-medium">
 {(() => {
+                            if (item.computedTotal !== undefined) {
+                              return formatCurrency(item.computedTotal);
+                            }
                             if (item.sellingType === "pallets") {
                               return formatCurrency(parseFloat(item.product.palletPrice || "0") * item.quantity);
-                            } else {
-                              const basePrice = parseFloat(item.product.price) || 0;
-                              return formatCurrency(basePrice * item.quantity);
                             }
+                            return formatCurrency(parseFloat(item.product.price || "0") * item.quantity);
                           })()}
                         </p>
                       </div>
