@@ -751,6 +751,7 @@ export default function QuickQuote() {
                                      offer.name || 'Promo Active'}
                                   </Badge>
                                 ))}
+                              <p className="text-[11px] text-gray-400 mt-0.5 italic">Promo shown for reference — price & qty are entered manually</p>
                               </div>
                             );
                           })()}
