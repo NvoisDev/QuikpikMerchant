@@ -397,52 +397,53 @@ export default function Promotions() {
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">{promo.name}</h3>
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <h3 className="font-semibold text-gray-900 leading-tight">{promo.name}</h3>
+                        <div className="flex items-center gap-0.5 flex-shrink-0 -mt-1 -mr-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              toggleMutation.mutate({
+                                productId: promo.productId,
+                                promoId: promo.id,
+                                isActive: !promo.isActive,
+                              })
+                            }
+                            title={promo.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {promo.isActive ? (
+                              <ToggleRight className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5 text-gray-400" />
+                            )}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(promo)}>
+                            <Pencil className="h-4 w-4 text-gray-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap mb-2">
                         {getTypeBadge(promo.type)}
                         {getStatusBadge(status)}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">{promo.productName}</p>
-                      <div className="flex items-center gap-4 mt-2 text-sm">
-                        <span className="text-gray-500 line-through">£{Number(promo.productPrice).toFixed(2)}</span>
+                      <p className="text-sm text-gray-500 mb-1.5">{promo.productName}</p>
+                      <div className="flex items-center gap-3 text-sm mb-1.5">
+                        <span className="text-gray-400 line-through">£{Number(promo.productPrice).toFixed(2)}</span>
                         <span className="font-semibold text-green-700">{formatPromoValue(promo)}</span>
-                        <span className="text-gray-400 hidden sm:inline">
-                          <Calendar className="h-3.5 w-3.5 inline mr-1" />
-                          {formatDate(promo.startDate)} — {formatDate(promo.endDate)}
-                        </span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          toggleMutation.mutate({
-                            productId: promo.productId,
-                            promoId: promo.id,
-                            isActive: !promo.isActive,
-                          })
-                        }
-                        title={promo.isActive ? "Deactivate" : "Activate"}
-                      >
-                        {promo.isActive ? (
-                          <ToggleRight className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-5 w-5 text-gray-400" />
-                        )}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(promo)}>
-                        <Pencil className="h-4 w-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Calendar className="h-3 w-3 flex-shrink-0" />
+                        <span>{formatDate(promo.startDate)} — {formatDate(promo.endDate)}</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
