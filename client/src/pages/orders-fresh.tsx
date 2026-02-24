@@ -1591,13 +1591,29 @@ export default function OrdersFresh() {
                 )}
 
                 {/* Refund payments */}
+                {(() => {
+                  const totalPaid = parseFloat(selectedOrder?.amountPaid || '0');
+                  const calculatedRefund = returnItems.length > 0
+                    ? Math.min(
+                        returnItems.reduce((sum, ri) => {
+                          const oi = selectedOrder?.items?.find(i => i.productId === ri.productId);
+                          return sum + (ri.quantity * parseFloat(oi?.unitPrice || '0'));
+                        }, 0),
+                        totalPaid
+                      )
+                    : totalPaid;
+                  const isPartial = calculatedRefund < totalPaid && totalPaid > 0;
+                  return (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
                   <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('card'); setProcessRefund(true); }}>
                     <input type="radio" name="refundType" checked={refundType === 'card'} onChange={() => { setRefundType('card'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
                     <div className="ml-3 flex-1">
                       <span className="text-sm font-medium">Original payment method</span>
-                      <p className="text-xs text-gray-500 mt-0.5">Refund {formatCurrency(parseFloat(selectedOrder?.amountPaid || selectedOrder?.total || '0'))} GBP to card</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-xs text-gray-500">Refund {formatCurrency(calculatedRefund)} GBP to card</p>
+                        {isPartial && <span className="text-xs text-amber-600 font-medium">(partial refund)</span>}
+                      </div>
                     </div>
                   </label>
                   <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('later'); setProcessRefund(false); }}>
@@ -1608,6 +1624,8 @@ export default function OrdersFresh() {
                     </div>
                   </label>
                 </div>
+                  );
+                })()}
 
                 {/* Staff Note */}
                 <div>
