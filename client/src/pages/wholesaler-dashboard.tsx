@@ -34,7 +34,8 @@ import {
   Trophy,
   Share2,
   CreditCard,
-  Eye
+  Eye,
+  Tag
 } from "lucide-react";
 import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -163,10 +164,24 @@ export default function WholesalerDashboard() {
 
   const { data: customerInsights, isLoading: customerInsightsLoading } = useQuery({
     queryKey: ["/api/analytics/customers"],
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     retry: false,
     enabled: !!user,
+  });
+
+  const { data: promotions } = useQuery<any[]>({
+    queryKey: ['/api/promotions'],
+    staleTime: 5 * 60 * 1000,
+    enabled: !!user,
+  });
+
+  const activePromotions = (promotions || []).filter((p: any) => {
+    if (!p.isActive) return false;
+    const now = new Date();
+    const start = p.startDate ? new Date(p.startDate) : null;
+    const end = p.endDate ? new Date(p.endDate) : null;
+    return (!start || start <= now) && (!end || end >= now);
   });
 
   // Stripe Connect status for payment setup notifications
@@ -916,6 +931,61 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Active Promotions */}
+          {activePromotions.length > 0 && (
+            <div className="mb-8">
+              <Card className="bg-white border-gray-200 shadow-lg">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                        <Tag className="w-6 h-6 text-red-500 mr-2" />
+                        Active Promotions
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">{activePromotions.length} promotion{activePromotions.length !== 1 ? 's' : ''} running</p>
+                    </div>
+                    <Link href="/promotions">
+                      <Button variant="outline" size="sm">Manage</Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {activePromotions.slice(0, 6).map((promo: any) => {
+                      const typeLabels: Record<string, string> = {
+                        percentage_discount: `${promo.discountPercentage}% OFF`,
+                        fixed_price: `Now £${promo.fixedPrice}`,
+                        buy_x_get_y_free: `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`,
+                        bundle_deal: `${promo.minQuantity}+ @ £${promo.fixedPrice}`,
+                        clearance: `Clearance £${promo.fixedPrice}`,
+                      };
+                      const typeColors: Record<string, string> = {
+                        percentage_discount: 'bg-red-100 text-red-700',
+                        fixed_price: 'bg-green-100 text-green-700',
+                        buy_x_get_y_free: 'bg-purple-100 text-purple-700',
+                        bundle_deal: 'bg-blue-100 text-blue-700',
+                        clearance: 'bg-orange-100 text-orange-700',
+                      };
+                      return (
+                        <div key={promo.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">{promo.productName}</p>
+                            <Badge className={`text-xs ${typeColors[promo.type] || 'bg-gray-100 text-gray-700'}`}>
+                              {typeLabels[promo.type] || promo.type}
+                            </Badge>
+                            {promo.endDate && (
+                              <p className="text-xs text-gray-500 mt-1">Ends {new Date(promo.endDate).toLocaleDateString()}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Recent Orders & Top Products */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -658,6 +658,7 @@ export class DatabaseStorage implements IStorage {
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
           base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
           unit, unit_format, pallet_weight, unit_weight,
+          promotional_offers,
           created_at, updated_at
         FROM products 
         WHERE wholesaler_id = ${wholesalerId} 
@@ -681,7 +682,18 @@ export class DatabaseStorage implements IStorage {
         price: String(row.price),
         promoPrice: row.promo_price ? String(row.promo_price) : null,
         promoActive: Boolean(row.promo_active),
-        promotionalOffers: [],
+        promotionalOffers: (() => {
+          try {
+            if (!row.promotional_offers) return [];
+            if (Array.isArray(row.promotional_offers)) return row.promotional_offers;
+            if (typeof row.promotional_offers === 'string') {
+              const trimmed = row.promotional_offers.trim();
+              if (!trimmed || trimmed === '[]' || trimmed === 'null') return [];
+              return JSON.parse(trimmed);
+            }
+            return [];
+          } catch { return []; }
+        })(),
         currency: String(row.currency || 'GBP'),
         moq: Number(row.moq || 1),
         stock: Number(row.stock || 0),
@@ -735,6 +747,7 @@ export class DatabaseStorage implements IStorage {
         price_visible, negotiation_enabled, minimum_bid_price,
         pack_quantity, unit_of_measure, size_per_unit, currency,
         selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+        promotional_offers,
         created_at, updated_at
       FROM products 
       WHERE status = 'active'
@@ -756,7 +769,18 @@ export class DatabaseStorage implements IStorage {
       price: String(row.price),
       promoPrice: row.promo_price ? String(row.promo_price) : null,
       promoActive: Boolean(row.promo_active),
-      promotionalOffers: [],
+      promotionalOffers: (() => {
+        try {
+          if (!row.promotional_offers) return [];
+          if (Array.isArray(row.promotional_offers)) return row.promotional_offers;
+          if (typeof row.promotional_offers === 'string') {
+            const trimmed = row.promotional_offers.trim();
+            if (!trimmed || trimmed === '[]' || trimmed === 'null') return [];
+            return JSON.parse(trimmed);
+          }
+          return [];
+        } catch { return []; }
+      })(),
       currency: String(row.currency || 'GBP'),
       moq: Number(row.moq || 1),
       stock: Number(row.stock || 0),

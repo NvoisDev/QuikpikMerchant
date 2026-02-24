@@ -8,6 +8,16 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**February 24, 2026 - Promotional Pricing System:**
+- **5 PROMOTION TYPES**: Percentage Discount, Fixed Price, Buy X Get Y Free, Bundle Deal, Clearance
+- **AUTO START/END**: Promotions auto-activate and deactivate based on configured start/end dates
+- **PROMOTIONS PAGE**: New `/promotions` page for wholesalers to create, edit, delete, toggle promotions with product assignment
+- **CUSTOMER STORE**: Promotional pricing displayed with color-coded badges (red=percentage, green=fixed, purple=buy-x-get-y, blue=bundle, orange=clearance), strikethrough original prices, and promo labels
+- **CART/CHECKOUT**: Cart calculations apply promotional pricing for unit orders; free items and applied promotions shown
+- **DASHBOARD**: Active promotions summary section on wholesaler dashboard with "Manage" link
+- **DATA FLOW**: Products table `promotional_offers` JSONB field stores array of PromotionalOffer objects; `promoPrice` and `promoActive` derived fields updated on promotion CRUD
+- **API ENDPOINTS**: GET `/api/promotions`, POST/PATCH/DELETE `/api/products/:id/promotions/:promoId`
+
 **February 22, 2026 - Customer Order Filtering Fix:**
 - **EXACT CUSTOMER MATCHING**: Added `customerId` parameter to `orders-paginated` endpoint that filters by `retailerId` for exact matching instead of name-based `ILIKE` search
 - **VIEW ALL ORDERS**: Customer detail page "View all" and "View orders" links now pass `customerId` for precise order matching, showing ALL orders for that customer

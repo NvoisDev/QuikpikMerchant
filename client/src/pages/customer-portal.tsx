@@ -1331,7 +1331,7 @@ export default function CustomerPortal() {
 
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
     const basePrice = parseFloat(product.price) || 0;
-    return {
+    const result = {
       originalPrice: basePrice,
       effectivePrice: basePrice,
       totalCost: basePrice * quantity,
@@ -1339,8 +1339,75 @@ export default function CustomerPortal() {
       discountPercentage: 0,
       appliedOffers: [] as string[],
       freeItems: 0,
-      totalQuantity: quantity
+      totalQuantity: quantity,
+      promoType: '' as string,
+      promoLabel: '' as string,
     };
+
+    const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+    const now = new Date();
+
+    for (const offer of offers) {
+      if (!offer.isActive) continue;
+      const start = offer.startDate ? new Date(offer.startDate) : null;
+      const end = offer.endDate ? new Date(offer.endDate) : null;
+      if (start && start > now) continue;
+      if (end && end < now) continue;
+
+      if (offer.type === 'percentage_discount' && offer.discountPercentage) {
+        const discount = offer.discountPercentage / 100;
+        result.effectivePrice = Math.round(basePrice * (1 - discount) * 100) / 100;
+        result.totalCost = result.effectivePrice * quantity;
+        result.totalDiscount = (basePrice - result.effectivePrice) * quantity;
+        result.discountPercentage = offer.discountPercentage;
+        result.appliedOffers.push(offer.name || `${offer.discountPercentage}% off`);
+        result.promoType = 'percentage_discount';
+        result.promoLabel = `${offer.discountPercentage}% OFF`;
+        break;
+      } else if (offer.type === 'fixed_price' && offer.fixedPrice) {
+        result.effectivePrice = offer.fixedPrice;
+        result.totalCost = offer.fixedPrice * quantity;
+        result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
+        result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
+        result.appliedOffers.push(offer.name || 'Special Price');
+        result.promoType = 'fixed_price';
+        result.promoLabel = 'SPECIAL PRICE';
+        break;
+      } else if (offer.type === 'buy_x_get_y_free' && offer.buyQuantity && offer.getQuantity) {
+        const sets = Math.floor(quantity / offer.buyQuantity);
+        const freeItems = sets * offer.getQuantity;
+        result.freeItems = freeItems;
+        result.totalQuantity = quantity + freeItems;
+        result.totalCost = basePrice * quantity;
+        result.appliedOffers.push(offer.name || `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`);
+        result.promoType = 'buy_x_get_y_free';
+        result.promoLabel = `BUY ${offer.buyQuantity} GET ${offer.getQuantity} FREE`;
+        break;
+      } else if (offer.type === 'bundle_deal' && offer.minQuantity && offer.fixedPrice) {
+        if (quantity >= offer.minQuantity) {
+          result.effectivePrice = offer.fixedPrice;
+          result.totalCost = offer.fixedPrice * quantity;
+          result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
+          result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
+          result.appliedOffers.push(offer.name || `${offer.minQuantity}+ for £${offer.fixedPrice} each`);
+          result.promoType = 'bundle_deal';
+          result.promoLabel = `${offer.minQuantity}+ DEAL`;
+          break;
+        }
+        continue;
+      } else if (offer.type === 'clearance' && offer.fixedPrice) {
+        result.effectivePrice = offer.fixedPrice;
+        result.totalCost = offer.fixedPrice * quantity;
+        result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
+        result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
+        result.appliedOffers.push(offer.name || 'Clearance');
+        result.promoType = 'clearance';
+        result.promoLabel = 'CLEARANCE';
+        break;
+      }
+    }
+
+    return result;
   };
 
   // Memoized calculations
@@ -1396,10 +1463,9 @@ export default function CustomerPortal() {
     let appliedPromotions: string[] = [];
     let bogoffDetails: any[] = [];
 
-    // Calculate each item with full promotional support
     cart.forEach(item => {
       let itemPrice = 0;
-      const itemQuantity = Number(item.quantity) || 0; // Ensure numeric
+      const itemQuantity = Number(item.quantity) || 0;
       
       if (item.sellingType === "pallets") {
         itemPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
@@ -1407,11 +1473,17 @@ export default function CustomerPortal() {
         totalPromotionalItems += itemQuantity;
         subtotal += itemPrice * itemQuantity;
       } else {
-        const basePrice = parseFloat(item.product.price) || 0;
-        itemPrice = basePrice;
+        const pricing = calculatePromotionalPricing(item.product, itemQuantity);
+        itemPrice = pricing.effectivePrice;
         totalItems += itemQuantity;
-        totalPromotionalItems += itemQuantity;
-        subtotal += basePrice * itemQuantity;
+        totalPromotionalItems += pricing.totalQuantity;
+        subtotal += pricing.totalCost;
+        if (pricing.appliedOffers.length > 0) {
+          appliedPromotions.push(...pricing.appliedOffers);
+        }
+        if (pricing.freeItems > 0) {
+          bogoffDetails.push({ productName: item.product.name, freeItems: pricing.freeItems });
+        }
       }
     });
     
@@ -2805,9 +2877,9 @@ export default function CustomerPortal() {
                                     <Package className="w-8 h-8 text-gray-400 group-hover:scale-110 transition-transform duration-300" />
                                   </div>
                                 )}
-                                {product.promoActive && (
-                                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold animate-bounce-subtle">
-                                    🔥 SALE
+                                {pricing.promoLabel && (
+                                  <div className={`absolute top-2 left-2 text-white px-2 py-1 rounded text-xs font-bold ${pricing.promoType === 'clearance' ? 'bg-orange-500' : pricing.promoType === 'buy_x_get_y_free' ? 'bg-purple-500' : pricing.promoType === 'bundle_deal' ? 'bg-blue-500' : 'bg-red-500'}`}>
+                                    {pricing.promoType === 'clearance' ? '🏷️' : '🔥'} {pricing.promoLabel}
                                   </div>
                                 )}
                                 {/* Hover overlay for interaction hint */}
@@ -3337,11 +3409,11 @@ export default function CustomerPortal() {
                                 );
                               })()}
                               
-                              {/* Sale Badge */}
-                              {product.promoActive && product.promoPrice && (
+                              {/* Promo Badge */}
+                              {pricing.promoLabel && (
                                 <div className="absolute top-2 left-2">
-                                  <Badge variant="destructive" className="text-xs">
-                                    SALE
+                                  <Badge className={`text-xs text-white ${pricing.promoType === 'clearance' ? 'bg-orange-500' : pricing.promoType === 'buy_x_get_y_free' ? 'bg-purple-500' : pricing.promoType === 'bundle_deal' ? 'bg-blue-500' : 'bg-red-500'}`}>
+                                    {pricing.promoLabel}
                                   </Badge>
                                 </div>
                               )}
@@ -3757,11 +3829,11 @@ export default function CustomerPortal() {
                                   );
                                 })()}
                                 
-                                {/* Sale Badge */}
-                                {product.promoActive && product.promoPrice && (
+                                {/* Promo Badge */}
+                                {pricing.promoLabel && (
                                   <div className="absolute top-1 left-1">
-                                    <Badge variant="destructive" className="text-xs px-1 py-0">
-                                      SALE
+                                    <Badge className={`text-xs px-1 py-0 text-white ${pricing.promoType === 'clearance' ? 'bg-orange-500' : pricing.promoType === 'buy_x_get_y_free' ? 'bg-purple-500' : pricing.promoType === 'bundle_deal' ? 'bg-blue-500' : 'bg-red-500'}`}>
+                                      {pricing.promoLabel}
                                     </Badge>
                                   </div>
                                 )}
@@ -4317,17 +4389,17 @@ export default function CustomerPortal() {
                   <h3 className="font-semibold mb-3">Order Summary</h3>
                   <div className="space-y-2">
                     {cart.map((item, index) => {
-                      // Calculate correct pricing with promotional support
                       let itemPrice;
                       let totalCost;
+                      let cartPricing: any = null;
                       
                       if (item.sellingType === 'pallets') {
                         itemPrice = parseFloat((item.product as any).palletPrice?.toString() || '0');
                         totalCost = itemPrice * item.quantity;
                       } else {
-                        const basePrice = parseFloat(item.product.price);
-                        itemPrice = basePrice;
-                        totalCost = basePrice * item.quantity;
+                        cartPricing = calculatePromotionalPricing(item.product, item.quantity);
+                        itemPrice = cartPricing.effectivePrice;
+                        totalCost = cartPricing.totalCost;
                       }
                       
                       return (
@@ -4338,20 +4410,20 @@ export default function CustomerPortal() {
                             </div>
                             <p className="text-sm text-gray-600">
                               Qty: {item.quantity} {item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}
-                              {item.sellingType === 'units' && itemPrice !== parseFloat(item.product.price) && (
+                              {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
                                 <span className="text-green-600 font-medium ml-1">
-                                  (£{itemPrice.toFixed(2)} each - promotional price)
+                                  (£{cartPricing.effectivePrice.toFixed(2)} each - {cartPricing.promoLabel || 'promo price'})
                                 </span>
                               )}
                             </p>
-                            {(item as any).appliedOfferLabel && (
+                            {cartPricing && cartPricing.appliedOffers.length > 0 && (
                               <span className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mt-1">
-                                🎁 {(item as any).appliedOfferLabel}
+                                🎁 {cartPricing.appliedOffers[0]}
                               </span>
                             )}
-                            {((item as any).freeItems || 0) > 0 && (
+                            {cartPricing && cartPricing.freeItems > 0 && (
                               <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 ml-1">
-                                +{(item as any).freeItems} free
+                                +{cartPricing.freeItems} free
                               </span>
                             )}
                             {item.sellingType === 'pallets' && (
@@ -4361,9 +4433,9 @@ export default function CustomerPortal() {
                             )}
                           </div>
                           <div className="text-right">
-                            {item.sellingType === 'units' && itemPrice !== parseFloat(item.product.price) && (
+                            {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
                               <div className="text-xs text-gray-500 line-through">
-                                £{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                                £{(cartPricing.originalPrice * item.quantity).toFixed(2)}
                               </div>
                             )}
                             <PriceDisplay

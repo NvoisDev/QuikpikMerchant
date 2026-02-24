@@ -28,7 +28,8 @@ import {
   Book,
   Contact,
   Megaphone,
-  Badge
+  Badge,
+  Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -46,6 +47,7 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
+  { name: "Promotions", href: "/promotions", icon: Tag, tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
 
