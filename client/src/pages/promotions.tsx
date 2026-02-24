@@ -298,40 +298,22 @@ export default function Promotions() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Active</p>
-              <p className="text-2xl font-bold">{activeCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Scheduled</p>
-              <p className="text-2xl font-bold">{scheduledCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-gray-500" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Expired</p>
-              <p className="text-2xl font-bold">{expiredCount}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+          <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
+          <span className="text-xs text-green-700 font-medium">Active</span>
+          <span className="ml-auto text-base font-bold text-green-800">{activeCount}</span>
+        </div>
+        <div className="flex-1 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
+          <span className="text-xs text-blue-700 font-medium">Scheduled</span>
+          <span className="ml-auto text-base font-bold text-blue-800">{scheduledCount}</span>
+        </div>
+        <div className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <AlertCircle className="h-4 w-4 text-gray-500 flex-shrink-0" />
+          <span className="text-xs text-gray-600 font-medium">Expired</span>
+          <span className="ml-auto text-base font-bold text-gray-700">{expiredCount}</span>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
