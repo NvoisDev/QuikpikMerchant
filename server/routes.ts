@@ -6516,21 +6516,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const newStatus = isFullCancellation ? 'cancelled' : order.status;
 
-      // Handle store credit if selected
-      let storeCreditAmount = 0;
-      if (refundType === 'credit' && refundAmount > 0) {
-        storeCreditAmount = returnedItems?.length > 0 ? refundAmount : parseFloat(order.amountPaid || '0');
-        // TODO: Add store credit to customer account when customer credits table is implemented
-        console.log(`💳 Store credit of £${storeCreditAmount.toFixed(2)} would be applied to customer account`);
-      }
-
       // Update order with cancellation details
       const currentRefunded = parseFloat(order.amountRefunded || '0');
       const stripeRefundAmount = stripeRefund ? stripeRefund.amount / 100 : 0;
       const amountPaidNum = parseFloat(order.amountPaid || '0');
       
-      // Calculate total refunded: Stripe refund + store credit, or full amount if cancelled
-      let totalRefunded = currentRefunded + stripeRefundAmount + storeCreditAmount;
+      // Calculate total refunded: Stripe refund amount (card only)
+      let totalRefunded = currentRefunded + stripeRefundAmount;
       
       // For full cancellation, always record the refund amount even if "later" refund type
       if (isFullCancellation && totalRefunded === 0 && amountPaidNum > 0) {
@@ -6541,14 +6533,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const refundNote = stripeRefund 
         ? `Stripe refund: £${stripeRefundAmount.toFixed(2)}` 
-        : storeCreditAmount > 0 
-          ? `Store credit: £${storeCreditAmount.toFixed(2)}`
-          : amountPaidNum > 0 
-            ? `Refund pending: £${amountPaidNum.toFixed(2)}`
-            : 'No payment taken';
+        : amountPaidNum > 0 
+          ? `Refund pending: £${amountPaidNum.toFixed(2)}`
+          : 'No payment taken';
       
       // Determine if refund was processed now
-      const refundProcessedNow = stripeRefund || storeCreditAmount > 0;
+      const refundProcessedNow = !!stripeRefund;
       
       await db.update(orders)
         .set({
@@ -6577,8 +6567,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let refundMsg = '';
           if (stripeRefund) {
             refundMsg = `\n\nA refund of £${stripeRefundAmount.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
-          } else if (storeCreditAmount > 0) {
-            refundMsg = `\n\nStore credit of £${storeCreditAmount.toFixed(2)} has been applied to your account and can be used on future orders.`;
           } else if (amountPaid <= 0) {
             refundMsg = `\n\nNo payment was taken for this order, so no refund is required.`;
           }
@@ -6610,8 +6598,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Add refund details to email
               if (stripeRefund) {
                 emailBody += `<div style="background:#f0f7ff;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#1e40af;">Refund Details</h3><p style="margin:0;">Amount: <strong>£${stripeRefundAmount.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">Refunded to your original payment method. Please allow 5-10 business days for the refund to appear on your statement.</p></div>`;
-              } else if (storeCreditAmount > 0) {
-                emailBody += `<div style="background:#f0fdf4;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#166534;">Store Credit Applied</h3><p style="margin:0;">Amount: <strong>£${storeCreditAmount.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">This credit is available immediately and can be used on your next order.</p></div>`;
               } else if (amountPaid <= 0) {
                 emailBody += `<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0;"><p style="margin:0;color:#666;">No payment was taken for this order, so no refund is required.</p></div>`;
               }
@@ -6646,9 +6632,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: stripeRefundAmount,
           status: stripeRefund.status,
           type: 'card'
-        } : storeCreditAmount > 0 ? {
-          amount: storeCreditAmount,
-          type: 'credit'
         } : null
       });
     } catch (error) {

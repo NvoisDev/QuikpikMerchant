@@ -1600,13 +1600,6 @@ export default function OrdersFresh() {
                       <p className="text-xs text-gray-500 mt-0.5">Refund {formatCurrency(parseFloat(selectedOrder?.amountPaid || selectedOrder?.total || '0'))} GBP to card</p>
                     </div>
                   </label>
-                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'credit' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('credit'); setProcessRefund(true); }}>
-                    <input type="radio" name="refundType" checked={refundType === 'credit'} onChange={() => { setRefundType('credit'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
-                    <div className="ml-3">
-                      <span className="text-sm font-medium">Store credit</span>
-                      <p className="text-xs text-gray-500 mt-0.5">Applied immediately to customer's account</p>
-                    </div>
-                  </label>
                   <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('later'); setProcessRefund(false); }}>
                     <input type="radio" name="refundType" checked={refundType === 'later'} onChange={() => { setRefundType('later'); setProcessRefund(false); }} className="w-4 h-4 text-green-600" />
                     <div className="ml-3">
