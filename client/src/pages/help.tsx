@@ -73,7 +73,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - **Standard Plan**: Up to 10 products, unlimited editing ($10.99/month)
 - **Premium Plan**: Unlimited products, unlimited editing ($19.99/month)
 
-All plans include 5% platform fee on successful orders with automatic revenue collection.
+All plans include a 3.3% platform fee on successful orders with automatic revenue collection.
         `
       },
       {
@@ -155,10 +155,23 @@ Click the status badge on any product card to quickly change status.
 - Update stock levels regularly after sales
 - Set realistic MOQ based on your packaging/shipping constraints
 - Use "Out of Stock" status when inventory is depleted
+- Click any product's stock count to open the stock update panel and view full movement history
+
+#### Stock Movement History
+Every stock change is logged automatically with a before/after count and reason. Movement types include:
+- **Order** — stock reduced when a customer places an order
+- **Customer Return** — stock restored when an order is cancelled or items are partially returned with "Restock inventory" ticked. Shows as a green "+X units · Return" entry linked to the order.
+- **Restocked / Manual Increase** — stock added manually (new shipment, correction)
+- **Removed / Manual Decrease** — stock removed manually
+
+#### Stock Alerts
+- The system sends daily low-stock email alerts automatically at 8 AM
+- Each product is only alerted once per 24 hours to prevent repeat notifications
+- Low-stock threshold is based on your product settings — review and update thresholds to control when alerts fire
 
 #### Pricing Strategy
 - Research competitor pricing in your category
-- Consider your margins and platform fee (5% on sales)
+- Consider your margins and platform fee (3.3% on sales)
 - Use price visibility settings strategically
 
 #### Product Organization
@@ -171,6 +184,61 @@ Click the status badge on any product card to quickly change status.
 - Use the "Duplicate" feature to quickly create similar products
 - Edit multiple products by status to manage seasonal inventory
 - Export product data for offline analysis (coming soon)
+        `
+      }
+    ]
+  },
+  {
+    id: "promotions",
+    title: "Promotions",
+    icon: Star,
+    description: "Create and manage promotional pricing for your products",
+    articles: [
+      {
+        title: "Setting Up Promotions",
+        content: `
+### Creating Promotions
+
+Navigate to **Promotions** in the sidebar to manage all promotional pricing for your store.
+
+#### 5 Promotion Types
+
+1. **Percentage Discount** — Take a percentage off the regular price (e.g. 20% off). Enter the discount percentage and the system calculates the promotional price automatically. Shown with a red badge on the customer store.
+
+2. **Fixed Price** — Set a specific promotional price regardless of the original price (e.g. £5.00). The original price appears as a strikethrough next to the promotional price. Shown with a green badge.
+
+3. **Buy X Get Y Free** — Reward bulk purchases (e.g. buy 10, get 2 free). Enter the "buy quantity" and the "free quantity". Free items are shown in the customer's cart and reflected in totals. Shown with a purple badge.
+
+4. **Bundle Deal** — Unlock a special bundle price when the customer orders at least a minimum quantity (e.g. order 12+ for £15.00 each). Enter the minimum quantity and bundle price. Shown with a blue badge.
+
+5. **Clearance** — Set a fixed clearance price for end-of-line or excess stock. Works like Fixed Price but with an orange "Clearance" badge to signal urgency.
+
+#### Creating a Promotion
+
+1. Click **"New Promotion"** on the Promotions page
+2. Enter a promotion name (e.g. "Summer Sale 20% Off")
+3. Select the promotion type
+4. Fill in the type-specific fields (discount %, price, quantities etc.)
+5. Set a **Start Date** and **End Date** (optional — promotions auto-activate and auto-deactivate based on these dates)
+6. Click **"Assign Products"** to link the promotion to one or more products
+7. Save the promotion
+
+#### Managing Promotions
+
+- **Toggle active/inactive**: Switch any promotion on or off instantly without deleting it
+- **Edit**: Update any promotion details or change assigned products
+- **Delete**: Remove a promotion permanently
+
+#### Customer Experience
+
+- Promotional prices appear on the store with colour-coded badges matching the promotion type
+- Original prices show as strikethrough next to the promotional price
+- Free items (Buy X Get Y) are shown in the cart summary
+- Cart and checkout always use the current promotional price
+
+#### Dashboard Summary
+
+Active promotions are shown in a summary section on your main dashboard so you always know what's running. Click "Manage" to go directly to the Promotions page.
         `
       }
     ]
@@ -915,7 +983,7 @@ When customers place orders for collection/pickup, the platform **automatically 
 Each order shows:
 - Customer details and delivery address
 - Order items with quantities and prices
-- Subtotal, platform fee (5%), and total
+- Subtotal, platform fee (3.3%), and total
 - Payment status
 - Order date and tracking
 
@@ -943,9 +1011,9 @@ To receive payments from customers, you must set up Stripe Connect.
 
 #### Payment Flow
 When customers pay:
-1. Customer pays full order amount (including 5% platform fee)
-2. Quikpik automatically collects 5% platform fee
-3. You receive 95% directly to your bank account
+1. Customer pays the full order amount (including Quikpik's platform fee)
+2. Quikpik automatically collects a 3.3% platform fee
+3. You receive the remaining amount directly to your bank account
 4. Order status updates to "Processing"
 
 #### Account Status
@@ -954,8 +1022,8 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **You Keep**: 95% of order value
-- **Platform Fee**: 5% to Quikpik for platform services
+- **Platform Fee**: 3.3% to Quikpik for platform services
+- **You Keep**: The remaining order value after the platform fee
 
 #### Bank Transfers
 - Funds are transferred to your bank account automatically
@@ -1208,9 +1276,9 @@ The Analytics dashboard provides insights into your business performance.
 
 #### Transaction Fees
 Regardless of subscription plan:
-- **Platform Fee**: 5% on all successful orders
+- **Platform Fee**: 3.3% on all successful orders
 - **Payment Processing**: Handled by Stripe
-- **Your Revenue**: 95% of order value goes to you
+- **Your Revenue**: Order value minus the 3.3% platform fee
         `
       }
     ]
@@ -1263,19 +1331,36 @@ The Customer Portal is a dedicated shopping interface where your customers can b
 4. **Fulfilled**: You manually mark orders as fulfilled when shipped
 5. **Archived**: Orders automatically archive 24 hours after fulfillment
 
-#### Order Status Management
-- **Active Orders**: Show in main order list for processing
-- **Status Updates**: Click dropdown to change order status
-- **Manual Actions**: Only "Fulfilled" requires your action - everything else is automatic
-- **Email Confirmations**: Resend confirmation emails anytime
+#### Order Status Badges
+Each order shows a combination of badges:
+- **Paid** (green) / **Part Paid** (orange) / **Unpaid** (red) — payment status
+- **Fulfilled** (blue) / **Ready** (yellow) / **Cancelled** (red) / **Pending** (grey) — fulfilment status
+- **Refunded** (purple) — full refund has been processed (shown alongside "Cancelled")
+- **Partially Refunded** (purple) — some items were returned but the order remains active
+- **Delivery** / **Collection** — how the order will be fulfilled
 
 #### Order Details
 Each order includes:
 - Customer contact information and delivery address
 - Product details with quantities and pricing
 - Payment information and Stripe transaction ID
-- Platform fee calculation (5% automatically collected)
-- Order timeline with status changes and emails sent
+- Platform fee calculation (3.3% automatically collected)
+- Order timeline with colour-coded status entries
+- Payment summary showing order total, platform fee, any refunds, and your net amount
+
+#### Order Timeline
+The timeline tracks every stage of an order:
+- Green dot — completed steps (payment received, ready, fulfilled)
+- Orange/amber dot — pending steps (balance outstanding, refund pending)
+- Red dot — cancellation
+- Purple dot — refund processed to card (with date)
+- Amber dot — refund recorded but not yet processed (chose "Later")
+
+#### Payment Summary
+The payment summary in each order shows:
+- Order total and platform fee (3.3%)
+- A **Refunded** or **Partial Refund** row in purple when a refund has been recorded
+- **Your Net Amount** — adjusted to reflect any refunds issued
 
 #### Processing Orders
 1. Review order details in the Orders page
@@ -1292,8 +1377,8 @@ Each order includes:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Platform Fee**: 5% automatically deducted for Quikpik
-3. **Wholesaler Payment**: 95% of order value transferred to your Stripe account
+2. **Platform Fee**: 3.3% automatically deducted for Quikpik
+3. **Wholesaler Payment**: Remaining amount transferred to your Stripe account after fees
 4. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
 
 #### Invoice Features
@@ -1317,38 +1402,85 @@ Each order includes:
         `
       },
       {
+        title: "Quick Quote & Pay Later",
+        content: `
+### Quick Quote
+
+Quick Quote lets you create orders on behalf of a customer directly from the Orders page — ideal for phone/in-person sales or custom pricing agreements.
+
+#### Creating a Quick Quote
+1. Go to **Orders** and click **"Quick Quote"**
+2. Select the customer from your registered customer list
+3. Add products by searching and clicking — set the quantity for each item
+4. Adjust the unit price per item if you're offering custom pricing
+5. Choose the payment structure (see below)
+6. Click **"Create Quote"**
+
+#### Payment / Deposit Options
+
+| Option | What happens |
+|--------|-------------|
+| **Pay Later (0%)** | No Stripe payment link generated. Customer is notified the order is placed and payment will be arranged separately. |
+| **25% / 50% / 75% deposit** | A Stripe payment link is sent to the customer for just the deposit amount. The remaining balance is tracked on the order with a "Balance due by" date (7, 14, or 30 days). |
+| **100% (full payment)** | Full Stripe payment link sent. Order is fully paid upfront. |
+
+#### After Creating a Quote
+- The quote appears in your Orders list with a quote badge
+- The payment summary shows deposit %, amount paid, and outstanding balance
+- When the customer pays, payment status updates automatically
+- For Pay Later orders, you can manually update payment status when payment is received offline
+
+#### Tracking Quote Orders
+- Filter your Orders list by quote/non-quote using the filter options
+- Outstanding balances and due dates are visible in each order's payment summary
+- Payment reminder emails are sent automatically for overdue balances
+        `
+      },
+      {
         title: "Refunds & Cancellations",
         content: `
-### Processing Refunds
+### Cancelling an Order & Processing Refunds
 
-#### When to Issue Refunds
-- Customer requests cancellation
-- Product unavailable after order placed
-- Quality issues or customer dissatisfaction
-- Duplicate orders or payment errors
+#### How to Cancel an Order
+1. Open the order from the Orders page
+2. Click **"Cancel Order"** at the bottom of the order details
+3. **Select a reason** from the dropdown (required)
+4. Add any optional notes for your records
 
-#### How to Process Refunds
-1. **Go to Orders**: Find the order to refund
-2. **Click Order Details**: Open the order detail modal
-3. **Click "Refund"**: Red refund button at bottom
-4. **Choose Refund Type**:
-   - **Full Refund**: Cancels entire order, restores stock
-   - **Partial Refund**: Specify amount, keeps order active
-5. **Add Reason**: Explain why refund was issued
-6. **Confirm**: Refund processes through Stripe immediately
+#### Items to Return
+- All items default to their full ordered quantity
+- **Reduce any quantity** to process a partial return — the remaining items stay on the order
+- The **refund amount updates live** as you adjust quantities
+- When any item is below its full quantity, a **(partial refund)** label appears next to the amount
 
-#### Refund Processing
-- **Stripe Integration**: Refunds processed automatically through Stripe
-- **Stock Restoration**: Full refunds automatically restore product stock
-- **Customer Notification**: Customers receive refund confirmation emails
-- **Order Status**: Full refunds change order status to "Refunded"
-- **Platform Fees**: Platform fees are also refunded for full refunds
+#### Refund Method
+Choose how to process the refund:
+- **Original payment method** — Stripe refund sent to the customer's card. Typically takes 5–10 business days to appear on their statement. The exact amount is shown dynamically based on your item selections.
+- **Later** — No refund is processed now. The amount is recorded on the order for reference, and you can arrange payment separately.
+
+#### Additional Options
+- **Restock inventory** (ticked by default) — Restores stock for all returned items. A "Customer Return" movement entry is logged in each product's stock history with the before/after counts.
+- **Send notification** — Sends an SMS and email to the customer confirming the cancellation or partial return.
+
+#### What Happens After Cancellation
+
+**Full cancellation** (all items at full quantity):
+- Order status changes to **Cancelled**
+- A purple **Refunded** badge appears alongside the red "Cancelled" badge
+- Timeline shows a red "Order Cancelled" entry and a purple/amber refund entry
+
+**Partial return** (some items reduced):
+- Order remains active (status unchanged)
+- A purple **Partially Refunded** badge appears on the order
+- Timeline shows:
+  - Purple dot "Partial refund to card: £X" + date (if refunded to card)
+  - Amber dot "Partial refund pending: £X" (if "Later" was chosen)
+- Payment summary shows a purple "Partial Refund: −£X" row and adjusted net amount
 
 #### Refund Timeline
-- **Processing**: Refunds process immediately through Stripe
-- **Customer Receipt**: Funds typically appear in 5-10 business days
-- **Notification**: Customer receives immediate refund confirmation
-- **Records**: All refunds tracked in order history and Stripe dashboard
+- Stripe refunds appear on the customer's statement within 5–10 business days
+- Customers receive an email and SMS confirming the cancellation/refund
+- All refund details are logged in the order notes for your audit trail
         `
       }
     ]
@@ -1395,7 +1527,7 @@ A: Check that your Stripe account can accept payments. Contact Stripe support if
 A: Stripe invoices are automatically sent after successful payments. Check customer email addresses are correct and check their spam folder.
 
 **Q: Platform fee not being collected**
-A: Platform fees are automatically calculated (5%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
+A: Platform fees are automatically calculated (3.3%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
 
 #### Order Management Issues
 
