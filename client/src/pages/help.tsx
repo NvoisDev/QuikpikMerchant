@@ -1748,16 +1748,24 @@ export default function Help() {
 
   const currentSection = helpSections.find(section => section.id === selectedSection);
 
+  const inlineFormat = (text: string): React.ReactNode => {
+    const parts = text.split(/\*\*/);
+    if (parts.length === 1) return text;
+    return parts.map((part, i) =>
+      i % 2 === 1 ? <strong key={i} className="font-semibold text-gray-900 dark:text-gray-100">{part}</strong> : part
+    );
+  };
+
   const renderContent = (content: string) => {
     return content.split('\n').map((line, index) => {
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">{line.replace('### ', '')}</h3>;
+        return <h3 key={index} className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">{inlineFormat(line.replace('### ', ''))}</h3>;
       } else if (line.startsWith('#### ')) {
-        return <h4 key={index} className="text-base font-medium text-gray-800 dark:text-gray-200 mt-4 mb-2">{line.replace('#### ', '')}</h4>;
+        return <h4 key={index} className="text-base font-medium text-gray-800 dark:text-gray-200 mt-4 mb-2">{inlineFormat(line.replace('#### ', ''))}</h4>;
       } else if (line.startsWith('- ')) {
-        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300">{line.replace('- ', '')}</li>;
+        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 mb-1">{inlineFormat(line.replace(/^- /, ''))}</li>;
       } else if (line.trim().match(/^\d+\./)) {
-        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 list-decimal">{line.trim()}</li>;
+        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 list-decimal mb-1">{inlineFormat(line.trim().replace(/^\d+\.\s*/, ''))}</li>;
       } else if (line.includes('[developers.facebook.com]')) {
         return (
           <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">
@@ -1767,12 +1775,10 @@ export default function Help() {
             </a>
           </p>
         );
-      } else if (line.startsWith('**') && line.endsWith('**')) {
-        return <p key={index} className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{line.replace(/\*\*/g, '')}</p>;
       } else if (line.trim() === '') {
         return <br key={index} />;
       } else {
-        return <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">{line}</p>;
+        return <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">{inlineFormat(line)}</p>;
       }
     });
   };
@@ -1898,7 +1904,7 @@ export default function Help() {
                     </div>
                     {expandedArticles[article.title] && (
                       <div className="px-4 pb-4 border-t bg-gray-50">
-                        <div className="pt-4 prose prose-sm max-w-none">
+                        <div className="pt-4 max-w-none">
                           {renderContent(article.content)}
                         </div>
                       </div>
