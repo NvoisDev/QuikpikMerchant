@@ -1753,12 +1753,12 @@ export default function Help() {
     const nodes: ReactNode[] = [];
     boldParts.forEach((boldPart, bi) => {
       if (bi % 2 === 1) {
-        nodes.push(<strong key={`b${bi}`} className="font-semibold text-gray-900 dark:text-gray-100">{boldPart}</strong>);
+        nodes.push(<strong key={`b${bi}`} className="font-semibold text-black">{boldPart}</strong>);
       } else {
         const codeParts = boldPart.split(/`/);
         codeParts.forEach((codePart, ci) => {
           if (ci % 2 === 1) {
-            nodes.push(<code key={`b${bi}c${ci}`} className="bg-gray-100 text-gray-800 text-xs font-mono px-1 py-0.5 rounded">{codePart}</code>);
+            nodes.push(<code key={`b${bi}c${ci}`} className="bg-gray-100 text-black text-xs font-mono px-1 py-0.5 rounded">{codePart}</code>);
           } else if (codePart) {
             nodes.push(codePart);
           }
@@ -1771,18 +1771,18 @@ export default function Help() {
   const renderContent = (content: string) => {
     return content.split('\n').map((line, index) => {
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">{inlineFormat(line.replace('### ', ''))}</h3>;
+        return <h3 key={index} className="text-lg font-semibold text-black mt-6 mb-3">{inlineFormat(line.replace('### ', ''))}</h3>;
       } else if (line.startsWith('#### ')) {
-        return <h4 key={index} className="text-base font-medium text-gray-800 dark:text-gray-200 mt-4 mb-2">{inlineFormat(line.replace('#### ', ''))}</h4>;
+        return <h4 key={index} className="text-base font-medium text-black mt-4 mb-2">{inlineFormat(line.replace('#### ', ''))}</h4>;
       } else if (line.startsWith('- ')) {
-        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 mb-1">{inlineFormat(line.replace(/^- /, ''))}</li>;
+        return <li key={index} className="ml-4 text-black mb-1">{inlineFormat(line.replace(/^- /, ''))}</li>;
       } else if (line.trim().match(/^\d+\./)) {
-        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 list-decimal mb-1">{inlineFormat(line.trim().replace(/^\d+\.\s*/, ''))}</li>;
+        return <li key={index} className="ml-4 text-black list-decimal mb-1">{inlineFormat(line.trim().replace(/^\d+\.\s*/, ''))}</li>;
       } else if (line.includes('[developers.facebook.com]')) {
         return (
-          <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">
+          <p key={index} className="text-black mb-2">
             {line.replace('[developers.facebook.com](https://developers.facebook.com)', '')}
-            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline">
+            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
               developers.facebook.com
             </a>
           </p>
@@ -1791,7 +1791,7 @@ export default function Help() {
         if (line.includes('---')) return null;
         const cells = line.split('|').filter(c => c.trim() !== '');
         return (
-          <div key={index} className="flex gap-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 py-1.5">
+          <div key={index} className="flex gap-3 text-sm text-black border-b border-gray-200 py-1.5">
             {cells.map((cell, ci) => (
               <span key={ci} className="flex-1">{inlineFormat(cell.trim())}</span>
             ))}
@@ -1800,7 +1800,7 @@ export default function Help() {
       } else if (line.trim() === '') {
         return <br key={index} />;
       } else {
-        return <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">{inlineFormat(line)}</p>;
+        return <p key={index} className="text-black mb-2">{inlineFormat(line)}</p>;
       }
     });
   };
