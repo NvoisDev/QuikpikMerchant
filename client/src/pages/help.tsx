@@ -1810,8 +1810,8 @@ export default function Help() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Help Hub</h1>
-          <p className="text-gray-800 dark:text-gray-200 mt-1">Comprehensive guides and documentation for all Quikpik Merchant features</p>
+          <h1 className="text-2xl font-bold text-black">Help Hub</h1>
+          <p className="text-black mt-1">Comprehensive guides and documentation for all Quikpik Merchant features</p>
         </div>
       </div>
 
@@ -1849,8 +1849,8 @@ export default function Help() {
                       key={section.id}
                       className={`flex items-center p-3 cursor-pointer border-l-4 transition-colors ${
                         selectedSection === section.id
-                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-500"
-                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-transparent"
+                          ? "bg-blue-50 text-blue-700 border-blue-500"
+                          : "text-black hover:bg-gray-50 border-transparent"
                       }`}
                       onClick={() => setSelectedSection(section.id)}
                     >
@@ -1858,7 +1858,7 @@ export default function Help() {
                       <div className="min-w-0">
                         <div className="font-medium text-sm">{section.title}</div>
                         {section.articles.length > 0 && (
-                          <div className="text-xs text-gray-700 dark:text-gray-300 mt-1">
+                          <div className="text-xs text-black mt-1">
                             {section.articles.length} articles
                           </div>
                         )}
@@ -1870,31 +1870,6 @@ export default function Help() {
             </CardContent>
           </Card>
 
-          {/* Quick Links */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-sm">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <OnboardingRestartButton 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-              />
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Mail className="mr-2 h-4 w-4" />
-                Contact Support
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Video className="mr-2 h-4 w-4" />
-                Video Tutorials
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <FileText className="mr-2 h-4 w-4" />
-                Download Guides
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Main Content */}
@@ -1906,7 +1881,7 @@ export default function Help() {
                   <currentSection.icon className="mr-3 h-6 w-6 text-blue-600" />
                   <div>
                     <CardTitle>{currentSection.title}</CardTitle>
-                    <p className="text-gray-800 dark:text-gray-200 mt-1">{currentSection.description}</p>
+                    <p className="text-black mt-1">{currentSection.description}</p>
                   </div>
                 </div>
               </CardHeader>
@@ -1917,7 +1892,7 @@ export default function Help() {
                       className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
                       onClick={() => toggleArticle(article.title)}
                     >
-                      <h3 className="font-medium text-gray-900">{article.title}</h3>
+                      <h3 className="font-medium text-black">{article.title}</h3>
                       {expandedArticles[article.title] ? (
                         <ChevronDown className="h-4 w-4 text-gray-500" />
                       ) : (
