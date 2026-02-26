@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -1748,12 +1748,24 @@ export default function Help() {
 
   const currentSection = helpSections.find(section => section.id === selectedSection);
 
-  const inlineFormat = (text: string): React.ReactNode => {
-    const parts = text.split(/\*\*/);
-    if (parts.length === 1) return text;
-    return parts.map((part, i) =>
-      i % 2 === 1 ? <strong key={i} className="font-semibold text-gray-900 dark:text-gray-100">{part}</strong> : part
-    );
+  const inlineFormat = (text: string) => {
+    const boldParts = text.split(/\*\*/);
+    const nodes: ReactNode[] = [];
+    boldParts.forEach((boldPart, bi) => {
+      if (bi % 2 === 1) {
+        nodes.push(<strong key={`b${bi}`} className="font-semibold text-gray-900 dark:text-gray-100">{boldPart}</strong>);
+      } else {
+        const codeParts = boldPart.split(/`/);
+        codeParts.forEach((codePart, ci) => {
+          if (ci % 2 === 1) {
+            nodes.push(<code key={`b${bi}c${ci}`} className="bg-gray-100 text-gray-800 text-xs font-mono px-1 py-0.5 rounded">{codePart}</code>);
+          } else if (codePart) {
+            nodes.push(codePart);
+          }
+        });
+      }
+    });
+    return nodes;
   };
 
   const renderContent = (content: string) => {
@@ -1774,6 +1786,16 @@ export default function Help() {
               developers.facebook.com
             </a>
           </p>
+        );
+      } else if (line.trim().startsWith('|')) {
+        if (line.includes('---')) return null;
+        const cells = line.split('|').filter(c => c.trim() !== '');
+        return (
+          <div key={index} className="flex gap-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 py-1.5">
+            {cells.map((cell, ci) => (
+              <span key={ci} className="flex-1">{inlineFormat(cell.trim())}</span>
+            ))}
+          </div>
         );
       } else if (line.trim() === '') {
         return <br key={index} />;
@@ -1903,7 +1925,7 @@ export default function Help() {
                       )}
                     </div>
                     {expandedArticles[article.title] && (
-                      <div className="px-4 pb-4 border-t bg-gray-50">
+                      <div className="px-4 pb-4 border-t bg-white">
                         <div className="pt-4 max-w-none">
                           {renderContent(article.content)}
                         </div>
