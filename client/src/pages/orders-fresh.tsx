@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Building, Warehouse } from "lucide-react";
+import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {
@@ -471,6 +471,21 @@ export default function OrdersFresh() {
 
   const handlePageChange = (newPage: number) => {
     loadOrders(newPage, searchQuery);
+  };
+
+  const getPageNumbers = (): (number | '...')[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | '...')[] = [];
+    const left = Math.max(2, currentPage - 1);
+    const right = Math.min(totalPages - 1, currentPage + 1);
+    pages.push(1);
+    if (left > 2) pages.push('...');
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push('...');
+    pages.push(totalPages);
+    return pages;
   };
 
   // Fetch detailed order information with items
@@ -1475,28 +1490,43 @@ export default function OrdersFresh() {
               
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex flex-col items-center gap-2 px-4 py-3 border-t">
+                  <div className="text-xs text-gray-500">
                     Page {currentPage} of {totalPages} • {totalOrders} total orders
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="text-xs"
+                      className="h-8 w-8 p-0"
                     >
-                      Previous
+                      <ChevronLeft className="h-4 w-4" />
                     </Button>
+                    {getPageNumbers().map((page, idx) =>
+                      page === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 text-sm select-none">...</span>
+                      ) : (
+                        <Button
+                          key={page}
+                          size="sm"
+                          variant={page === currentPage ? 'default' : 'outline'}
+                          onClick={() => handlePageChange(page as number)}
+                          className={`h-8 w-8 p-0 text-xs ${page === currentPage ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' : ''}`}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="text-xs"
+                      className="h-8 w-8 p-0"
                     >
-                      Next
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
