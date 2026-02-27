@@ -327,7 +327,7 @@ export default function Customers() {
 
   // Optimized search - use API for complex searches, local filter for simple ones
   const { data: searchResults = [] } = useQuery<Customer[]>({
-    queryKey: ['/api/customers/search', searchQuery],
+    queryKey: [`/api/customers/search?q=${encodeURIComponent(searchQuery)}`],
     enabled: searchQuery.length > 2,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for search results
     gcTime: 10 * 60 * 1000,
@@ -762,7 +762,7 @@ export default function Customers() {
 
   // Memoized filtered customers for main display
   const filteredCustomers = useMemo(() => {
-    if (searchQuery.length > 2 && searchResults.length > 0) {
+    if (searchQuery.length > 2) {
       return searchResults;
     }
     return customers || [];
