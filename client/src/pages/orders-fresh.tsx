@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
@@ -182,6 +182,7 @@ export default function OrdersFresh() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [customerIdFilter, setCustomerIdFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [archiveTab, setArchiveTab] = useState<'active' | 'archived' | 'all'>('active');
@@ -340,6 +341,19 @@ export default function OrdersFresh() {
     loadOrders(1, searchParam || '', initialTab as any);
   }, []);
 
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      loadOrders(1, searchQuery).finally(() => setIsSearching(false));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Load cancellation requests
   const loadCancellationRequests = async () => {
     try {
@@ -456,7 +470,6 @@ export default function OrdersFresh() {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
-    loadOrders(1, query);
   };
 
   const handleStatusFilter = (status: string) => {
@@ -913,8 +926,8 @@ export default function OrdersFresh() {
   const activeCount = orderStats?.activeCount ?? 0;
   const archivedCount = orderStats?.archivedCount ?? 0;
 
-  // Show loading state for auth or orders loading
-  if (authLoading || loading) {
+  // Show full-screen loading only on the very first page load (no orders yet)
+  if (authLoading || (loading && orders.length === 0 && !searchQuery)) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -1043,8 +1056,11 @@ export default function OrdersFresh() {
             placeholder="Search by name, phone, or order..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
           />
+          {isSearching && (
+            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500 animate-spin" />
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <select 
