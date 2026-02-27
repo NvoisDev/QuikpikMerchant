@@ -17915,18 +17915,23 @@ https://quikpik.app`;
               totalAmount: total.toFixed(2),
             },
             customer_email: customer.email || undefined,
-            expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+            expires_at: (() => {
+              const balanceDays = validDepositPercentage < 100 ? (quoteOrder.balanceDueDays || 0) : 0;
+              const daysValid = balanceDays > 0 ? Math.min(balanceDays + 3, 30) : 1;
+              return Math.floor(Date.now() / 1000) + (daysValid * 24 * 60 * 60);
+            })(),
           });
 
           paymentLinkUrl = session.url || '';
           paymentLinkId = session.id;
 
+          const expiryDays = validDepositPercentage < 100 ? Math.min((quoteOrder.balanceDueDays || 0) + 3, 30) : 1;
           // Update order with payment link
           await db.update(orders)
             .set({
               stripePaymentLinkId: paymentLinkId,
               stripePaymentLinkUrl: paymentLinkUrl,
-              quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+              quoteExpiresAt: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
             })
             .where(eq(orders.id, quoteOrder.id));
 

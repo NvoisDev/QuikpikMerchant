@@ -1,8 +1,13 @@
 import { db } from './db';
-import { orders, users } from '@shared/schema';
-import { and, gt, isNotNull, sql } from 'drizzle-orm';
+import { orders, users, orderItems, products } from '@shared/schema';
+import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
 import { sendPaymentReminderEmail } from './sendgrid-service';
 import { sendSMS } from './services/smsService';
+import Stripe from 'stripe';
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' })
+  : null;
 
 interface OrderWithPaymentTerms {
   id: number;
@@ -82,6 +87,75 @@ export async function checkAndSendPaymentReminders() {
   }
 }
 
+async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: string, wholesalerStripeAccountId: string | null | undefined): Promise<string> {
+  if (!stripe || !wholesalerStripeAccountId) return '';
+
+  try {
+    const outstandingAmount = parseFloat(order.amountOutstanding || '0');
+    const amountInPence = Math.round(outstandingAmount * 100);
+    const appBase = process.env.APP_URL || 'https://quikpik.app';
+
+    const session = await stripe.checkout.sessions.create(
+      {
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: `Outstanding balance — Order ${order.orderNumber}`,
+              description: `Balance payment to ${businessName}`,
+            },
+            unit_amount: amountInPence,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${appBase}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appBase}/store/${order.wholesalerId}`,
+        metadata: {
+          orderId: order.id.toString(),
+          orderNumber: order.orderNumber || '',
+          wholesalerId: order.wholesalerId,
+          isBalancePayment: 'true',
+        },
+        customer_email: order.customerEmail || undefined,
+        expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      },
+      { stripeAccount: wholesalerStripeAccountId }
+    );
+
+    const freshUrl = session.url || '';
+    if (freshUrl) {
+      await db.update(orders)
+        .set({ stripePaymentLinkUrl: freshUrl, stripePaymentLinkId: session.id })
+        .where(eq(orders.id, order.id));
+      console.log(`✅ Fresh payment link generated for order ${order.orderNumber}`);
+    }
+    return freshUrl;
+  } catch (err) {
+    console.error(`❌ Failed to generate fresh payment link for order ${order.orderNumber}:`, err);
+    return order.stripePaymentLinkUrl || '';
+  }
+}
+
+async function getItemsSummary(orderId: number): Promise<string> {
+  try {
+    const items = await db
+      .select({ quantity: orderItems.quantity, productName: products.name })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.orderId, orderId));
+
+    if (!items.length) return '';
+
+    const formatted = items.slice(0, 2).map(i => `${i.quantity}x ${i.productName}`);
+    if (items.length > 2) formatted.push(`+${items.length - 2} more`);
+    return formatted.join(', ');
+  } catch {
+    return '';
+  }
+}
+
 async function sendPaymentReminder(
   order: OrderWithPaymentTerms, 
   daysUntilDue: number,
@@ -90,12 +164,14 @@ async function sendPaymentReminder(
   const wholesalerResult = await db.select({
     businessName: users.businessName,
     email: users.email,
+    stripeAccountId: users.stripeAccountId,
   })
   .from(users)
   .where(sql`${users.id} = ${order.wholesalerId}`)
   .limit(1);
   
   const businessName = wholesalerResult[0]?.businessName || 'Your supplier';
+  const wholesalerStripeAccountId = wholesalerResult[0]?.stripeAccountId;
   const outstandingAmount = parseFloat(order.amountOutstanding || '0');
   const formattedDueDate = dueDate.toLocaleDateString('en-GB', { 
     day: 'numeric', 
@@ -104,7 +180,6 @@ async function sendPaymentReminder(
   });
   
   let urgency: 'upcoming' | 'due_today' | 'overdue';
-  
   if (daysUntilDue > 0) {
     urgency = 'upcoming';
   } else if (daysUntilDue === 0) {
@@ -112,41 +187,49 @@ async function sendPaymentReminder(
   } else {
     urgency = 'overdue';
   }
+
+  const freshPaymentLink = await getFreshPaymentLink(order, businessName, wholesalerStripeAccountId);
+  const paymentLink = freshPaymentLink || order.stripePaymentLinkUrl || '';
+  const itemsSummary = await getItemsSummary(order.id);
+  const firstName = order.customerName?.split(' ')[0] || 'there';
+  const orderRef = order.orderNumber || 'your order';
+  const itemsPart = itemsSummary ? ` (${itemsSummary})` : '';
   
   if (order.customerEmail) {
     try {
       await sendPaymentReminderEmail({
         to: order.customerEmail,
         customerName: order.customerName || 'Valued Customer',
-        orderNumber: order.orderNumber || '',
+        orderNumber: orderRef,
         amountOutstanding: outstandingAmount,
         dueDate: formattedDueDate,
         businessName,
-        paymentLink: order.stripePaymentLinkUrl || '',
+        paymentLink,
         urgency,
       });
-      console.log(`✅ Email reminder sent to ${order.customerEmail} for order ${order.orderNumber}`);
+      console.log(`✅ Email reminder sent to ${order.customerEmail} for order ${orderRef}`);
     } catch (error) {
-      console.error(`❌ Failed to send email reminder for order ${order.orderNumber}:`, error);
+      console.error(`❌ Failed to send email reminder for order ${orderRef}:`, error);
     }
   }
   
   if (order.customerPhone) {
     try {
       let smsMessage: string;
+      const payPart = paymentLink ? ` Pay here: ${paymentLink}` : ' Please contact us to arrange payment.';
       
       if (urgency === 'upcoming') {
-        smsMessage = `Hi ${order.customerName?.split(' ')[0] || 'there'}! Friendly reminder: £${outstandingAmount.toFixed(2)} is due on ${formattedDueDate} for your order with ${businessName}. ${order.stripePaymentLinkUrl ? `Pay here: ${order.stripePaymentLinkUrl}` : 'Please contact us to arrange payment.'}`;
+        smsMessage = `Hi ${firstName}! Reminder: £${outstandingAmount.toFixed(2)} balance due on ${formattedDueDate} for order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
       } else if (urgency === 'due_today') {
-        smsMessage = `Payment Due Today! £${outstandingAmount.toFixed(2)} is due for your order with ${businessName}. ${order.stripePaymentLinkUrl ? `Pay now: ${order.stripePaymentLinkUrl}` : 'Please contact us immediately.'}`;
+        smsMessage = `Hi ${firstName}! Payment due today: £${outstandingAmount.toFixed(2)} outstanding on order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
       } else {
-        smsMessage = `Overdue Notice: £${outstandingAmount.toFixed(2)} was due on ${formattedDueDate} for your order with ${businessName}. Please pay immediately. ${order.stripePaymentLinkUrl ? `Pay here: ${order.stripePaymentLinkUrl}` : ''}`;
+        smsMessage = `Hi ${firstName}, overdue notice: £${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately:${paymentLink ? ` ${paymentLink}` : ' contact us.'}`;
       }
       
       await sendSMS({ to: order.customerPhone, message: smsMessage });
-      console.log(`✅ SMS reminder sent to ${order.customerPhone} for order ${order.orderNumber}`);
+      console.log(`✅ SMS reminder sent to ${order.customerPhone} for order ${orderRef}`);
     } catch (error) {
-      console.error(`❌ Failed to send SMS reminder for order ${order.orderNumber}:`, error);
+      console.error(`❌ Failed to send SMS reminder for order ${orderRef}:`, error);
     }
   }
 }
