@@ -325,13 +325,17 @@ export default function Customers() {
     };
   }, [customers]);
 
-  // Optimized search - use API for complex searches, local filter for simple ones
-  const { data: searchResults = [] } = useQuery<Customer[]>({
-    queryKey: [`/api/customers/search?q=${encodeURIComponent(searchQuery)}`],
-    enabled: searchQuery.length > 2,
-    staleTime: 5 * 60 * 1000, // 5 minutes cache for search results
-    gcTime: 10 * 60 * 1000,
-  });
+  // Client-side search filtering - instant, no API call needed
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter(c =>
+      (c.firstName || '').toLowerCase().includes(q) ||
+      (c.lastName || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.phoneNumber || '').toLowerCase().includes(q)
+    );
+  }, [customers, searchQuery]);
 
   // Mutations - Customer Groups
   const createGroupMutation = useMutation({
@@ -672,8 +676,7 @@ export default function Customers() {
     return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
   };
 
-  const displayedCustomers = searchQuery.length > 2 ? searchResults : customers;
-  const sortedCustomers = displayedCustomers?.sort((a, b) => b.totalSpent - a.totalSpent) || [];
+  const sortedCustomers = [...(searchResults || [])].sort((a, b) => b.totalSpent - a.totalSpent);
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {
