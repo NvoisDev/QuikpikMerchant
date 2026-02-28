@@ -4146,18 +4146,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchCustomers(wholesalerId: string, searchTerm: string): Promise<User[]> {
+    const term = '%' + searchTerm.toLowerCase() + '%';
     const customers = await db.execute(sql`
       SELECT DISTINCT u.*
       FROM users u
-      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
-      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
-      WHERE cg.wholesaler_id = ${wholesalerId}
+      INNER JOIN wholesaler_customer_relationships wcr ON u.id = wcr.customer_id
+      WHERE wcr.wholesaler_id = ${wholesalerId}
+        AND wcr.status = 'active'
+        AND u.archived = false
         AND u.role = 'retailer'
         AND (
-          LOWER(u.first_name) LIKE LOWER(${'%' + searchTerm + '%'}) OR
-          LOWER(u.last_name) LIKE LOWER(${'%' + searchTerm + '%'}) OR
-          LOWER(u.email) LIKE LOWER(${'%' + searchTerm + '%'}) OR
-          u.phone_number LIKE ${'%' + searchTerm + '%'}
+          LOWER(u.first_name) LIKE ${term} OR
+          LOWER(u.last_name) LIKE ${term} OR
+          LOWER(COALESCE(u.email, '')) LIKE ${term} OR
+          COALESCE(u.phone_number, '') LIKE ${'%' + searchTerm + '%'}
         )
       ORDER BY u.first_name ASC
     `);
@@ -4174,7 +4176,11 @@ export class DatabaseStorage implements IStorage {
       postalCode: customer.postal_code,
       country: customer.country,
       createdAt: customer.created_at,
-      role: customer.role
+      role: customer.role,
+      totalSpent: 0,
+      totalOrders: 0,
+      groupNames: [],
+      groupIds: [],
     }));
   }
 

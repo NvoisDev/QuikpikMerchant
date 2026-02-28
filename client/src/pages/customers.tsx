@@ -760,13 +760,6 @@ export default function Customers() {
     });
   }, [customers, mergeSearchQuery]);
 
-  // Memoized filtered customers for main display
-  const filteredCustomers = useMemo(() => {
-    if (searchQuery.length > 2) {
-      return searchResults;
-    }
-    return customers || [];
-  }, [customers, searchResults, searchQuery]);
 
   // Handle customer merge
   const handleMergeCustomers = (primaryCustomer: Customer, duplicates: Customer[]) => {
