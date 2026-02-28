@@ -342,16 +342,19 @@ export default function OrdersFresh() {
   }, []);
 
   const isInitialMount = useRef(true);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
     setIsSearching(true);
-    const timer = setTimeout(() => {
+    searchTimerRef.current = setTimeout(() => {
       loadOrders(1, searchQuery).finally(() => setIsSearching(false));
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
   }, [searchQuery]);
 
   // Load cancellation requests
@@ -1056,6 +1059,13 @@ export default function OrdersFresh() {
             placeholder="Search by name, phone, or order..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                setIsSearching(true);
+                loadOrders(1, searchQuery).finally(() => setIsSearching(false));
+              }
+            }}
             className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
           />
           {isSearching && (
