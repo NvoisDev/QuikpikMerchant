@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -454,7 +455,7 @@ export default function Campaigns() {
   if (campaignsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <ElephantLoader message="Loading campaigns..." />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,8 +165,8 @@ export default function ShippingTracking() {
             <CardContent className="p-0">
               <ScrollArea className="h-[600px]">
                 {isLoading ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Loading orders...
+                  <div className="flex items-center justify-center h-40">
+                    <ElephantLoader message="Loading shipments..." />
                   </div>
                 ) : filteredOrders.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground">

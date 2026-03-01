@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import ElephantLoader from "@/components/ui/elephant-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader, AnimatedCardTitle } from "@/components/ui/animated-card";
 import { Button } from "@/components/ui/button";
@@ -234,17 +235,8 @@ export default function WholesalerDashboard() {
   // Show loading screen while user data is being fetched
   if (!user || statsLoading) {
     return (
-      <div className="p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          <AnalyticsCardSkeleton />
-          <AnalyticsCardSkeleton />
-          <AnalyticsCardSkeleton />
-          <AnalyticsCardSkeleton />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <OrderCardSkeleton />
-          <ProductCardSkeleton />
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <ElephantLoader message="Loading your dashboard..." />
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2 } from "lucide-react";
+import ElephantLoader from "@/components/ui/elephant-loader";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
@@ -932,13 +933,8 @@ export default function OrdersFresh() {
   // Show full-screen loading only on the very first page load (no orders yet)
   if (authLoading || (loading && orders.length === 0 && !searchQuery)) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">Loading orders...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <ElephantLoader message="Loading your orders..." />
       </div>
     );
   }
