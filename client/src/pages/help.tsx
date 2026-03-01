@@ -1420,20 +1420,88 @@ Quick Quote lets you create orders on behalf of a customer directly from the Ord
 
 | Option | What happens |
 |--------|-------------|
-| **Pay Later (0%)** | No Stripe payment link generated. Customer is notified the order is placed and payment will be arranged separately. |
-| **25% / 50% / 75% deposit** | A Stripe payment link is sent to the customer for just the deposit amount. The remaining balance is tracked on the order with a "Balance due by" date (7, 14, or 30 days). |
-| **100% (full payment)** | Full Stripe payment link sent. Order is fully paid upfront. |
+| **Pay Later (0%)** | No Stripe payment link generated. Customer receives an SMS confirming the order is placed — payment is arranged offline separately. |
+| **25% deposit** | Customer pays 25% now via Stripe. Remaining 75% is due by the balance due date you set. |
+| **50% deposit** | Customer pays 50% now via Stripe. Remaining 50% is due by the balance due date you set. |
+| **75% deposit** | Customer pays 75% now via Stripe. Remaining 25% is due by the balance due date you set. |
+| **100% (full payment)** | Full Stripe payment link sent. No outstanding balance — order is fully paid upfront. |
 
-#### After Creating a Quote
-- The quote appears in your Orders list with a quote badge
-- The payment summary shows deposit %, amount paid, and outstanding balance
-- When the customer pays, payment status updates automatically
-- For Pay Later orders, you can manually update payment status when payment is received offline
+#### How Deposits Work — Step by Step
+
+1. **You create the quote** — choose the deposit percentage and the balance due date (7, 14, or 30 days from now)
+2. **Customer receives an SMS** (and email if provided) with a Stripe link to pay the deposit amount only
+3. **Deposit is paid** — the order status updates to "Deposit Paid" and both you and the customer receive a payment confirmation email showing: amount paid, remaining balance, and the due date
+4. **Balance is tracked** — visible in the order detail panel under "Payment Summary" with the exact amount outstanding and the due date
+5. **Automatic reminders** are sent to the customer before and on the due date (see Payment Reminders below)
+6. **Balance is paid** — order moves to "Paid" status and both parties receive a final payment confirmation
+
+#### Balance Due Dates
+
+- Choose **7, 14, or 30 days** at quote creation — the customer sees this date in all reminders
+- The balance due date **cannot be changed** after the quote is sent; create a new quote if needed
+- The due date is displayed on the order card and in the order detail panel
+
+#### Pay Later (0% Deposit)
+
+- No Stripe payment link is generated — the customer is simply notified the order is placed
+- Payment is arranged offline (bank transfer, cash, etc.)
+- When payment is received, open the order and manually update the payment status
+- No automatic reminders are sent for Pay Later orders
 
 #### Tracking Quote Orders
-- Filter your Orders list by quote/non-quote using the filter options
 - Outstanding balances and due dates are visible in each order's payment summary
-- Payment reminder emails are sent automatically for overdue balances
+- The order detail panel shows deposit %, amount paid, remaining balance, and balance due date
+        `
+      },
+      {
+        title: "Payment Reminders",
+        content: `
+### Automatic Payment Reminders
+
+Quikpik automatically contacts customers with outstanding deposit balances — no action needed from you.
+
+#### When Reminders Are Sent
+
+| Timing | Type | Message sent to customer |
+|--------|------|--------------------------|
+| 3 days before due date | Upcoming reminder | Friendly heads-up with the due date and payment link |
+| On the due date | Due today notice | "Payment due today" with payment link |
+| 1 day after due date | Overdue notice | Overdue alert with payment link |
+
+Reminders run once daily at **9 AM**. If a due date falls on a weekend or holiday, the reminder still fires at 9 AM that day.
+
+#### What the Customer Receives
+
+Each reminder includes a personalised SMS (and email if the customer's email is on file) containing:
+- Their first name
+- Your business name
+- The order number (e.g. SF-286)
+- The items they ordered (e.g. 10x Garri)
+- The outstanding amount (e.g. £422.50)
+- The balance due date
+- A payment link
+
+**Example SMS:**
+*Hi Bamidele! Reminder: £422.50 balance due on 7 Mar 2026 for order SF-286 (10x Garri) with Surulere Foods Wholesale. Pay here: https://checkout.stripe.com/...*
+
+#### Payment Links Always Work
+
+Each reminder generates a **brand new Stripe payment link** valid for 7 days — even if the original quote link has long since expired. Customers will always receive a working link regardless of when the quote was created.
+
+#### What Happens When the Customer Pays
+
+- Order status updates automatically to "Paid" (or "Deposit Paid" if only the deposit was paid)
+- You receive a payment notification email with the breakdown
+- The customer receives a payment confirmation email
+- No further reminders are sent once the balance is cleared
+
+#### If a Customer Reports a Broken Link
+
+The previous link may have expired before the next reminder ran. The **next scheduled reminder** (tomorrow at 9 AM at the latest) will include a fresh working link automatically. You can also open the order and resend a quote notification manually from the order detail panel.
+
+#### Pay Later Orders
+
+No reminders are sent for Pay Later (0%) orders — there is no Stripe payment link to send. These are managed manually between you and the customer.
         `
       },
       {
