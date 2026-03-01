@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1605,9 +1606,9 @@ Mike Johnson, 07444 555666`}
         </DialogContent>
       </Dialog>
 
-      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal
         open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
+        onOpenChange={() => setShowUpgradeModal(false)}
       />
     </div>
   );
