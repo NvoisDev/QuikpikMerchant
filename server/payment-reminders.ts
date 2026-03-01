@@ -87,42 +87,39 @@ export async function checkAndSendPaymentReminders() {
   }
 }
 
-async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: string, wholesalerStripeAccountId: string | null | undefined): Promise<string> {
-  if (!stripe || !wholesalerStripeAccountId) return '';
+async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: string): Promise<string> {
+  if (!stripe) return '';
 
   try {
     const outstandingAmount = parseFloat(order.amountOutstanding || '0');
     const amountInPence = Math.round(outstandingAmount * 100);
     const appBase = process.env.APP_URL || 'https://quikpik.app';
 
-    const session = await stripe.checkout.sessions.create(
-      {
-        payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: `Outstanding balance — Order ${order.orderNumber}`,
-              description: `Balance payment to ${businessName}`,
-            },
-            unit_amount: amountInPence,
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'gbp',
+          product_data: {
+            name: `Outstanding balance — Order ${order.orderNumber}`,
+            description: `Balance payment to ${businessName}`,
           },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        success_url: `${appBase}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${appBase}/store/${order.wholesalerId}`,
-        metadata: {
-          orderId: order.id.toString(),
-          orderNumber: order.orderNumber || '',
-          wholesalerId: order.wholesalerId,
-          isBalancePayment: 'true',
+          unit_amount: amountInPence,
         },
-        customer_email: order.customerEmail || undefined,
-        expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${appBase}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appBase}/store/${order.wholesalerId}`,
+      metadata: {
+        orderId: order.id.toString(),
+        orderNumber: order.orderNumber || '',
+        wholesalerId: order.wholesalerId,
+        isBalancePayment: 'true',
       },
-      { stripeAccount: wholesalerStripeAccountId }
-    );
+      customer_email: order.customerEmail || undefined,
+      expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+    });
 
     const freshUrl = session.url || '';
     if (freshUrl) {
@@ -164,14 +161,12 @@ async function sendPaymentReminder(
   const wholesalerResult = await db.select({
     businessName: users.businessName,
     email: users.email,
-    stripeAccountId: users.stripeAccountId,
   })
   .from(users)
   .where(sql`${users.id} = ${order.wholesalerId}`)
   .limit(1);
   
   const businessName = wholesalerResult[0]?.businessName || 'Your supplier';
-  const wholesalerStripeAccountId = wholesalerResult[0]?.stripeAccountId;
   const outstandingAmount = parseFloat(order.amountOutstanding || '0');
   const formattedDueDate = dueDate.toLocaleDateString('en-GB', { 
     day: 'numeric', 
@@ -188,7 +183,7 @@ async function sendPaymentReminder(
     urgency = 'overdue';
   }
 
-  const freshPaymentLink = await getFreshPaymentLink(order, businessName, wholesalerStripeAccountId);
+  const freshPaymentLink = await getFreshPaymentLink(order, businessName);
   const paymentLink = freshPaymentLink || order.stripePaymentLinkUrl || '';
   const itemsSummary = await getItemsSummary(order.id);
   const firstName = order.customerName?.split(' ')[0] || 'there';
