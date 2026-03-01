@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,86 +7,93 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ElephantLoader from "@/components/ui/elephant-loader";
 
-import NotFound from "@/pages/not-found";
-import Login from "@/pages/Login";
-import LandingPage from "@/pages/LandingPage";
-import CustomerLogin from "@/pages/CustomerLogin";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import WholesalerDashboard from "@/pages/wholesaler-dashboard";
-import ProductManagement from "@/pages/product-management";
-import RetailerInterface from "@/pages/retailer-interface";
-import Checkout from "@/pages/checkout";
-import Broadcasts from "@/pages/broadcasts";
-import CustomerGroups from "@/pages/customer-groups";
-import Settings from "@/pages/settings";
-import StripeSuccess from "@/pages/stripe-success";
-import Marketplace from "@/pages/marketplace";
-import Advertising from "@/pages/advertising";
-import AdvertisingPreview from "@/pages/advertising-preview";
-import PublicProductPage from "@/pages/public-product";
-import OrdersFresh from "@/pages/orders-fresh";
-// OrdersDebug removed - using original Orders component
-import Analytics from "@/pages/analytics";
-import Help from "@/pages/help";
-import MessageTemplates from "@/pages/message-templates";
-import Campaigns from "@/pages/campaigns";
-import BusinessPerformance from "@/pages/business-performance";
-import Financials from "@/pages/financials";
-import FinancialHealth from "@/pages/financial-health";
-import CampaignPreview from "@/pages/campaign-preview";
-import ProductOrderPage from "@/pages/product-order-page";
-import CustomerPortal from "@/pages/customer-portal";
-import PaymentSuccess from "@/pages/payment-success";
-import StockAlerts from "@/pages/stock-alerts";
-import TeamManagement from "@/pages/team-management";
-import TeamInvitation from "@/pages/team-invitation";
-import Signup from "@/pages/signup";
-import SignupComplete from "@/pages/signup-complete";
-import WholesalerSelection from "@/pages/WholesalerSelection";
-import AcceptInvitation from "@/pages/AcceptInvitation";
-import ShippingSettings from "@/pages/shipping-settings";
-import ShippingTracking from "@/pages/shipping-tracking";
-import Customers from "@/pages/customers";
-import CustomerRegistrationRequests from "@/pages/customer-registration-requests";
-import AuthSuccess from "@/pages/auth-success";
-import SuperAdmin from "@/pages/super-admin";
-import { LoadingDemo } from "@/pages/loading-demo";
-import { LoadingOverlay } from "@/components/ui/loading-spinner";
-import SubscriptionPricing from "@/pages/SubscriptionPricing";
-import QuickQuote from "@/pages/quick-quote";
-import CustomerDetail from "@/pages/customer-detail";
-import Promotions from "@/pages/promotions";
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Login = lazy(() => import("@/pages/Login"));
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const CustomerLogin = lazy(() => import("@/pages/CustomerLogin"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const WholesalerDashboard = lazy(() => import("@/pages/wholesaler-dashboard"));
+const ProductManagement = lazy(() => import("@/pages/product-management"));
+const RetailerInterface = lazy(() => import("@/pages/retailer-interface"));
+const Checkout = lazy(() => import("@/pages/checkout"));
+const Broadcasts = lazy(() => import("@/pages/broadcasts"));
+const CustomerGroups = lazy(() => import("@/pages/customer-groups"));
+const Settings = lazy(() => import("@/pages/settings"));
+const StripeSuccess = lazy(() => import("@/pages/stripe-success"));
+const Marketplace = lazy(() => import("@/pages/marketplace"));
+const Advertising = lazy(() => import("@/pages/advertising"));
+const AdvertisingPreview = lazy(() => import("@/pages/advertising-preview"));
+const PublicProductPage = lazy(() => import("@/pages/public-product"));
+const OrdersFresh = lazy(() => import("@/pages/orders-fresh"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Help = lazy(() => import("@/pages/help"));
+const MessageTemplates = lazy(() => import("@/pages/message-templates"));
+const Campaigns = lazy(() => import("@/pages/campaigns"));
+const BusinessPerformance = lazy(() => import("@/pages/business-performance"));
+const Financials = lazy(() => import("@/pages/financials"));
+const FinancialHealth = lazy(() => import("@/pages/financial-health"));
+const CampaignPreview = lazy(() => import("@/pages/campaign-preview"));
+const ProductOrderPage = lazy(() => import("@/pages/product-order-page"));
+const CustomerPortal = lazy(() => import("@/pages/customer-portal"));
+const PaymentSuccess = lazy(() => import("@/pages/payment-success"));
+const StockAlerts = lazy(() => import("@/pages/stock-alerts"));
+const TeamManagement = lazy(() => import("@/pages/team-management"));
+const TeamInvitation = lazy(() => import("@/pages/team-invitation"));
+const Signup = lazy(() => import("@/pages/signup"));
+const SignupComplete = lazy(() => import("@/pages/signup-complete"));
+const WholesalerSelection = lazy(() => import("@/pages/WholesalerSelection"));
+const AcceptInvitation = lazy(() => import("@/pages/AcceptInvitation"));
+const ShippingSettings = lazy(() => import("@/pages/shipping-settings"));
+const ShippingTracking = lazy(() => import("@/pages/shipping-tracking"));
+const Customers = lazy(() => import("@/pages/customers"));
+const CustomerRegistrationRequests = lazy(() => import("@/pages/customer-registration-requests"));
+const AuthSuccess = lazy(() => import("@/pages/auth-success"));
+const SuperAdmin = lazy(() => import("@/pages/super-admin"));
+const LoadingDemo = lazy(() => import("@/pages/loading-demo").then(m => ({ default: m.LoadingDemo })));
+const SubscriptionPricing = lazy(() => import("@/pages/SubscriptionPricing"));
+const QuickQuote = lazy(() => import("@/pages/quick-quote"));
+const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
+const Promotions = lazy(() => import("@/pages/promotions"));
 
 import AppLayout from "@/components/layout/app-layout";
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <ElephantLoader message="Loading..." />
+  </div>
+);
 
 // Component for public routes that don't need authentication
 function PublicRoutes() {
   return (
-    <Switch>
-      <Route path="/campaign/:id" component={CampaignPreview} />
-      <Route path="/marketplace/product/:id" component={ProductOrderPage} />
-      <Route path="/product/:slug" component={PublicProductPage} />
-      <Route path="/customer/payment-success" component={PaymentSuccess} />
-      <Route path="/customer/:id" component={CustomerLogin} />
-      <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
-      <Route path="/store/:id" component={CustomerPortal} />
-      <Route path="/team-invitation" component={TeamInvitation} />
-      <Route path="/signup" component={Signup} />
-      <Route path="/signup-complete" component={SignupComplete} />
-      <Route path="/login" component={Login} />
-      <Route path="/forgot-password" component={ForgotPassword} />
-      <Route path="/reset-password" component={ResetPassword} />
-      <Route path="/customer-login" component={CustomerLogin} />
-      <Route path="/advertising-preview" component={AdvertisingPreview} />
-      <Route path="/auth-success" component={AuthSuccess} />
-      <Route path="/select-wholesaler" component={WholesalerSelection} />
-      <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
-      <Route path="/" component={LandingPage} />
-      <Route path="/landing" component={LandingPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/campaign/:id" component={CampaignPreview} />
+        <Route path="/marketplace/product/:id" component={ProductOrderPage} />
+        <Route path="/product/:slug" component={PublicProductPage} />
+        <Route path="/customer/payment-success" component={PaymentSuccess} />
+        <Route path="/customer/:id" component={CustomerLogin} />
+        <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
+        <Route path="/store/:id" component={CustomerPortal} />
+        <Route path="/team-invitation" component={TeamInvitation} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/signup-complete" component={SignupComplete} />
+        <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/customer-login" component={CustomerLogin} />
+        <Route path="/advertising-preview" component={AdvertisingPreview} />
+        <Route path="/auth-success" component={AuthSuccess} />
+        <Route path="/select-wholesaler" component={WholesalerSelection} />
+        <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
+        <Route path="/" component={LandingPage} />
+        <Route path="/landing" component={LandingPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -94,58 +102,63 @@ function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
-    return <LoadingOverlay message="Loading your wholesale platform..." />;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Login />
+      </Suspense>
+    );
   }
 
   return (
     <AppLayout>
-      <Switch>
-        <Route path="/marketplace" component={Marketplace} />
-        <Route path="/advertising" component={Advertising} />
-        {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
-          <>
-            <Route path="/" component={WholesalerDashboard} />
-            <Route path="/dashboard" component={WholesalerDashboard} />
-            <Route path="/products" component={ProductManagement} />
-            <Route path="/promotions" component={Promotions} />
-            <Route path="/customers/:customerId" component={CustomerDetail} />
-            <Route path="/customers" component={Customers} />
-            <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
-            <Route path="/orders" component={OrdersFresh} />
-            <Route path="/analytics" component={Analytics} />
-            <Route path="/business-performance" component={BusinessPerformance} />
-            <Route path="/business-performance/financials" component={Financials} />
-            <Route path="/financials" component={Financials} />
-            <Route path="/financial-health" component={FinancialHealth} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/stripe-success" component={StripeSuccess} />
-            <Route path="/campaigns" component={Campaigns} />
-            {/* Legacy route redirect */}
-            <Route path="/broadcasts" component={Campaigns} />
-            <Route path="/message-templates" component={Campaigns} />
-            <Route path="/stock-alerts" component={StockAlerts} />
-            <Route path="/quick-quote" component={QuickQuote} />
-            <Route path="/team-management" component={TeamManagement} />
-            <Route path="/help" component={Help} />
-            <Route path="/loading-demo" component={LoadingDemo} />
-            <Route path="/subscription-pricing" component={SubscriptionPricing} />
-            <Route path="/preview-store" component={CustomerPortal} />
-            <Route path="/preview-store/:id" component={CustomerPortal} />
-            <Route path="/store/:id" component={CustomerPortal} />
-            <Route path="/super-admin" component={SuperAdmin} />
-          </>
-        ) : (
-          <>
-            <Route path="/" component={RetailerInterface} />
-            <Route path="/checkout" component={Checkout} />
-          </>
-        )}
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/advertising" component={Advertising} />
+          {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
+            <>
+              <Route path="/" component={WholesalerDashboard} />
+              <Route path="/dashboard" component={WholesalerDashboard} />
+              <Route path="/products" component={ProductManagement} />
+              <Route path="/promotions" component={Promotions} />
+              <Route path="/customers/:customerId" component={CustomerDetail} />
+              <Route path="/customers" component={Customers} />
+              <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
+              <Route path="/orders" component={OrdersFresh} />
+              <Route path="/analytics" component={Analytics} />
+              <Route path="/business-performance" component={BusinessPerformance} />
+              <Route path="/business-performance/financials" component={Financials} />
+              <Route path="/financials" component={Financials} />
+              <Route path="/financial-health" component={FinancialHealth} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/stripe-success" component={StripeSuccess} />
+              <Route path="/campaigns" component={Campaigns} />
+              <Route path="/broadcasts" component={Campaigns} />
+              <Route path="/message-templates" component={Campaigns} />
+              <Route path="/stock-alerts" component={StockAlerts} />
+              <Route path="/quick-quote" component={QuickQuote} />
+              <Route path="/team-management" component={TeamManagement} />
+              <Route path="/help" component={Help} />
+              <Route path="/loading-demo" component={LoadingDemo} />
+              <Route path="/subscription-pricing" component={SubscriptionPricing} />
+              <Route path="/preview-store" component={CustomerPortal} />
+              <Route path="/preview-store/:id" component={CustomerPortal} />
+              <Route path="/store/:id" component={CustomerPortal} />
+              <Route path="/super-admin" component={SuperAdmin} />
+            </>
+          ) : (
+            <>
+              <Route path="/" component={RetailerInterface} />
+              <Route path="/checkout" component={Checkout} />
+            </>
+          )}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </AppLayout>
   );
 }
@@ -155,7 +168,6 @@ function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   
   // SECURITY: Block customers from accessing wholesaler dashboard
-  // This is a frontend protection - backend has the primary security
   if (user && (user.role === 'customer' || user.role === 'retailer')) {
     console.log('🚫 Frontend: Customer detected, redirecting to customer portal');
     window.location.href = '/customer-login';
@@ -169,29 +181,21 @@ function Router() {
     );
   }
   
-  // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview', '/forgot-password', '/reset-password'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
-    location.startsWith('/store/') || // Add /store/ routes as public
+    location.startsWith('/store/') ||
     publicRoutes.includes(location);
 
-  // Force landing page to always show LandingPage regardless of auth status
   if (location === '/landing') {
     return <PublicRoutes />;
   }
   
-  // Show loading while checking authentication
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PageLoader />;
   }
   
-  // Handle root path based on authentication status
   if (location === '/') {
     if (isAuthenticated) {
       return <AuthenticatedRoutes />;
@@ -200,7 +204,6 @@ function Router() {
     }
   }
   
-  // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
     return <PublicRoutes />;
   } else {
