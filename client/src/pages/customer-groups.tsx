@@ -112,6 +112,7 @@ export default function CustomerGroups() {
   });
 
   // Fetch subscription status for limit checking
+  const { data: subscriptionStatus } = useQuery({
     queryKey: ["/api/subscription/status"],
     queryFn: async () => {
       const response = await fetch("/api/subscription/status", {
