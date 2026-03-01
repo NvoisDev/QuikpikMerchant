@@ -28,6 +28,7 @@ import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
+import ElephantLoader from "@/components/ui/elephant-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { DynamicTooltip, HelpTooltip, WarningTooltip, FeatureTooltip } from "@/components/ui/dynamic-tooltip";
 import { AnimatedButton } from "@/components/ui/animated-button";
@@ -2355,13 +2356,9 @@ export default function ProductManagement() {
 
           {/* Products Grid/List */}
           {isLoading ? (
-            <LoadingSkeleton 
-              variant="page" 
-              count={6} 
-              showMascot={true}
-              mascotMessage="Loading your product inventory..."
-              className="p-6"
-            />
+            <div className="flex items-center justify-center py-24">
+              <ElephantLoader message="Loading your product inventory..." />
+            </div>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {filteredProducts.map((product: any) => (
