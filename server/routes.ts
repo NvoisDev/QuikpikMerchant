@@ -5277,14 +5277,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 connectAccountStatus === 'error' ? 'Account validation failed' : 'No account'
       });
       
-      // Create unique idempotency key with timestamp to prevent payment intent reuse issues
+      // Create stable idempotency key to prevent duplicate payment intents on simultaneous requests
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
       const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
       const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
       const shippingFlag = shippingInfo?.option === 'delivery' ? 'd' : 'p'; // Include shipping option for different payment intents
-      const timestamp = Date.now().toString().slice(-6); // Add 6-digit timestamp for uniqueness
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}_${timestamp}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
