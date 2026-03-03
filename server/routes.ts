@@ -17902,6 +17902,26 @@ https://quikpik.app`;
             .limit(1);
           const isReturning = previousOrders.length > 0;
 
+          // Validate wholesaler's Stripe Connect account for automatic transfer
+          let quoteUseConnect = false;
+          if (wholesaler.stripeAccountId) {
+            try {
+              const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+              if (connectAccount.charges_enabled && connectAccount.details_submitted) {
+                quoteUseConnect = true;
+                console.log(`✅ Quote Connect account active: ${wholesaler.stripeAccountId}`);
+              } else {
+                console.log(`⚠️ Quote Connect account not ready: ${wholesaler.stripeAccountId}`);
+              }
+            } catch (connectErr: any) {
+              console.error(`❌ Quote Connect account validation failed: ${connectErr.message}`);
+            }
+          }
+
+          // Wholesaler receives subtotal minus 3.3% platform fee; proportional to deposit
+          const wholesalerTotal = subtotal - platformFee;
+          const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
+
           // Create a Stripe Checkout Session with a payment link
           const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -17925,6 +17945,14 @@ https://quikpik.app`;
               const daysValid = balanceDays > 0 ? Math.min(balanceDays + 3, 30) : 1;
               return Math.floor(Date.now() / 1000) + (daysValid * 24 * 60 * 60);
             })(),
+            ...(quoteUseConnect && wholesalerDepositAmount > 0 ? {
+              payment_intent_data: {
+                transfer_data: {
+                  destination: wholesaler.stripeAccountId!,
+                  amount: wholesalerDepositAmount,
+                },
+              },
+            } : {}),
           });
 
           paymentLinkUrl = session.url || '';
@@ -18122,6 +18150,28 @@ https://quikpik.app`;
 
       console.log(`💳 Payment link calculation: status=${order.paymentStatus}, depositPct=${depositPercentage}%, total=${orderTotal}, paid=${amountPaid}, outstanding=${amountOutstanding}, charging=${paymentAmount}`);
 
+      // Validate wholesaler's Stripe Connect account for automatic transfer
+      let balanceLinkUseConnect = false;
+      if (wholesaler?.stripeAccountId) {
+        try {
+          const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+          if (connectAccount.charges_enabled && connectAccount.details_submitted) {
+            balanceLinkUseConnect = true;
+            console.log(`✅ Balance link Connect account active: ${wholesaler.stripeAccountId}`);
+          } else {
+            console.log(`⚠️ Balance link Connect account not ready: ${wholesaler.stripeAccountId}`);
+          }
+        } catch (connectErr: any) {
+          console.error(`❌ Balance link Connect account validation failed: ${connectErr.message}`);
+        }
+      }
+
+      // Wholesaler's proportional cut of this payment (subtotal - 3.3% platform fee, pro-rated)
+      const balanceLinkWholesalerTotal = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+      const balanceLinkTransferAmount = orderTotal > 0
+        ? Math.round(paymentAmount * (balanceLinkWholesalerTotal / orderTotal) * 100)
+        : 0;
+
       // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -18152,6 +18202,14 @@ https://quikpik.app`;
         },
         customer_email: customer?.email || undefined,
         expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+        ...(balanceLinkUseConnect && balanceLinkTransferAmount > 0 ? {
+          payment_intent_data: {
+            transfer_data: {
+              destination: wholesaler!.stripeAccountId!,
+              amount: balanceLinkTransferAmount,
+            },
+          },
+        } : {}),
       });
 
       // Update order with new payment link
@@ -18267,6 +18325,29 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(order.wholesalerId);
       const customer = await storage.getUser(order.retailerId);
 
+      // Validate wholesaler's Stripe Connect account for automatic transfer
+      let customerBalanceUseConnect = false;
+      if (wholesaler?.stripeAccountId) {
+        try {
+          const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+          if (connectAccount.charges_enabled && connectAccount.details_submitted) {
+            customerBalanceUseConnect = true;
+            console.log(`✅ Customer balance link Connect account active: ${wholesaler.stripeAccountId}`);
+          } else {
+            console.log(`⚠️ Customer balance link Connect account not ready: ${wholesaler.stripeAccountId}`);
+          }
+        } catch (connectErr: any) {
+          console.error(`❌ Customer balance link Connect account validation failed: ${connectErr.message}`);
+        }
+      }
+
+      // Wholesaler's proportional cut of this payment (subtotal - 3.3% platform fee, pro-rated)
+      const customerBalanceOrderTotal = parseFloat(order.total || '0');
+      const customerBalanceWholesalerTotal = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+      const customerBalanceTransferAmount = customerBalanceOrderTotal > 0
+        ? Math.round(amountOutstanding * (customerBalanceWholesalerTotal / customerBalanceOrderTotal) * 100)
+        : 0;
+
       // Create Stripe checkout session for remaining balance
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -18297,6 +18378,14 @@ https://quikpik.app`;
         },
         customer_email: customer?.email || undefined,
         expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+        ...(customerBalanceUseConnect && customerBalanceTransferAmount > 0 ? {
+          payment_intent_data: {
+            transfer_data: {
+              destination: wholesaler!.stripeAccountId!,
+              amount: customerBalanceTransferAmount,
+            },
+          },
+        } : {}),
       });
 
       // Update order with new payment link
