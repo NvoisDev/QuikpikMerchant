@@ -17866,9 +17866,12 @@ https://quikpik.app`;
       
       if (stripe && validDepositPercentage > 0) {
         try {
-          // Create line items for Stripe - for deposits, create a single line item for the deposit amount
+          // Create line items for Stripe
+          // Deposits: single line item for the deposit amount (% of total including transaction fee)
+          // Full payment: single line item for the full total (subtotal + transaction fee)
+          // Never map raw item prices — they exclude the customer transaction fee
           const isDeposit = validDepositPercentage < 100;
-          const lineItems = isDeposit 
+          const lineItems = isDeposit
             ? [{
                 price_data: {
                   currency: 'gbp',
@@ -17876,20 +17879,21 @@ https://quikpik.app`;
                     name: `Deposit (${validDepositPercentage}%) - Order ${orderNumber}`,
                     description: `Deposit payment for quote. Full order: £${total.toFixed(2)}. Remaining: £${outstandingAmount.toFixed(2)}`,
                   },
-                  unit_amount: Math.round(depositAmount * 100), // Convert to pence
+                  unit_amount: Math.round(depositAmount * 100),
                 },
                 quantity: 1,
               }]
-            : items.map((item: any) => ({
+            : [{
                 price_data: {
                   currency: 'gbp',
                   product_data: {
-                    name: item.productName,
+                    name: `Order ${orderNumber}`,
+                    description: `Full payment including transaction fee`,
                   },
-                  unit_amount: Math.round(item.customPrice * 100), // Convert to pence
+                  unit_amount: Math.round(total * 100), // total = subtotal + customer transaction fee
                 },
-                quantity: item.quantity,
-              }));
+                quantity: 1,
+              }];
 
           // Check if customer has previous orders with this wholesaler
           const previousOrders = await db.select({ id: orders.id }).from(orders)
