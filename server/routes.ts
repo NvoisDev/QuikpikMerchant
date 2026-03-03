@@ -1101,6 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               amountOutstanding: newOutstanding.toFixed(2),
               paymentStatus: paymentStatus,
               status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+              stripePaymentIntentId: session.payment_intent as string || null, // Save Stripe reference for traceability and refunds
               stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
               stripePaymentLinkId: null,
             })
