@@ -475,7 +475,7 @@ export default function WholesalerDashboard() {
           )}
 
           {/* Stats Cards Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
             <DynamicTooltip 
               content="Your total revenue from all completed orders. This includes all successful payments from customers."
               type="info"
@@ -487,19 +487,19 @@ export default function WholesalerDashboard() {
                 fadeIn={true} 
                 delay={0}
               >
-                <AnimatedCardContent className="p-6">
+                <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/80 text-sm font-medium">Total Revenue</p>
-                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
+                      <p className="text-white/80 text-xs sm:text-sm font-medium">Total Revenue</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(stats as any)?.revenueChange !== undefined 
                           ? `${(stats as any).revenueChange >= 0 ? '+' : ''}${(stats as any).revenueChange.toFixed(1)}% from last month`
                           : 'No change data'}
                       </p>
                     </div>
-                    <div className="bg-white/20 p-3 rounded-full">
-                      <DollarSign className="h-6 w-6" />
+                    <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+                      <DollarSign className="h-4 w-4 sm:h-6 sm:w-6" />
                     </div>
                   </div>
                 </AnimatedCardContent>
@@ -517,19 +517,19 @@ export default function WholesalerDashboard() {
                 fadeIn={true} 
                 delay={100}
               >
-                <AnimatedCardContent className="p-6">
+                <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/80 text-sm font-medium">Total Orders</p>
-                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
+                      <p className="text-white/80 text-xs sm:text-sm font-medium">Total Orders</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(stats as any)?.ordersChange !== undefined 
                           ? `${(stats as any).ordersChange >= 0 ? '+' : ''}${(stats as any).ordersChange.toFixed(1)}% from last month`
                           : 'No change data'}
                       </p>
                     </div>
-                    <div className="bg-white/20 p-3 rounded-full">
-                      <ShoppingCart className="h-6 w-6" />
+                    <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+                      <ShoppingCart className="h-4 w-4 sm:h-6 sm:w-6" />
                     </div>
                   </div>
                 </AnimatedCardContent>
@@ -542,17 +542,17 @@ export default function WholesalerDashboard() {
               placement="top"
             >
               <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/80 text-sm font-medium">Active Products</p>
-                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
+                      <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(alertsData as any)?.count > 0 ? `${(alertsData as any).count} low stock alerts` : 'Stock levels healthy'}
                       </p>
                     </div>
-                    <div className="bg-white/20 p-3 rounded-full">
-                      <Package className="h-6 w-6" />
+                    <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+                      <Package className="h-4 w-4 sm:h-6 sm:w-6" />
                     </div>
                   </div>
                 </CardContent>
@@ -560,15 +560,15 @@ export default function WholesalerDashboard() {
             </DynamicTooltip>
 
             <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white/80 text-sm font-medium">WhatsApp Reach</p>
-                    <p className="text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber((broadcastStats as any)?.recipientsReached || 0)}</p>
+                    <p className="text-white/80 text-xs sm:text-sm font-medium">WhatsApp Reach</p>
+                    <p className="text-xl sm:text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber((broadcastStats as any)?.recipientsReached || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">Customers reached</p>
                   </div>
-                  <div className="bg-white/20 p-3 rounded-full">
-                    <MessageSquare className="h-6 w-6" />
+                  <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+                    <MessageSquare className="h-4 w-4 sm:h-6 sm:w-6" />
                   </div>
                 </div>
               </CardContent>
