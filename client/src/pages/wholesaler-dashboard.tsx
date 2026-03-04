@@ -414,23 +414,6 @@ export default function WholesalerDashboard() {
                 <span className="xs:hidden">Preview</span>
               </AnimatedButton>
             </DynamicTooltip>
-            <DynamicTooltip 
-              content="Copy your customer portal link to share with customers. They can browse and order your products through this link."
-              type="success"
-              placement="bottom"
-            >
-              <Button 
-                size="sm"
-                variant="outline" 
-                onClick={handleShareStore}
-                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
-                title="Copy customer portal link to clipboard"
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">Share Store</span>
-                <span className="xs:hidden">Share</span>
-              </Button>
-            </DynamicTooltip>
           </div>
         </div>
 
