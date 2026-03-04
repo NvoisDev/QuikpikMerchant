@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
@@ -669,6 +670,18 @@ export default function OrdersFresh() {
     } finally {
       setUpdatingOrderId(null);
     }
+  };
+
+  // Quick-open the cancel form from the dropdown (without a full modal fetch)
+  const openCancelForm = (order: Order) => {
+    setSelectedOrder(order);
+    setCancelReasonCategory('');
+    setCancelReason('');
+    setProcessRefund(false);
+    setRestockInventory(true);
+    setSendNotification(true);
+    setReturnItems([]);
+    setShowCancelForm(true);
   };
 
   // Mark order as ready for collection
@@ -1388,26 +1401,55 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {order.status === 'cancelled' ? (
-                          <span className="text-red-600 text-xs">-</span>
-                        ) : order.status !== 'fulfilled' ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            disabled={updatingOrderId === order.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markAsFulfilled(order.id);
-                            }}
-                            className="text-xs"
-                          >
-                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
-                          </Button>
-                        ) : (
+                        {order.status === 'fulfilled' ? (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">
                             <CheckCircle className="w-2 h-2 mr-1" />
                             Fulfilled
                           </Badge>
+                        ) : order.status === 'cancelled' ? (
+                          <span className="text-red-400 text-xs">—</span>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={updatingOrderId === order.id}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-7 w-7 p-0"
+                              >
+                                {updatingOrderId === order.id
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <MoreVertical className="h-3 w-3" />}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              {order.status !== 'ready_for_collection' && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); markReadyForCollection(order.id); }}
+                                  className="text-orange-600 focus:text-orange-700 cursor-pointer"
+                                >
+                                  <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                  Mark Ready
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
+                                className="text-blue-600 focus:text-blue-700 cursor-pointer"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                Mark Fulfilled
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); openCancelForm(order); }}
+                                className="text-red-600 focus:text-red-700 cursor-pointer"
+                              >
+                                <X className="h-3.5 w-3.5 mr-2" />
+                                Cancel Order
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500">
@@ -1496,18 +1538,47 @@ export default function OrdersFresh() {
                       </div>
                       
                       {order.status !== 'fulfilled' && order.status !== 'cancelled' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          disabled={updatingOrderId === order.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsFulfilled(order.id);
-                          }}
-                          className="text-xs w-full"
-                        >
-                          {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={updatingOrderId === order.id}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs w-full flex items-center justify-center gap-1.5"
+                            >
+                              {updatingOrderId === order.id
+                                ? <><Loader2 className="h-3 w-3 animate-spin" /> Updating...</>
+                                : <><MoreVertical className="h-3 w-3" /> Actions</>}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            {order.status !== 'ready_for_collection' && (
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); markReadyForCollection(order.id); }}
+                                className="text-orange-600 focus:text-orange-700 cursor-pointer"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                Mark Ready
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
+                              className="text-blue-600 focus:text-blue-700 cursor-pointer"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                              Mark Fulfilled
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); openCancelForm(order); }}
+                              className="text-red-600 focus:text-red-700 cursor-pointer"
+                            >
+                              <X className="h-3.5 w-3.5 mr-2" />
+                              Cancel Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </CardContent>
                   </Card>
