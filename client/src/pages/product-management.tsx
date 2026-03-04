@@ -2280,9 +2280,6 @@ export default function ProductManagement() {
                   </Form>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-        </div>
 
         {/* Content */}
         <div className="p-8">
@@ -2651,7 +2648,6 @@ export default function ProductManagement() {
           )}
         </DialogContent>
       </Dialog>
-      </div>
     </div>
     </>
   );

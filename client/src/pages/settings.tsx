@@ -1208,6 +1208,7 @@ export default function Settings() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
 
@@ -1400,7 +1401,6 @@ function PaymentTermsSettings({ user }: { user: any }) {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
