@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -461,22 +462,9 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Campaigns</h1>
-            <ContextualHelpBubble
-              topic="campaigns"
-              title="Creating Effective Campaigns"
-              steps={helpContent.campaigns.steps}
-              position="right"
-            />
-          </div>
-          <p className="text-gray-600 mt-1">Create and manage WhatsApp marketing campaigns</p>
-        </div>
-      </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Campaigns" description="Create and manage WhatsApp marketing campaigns" />
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns')}>
@@ -1358,6 +1346,7 @@ export default function Campaigns() {
         reason="broadcast_limit"
         currentPlan={user?.currentPlan || "free"}
       />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -325,15 +326,8 @@ export default function TeamManagement() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Team Management</h1>
-          <p className="text-gray-600 mt-2">
-            Manage team access and permissions for your wholesale platform
-          </p>
-        </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Team" description="Manage team access and permissions">
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogTrigger asChild>
             <Button 
@@ -464,7 +458,8 @@ export default function TeamManagement() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
+      </PageHeader>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       {/* Subscription Status */}
       <Card>
@@ -736,6 +731,7 @@ export default function TeamManagement() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

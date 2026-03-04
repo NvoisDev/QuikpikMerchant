@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
+import PageHeader from "@/components/PageHeader";
 import { subDays, startOfToday } from "date-fns";
 import { 
   BarChart3, 
@@ -155,25 +156,19 @@ export default function Analytics() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics & Reports</h1>
-          <p className="text-gray-600 mt-1">Track your business performance and insights</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <DateRangePicker 
-            value={dateRange} 
-            onChange={setDateRange}
-            className="min-w-48"
-          />
+    <div className="bg-white min-h-screen">
+    <PageHeader title="Analytics & Reports" description="Track your business performance and insights">
+      <DateRangePicker 
+        value={dateRange} 
+        onChange={setDateRange}
+        className="min-w-48"
+      />
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-        </div>
-      </div>
+    </PageHeader>
+    <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6">
 
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
@@ -683,6 +678,7 @@ export default function Analytics() {
           </Card>
         </div>
       )}
+    </div>
     </div>
   );
 }

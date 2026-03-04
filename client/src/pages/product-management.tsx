@@ -34,6 +34,7 @@ import { DynamicTooltip, HelpTooltip, WarningTooltip, FeatureTooltip } from "@/c
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
 import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whimsical-error";
+import PageHeader from "@/components/PageHeader";
 import { FloatingHelp } from "@/components/ui/floating-help";
 
 // Utility function to format numbers with commas
@@ -1263,38 +1264,11 @@ export default function ProductManagement() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
-
-      
-      <div className="flex-1">
-        {/* Top Bar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-          <div className="space-y-4">
-            {/* Header Section */}
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <div className="flex items-center space-x-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Product Management</h1>
-                  <ContextualHelp
-                    context="product-management"
-                    resources={[]}
-                    position="bottom-right"
-                    trigger="text"
-                    className="relative z-10"
-                  />
-                </div>
-                <ContextualHelpBubble
-                  topic="product management"
-                  title="Managing Your Products"
-                  steps={helpContent.productManagement.steps}
-                  position="right"
-                />
-              </div>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your inventory, pricing, and product details.</p>
-            </div>
-            
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Products" description="Manage your inventory, pricing, and product details." />
+      <div className="p-4 sm:p-6 lg:p-8">
             {/* Action Buttons Section */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
               <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <Button 
                   variant="outline" 
@@ -2677,6 +2651,8 @@ export default function ProductManagement() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
+    </div>
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -913,25 +914,22 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0 bg-white min-h-screen">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Customers</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/customer-registration-requests">
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                <UserPlus className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Requests</span>
-              </Button>
-            </Link>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Customers">
+        <Link href="/customer-registration-requests">
+          <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+            <UserPlus className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Requests</span>
+          </Button>
+        </Link>
+        <Button size="sm" className="text-xs sm:text-sm" onClick={() => setIsAddCustomerDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add
+        </Button>
+      </PageHeader>
           <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="text-xs sm:text-sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
+              <span />
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -1034,10 +1032,8 @@ export default function Customers() {
               </Form>
             </DialogContent>
           </Dialog>
-          </div>
-        </div>
-      </div>
 
+      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <Tabs defaultValue="address-book" className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-2 h-auto">
           <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
@@ -2497,6 +2493,7 @@ export default function Customers() {
         isOpen={isInvitationModalOpen}
         onOpenChange={setIsInvitationModalOpen}
       />
+      </div>
     </div>
   );
 }

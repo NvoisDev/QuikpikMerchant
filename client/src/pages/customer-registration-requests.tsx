@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -181,7 +182,9 @@ export default function CustomerRegistrationRequests() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Registration Requests" />
+      <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -480,6 +483,7 @@ export default function CustomerRegistrationRequests() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

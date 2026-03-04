@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -211,12 +212,8 @@ export default function StockAlerts() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Stock Alerts</h1>
-          <p className="text-sm md:text-base text-gray-600">Monitor and manage low stock notifications</p>
-        </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Stock Alerts" description="Monitor and manage low stock notifications">
         
         <div className="flex items-center gap-3 md:gap-4">
           <div className="text-left md:text-right">
@@ -264,8 +261,8 @@ export default function StockAlerts() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
-
+      </PageHeader>
+      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
       {alerts.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
@@ -399,6 +396,7 @@ export default function StockAlerts() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2 } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
+import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
@@ -975,32 +976,27 @@ export default function OrdersFresh() {
   }
 
   return (
+    <div className="bg-white min-h-screen">
+    <PageHeader title="Orders">
+      <span className="text-xs text-gray-500 whitespace-nowrap hidden sm:inline">
+        {statusFilter ? (
+          <>Showing {displayedOrders} {statusFilter}</>
+        ) : (
+          <>Showing {totalOrders} {archiveTab === 'archived' ? 'archived ' : archiveTab === 'all' ? '' : 'active '}orders</>
+        )}
+      </span>
+      <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
+        Refresh
+      </Button>
+      <Link href="/quick-quote">
+        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+          <FileText className="w-4 h-4 mr-1 md:mr-2" />
+          <span className="hidden sm:inline">Quick Quote</span>
+          <span className="sm:hidden">Quote</span>
+        </Button>
+      </Link>
+    </PageHeader>
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      {/* Header - stacks on mobile */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl md:text-2xl font-bold">Orders</h1>
-          <span className="text-xs text-gray-500 whitespace-nowrap">
-            {statusFilter ? (
-              <>Showing {displayedOrders} {statusFilter} ({archiveTab === 'all' ? 'All' : archiveTab === 'archived' ? 'Archived' : 'Active'})</>
-            ) : (
-              <>Showing {totalOrders} {archiveTab === 'all' ? '' : archiveTab === 'archived' ? 'Archived ' : 'Active '}orders</>
-            )}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
-            Refresh
-          </Button>
-          <Link href="/quick-quote">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-              <FileText className="w-4 h-4 mr-1 md:mr-2" />
-              <span className="hidden sm:inline">Quick Quote</span>
-              <span className="sm:hidden">Quote</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
 
       {/* Archive Tabs */}
       <div className="flex border-b border-gray-200">
@@ -2394,6 +2390,7 @@ export default function OrdersFresh() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

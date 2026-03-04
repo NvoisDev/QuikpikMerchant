@@ -8,6 +8,13 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**March 4, 2026 - Consistent Page Headers & Share/Bell Icons:**
+- **SHARED PageHeader COMPONENT**: Created `client/src/components/PageHeader.tsx` with Share2 + Bell (with red badge) icons on every page
+- **ALL WHOLESALER PAGES UPDATED**: Dashboard, Orders, Promotions, Products, Analytics, Customers, Campaigns, Settings, Customer Detail, Customer Registration Requests, Financial Health, Financials, Stock Alerts, Team Management, Business Performance
+- **CONSISTENT WHITE BACKGROUND**: All pages now use `bg-white min-h-screen` root wrapper — no more gray-50 backgrounds
+- **CUSTOMER INSIGHTS**: Added Paid (green) and Unpaid (red) rows to customer detail Insights section, backed by `totalUnpaid` calculated in `getCustomerDetails`
+- **ORDERS PAYMENT FILTER**: Orders page now has Paid/Unpaid dropdown filter using `paymentStatus` query param on `/api/orders-paginated`
+
 **February 24, 2026 - Promotional Pricing System:**
 - **5 PROMOTION TYPES**: Percentage Discount, Fixed Price, Buy X Get Y Free, Bundle Deal, Clearance
 - **AUTO START/END**: Promotions auto-activate and deactivate based on configured start/end dates

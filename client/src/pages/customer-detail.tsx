@@ -43,7 +43,10 @@ import {
   ShieldX,
   UserPlus,
   Users,
+  Share2,
+  Bell,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Customer {
   id: string;
@@ -106,6 +109,23 @@ export default function CustomerDetail() {
   const [match, params] = useRoute("/customers/:customerId");
   const customerId = params?.customerId || "";
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
+
+  const handleShareStore = async () => {
+    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+    const url = `https://quikpik.app/customer/${effectiveUserId}`;
+    const name = user?.businessName || "My Store";
+    if (navigator.share) {
+      try { await navigator.share({ title: name, url }); return; } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Store Link Copied!", description: "Paste it anywhere to share!" });
+    } catch {
+      toast({ title: "Share Store", description: `Copy: ${url}`, duration: 8000 });
+    }
+  };
   const queryClient = useQueryClient();
 
   const [isEditContactOpen, setIsEditContactOpen] = useState(false);
@@ -368,7 +388,21 @@ export default function CustomerDetail() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <DropdownMenu>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative hover:bg-gray-100" onClick={handleShareStore}>
+            <Share2 className="h-5 w-5" />
+          </Button>
+          <a href="/stock-alerts">
+            <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
+              <Bell className="h-5 w-5" />
+              {(alertsData?.count ?? 0) > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {alertsData!.count}
+                </span>
+              )}
+            </Button>
+          </a>
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <MoreHorizontal className="h-5 w-5" />
@@ -470,6 +504,7 @@ export default function CustomerDetail() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex items-start space-x-4">

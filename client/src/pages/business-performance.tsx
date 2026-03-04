@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,13 +129,9 @@ export default function BusinessPerformance() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Business Performance</h1>
-          <p className="text-gray-600 mt-1">Comprehensive analytics and insights for your wholesale business</p>
-        </div>
-      </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Business Performance" description="Comprehensive analytics and insights for your wholesale business" />
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -639,6 +636,7 @@ export default function BusinessPerformance() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

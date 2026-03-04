@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -355,11 +356,9 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account preferences and business settings</p>
-      </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Settings" description="Manage your account preferences and business settings" />
+      <div className="space-y-8 p-4 sm:p-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Settings Navigation */}
@@ -1401,6 +1400,7 @@ function PaymentTermsSettings({ user }: { user: any }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
