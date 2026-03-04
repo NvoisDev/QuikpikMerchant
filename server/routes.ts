@@ -17679,8 +17679,8 @@ https://quikpik.app`;
           const wholesalerTotal = subtotal - platformFee;
           const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
 
-          // Create a Stripe Checkout Session with a payment link
-          const session = await stripe.checkout.sessions.create({
+          // Base session params (no Connect routing) — used as fallback if transfer_data fails
+          const baseSessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
@@ -17702,15 +17702,33 @@ https://quikpik.app`;
               const daysValid = balanceDays > 0 ? Math.min(balanceDays + 3, 30) : 1;
               return Math.floor(Date.now() / 1000) + (daysValid * 24 * 60 * 60);
             })(),
-            ...(quoteUseConnect && wholesalerDepositAmount > 0 ? {
-              payment_intent_data: {
-                transfer_data: {
-                  destination: wholesaler.stripeAccountId!,
-                  amount: wholesalerDepositAmount,
+          };
+
+          // First attempt: with Connect routing (transfer_data)
+          let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>> | null = null;
+          if (quoteUseConnect && wholesalerDepositAmount > 0) {
+            try {
+              session = await stripe.checkout.sessions.create({
+                ...baseSessionParams,
+                payment_intent_data: {
+                  transfer_data: {
+                    destination: wholesaler.stripeAccountId!,
+                    amount: wholesalerDepositAmount,
+                  },
                 },
-              },
-            } : {}),
-          });
+              });
+              console.log(`✅ Quote session created with Connect routing: ${session.id}`);
+            } catch (connectSessionErr: any) {
+              console.error(`❌ Quote session with Connect routing failed — type: ${connectSessionErr.type}, code: ${connectSessionErr.code}, message: ${connectSessionErr.message}`);
+              console.log(`⚠️ Retrying quote session without Connect routing...`);
+            }
+          }
+
+          // Fallback: plain session without Connect routing (payment goes to platform account)
+          if (!session) {
+            session = await stripe.checkout.sessions.create(baseSessionParams);
+            console.log(`✅ Quote session created (no Connect routing): ${session.id}`);
+          }
 
           paymentLinkUrl = session.url || '';
           paymentLinkId = session.id;
@@ -17725,8 +17743,8 @@ https://quikpik.app`;
             })
             .where(eq(orders.id, quoteOrder.id));
 
-        } catch (stripeError) {
-          console.error('❌ Stripe error creating payment link:', stripeError);
+        } catch (stripeError: any) {
+          console.error(`❌ Stripe error creating quote payment link — type: ${stripeError.type}, code: ${stripeError.code}, message: ${stripeError.message}`);
           // Continue without payment link - manual payment can be arranged
         }
       }
