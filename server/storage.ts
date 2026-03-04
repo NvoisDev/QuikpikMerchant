@@ -179,6 +179,7 @@ export interface IStorage {
     orders: Order[];
     totalOrders: number;
     totalSpent: number;
+    totalUnpaid: number;
   }) | undefined>;
   searchCustomers(wholesalerId: string, searchTerm: string): Promise<User[]>;
   bulkUpdateCustomers(customerUpdates: { customerId: string; updates: Partial<User> }[]): Promise<void>;
@@ -4153,11 +4154,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.retailerId, customerId))
       .orderBy(desc(orders.createdAt));
 
-    // Calculate stats (net amount: subtotal - platform fee for paid orders)
+    // Calculate stats (net amount: subtotal - platform fee)
     const paidOrders = customerOrders.filter(order => 
       ['paid', 'fulfilled', 'completed'].includes(order.status)
     );
     const totalSpent = paidOrders.reduce((sum, order) => {
+      const subtotal = parseFloat(order.subtotal || order.total || '0');
+      const platformFee = parseFloat(order.platformFee || '0');
+      return sum + (subtotal - platformFee);
+    }, 0);
+
+    const unpaidOrders = customerOrders.filter(order =>
+      ['pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection'].includes(order.status)
+    );
+    const totalUnpaid = unpaidOrders.reduce((sum, order) => {
       const subtotal = parseFloat(order.subtotal || order.total || '0');
       const platformFee = parseFloat(order.platformFee || '0');
       return sum + (subtotal - platformFee);
@@ -4168,7 +4178,8 @@ export class DatabaseStorage implements IStorage {
       groups: customerGroups.map(cg => cg.group),
       orders: customerOrders,
       totalOrders: customerOrders.length,
-      totalSpent
+      totalSpent,
+      totalUnpaid
     };
   }
 

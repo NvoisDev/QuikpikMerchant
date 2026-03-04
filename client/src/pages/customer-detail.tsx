@@ -61,6 +61,7 @@ interface Customer {
   groupIds: number[];
   totalOrders: number;
   totalSpent: number;
+  totalUnpaid?: number;
   lastOrderDate?: Date;
   createdAt: Date;
 }
@@ -502,6 +503,14 @@ export default function CustomerDetail() {
           <div className="flex items-center justify-between">
             <span className="text-sm">Total spend</span>
             <span className="text-sm font-semibold">{formatCurrency(customer.totalSpent || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Paid</span>
+            <span className="text-sm font-semibold text-green-600">{formatCurrency(customer.totalSpent || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Unpaid</span>
+            <span className="text-sm font-semibold text-red-500">{formatCurrency(customer.totalUnpaid || 0)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Last order</span>
