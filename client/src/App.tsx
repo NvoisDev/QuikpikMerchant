@@ -24,15 +24,12 @@ const CustomerGroups = lazy(() => import("@/pages/customer-groups"));
 const Settings = lazy(() => import("@/pages/settings"));
 const StripeSuccess = lazy(() => import("@/pages/stripe-success"));
 const Marketplace = lazy(() => import("@/pages/marketplace"));
-const Advertising = lazy(() => import("@/pages/advertising"));
-const AdvertisingPreview = lazy(() => import("@/pages/advertising-preview"));
 const PublicProductPage = lazy(() => import("@/pages/public-product"));
 const OrdersFresh = lazy(() => import("@/pages/orders-fresh"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const Help = lazy(() => import("@/pages/help"));
 const MessageTemplates = lazy(() => import("@/pages/message-templates"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
-const BusinessPerformance = lazy(() => import("@/pages/business-performance"));
 const Financials = lazy(() => import("@/pages/financials"));
 const FinancialHealth = lazy(() => import("@/pages/financial-health"));
 const CampaignPreview = lazy(() => import("@/pages/campaign-preview"));
@@ -85,7 +82,6 @@ function PublicRoutes() {
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/customer-login" component={CustomerLogin} />
-        <Route path="/advertising-preview" component={AdvertisingPreview} />
         <Route path="/auth-success" component={AuthSuccess} />
         <Route path="/select-wholesaler" component={WholesalerSelection} />
         <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
@@ -118,7 +114,6 @@ function AuthenticatedRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Switch>
           <Route path="/marketplace" component={Marketplace} />
-          <Route path="/advertising" component={Advertising} />
           {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
             <>
               <Route path="/" component={WholesalerDashboard} />
@@ -130,8 +125,6 @@ function AuthenticatedRoutes() {
               <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
               <Route path="/orders" component={OrdersFresh} />
               <Route path="/analytics" component={Analytics} />
-              <Route path="/business-performance" component={BusinessPerformance} />
-              <Route path="/business-performance/financials" component={Financials} />
               <Route path="/financials" component={Financials} />
               <Route path="/financial-health" component={FinancialHealth} />
               <Route path="/settings" component={Settings} />
@@ -181,7 +174,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/forgot-password', '/reset-password'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 

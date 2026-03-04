@@ -60,7 +60,7 @@ export class SubscriptionService {
           features: [
             "Up to 50 products",
             "Up to 25 broadcasts per month",
-            "Advanced analytics and insights",
+            "Basic dashboard analytics",
             "Priority email support"
           ],
           limits: {
@@ -82,7 +82,6 @@ export class SubscriptionService {
           features: [
             "Unlimited products",
             "Unlimited broadcasts", 
-            "Full business performance analytics",
             "Custom reports and insights",
             "Priority email and phone support"
           ],

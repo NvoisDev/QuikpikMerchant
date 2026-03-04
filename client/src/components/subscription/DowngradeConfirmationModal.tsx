@@ -30,11 +30,9 @@ const getPlanFeatures = (plan: string) => {
       features: [
         "Unlimited products",
         "Unlimited broadcasts",
-        "Full business performance analytics",
         "Custom reports and insights",
         "Priority email and phone support",
-        "B2B Marketplace access",
-        "Advanced advertising tools"
+        "B2B Marketplace access"
       ]
     },
     standard: {
@@ -43,7 +41,7 @@ const getPlanFeatures = (plan: string) => {
       features: [
         "Up to 50 products",
         "Up to 25 broadcasts per month",
-        "Advanced analytics and insights",
+        "Basic dashboard analytics",
         "Priority email support",
         "Team management (3 members)"
       ]

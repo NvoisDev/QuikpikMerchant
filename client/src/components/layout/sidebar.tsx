@@ -29,7 +29,8 @@ import {
   Contact,
   Megaphone,
   Badge,
-  Tag
+  Tag,
+  Puzzle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -42,6 +43,7 @@ interface NavigationItem {
   onboardingId?: string;
   tabName: string;
   premiumOnly?: boolean;
+  comingSoon?: boolean;
 }
 
 const navigation: NavigationItem[] = [
@@ -50,11 +52,9 @@ const navigation: NavigationItem[] = [
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
-
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
-  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, tabName: "analytics", premiumOnly: true },
-  { name: "Advertising", href: "/advertising", icon: Megaphone, tabName: "advertising", premiumOnly: true },
-  { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", premiumOnly: true },
+  { name: "Marketplace", href: "#", icon: Store, tabName: "marketplace", comingSoon: true },
+  { name: "Integrations", href: "/settings?tab=integrations", icon: Puzzle, tabName: "settings" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
@@ -129,30 +129,35 @@ export default function Sidebar() {
         <nav className="mt-6 flex-1 pb-48 overflow-y-auto">
           {navigation.map((item) => {
             const IconComponent = item.icon;
-            const isActive = location === item.href;
+            const isActive = location === item.href && item.href !== "#";
             const isPremiumFeature = item.premiumOnly;
             const isLocked = isPremiumFeature && isFreeUser;
-            const showBeta = isPremiumFeature && isStandardUser;
+            const isComingSoon = item.comingSoon;
             
             return (
-              <Link key={item.name} href={isLocked ? "/subscription-pricing" : item.href}>
+              <Link key={item.name} href={isComingSoon ? "#" : isLocked ? "/subscription-pricing" : item.href}>
                 <div
                   className={cn(
                     "flex items-center justify-between px-6 py-2 text-sm font-medium transition-colors cursor-pointer relative",
                     isActive
                       ? "text-primary bg-blue-50 border-r-4 border-primary"
+                      : isComingSoon
+                      ? "text-gray-400 cursor-default"
                       : isLocked
                       ? "text-gray-400 hover:text-gray-500"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
-                  onClick={() => setIsCollapsed(true)}
+                  onClick={(e) => {
+                    if (isComingSoon) { e.preventDefault(); return; }
+                    setIsCollapsed(true);
+                  }}
                   data-onboarding={item.onboardingId}
                 >
                   <div className="flex items-center flex-1">
                     <IconComponent 
                       className={cn(
                         "mr-3 h-5 w-5 flex-shrink-0",
-                        isActive ? "text-primary" : isLocked ? "text-gray-400" : "text-gray-400"
+                        isActive ? "text-primary" : (isLocked || isComingSoon) ? "text-gray-300" : "text-gray-400"
                       )} 
                     />
                     <span className="flex-1">{item.name}</span>
@@ -160,11 +165,8 @@ export default function Sidebar() {
                   {isLocked && (
                     <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
                   )}
-                  {showBeta && (
-                    <div className="flex items-center space-x-1">
-                      <Badge className="h-3 w-3 text-blue-500" />
-                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">BETA</span>
-                    </div>
+                  {isComingSoon && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Coming Soon</span>
                   )}
                 </div>
               </Link>
