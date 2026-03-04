@@ -4055,6 +4055,7 @@ export class DatabaseStorage implements IStorage {
     groupNames: string[]; 
     totalOrders: number; 
     totalSpent: number; 
+    totalUnpaid: number;
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
@@ -4083,6 +4084,7 @@ export class DatabaseStorage implements IStorage {
           .select({
             totalOrders: count(orders.id),
             totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+            totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
             lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
           })
           .from(orders)
@@ -4104,13 +4106,14 @@ export class DatabaseStorage implements IStorage {
             eq(customerGroups.wholesalerId, wholesalerId)
           ));
 
-        const stats = orderStats[0] || { totalOrders: 0, totalSpent: 0, lastOrderDate: null };
+        const stats = orderStats[0] || { totalOrders: 0, totalSpent: 0, totalUnpaid: 0, lastOrderDate: null };
         
         return {
           ...row.user,
           groupNames: groupMemberships.map(g => g.groupName),
           totalOrders: Number(stats.totalOrders),
           totalSpent: Number(stats.totalSpent),
+          totalUnpaid: Number(stats.totalUnpaid),
           lastOrderDate: stats.lastOrderDate,
           groupIds: groupMemberships.map(g => g.groupId)
         };

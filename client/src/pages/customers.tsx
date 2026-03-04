@@ -52,7 +52,8 @@ import {
   Shield,
   ShieldX,
   UserX,
-  MoreHorizontal
+  MoreHorizontal,
+  Clock
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -168,7 +169,7 @@ interface Customer {
 interface CustomerStats {
   totalCustomers: number;
   activeCustomers: number;
-  newCustomersThisMonth: number;
+  totalUnpaid: number;
   topCustomers: { customerId: string; name: string; totalSpent: number }[];
 }
 
@@ -319,9 +320,7 @@ export default function Customers() {
     return {
       totalCustomers: customers.length,
       activeCustomers: customers.filter(c => c.totalOrders > 0).length,
-      newCustomersThisMonth: customers.filter(c => 
-        new Date(c.createdAt || c.lastOrderDate || 0) >= thisMonth
-      ).length,
+      totalUnpaid: customers.reduce((sum, c) => sum + ((c as any).totalUnpaid || 0), 0),
       totalRevenue: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0)
     };
   }, [customers]);
@@ -1292,11 +1291,11 @@ export default function Customers() {
                   <p className="text-sm font-bold text-orange-600">{stats.activeCustomers}</p>
                 </div>
               </div>
-              <div className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2 flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-yellow-500 shrink-0" />
+              <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-red-500 shrink-0" />
                 <div>
-                  <p className="text-[11px] text-yellow-700">New This Month</p>
-                  <p className="text-sm font-bold text-yellow-600">{stats.newCustomersThisMonth}</p>
+                  <p className="text-[11px] text-red-700">Unpaid</p>
+                  <p className="text-sm font-bold text-red-600">{formatCurrency(stats.totalUnpaid)}</p>
                 </div>
               </div>
             </div>
