@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, Loader2 } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, Loader2, CreditCard, ChevronRight, ArrowLeft } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
@@ -25,6 +25,11 @@ export default function Settings() {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+
+  // Integration marketplace navigation
+  const [integrationView, setIntegrationView] = useState<'categories' | 'list' | 'detail'>('categories');
+  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | null>(null);
+  const [selectedIntegration, setSelectedIntegration] = useState<'whatsapp' | 'stripe' | 'paystack' | null>(null);
 
   // Update active tab when URL changes
   useEffect(() => {
@@ -850,7 +855,7 @@ export default function Settings() {
 
               {activeTab === "integrations" && (
                 <div className="space-y-6">
-                  {/* WhatsApp Setup Modal */}
+                  {/* WhatsApp Setup Modal — always mounted */}
                   <WhatsAppSetupModal 
                     isOpen={showWhatsAppModal}
                     onClose={() => setShowWhatsAppModal(false)}
@@ -858,224 +863,345 @@ export default function Settings() {
                     isSubmitting={isConnectingWhatsApp}
                   />
 
-                  <div>
-                    <h3 className="text-base sm:text-lg font-medium mb-4">Integration Settings</h3>
-                    <p className="text-gray-600 text-sm sm:text-base">Connect your business with WhatsApp and Stripe to streamline operations.</p>
-                  </div>
-                  
-                  {/* WhatsApp Integration - New User Friendly Version */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                      <div className="flex-shrink-0 self-center sm:self-start">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <SiWhatsapp className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
-                        </div>
+                  {/* ── VIEW: CATEGORIES ─────────────────────────────────── */}
+                  {integrationView === 'categories' && (
+                    <div>
+                      <div className="mb-6">
+                        <h3 className="text-base sm:text-lg font-medium mb-1">Integrations</h3>
+                        <p className="text-gray-500 text-sm">Connect your business tools to streamline operations.</p>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
-                          {(whatsappStatus as any)?.isConfigured ? (
-                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
-                              <CheckCircle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Connected</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button
+                          onClick={() => { setSelectedCategory('communication'); setIntegrationView('list'); }}
+                          className="text-left border border-gray-200 rounded-xl p-5 hover:border-green-400 hover:shadow-md transition-all group bg-white"
+                        >
+                          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
+                            <SiWhatsapp className="w-6 h-6 text-green-600" />
+                          </div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Communication</h4>
+                          <p className="text-sm text-gray-500">WhatsApp messaging and notifications</p>
+                          <div className="mt-3 flex items-center text-green-600 text-sm font-medium">
+                            <span>1 integration</span>
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => { setSelectedCategory('payment'); setIntegrationView('list'); }}
+                          className="text-left border border-gray-200 rounded-xl p-5 hover:border-purple-400 hover:shadow-md transition-all group bg-white"
+                        >
+                          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
+                            <CreditCard className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Payments</h4>
+                          <p className="text-sm text-gray-500">Stripe · Paystack payment processing</p>
+                          <div className="mt-3 flex items-center text-purple-600 text-sm font-medium">
+                            <span>2 integrations</span>
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── VIEW: LIST ───────────────────────────────────────── */}
+                  {integrationView === 'list' && (
+                    <div>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+                        <button onClick={() => { setIntegrationView('categories'); setSelectedCategory(null); }} className="hover:text-gray-800 transition-colors">Integrations</button>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                        <span className="text-gray-900 font-medium">{selectedCategory === 'communication' ? 'Communication' : 'Payments'}</span>
+                      </div>
+
+                      {selectedCategory === 'communication' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <button
+                            onClick={() => { setSelectedIntegration('whatsapp'); setIntegrationView('detail'); }}
+                            className="text-left border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-green-300 transition-all bg-white"
+                          >
+                            <div className="bg-[#25D366] h-28 flex items-center justify-center">
+                              <SiWhatsapp className="w-12 h-12 text-white" />
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                              <MessageSquare className="h-3 w-3" />
-                              <span className="text-xs font-medium">Setup Required</span>
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <span className="font-semibold text-gray-900 text-sm">WhatsApp Messaging</span>
+                                {(whatsappStatus as any)?.isConfigured ? (
+                                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
+                                    <CheckCircle className="h-2.5 w-2.5" /> Connected
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
+                                    <AlertCircle className="h-2.5 w-2.5" /> Setup Required
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500">Send campaigns, order updates and promotions via WhatsApp.</p>
+                              <p className="text-xs text-gray-400 mt-2">Communication · Marketing</p>
                             </div>
-                          )}
+                          </button>
                         </div>
-                        
-                        <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                          Send product promotions, order confirmations, and customer communications via WhatsApp.
-                        </p>
-                        
-                        {(whatsappStatus as any)?.isConfigured ? (
-                          // User has configured WhatsApp Business API - show success state
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
-                            <div className="flex items-start gap-3">
-                              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                              <div className="flex-1">
-                                <h5 className="font-medium text-green-900 mb-1">WhatsApp Business API Connected!</h5>
-                                <p className="text-green-800 text-sm mb-2">
-                                  Your WhatsApp Business API is configured and ready to send messages. 
-                                  You can now:
-                                </p>
-                                <ul className="text-green-800 text-sm space-y-1">
-                                  <li>• Send product campaigns to customer groups</li>
-                                  <li>• Notify customers about order updates</li>
-                                  <li>• Share promotional offers directly</li>
-                                </ul>
-                                <div className="mt-3 text-xs text-green-700 bg-green-100 p-2 rounded">
-                                  <p><strong>Phone Number ID:</strong> {(whatsappStatus as any)?.phoneNumberId}</p>
-                                  {(whatsappStatus as any)?.businessName && (
-                                    <p><strong>Business Name:</strong> {(whatsappStatus as any)?.businessName}</p>
-                                  )}
-                                  <p><strong>Access Token:</strong> {(whatsappStatus as any)?.accessToken}</p>
-                                </div>
+                      )}
+
+                      {selectedCategory === 'payment' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <button
+                            onClick={() => { setSelectedIntegration('stripe'); setIntegrationView('detail'); }}
+                            className="text-left border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-purple-300 transition-all bg-white"
+                          >
+                            <div className="bg-[#6772E5] h-28 flex items-center justify-center">
+                              <SiStripe className="w-14 h-14 text-white" />
+                            </div>
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <span className="font-semibold text-gray-900 text-sm">Stripe</span>
+                                {stripeStatus?.accountStatus === 'active' ? (
+                                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"><CheckCircle className="h-2.5 w-2.5" /> Connected</span>
+                                ) : stripeStatus?.accountStatus === 'incomplete_setup' ? (
+                                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"><AlertCircle className="h-2.5 w-2.5" /> Setup Required</span>
+                                ) : stripeStatus?.accountStatus === 'pending_verification' ? (
+                                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"><Clock className="h-2.5 w-2.5" /> Pending</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">Not connected</span>
+                                )}
                               </div>
+                              <p className="text-xs text-gray-500">Accept card payments and route funds directly to your bank account.</p>
+                              <p className="text-xs text-gray-400 mt-2">Payments · UK & Europe</p>
+                            </div>
+                          </button>
+
+                          <div className="text-left border border-gray-200 rounded-xl overflow-hidden bg-white opacity-75">
+                            <div className="bg-[#00C3A5] h-28 flex items-center justify-center">
+                              <span className="text-white font-bold text-2xl tracking-tight">Paystack</span>
+                            </div>
+                            <div className="p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <span className="font-semibold text-gray-900 text-sm">Paystack</span>
+                                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">Coming Soon</span>
+                              </div>
+                              <p className="text-xs text-gray-500">Accept payments from customers across Africa — Nigeria, Ghana and more.</p>
+                              <p className="text-xs text-gray-400 mt-2">Payments · Africa</p>
                             </div>
                           </div>
-                        ) : (
-                          // Not configured - show simple setup options
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
-                            <div className="flex items-start gap-3">
-                              <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
-                              <div className="flex-1">
-                                <h5 className="font-medium text-blue-900 mb-2">Quick Setup Available</h5>
-                                <div className="bg-white border border-blue-200 rounded p-3 mb-3">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span className="font-medium text-blue-900 text-sm">Platform Integration (Recommended)</span>
-                                    <Badge variant="outline" className="text-green-700 border-green-200 text-xs">Click to Activate</Badge>
-                                  </div>
-                                  <p className="text-blue-800 text-sm mb-2">
-                                    ⚡ WhatsApp messaging capability is available - just needs activation for your account.
-                                  </p>
-                                  <p className="text-blue-700 text-xs">
-                                    One-click setup • Uses our managed WhatsApp service • No external accounts needed
-                                  </p>
-                                </div>
-                                
-                                <div className="bg-white border border-blue-200 rounded p-3">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    <span className="font-medium text-blue-900 text-sm">Custom WhatsApp Business API</span>
-                                    <Badge variant="outline" className="text-orange-700 border-orange-200 text-xs">Advanced</Badge>
-                                  </div>
-                                  <p className="text-blue-800 text-sm mb-1">
-                                    Use your own WhatsApp Business API account (requires Meta approval process)
-                                  </p>
-                                  <p className="text-blue-700 text-xs">
-                                    For businesses with specific compliance or branding requirements
-                                  </p>
-                                </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── VIEW: DETAIL ─────────────────────────────────────── */}
+                  {integrationView === 'detail' && (
+                    <div>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+                        <button onClick={() => { setIntegrationView('categories'); setSelectedCategory(null); setSelectedIntegration(null); }} className="hover:text-gray-800 transition-colors">Integrations</button>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                        <button onClick={() => { setIntegrationView('list'); setSelectedIntegration(null); }} className="hover:text-gray-800 transition-colors">{selectedCategory === 'communication' ? 'Communication' : 'Payments'}</button>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                        <span className="text-gray-900 font-medium">
+                          {selectedIntegration === 'whatsapp' ? 'WhatsApp Messaging' : selectedIntegration === 'stripe' ? 'Stripe' : 'Paystack'}
+                        </span>
+                      </div>
+
+                      {/* WhatsApp Detail */}
+                      {selectedIntegration === 'whatsapp' && (
+                        <div className="space-y-6">
+                          <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
+                            <div className="w-20 h-20 bg-[#25D366] rounded-2xl flex items-center justify-center flex-shrink-0">
+                              <SiWhatsapp className="w-10 h-10 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-3 mb-2">
+                                <h3 className="text-xl font-bold text-gray-900">WhatsApp Messaging</h3>
+                                {(whatsappStatus as any)?.isConfigured ? (
+                                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-medium"><CheckCircle className="h-3 w-3" /> Connected</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> Setup Required</span>
+                                )}
                               </div>
+                              <p className="text-gray-500 text-sm">By Meta / WhatsApp</p>
+                              <p className="text-gray-600 text-sm mt-2">Send product promotions, order confirmations, and customer communications directly via WhatsApp. Reach customers where they already are.</p>
                             </div>
                           </div>
-                        )}
-                        
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">Status:</span>
+                          <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 text-center">
+                            <div><p className="text-sm font-semibold text-gray-800">Communication</p><p className="text-xs text-gray-500 mt-0.5">Category</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">Marketing</p><p className="text-xs text-gray-500 mt-0.5">Key function</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">Global</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                             {(whatsappStatus as any)?.isConfigured ? (
-                              <span className="text-green-600 font-medium text-sm">
-                                ✅ Connected via WhatsApp Business API
-                              </span>
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
+                                <div className="flex items-start gap-3">
+                                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                                  <div className="flex-1">
+                                    <h5 className="font-medium text-green-900 mb-1">WhatsApp Business API Connected!</h5>
+                                    <p className="text-green-800 text-sm mb-2">Your WhatsApp Business API is configured and ready to send messages. You can now:</p>
+                                    <ul className="text-green-800 text-sm space-y-1">
+                                      <li>• Send product campaigns to customer groups</li>
+                                      <li>• Notify customers about order updates</li>
+                                      <li>• Share promotional offers directly</li>
+                                    </ul>
+                                    <div className="mt-3 text-xs text-green-700 bg-green-100 p-2 rounded">
+                                      <p><strong>Phone Number ID:</strong> {(whatsappStatus as any)?.phoneNumberId}</p>
+                                      {(whatsappStatus as any)?.businessName && <p><strong>Business Name:</strong> {(whatsappStatus as any)?.businessName}</p>}
+                                      <p><strong>Access Token:</strong> {(whatsappStatus as any)?.accessToken}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             ) : (
-                              <span className="text-blue-600 font-medium text-sm">
-                                ⚡ Ready to configure your WhatsApp Business API
-                              </span>
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
+                                <div className="flex items-start gap-3">
+                                  <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
+                                  <div className="flex-1">
+                                    <h5 className="font-medium text-blue-900 mb-2">Quick Setup Available</h5>
+                                    <div className="bg-white border border-blue-200 rounded p-3 mb-3">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className="font-medium text-blue-900 text-sm">Platform Integration (Recommended)</span>
+                                        <Badge variant="outline" className="text-green-700 border-green-200 text-xs">Click to Activate</Badge>
+                                      </div>
+                                      <p className="text-blue-800 text-sm mb-2">⚡ WhatsApp messaging capability is available — just needs activation for your account.</p>
+                                      <p className="text-blue-700 text-xs">One-click setup · Uses our managed WhatsApp service · No external accounts needed</p>
+                                    </div>
+                                    <div className="bg-white border border-blue-200 rounded p-3">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                        <span className="font-medium text-blue-900 text-sm">Custom WhatsApp Business API</span>
+                                        <Badge variant="outline" className="text-orange-700 border-orange-200 text-xs">Advanced</Badge>
+                                      </div>
+                                      <p className="text-blue-800 text-sm mb-1">Use your own WhatsApp Business API account (requires Meta approval process)</p>
+                                      <p className="text-blue-700 text-xs">For businesses with specific compliance or branding requirements</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             )}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">Status:</span>
+                                {(whatsappStatus as any)?.isConfigured ? (
+                                  <span className="text-green-600 font-medium text-sm">✅ Connected via WhatsApp Business API</span>
+                                ) : (
+                                  <span className="text-blue-600 font-medium text-sm">⚡ Ready to configure your WhatsApp Business API</span>
+                                )}
+                              </div>
+                              <button
+                                onClick={handleWhatsAppConnect}
+                                disabled={isConnectingWhatsApp}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="text-sm">{(whatsappStatus as any)?.isConfigured ? 'Reconfigure WhatsApp' : 'Connect WhatsApp Business API'}</span>
+                                <MessageSquare className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                          <button 
-                            onClick={handleWhatsAppConnect}
-                            disabled={isConnectingWhatsApp}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <span className="text-sm sm:text-base">
-                              {(whatsappStatus as any)?.isConfigured ? 'Reconfigure WhatsApp' : 'Connect WhatsApp Business API'}
-                            </span>
-                            <MessageSquare className="h-4 w-4" />
-                          </button>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                      )}
 
-                  {/* Stripe Integration */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                      <div className="flex-shrink-0 self-center sm:self-start">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <SiStripe className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Stripe Payment Processing</h4>
-                        <p className="text-gray-600 mb-4 text-sm sm:text-base">Accept secure payments and manage subscriptions through Stripe.</p>
-                        
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
-                          <h5 className="font-medium text-purple-900 mb-2 text-sm sm:text-base">Setup Instructions:</h5>
-                          <ol className="list-decimal list-inside text-xs sm:text-sm text-purple-800 space-y-1">
-                            <li>Click "Connect Stripe" below to start the Stripe Connect onboarding process</li>
-                            <li>Complete business verification with Stripe (identity, bank account, business details)</li>
-                            <li>Stripe will verify your information (usually takes 1-2 business days)</li>
-                            <li>Once approved, you'll receive payments directly to your connected bank account</li>
-                            <li>Webhook endpoints are automatically configured: <code className="bg-purple-100 px-1 rounded text-xs break-all">https://quikpik.app/api/webhooks/stripe</code></li>
-                            <li>Test the integration by processing a sample customer order</li>
-                          </ol>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                          <div className="flex items-center space-x-2">
-                            {stripeStatus?.accountStatus === 'active' && (
-                              <>
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                <span className="text-sm text-green-700 font-medium">Connected</span>
-                              </>
-                            )}
-                            {stripeStatus?.accountStatus === 'incomplete_setup' && (
-                              <>
-                                <AlertCircle className="h-4 w-4 text-orange-500" />
-                                <span className="text-sm text-orange-700 font-medium">Setup Required</span>
-                              </>
-                            )}
-                            {stripeStatus?.accountStatus === 'pending_verification' && (
-                              <>
-                                <Clock className="h-4 w-4 text-blue-500" />
-                                <span className="text-sm text-blue-700 font-medium">Pending Verification</span>
-                              </>
-                            )}
-                            {(!stripeStatus?.accountStatus || stripeStatus?.accountStatus === 'not_connected') && (
-                              <>
-                                <AlertCircle className="h-4 w-4 text-gray-500" />
-                                <span className="text-sm text-gray-600">Ready to connect</span>
-                              </>
-                            )}
-                            {stripeStatus?.accountStatus === 'error' && (
-                              <>
-                                <AlertCircle className="h-4 w-4 text-red-500" />
-                                <span className="text-sm text-red-700 font-medium">Setup Error</span>
-                              </>
-                            )}
+                      {/* Stripe Detail */}
+                      {selectedIntegration === 'stripe' && (
+                        <div className="space-y-6">
+                          <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
+                            <div className="w-20 h-20 bg-[#6772E5] rounded-2xl flex items-center justify-center flex-shrink-0">
+                              <SiStripe className="w-10 h-10 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-3 mb-2">
+                                <h3 className="text-xl font-bold text-gray-900">Stripe</h3>
+                                {stripeStatus?.accountStatus === 'active' ? (
+                                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-medium"><CheckCircle className="h-3 w-3" /> Connected</span>
+                                ) : stripeStatus?.accountStatus === 'incomplete_setup' ? (
+                                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> Setup Required</span>
+                                ) : stripeStatus?.accountStatus === 'pending_verification' ? (
+                                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-xs font-medium"><Clock className="h-3 w-3" /> Pending Verification</span>
+                                ) : stripeStatus?.accountStatus === 'error' ? (
+                                  <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> Error</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-medium">Not Connected</span>
+                                )}
+                              </div>
+                              <p className="text-gray-500 text-sm">By Stripe</p>
+                              <p className="text-gray-600 text-sm mt-2">Accept secure card payments and route funds directly to your connected bank account. Payments are processed on your behalf with a 3.3% platform fee.</p>
+                            </div>
                           </div>
-                          <button 
-                            onClick={() => {
-                              // For incomplete setup or new connections, always use Connect flow
-                              if (stripeStatus?.accountStatus === 'active') {
-                                handleStripeDashboard();
-                              } else {
-                                handleStripeConnect();
-                              }
-                            }}
-                            disabled={isConnectingStripe}
-                            className={`px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${
-                              stripeStatus?.accountStatus === 'active' 
-                                ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                            }`}
-                          >
-                            <span className="text-sm sm:text-base">
-                              {isConnectingStripe ? 'Connecting...' : 
-                               stripeStatus?.accountStatus === 'active' ? 'Manage Account' :
-                               stripeStatus?.accountStatus === 'incomplete_setup' ? 'Complete Setup' :
-                               stripeStatus?.accountStatus === 'pending_verification' ? 'View Status' :
-                               'Connect Stripe'}
-                            </span>
-                            {!isConnectingStripe && <ExternalLink className="h-4 w-4" />}
-                          </button>
+                          <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 text-center">
+                            <div><p className="text-sm font-semibold text-gray-800">3.3%</p><p className="text-xs text-gray-500 mt-0.5">Platform fee</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">Payments</p><p className="text-xs text-gray-500 mt-0.5">Category</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">UK & Europe</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
+                              <h5 className="font-medium text-purple-900 mb-2 text-sm sm:text-base">Setup Instructions:</h5>
+                              <ol className="list-decimal list-inside text-xs sm:text-sm text-purple-800 space-y-1">
+                                <li>Click "Connect Stripe" below to start the Stripe Connect onboarding process</li>
+                                <li>Complete business verification with Stripe (identity, bank account, business details)</li>
+                                <li>Stripe will verify your information (usually takes 1–2 business days)</li>
+                                <li>Once approved, you'll receive payments directly to your connected bank account</li>
+                                <li>Webhook endpoints are automatically configured: <code className="bg-purple-100 px-1 rounded text-xs break-all">https://quikpik.app/api/webhooks/stripe</code></li>
+                                <li>Test the integration by processing a sample customer order</li>
+                              </ol>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                {stripeStatus?.accountStatus === 'active' && <><CheckCircle className="h-4 w-4 text-green-500" /><span className="text-sm text-green-700 font-medium">Connected</span></>}
+                                {stripeStatus?.accountStatus === 'incomplete_setup' && <><AlertCircle className="h-4 w-4 text-orange-500" /><span className="text-sm text-orange-700 font-medium">Setup Required</span></>}
+                                {stripeStatus?.accountStatus === 'pending_verification' && <><Clock className="h-4 w-4 text-blue-500" /><span className="text-sm text-blue-700 font-medium">Pending Verification</span></>}
+                                {(!stripeStatus?.accountStatus || stripeStatus?.accountStatus === 'not_connected') && <><AlertCircle className="h-4 w-4 text-gray-500" /><span className="text-sm text-gray-600">Ready to connect</span></>}
+                                {stripeStatus?.accountStatus === 'error' && <><AlertCircle className="h-4 w-4 text-red-500" /><span className="text-sm text-red-700 font-medium">Setup Error</span></>}
+                              </div>
+                              <button
+                                onClick={() => stripeStatus?.accountStatus === 'active' ? handleStripeDashboard() : handleStripeConnect()}
+                                disabled={isConnectingStripe}
+                                className={`px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${stripeStatus?.accountStatus === 'active' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                              >
+                                <span className="text-sm">
+                                  {isConnectingStripe ? 'Connecting...' :
+                                   stripeStatus?.accountStatus === 'active' ? 'Manage Account' :
+                                   stripeStatus?.accountStatus === 'incomplete_setup' ? 'Complete Setup' :
+                                   stripeStatus?.accountStatus === 'pending_verification' ? 'View Status' : 'Connect Stripe'}
+                                </span>
+                                {!isConnectingStripe && <ExternalLink className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                      )}
 
-                  {/* Additional Integrations */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
-                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">Additional Integrations</h4>
-                    <p className="text-gray-600 text-xs sm:text-sm">More integrations like SMS notifications, email marketing, and inventory management will be available soon.</p>
-                  </div>
+                      {/* Paystack Detail */}
+                      {selectedIntegration === 'paystack' && (
+                        <div className="space-y-6">
+                          <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
+                            <div className="w-20 h-20 bg-[#00C3A5] rounded-2xl flex items-center justify-center flex-shrink-0">
+                              <span className="text-white font-bold text-lg leading-none">Pay<br/>stack</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-3 mb-2">
+                                <h3 className="text-xl font-bold text-gray-900">Paystack</h3>
+                                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+                              </div>
+                              <p className="text-gray-500 text-sm">By Paystack (a Stripe company)</p>
+                              <p className="text-gray-600 text-sm mt-2">Accept payments from customers in Nigeria, Ghana, South Africa and across Africa. Supports cards, bank transfers, USSD and mobile money.</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 text-center">
+                            <div><p className="text-sm font-semibold text-gray-800">Payments</p><p className="text-xs text-gray-500 mt-0.5">Category</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">Africa</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
+                            <div><p className="text-sm font-semibold text-gray-800">Cards · Bank · USSD</p><p className="text-xs text-gray-500 mt-0.5">Payment methods</p></div>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+                            <h5 className="font-medium text-gray-800 mb-3">What you'll be able to do:</h5>
+                            <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gray-300" /> Accept Naira, Cedis and other African currencies</li>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gray-300" /> Receive payments via card, bank transfer or USSD</li>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gray-300" /> Automatic payouts to your Nigerian bank account</li>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-gray-300" /> Full order and payment tracking</li>
+                            </ul>
+                            <button disabled className="w-full sm:w-auto px-6 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-medium border border-gray-200">
+                              Connect Paystack — Available Soon
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               )}
             </CardContent>
