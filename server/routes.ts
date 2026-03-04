@@ -3518,9 +3518,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('Products request - Target user ID:', targetUserId);
-      const products = await storage.getProducts(targetUserId);
-      console.log('Products found:', products.length);
-      res.json(products);
+      const productList = await storage.getProducts(targetUserId);
+      console.log('Products found:', productList.length);
+      res.json(productList);
+      // Fire-and-forget: clear stale promo_active flags in DB
+      const staleIds = productList.filter(p => !p.promoActive).map(p => p.id);
+      for (const staleId of staleIds) {
+        db.update(products).set({ promoActive: false, promoPrice: null }).where(eq(products.id, staleId)).catch(() => {});
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });
@@ -9234,7 +9239,37 @@ Write a professional, sales-focused description that highlights the key benefits
         }
         
         // Complete transformation with promotional data
-        const formattedProducts = rows.map(row => ({
+        const formattedProducts = rows.map(row => {
+          let parsedOffers: any[] = [];
+          try {
+            if (!row.promotional_offers) parsedOffers = [];
+            else if (Array.isArray(row.promotional_offers)) parsedOffers = row.promotional_offers;
+            else if (typeof row.promotional_offers === 'string') {
+              const trimmed = row.promotional_offers.trim();
+              if (trimmed && trimmed !== '[]' && trimmed !== 'null') parsedOffers = JSON.parse(trimmed);
+            }
+          } catch { parsedOffers = []; }
+          const now = new Date();
+          const activeOffer = parsedOffers.find((o: any) => {
+            if (!o.isActive) return false;
+            if (o.startDate && new Date(o.startDate) > now) return false;
+            if (o.endDate && new Date(o.endDate) < now) return false;
+            return true;
+          });
+          let livePromoActive = false;
+          let livePromoPrice: string | null = null;
+          if (activeOffer) {
+            livePromoActive = true;
+            const base = parseFloat(row.price || '0');
+            if (activeOffer.type === 'fixed_price' && activeOffer.fixedPrice != null) {
+              livePromoPrice = String(activeOffer.fixedPrice);
+            } else if (activeOffer.type === 'percentage_discount' && activeOffer.discountPercentage != null) {
+              livePromoPrice = String(Math.round(base * (1 - activeOffer.discountPercentage / 100) * 100) / 100);
+            } else if (activeOffer.type === 'clearance' && activeOffer.fixedPrice != null) {
+              livePromoPrice = String(activeOffer.fixedPrice);
+            }
+          }
+          return ({
           id: row.id,
           wholesalerId: row.wholesaler_id,
           name: row.name || '',
@@ -9255,17 +9290,14 @@ Write a professional, sales-focused description that highlights the key benefits
           unitSize: row.unit_size,
           sellingFormat: row.selling_format || 'units',
           deliveryExcluded: row.delivery_excluded === true,
-          // Pallet configuration fields
           unitsPerPallet: row.units_per_pallet,
           palletPrice: row.pallet_price,
           palletMoq: row.pallet_moq,
           palletStock: row.pallet_stock,
           palletWeight: row.pallet_weight,
-          promoPrice: row.promo_price,
-          promoActive: row.promo_active === true,
-          promotionalOffers: row.promotional_offers ? 
-            (typeof row.promotional_offers === 'string' ? 
-              JSON.parse(row.promotional_offers) : row.promotional_offers) : [],
+          promoPrice: livePromoPrice,
+          promoActive: livePromoActive,
+          promotionalOffers: parsedOffers,
           createdAt: row.created_at,
           wholesaler: {
             id: row.wholesaler_id,
@@ -9273,7 +9305,8 @@ Write a professional, sales-focused description that highlights the key benefits
             defaultCurrency: row.currency || 'GBP',
             rating: 4.5
           }
-        }));
+          });
+        });
         
         console.log(`✅ Successfully formatted ${formattedProducts.length} products for customer response`);
         res.json(formattedProducts);

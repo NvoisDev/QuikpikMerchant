@@ -393,6 +393,28 @@ export interface IStorage {
   getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined>;
 }
 
+function resolveLivePromo(offers: any[], basePrice: string): { promoActive: boolean; promoPrice: string | null } {
+  if (!Array.isArray(offers) || offers.length === 0) return { promoActive: false, promoPrice: null };
+  const now = new Date();
+  const activeOffer = offers.find(o => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+    return true;
+  });
+  if (!activeOffer) return { promoActive: false, promoPrice: null };
+  const base = parseFloat(basePrice || '0');
+  let promoPrice: string | null = null;
+  if (activeOffer.type === 'fixed_price' && activeOffer.fixedPrice != null) {
+    promoPrice = String(activeOffer.fixedPrice);
+  } else if (activeOffer.type === 'percentage_discount' && activeOffer.discountPercentage != null) {
+    promoPrice = String(Math.round(base * (1 - activeOffer.discountPercentage / 100) * 100) / 100);
+  } else if (activeOffer.type === 'clearance' && activeOffer.fixedPrice != null) {
+    promoPrice = String(activeOffer.fixedPrice);
+  }
+  return { promoActive: true, promoPrice };
+}
+
 export class DatabaseStorage implements IStorage {
   // Temporary in-memory storage for delivery addresses (due to database size limits)
   private deliveryAddressesStorage = new Map<string, DeliveryAddress[]>();
@@ -674,26 +696,26 @@ export class DatabaseStorage implements IStorage {
       const queryTime = Date.now() - startTime;
       console.log(`⚡ PERFORMANCE: Wholesaler products query: ${result.rows.length} rows in ${queryTime}ms`);
       
-      return result.rows.map(row => ({
+      return result.rows.map(row => {
+        let parsedOffers: any[] = [];
+        try {
+          if (!row.promotional_offers) parsedOffers = [];
+          else if (Array.isArray(row.promotional_offers)) parsedOffers = row.promotional_offers;
+          else if (typeof row.promotional_offers === 'string') {
+            const trimmed = row.promotional_offers.trim();
+            if (trimmed && trimmed !== '[]' && trimmed !== 'null') parsedOffers = JSON.parse(trimmed);
+          }
+        } catch { parsedOffers = []; }
+        const livePromo = resolveLivePromo(parsedOffers, String(row.price));
+        return ({
         id: Number(row.id),
         name: String(row.name),
         wholesalerId: String(row.wholesaler_id),
         description: row.description ? String(row.description) : null,
         price: String(row.price),
-        promoPrice: row.promo_price ? String(row.promo_price) : null,
-        promoActive: Boolean(row.promo_active),
-        promotionalOffers: (() => {
-          try {
-            if (!row.promotional_offers) return [];
-            if (Array.isArray(row.promotional_offers)) return row.promotional_offers;
-            if (typeof row.promotional_offers === 'string') {
-              const trimmed = row.promotional_offers.trim();
-              if (!trimmed || trimmed === '[]' || trimmed === 'null') return [];
-              return JSON.parse(trimmed);
-            }
-            return [];
-          } catch { return []; }
-        })(),
+        promoPrice: livePromo.promoPrice,
+        promoActive: livePromo.promoActive,
+        promotionalOffers: parsedOffers,
         currency: String(row.currency || 'GBP'),
         moq: Number(row.moq || 1),
         stock: Number(row.stock || 0),
@@ -735,7 +757,8 @@ export class DatabaseStorage implements IStorage {
         contentCategory: null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
-      }));
+      });
+      });
     }
     
     // General query optimization for all products
@@ -761,26 +784,26 @@ export class DatabaseStorage implements IStorage {
     const queryTime = Date.now() - startTime;
     console.log(`⚡ PERFORMANCE: All products query: ${result.rows.length} rows in ${queryTime}ms`);
     
-    return result.rows.map(row => ({
+    return result.rows.map(row => {
+      let parsedOffers: any[] = [];
+      try {
+        if (!row.promotional_offers) parsedOffers = [];
+        else if (Array.isArray(row.promotional_offers)) parsedOffers = row.promotional_offers;
+        else if (typeof row.promotional_offers === 'string') {
+          const trimmed = row.promotional_offers.trim();
+          if (trimmed && trimmed !== '[]' && trimmed !== 'null') parsedOffers = JSON.parse(trimmed);
+        }
+      } catch { parsedOffers = []; }
+      const livePromo = resolveLivePromo(parsedOffers, String(row.price));
+      return ({
       id: Number(row.id),
       name: String(row.name),
       wholesalerId: String(row.wholesaler_id),
       description: row.description ? String(row.description) : null,
       price: String(row.price),
-      promoPrice: row.promo_price ? String(row.promo_price) : null,
-      promoActive: Boolean(row.promo_active),
-      promotionalOffers: (() => {
-        try {
-          if (!row.promotional_offers) return [];
-          if (Array.isArray(row.promotional_offers)) return row.promotional_offers;
-          if (typeof row.promotional_offers === 'string') {
-            const trimmed = row.promotional_offers.trim();
-            if (!trimmed || trimmed === '[]' || trimmed === 'null') return [];
-            return JSON.parse(trimmed);
-          }
-          return [];
-        } catch { return []; }
-      })(),
+      promoPrice: livePromo.promoPrice,
+      promoActive: livePromo.promoActive,
+      promotionalOffers: parsedOffers,
       currency: String(row.currency || 'GBP'),
       moq: Number(row.moq || 1),
       stock: Number(row.stock || 0),
@@ -820,7 +843,8 @@ export class DatabaseStorage implements IStorage {
       contentCategory: null,
       createdAt: row.created_at ? new Date(String(row.created_at)) : null,
       updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
-    }));
+    });
+    });
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
