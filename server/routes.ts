@@ -4484,6 +4484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search;
       const customerId = req.query.customerId;
       const archiveTab = req.query.archiveTab || 'active';
+      const paymentStatusParam = req.query.paymentStatus as string | undefined;
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
@@ -4503,6 +4504,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sql`${orders.customerEmail} ILIKE ${searchValue}`,
           sql`${orders.customerPhone} ILIKE ${searchValue}`
         ));
+      }
+      // Payment status filter
+      if (paymentStatusParam === 'paid') {
+        searchConditions.push(eq(orders.paymentStatus, 'paid'));
+      } else if (paymentStatusParam === 'unpaid') {
+        searchConditions.push(sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} NOT IN ('paid'))`);
       }
 
       // Archived = cancelled OR (fulfilled AND paid)

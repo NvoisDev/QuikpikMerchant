@@ -145,6 +145,7 @@ export default function OrdersFresh() {
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [processRefund, setProcessRefund] = useState(true);
@@ -317,7 +318,7 @@ export default function OrdersFresh() {
     }
   });
 
-  const loadOrders = async (page = 1, search = '') => {
+  const loadOrders = async (page = 1, search = '', paymentStatus = '') => {
     setLoading(true);
     setError(null);
     
@@ -325,7 +326,8 @@ export default function OrdersFresh() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: ordersPerPage.toString(),
-        ...(search && { search })
+        ...(search && { search }),
+        ...(paymentStatus && { paymentStatus })
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -360,16 +362,23 @@ export default function OrdersFresh() {
     loadOrders(1, query);
   };
 
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    setCurrentPage(1);
-    const searchTerm = status || searchQuery;
-    loadOrders(1, searchTerm);
+  const handleStatusFilter = (value: string) => {
+    if (value === 'paid' || value === 'unpaid') {
+      setPaymentStatusFilter(value);
+      setStatusFilter('');
+      setCurrentPage(1);
+      loadOrders(1, searchQuery, value);
+    } else {
+      setStatusFilter(value);
+      setPaymentStatusFilter('');
+      setCurrentPage(1);
+      loadOrders(1, value || searchQuery, '');
+    }
   };
 
   const handlePageChange = (newPage: number) => {
     const searchTerm = statusFilter || searchQuery;
-    loadOrders(newPage, searchTerm);
+    loadOrders(newPage, searchTerm, paymentStatusFilter);
   };
 
   // Fetch detailed order information with items
@@ -679,21 +688,28 @@ export default function OrdersFresh() {
         </div>
         <select 
           className="px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          value={statusFilter}
+          value={paymentStatusFilter || statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
         >
-          <option value="">All Status</option>
-          <option value="paid">Paid</option>
-          <option value="fulfilled">Fulfilled</option>
-          <option value="pending">Pending</option>
+          <option value="">All</option>
+          <optgroup label="Payment">
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+          </optgroup>
+          <optgroup label="Order Status">
+            <option value="fulfilled">Fulfilled</option>
+            <option value="pending">Pending</option>
+          </optgroup>
         </select>
-        {(searchQuery || statusFilter) && (
+        {(searchQuery || statusFilter || paymentStatusFilter) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               handleSearch('');
               setStatusFilter('');
+              setPaymentStatusFilter('');
+              loadOrders(1, '', '');
             }}
             className="text-sm"
           >
