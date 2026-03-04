@@ -8279,89 +8279,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hoursDifference = (actualEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
       
       let chartData = [];
-      
+
       if (hoursDifference <= 24) {
-        // Hourly data for single day (only show past hours)
+        // Hourly — today or yesterday
         const currentHour = now.getHours();
         const isToday = actualEndDate.toDateString() === now.toDateString();
         const maxHour = isToday ? currentHour : 23;
-        
+
         for (let hour = 0; hour <= maxHour; hour++) {
           const hourStart = new Date(startDate);
           hourStart.setHours(hour, 0, 0, 0);
           const hourEnd = new Date(startDate);
           hourEnd.setHours(hour, 59, 59, 999);
-          
+
           const hourOrders = orders.filter(order => {
             const orderDate = new Date(order.createdAt || Date.now());
             return orderDate >= hourStart && orderDate <= hourEnd;
           });
-          
-          const revenue = hourOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-          const orderCount = hourOrders.length;
-          
+
           chartData.push({
             name: `${hour}:00`,
-            revenue: Math.round(revenue * 100) / 100,
-            orders: orderCount
+            revenue: Math.round(hourOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            orders: hourOrders.length
           });
         }
       } else if (hoursDifference <= 168) {
-        // Daily data for week
+        // Daily with weekday names — 2 to 7 days
         const daysDiff = Math.ceil(hoursDifference / 24);
         for (let i = 0; i < daysDiff; i++) {
           const dayStart = new Date(startDate);
           dayStart.setDate(startDate.getDate() + i);
           dayStart.setHours(0, 0, 0, 0);
-          
           const dayEnd = new Date(dayStart);
           dayEnd.setHours(23, 59, 59, 999);
-          
-          // Don't include future days
+
           if (dayStart > now) break;
-          
+
           const dayOrders = orders.filter(order => {
             const orderDate = new Date(order.createdAt || Date.now());
             return orderDate >= dayStart && orderDate <= dayEnd;
           });
-          
-          const revenue = dayOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-          const orderCount = dayOrders.length;
-          
+
           chartData.push({
-            name: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            revenue: Math.round(revenue * 100) / 100,
-            orders: orderCount
+            name: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
+            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            orders: dayOrders.length
           });
         }
-      } else {
-        // Weekly data for longer periods
+      } else if (hoursDifference <= 744) {
+        // Daily with date labels — 8 to 31 days
+        const daysDiff = Math.ceil(hoursDifference / 24);
+        for (let i = 0; i < daysDiff; i++) {
+          const dayStart = new Date(startDate);
+          dayStart.setDate(startDate.getDate() + i);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(dayStart);
+          dayEnd.setHours(23, 59, 59, 999);
+
+          if (dayStart > now) break;
+
+          const dayOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt || Date.now());
+            return orderDate >= dayStart && orderDate <= dayEnd;
+          });
+
+          chartData.push({
+            name: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            orders: dayOrders.length
+          });
+        }
+      } else if (hoursDifference <= 2190) {
+        // Weekly buckets with date label — 32 to 90 days
         const weeks = Math.ceil(hoursDifference / (24 * 7));
         for (let i = 0; i < weeks; i++) {
           const weekStart = new Date(startDate);
           weekStart.setDate(startDate.getDate() + (i * 7));
           weekStart.setHours(0, 0, 0, 0);
-          
           const weekEnd = new Date(weekStart);
           weekEnd.setDate(weekStart.getDate() + 6);
           weekEnd.setHours(23, 59, 59, 999);
-          
-          // Don't include future weeks
+
           if (weekStart > now) break;
-          
+
           const weekOrders = orders.filter(order => {
             const orderDate = new Date(order.createdAt || Date.now());
             return orderDate >= weekStart && orderDate <= weekEnd;
           });
-          
-          const revenue = weekOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-          const orderCount = weekOrders.length;
-          
+
           chartData.push({
-            name: `Week ${i + 1}`,
-            revenue: Math.round(revenue * 100) / 100,
-            orders: orderCount
+            name: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            revenue: Math.round(weekOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            orders: weekOrders.length
           });
+        }
+      } else {
+        // Monthly buckets — 90+ days
+        const spanYears = actualEndDate.getFullYear() - startDate.getFullYear();
+        const multiYear = spanYears >= 1;
+        let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+        while (cursor <= actualEndDate) {
+          if (cursor > now) break;
+
+          const monthStart = new Date(cursor);
+          const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+
+          const monthOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt || Date.now());
+            return orderDate >= monthStart && orderDate <= monthEnd;
+          });
+
+          const label = multiYear
+            ? monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+            : monthStart.toLocaleDateString('en-US', { month: 'short' });
+
+          chartData.push({
+            name: label,
+            revenue: Math.round(monthOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            orders: monthOrders.length
+          });
+
+          cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
         }
       }
       
