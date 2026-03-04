@@ -20,7 +20,7 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -2348,7 +2348,7 @@ export default function ProductManagement() {
             <div className="space-y-4">
               {filteredProducts.map((product: any) => (
                 <div key={product.id} className="space-y-3">
-                  <Card className="hover:shadow-md transition-shadow">
+                  <Card className={`hover:shadow-md transition-shadow ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-300' : ''}`}>
                     <CardContent className="p-3 sm:p-6">
                       <div className="flex items-start gap-3 sm:gap-4">
                         <img 
@@ -2363,7 +2363,13 @@ export default function ProductManagement() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+                              <div className="flex items-center gap-1.5">
+                                {product.status === 'locked'
+                                  ? <Lock className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                                  : <LockOpen className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                                }
+                                <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+                              </div>
                               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                 <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
                                   {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
@@ -2383,22 +2389,38 @@ export default function ProductManagement() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem onClick={() => handleEdit(product)}>
+                                <DropdownMenuItem
+                                  onClick={() => !product.status === 'locked' && handleEdit(product)}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
                                   <Pencil className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); }}>
+                                <DropdownMenuItem
+                                  onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); } }}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
                                   <PackagePlus className="h-4 w-4 mr-2" />
                                   Update Stock
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}>
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
                                   {product.status === 'active' ? (
                                     <><ToggleLeft className="h-4 w-4 mr-2" />Set Inactive</>
                                   ) : (
                                     <><ToggleRight className="h-4 w-4 mr-2" />Set Active</>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDuplicate(product)}>
+                                <DropdownMenuItem
+                                  onClick={() => !product.status === 'locked' && handleDuplicate(product)}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
                                   <Copy className="h-4 w-4 mr-2" />
                                   Duplicate
                                 </DropdownMenuItem>

@@ -23,7 +23,9 @@ import {
   Target,
   TrendingUp,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Lock,
+  LockOpen
 } from "lucide-react";
 import { SocialShare } from "@/components/social-share";
 import {
@@ -181,7 +183,7 @@ export default function ProductCard({
 
   return (
     <>
-      <Card className={`hover:shadow-lg transition-shadow duration-200 overflow-hidden ${isLocked ? 'border-orange-300 bg-orange-50/30' : ''}`}>
+      <Card className={`hover:shadow-lg transition-shadow duration-200 overflow-hidden ${isLocked ? 'opacity-60 grayscale border-gray-300 cursor-not-allowed' : ''}`}>
       <div className="relative">
         <img 
           src={
@@ -267,31 +269,44 @@ export default function ProductCard({
             </Badge>
           </div>
         )}
+
+        {/* Padlock Badge — bottom-right */}
+        <div className="absolute bottom-3 right-3">
+          {isLocked ? (
+            <span className="flex items-center gap-1 bg-gray-900/75 text-white text-xs px-2 py-1 rounded-full">
+              <Lock className="h-3 w-3" />
+              Locked
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 bg-green-600/80 text-white text-xs px-2 py-1 rounded-full">
+              <LockOpen className="h-3 w-3" />
+              Active
+            </span>
+          )}
+        </div>
       </div>
 
       <CardContent className="p-6">
-        {/* Locked Product Warning */}
+        {/* Upgrade Plan button for locked products — always clickable */}
         {isLocked && (
-          <div className="mb-4 p-3 bg-orange-100 border border-orange-300 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <span className="text-sm font-medium text-orange-800">Product Locked</span>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-orange-600 border-orange-300 hover:bg-orange-100"
-                onClick={() => window.location.href = '/settings/subscription'}
-              >
-                Upgrade Plan
-              </Button>
-            </div>
-            <p className="text-xs text-orange-700 mt-1">
-              This product is locked due to subscription limits. Upgrade your plan to unlock it.
-            </p>
+          <div className="mb-3 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+              <Lock className="h-3.5 w-3.5" />
+              Locked — plan limit reached
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 border-gray-300 hover:bg-gray-100"
+              onClick={() => window.location.href = '/subscription-pricing'}
+            >
+              Upgrade Plan
+            </Button>
           </div>
         )}
+
+        {/* Content wrapper — pointer-events blocked for locked products */}
+        <div className={isLocked ? 'pointer-events-none' : ''}>
 
         {/* Product Header */}
         <div className="flex items-start justify-between mb-3">
@@ -515,6 +530,8 @@ export default function ProductCard({
             </Button>
           </div>
         </div>
+
+        </div>{/* end pointer-events wrapper */}
       </CardContent>
       </Card>
       
