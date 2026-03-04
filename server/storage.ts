@@ -2407,7 +2407,7 @@ export class DatabaseStorage implements IStorage {
     // Get revenue and order count for the specified date range
     const [revenueStats] = await db
       .select({
-        totalRevenue: sum(orders.total),
+        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         ordersCount: count(orders.id)
       })
       .from(orders)

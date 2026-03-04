@@ -4668,12 +4668,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         order.status === 'pending'
       );
 
-      // Calculate net revenue (total - platform fees) for non-cancelled orders
+      // Calculate net revenue using subtotal for non-cancelled orders
       const revenueOrders = filteredOrders.filter(order => order.status !== 'cancelled');
       const totalRevenue = revenueOrders.reduce((sum, order) => {
-        const total = parseFloat(order.total || '0');
-        const platformFee = parseFloat(order.platformFee || '0');
-        const netAmount = total - platformFee;
+        const netAmount = parseFloat(order.subtotal || order.total || '0');
         return sum + (isNaN(netAmount) ? 0 : netAmount);
       }, 0);
 
@@ -8299,7 +8297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           chartData.push({
             name: `${hour}:00`,
-            revenue: Math.round(hourOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            revenue: Math.round(hourOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total), 0) * 100) / 100,
             orders: hourOrders.length
           });
         }
@@ -8322,7 +8320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           chartData.push({
             name: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
-            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total), 0) * 100) / 100,
             orders: dayOrders.length
           });
         }
@@ -8345,7 +8343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           chartData.push({
             name: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total), 0) * 100) / 100,
             orders: dayOrders.length
           });
         }
@@ -8369,7 +8367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           chartData.push({
             name: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            revenue: Math.round(weekOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            revenue: Math.round(weekOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total), 0) * 100) / 100,
             orders: weekOrders.length
           });
         }
@@ -8396,7 +8394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           chartData.push({
             name: label,
-            revenue: Math.round(monthOrders.reduce((sum, o) => sum + parseFloat(o.total), 0) * 100) / 100,
+            revenue: Math.round(monthOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total), 0) * 100) / 100,
             orders: monthOrders.length
           });
 
