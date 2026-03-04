@@ -51,27 +51,27 @@ export default function InteractiveActionCard({
           <div className="absolute top-1/2 left-1/2 w-0 h-0 bg-white/20 rounded-full transition-all duration-700 group-hover:w-96 group-hover:h-96 group-hover:-translate-x-48 group-hover:-translate-y-48"></div>
         </div>
         
-        <CardContent className="p-6 text-center relative z-10">
+        <CardContent className="p-3 sm:p-6 text-center relative z-10">
           {/* Animated icon container */}
-          <div className={`w-16 h-16 bg-gradient-to-br ${colorClass} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg group-hover:shadow-xl`}>
-            <Icon className="h-8 w-8 text-white group-hover:scale-110 transition-transform duration-300" />
+          <div className={`w-10 h-10 sm:w-16 sm:h-16 bg-gradient-to-br ${colorClass} rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg group-hover:shadow-xl`}>
+            <Icon className="h-5 w-5 sm:h-8 sm:w-8 text-white group-hover:scale-110 transition-transform duration-300" />
           </div>
           
           {/* Animated text */}
-          <h3 className={`font-bold text-lg text-gray-900 mb-2 ${
+          <h3 className={`font-bold text-xs sm:text-lg text-gray-900 mb-1 sm:mb-2 leading-tight ${
             colorName === 'blue' ? 'group-hover:text-blue-700' :
             colorName === 'emerald' ? 'group-hover:text-emerald-700' :
             colorName === 'purple' ? 'group-hover:text-purple-700' : 'group-hover:text-orange-700'
           } transition-colors duration-300`}>{title}</h3>
           
-          <p className={`text-sm text-gray-600 ${
+          <p className={`hidden sm:block text-sm text-gray-600 ${
             colorName === 'blue' ? 'group-hover:text-blue-600' :
             colorName === 'emerald' ? 'group-hover:text-emerald-600' :
             colorName === 'purple' ? 'group-hover:text-purple-600' : 'group-hover:text-orange-600'
           } transition-colors duration-300`}>{description}</p>
           
           {/* Animated metric */}
-          <div className={`mt-3 text-lg font-bold ${
+          <div className={`mt-1 sm:mt-3 text-xs sm:text-lg font-bold ${
             colorName === 'blue' ? 'text-blue-600' :
             colorName === 'emerald' ? 'text-emerald-600' :
             colorName === 'purple' ? 'text-purple-600' : 'text-orange-600'
