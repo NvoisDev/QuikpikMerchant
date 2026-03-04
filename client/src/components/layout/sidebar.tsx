@@ -54,7 +54,7 @@ const navigation: NavigationItem[] = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   { name: "Marketplace", href: "#", icon: Store, tabName: "marketplace", comingSoon: true },
-  { name: "Integrations", href: "/settings?tab=integrations", icon: Puzzle, tabName: "settings" },
+  { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },

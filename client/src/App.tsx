@@ -54,6 +54,7 @@ const SubscriptionPricing = lazy(() => import("@/pages/SubscriptionPricing"));
 const QuickQuote = lazy(() => import("@/pages/quick-quote"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 const Promotions = lazy(() => import("@/pages/promotions"));
+const Integrations = lazy(() => import("@/pages/integrations"));
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -141,6 +142,7 @@ function AuthenticatedRoutes() {
               <Route path="/preview-store" component={CustomerPortal} />
               <Route path="/preview-store/:id" component={CustomerPortal} />
               <Route path="/store/:id" component={CustomerPortal} />
+              <Route path="/integrations" component={Integrations} />
               <Route path="/super-admin" component={SuperAdmin} />
             </>
           ) : (
