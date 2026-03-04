@@ -304,7 +304,7 @@ export default function WholesalerDashboard() {
         {/* Modern Header with Glass Effect */}
         <div className="backdrop-blur-sm bg-white/80 border-gray-200/50 border-b px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
+            <div className="flex flex-row items-start justify-between gap-4">
               <div className="space-y-2" data-onboarding="dashboard-header">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
                   Hello, {user?.firstName || user?.businessName?.split(' ')[0] || 'Wholesaler'} 👋
