@@ -4673,8 +4673,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         order.status === 'pending'
       );
 
-      // Calculate net revenue using subtotal for non-cancelled orders
-      const revenueOrders = filteredOrders.filter(order => order.status !== 'cancelled');
+      // Calculate net revenue using subtotal for non-cancelled/refunded orders
+      const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
       const totalRevenue = revenueOrders.reduce((sum, order) => {
         const netAmount = parseFloat(order.subtotal || order.total || '0') - parseFloat(order.platformFee || '0');
         return sum + (isNaN(netAmount) ? 0 : netAmount);

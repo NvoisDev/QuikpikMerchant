@@ -463,7 +463,7 @@ export default function WholesalerDashboard() {
           {/* Stats Cards Row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
             <DynamicTooltip 
-              content="Your total revenue from all completed orders. This includes all successful payments from customers."
+              content="Your total revenue from all active orders (paid + outstanding). Excludes cancelled orders."
               type="info"
               placement="top"
             >
@@ -476,7 +476,7 @@ export default function WholesalerDashboard() {
                 <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/80 text-xs sm:text-sm font-medium">Total Revenue</p>
+                      <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
                       <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(stats as any)?.revenueChange !== undefined 

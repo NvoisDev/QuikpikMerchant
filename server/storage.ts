@@ -1113,7 +1113,7 @@ export class DatabaseStorage implements IStorage {
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.createdAt} >= ${fromDate}`,
         sql`${orders.createdAt} <= ${toDate}`,
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`
       ))
       .orderBy(desc(orders.createdAt));
     
@@ -2351,7 +2351,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`
       ));
 
     // Get current month stats
@@ -2363,7 +2363,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
         sql`${orders.createdAt} >= ${currentMonthStart}`
       ));
 
@@ -2376,7 +2376,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
         sql`${orders.createdAt} >= ${previousMonthStart} AND ${orders.createdAt} < ${currentMonthStart}`
       ));
 
@@ -2437,7 +2437,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
         sql`${orders.createdAt} >= ${fromDate} AND ${orders.createdAt} <= ${toDate}`
       ));
 
@@ -2487,7 +2487,7 @@ export class DatabaseStorage implements IStorage {
         eq(products.wholesalerId, wholesalerId),
         or(
           isNull(orders.id), // Products with no orders
-          sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+          sql`${orders.status} NOT IN ('cancelled', 'refunded')`
         )
       ))
       .groupBy(products.id)
