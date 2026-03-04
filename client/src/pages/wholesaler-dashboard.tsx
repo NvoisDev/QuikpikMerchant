@@ -758,11 +758,13 @@ export default function WholesalerDashboard() {
                   <p className="text-sm text-gray-600 mt-1">Revenue trends over time</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <DateRangePicker 
-                    value={dateRange} 
-                    onChange={setDateRange}
-                    className="min-w-48"
-                  />
+                  <div className="w-fit">
+                    <DateRangePicker 
+                      value={dateRange} 
+                      onChange={setDateRange}
+                      className="min-w-48"
+                    />
+                  </div>
                   <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-emerald-600">
@@ -831,11 +833,13 @@ export default function WholesalerDashboard() {
                   <p className="text-sm text-gray-600 mt-1">Orders processed over time</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <DateRangePicker 
-                    value={dateRange} 
-                    onChange={setDateRange}
-                    className="min-w-48"
-                  />
+                  <div className="w-fit">
+                    <DateRangePicker 
+                      value={dateRange} 
+                      onChange={setDateRange}
+                      className="min-w-48"
+                    />
+                  </div>
                   <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-blue-600">
