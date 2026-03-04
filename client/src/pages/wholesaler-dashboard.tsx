@@ -757,7 +757,7 @@ export default function WholesalerDashboard() {
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Revenue trends over time</p>
                 </div>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <DateRangePicker 
                     value={dateRange} 
                     onChange={setDateRange}
@@ -830,7 +830,7 @@ export default function WholesalerDashboard() {
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Orders processed over time</p>
                 </div>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <DateRangePicker 
                     value={dateRange} 
                     onChange={setDateRange}
