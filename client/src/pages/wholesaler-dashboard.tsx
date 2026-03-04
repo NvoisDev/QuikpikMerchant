@@ -315,8 +315,11 @@ export default function WholesalerDashboard() {
               </div>
 
               
-              {/* Stock Alerts */}
-              <div className="flex items-center gap-3">
+              {/* Header Icons */}
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="relative hover:bg-gray-100" onClick={handleShareStore}>
+                  <Share2 className="h-5 w-5" />
+                </Button>
                 <Link href="/stock-alerts">
                   <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
                     <Bell className="h-5 w-5" />
