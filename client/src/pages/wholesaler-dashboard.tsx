@@ -13,7 +13,7 @@ import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
@@ -779,7 +779,13 @@ export default function WholesalerDashboard() {
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData || []}>
+                      <AreaChart data={chartData || []}>
+                        <defs>
+                          <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                         <XAxis 
                           dataKey="name" 
@@ -801,15 +807,16 @@ export default function WholesalerDashboard() {
                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                           }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="revenue" 
-                          stroke="#10b981" 
-                          strokeWidth={3}
-                          dot={{ fill: "#10b981", strokeWidth: 2, r: 5 }}
-                          activeDot={{ r: 7, stroke: "#10b981", strokeWidth: 2, fill: '#ffffff' }}
+                        <Area
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          fill="url(#revenueGradient)"
+                          dot={false}
+                          activeDot={{ r: 6, stroke: "#10b981", strokeWidth: 2, fill: '#ffffff' }}
                         />
-                      </LineChart>
+                      </AreaChart>
                     </ResponsiveContainer>
                   )}
                 </div>
