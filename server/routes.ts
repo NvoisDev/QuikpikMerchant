@@ -17697,11 +17697,7 @@ https://quikpik.app`;
               totalAmount: total.toFixed(2),
             },
             customer_email: customer.email || undefined,
-            expires_at: (() => {
-              const balanceDays = validDepositPercentage < 100 ? (quoteOrder.balanceDueDays || 0) : 0;
-              const daysValid = balanceDays > 0 ? Math.min(balanceDays + 3, 30) : 1;
-              return Math.floor(Date.now() / 1000) + (daysValid * 24 * 60 * 60);
-            })(),
+            expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // Stripe max is 24 hours
           };
 
           // First attempt: with Connect routing (transfer_data)
