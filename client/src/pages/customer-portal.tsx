@@ -741,7 +741,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
               ) : (
                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
               )}
-              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.subtotal || order.total))}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal))}</span>
               {order.items && order.items.length > 0 && (
                 <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
               )}
