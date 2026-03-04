@@ -752,18 +752,18 @@ export default function WholesalerDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Sales Performance Chart */}
             <Card className="bg-white border-gray-200 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardHeader className="flex flex-col gap-3">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Revenue trends over time</p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center justify-between gap-4">
                   <DateRangePicker 
                     value={dateRange} 
                     onChange={setDateRange}
                     className="min-w-48"
                   />
-                  <div className="text-right">
+                  <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-emerald-600">
                       {chartLoading ? '...' : formatCurrency((chartData as any[])?.reduce((sum: number, d: any) => sum + (d.revenue || 0), 0) || 0)}
@@ -825,18 +825,18 @@ export default function WholesalerDashboard() {
 
             {/* Orders Chart */}
             <Card className="bg-white border-gray-200 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardHeader className="flex flex-col gap-3">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Orders processed over time</p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center justify-between gap-4">
                   <DateRangePicker 
                     value={dateRange} 
                     onChange={setDateRange}
                     className="min-w-48"
                   />
-                  <div className="text-right">
+                  <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-blue-600">
                       {chartLoading ? '...' : ((chartData as any[])?.reduce((sum: number, d: any) => sum + (d.orders || 0), 0) || 0)} orders
