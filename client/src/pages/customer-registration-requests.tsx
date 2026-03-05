@@ -74,7 +74,7 @@ export default function CustomerRegistrationRequests() {
   const { toast } = useToast();
   const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
   const [responseMessage, setResponseMessage] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("none");
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -141,7 +141,7 @@ export default function CustomerRegistrationRequests() {
       requestId: selectedRequest.id,
       action: 'approve',
       responseMessage: responseMessage || undefined,
-      customerGroupId: selectedGroupId ? parseInt(selectedGroupId) : undefined,
+      customerGroupId: selectedGroupId && selectedGroupId !== "none" ? parseInt(selectedGroupId) : undefined,
     });
   };
 
@@ -370,7 +370,7 @@ export default function CustomerRegistrationRequests() {
                                 <SelectValue placeholder="Select a customer group" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">No group</SelectItem>
+                                <SelectItem value="none">No group</SelectItem>
                                 {customerGroups.map((group) => (
                                   <SelectItem key={group.id} value={group.id.toString()}>
                                     <div className="flex items-center">
