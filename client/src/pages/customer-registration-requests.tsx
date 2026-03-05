@@ -201,7 +201,10 @@ export default function CustomerRegistrationRequests() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Customer Registration Requests</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">
+                <span className="sm:hidden">Registration Requests</span>
+                <span className="hidden sm:inline">Customer Registration Requests</span>
+              </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
                 Review and approve customer access requests
               </p>
@@ -230,35 +233,35 @@ export default function CustomerRegistrationRequests() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="flex items-center p-6">
-            <Clock className="h-8 w-8 text-amber-500 mr-4" />
+          <CardContent className="flex items-center p-3 sm:p-6">
+            <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-amber-500 mr-2 sm:mr-4 flex-shrink-0" />
             <div>
-              <p className="text-2xl font-bold">{pendingRequests.length}</p>
-              <p className="text-sm text-muted-foreground">Pending Requests</p>
+              <p className="text-lg sm:text-2xl font-bold">{pendingRequests.length}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Pending</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center p-6">
-            <CheckCircle className="h-8 w-8 text-green-500 mr-4" />
+          <CardContent className="flex items-center p-3 sm:p-6">
+            <CheckCircle className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 mr-2 sm:mr-4 flex-shrink-0" />
             <div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg sm:text-2xl font-bold">
                 {processedRequests.filter(r => r.status === 'approved').length}
               </p>
-              <p className="text-sm text-muted-foreground">Approved</p>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Approved</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center p-6">
-            <XCircle className="h-8 w-8 text-red-500 mr-4" />
+          <CardContent className="flex items-center p-3 sm:p-6">
+            <XCircle className="h-5 w-5 sm:h-8 sm:w-8 text-red-500 mr-2 sm:mr-4 flex-shrink-0" />
             <div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg sm:text-2xl font-bold">
                 {processedRequests.filter(r => r.status === 'rejected').length}
               </p>
-              <p className="text-sm text-muted-foreground">Rejected</p>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Rejected</p>
             </div>
           </CardContent>
         </Card>
@@ -455,61 +458,65 @@ export default function CustomerRegistrationRequests() {
           <CardContent>
             <div className="space-y-3">
               {processedRequests.slice(0, 10).map((request) => (
-                <div key={request.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div className="flex items-center space-x-3">
-                    {request.status === 'approved' ? (
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    )}
-                    <div>
+                <div key={request.id} className="py-3 border-b last:border-0 space-y-1.5">
+                  {/* Row 1: icon + name + badge */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {request.status === 'approved' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      )}
                       <p className="font-medium">{request.customerName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {request.customerPhone}
-                        {request.respondedAt ? ` • ${format(new Date(request.respondedAt), 'MMM d')}` : ''}
-                      </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
+                    <Badge variant={request.status === 'approved' ? 'default' : 'destructive'} className="text-xs">
                       {request.status}
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 px-2 text-gray-500 hover:text-gray-800"
-                      onClick={() => setViewingRequest(request)}
-                    >
-                      View
-                    </Button>
-                    {request.status === 'rejected' && (
+                  </div>
+                  {/* Row 2: phone/date + action buttons */}
+                  <div className="flex items-center justify-between pl-6">
+                    <p className="text-xs text-muted-foreground">
+                      {request.customerPhone}
+                      {request.respondedAt ? ` • ${format(new Date(request.respondedAt), 'MMM d')}` : ''}
+                    </p>
+                    <div className="flex items-center gap-1.5">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="text-xs h-7 px-2 text-green-600 border-green-300 hover:bg-green-50"
-                        disabled={respondToRequestMutation.isPending}
-                        onClick={() => respondToRequestMutation.mutate({
-                          requestId: request.id,
-                          action: 'approve',
-                        })}
+                        variant="ghost"
+                        className="text-xs h-7 px-2 text-gray-500 hover:text-gray-800"
+                        onClick={() => setViewingRequest(request)}
                       >
-                        Re-approve
+                        View
                       </Button>
-                    )}
-                    {request.status === 'approved' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7 px-2 text-red-600 border-red-300 hover:bg-red-50"
-                        disabled={respondToRequestMutation.isPending}
-                        onClick={() => respondToRequestMutation.mutate({
-                          requestId: request.id,
-                          action: 'reject',
-                        })}
-                      >
-                        Revoke
-                      </Button>
-                    )}
+                      {request.status === 'rejected' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 px-2 text-green-600 border-green-300 hover:bg-green-50"
+                          disabled={respondToRequestMutation.isPending}
+                          onClick={() => respondToRequestMutation.mutate({
+                            requestId: request.id,
+                            action: 'approve',
+                          })}
+                        >
+                          Re-approve
+                        </Button>
+                      )}
+                      {request.status === 'approved' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 px-2 text-red-600 border-red-300 hover:bg-red-50"
+                          disabled={respondToRequestMutation.isPending}
+                          onClick={() => respondToRequestMutation.mutate({
+                            requestId: request.id,
+                            action: 'reject',
+                          })}
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
