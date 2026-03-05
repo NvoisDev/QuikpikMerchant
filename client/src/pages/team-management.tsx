@@ -48,10 +48,10 @@ type TeamMemberFormData = z.infer<typeof teamMemberSchema>;
 
 function getTeamLimit(tier: string): number {
   switch (tier) {
-    case 'free': return 0;
-    case 'standard': return 2;
-    case 'premium': return 5;
-    default: return 5; // Default to premium limit
+    case 'free': return 1;
+    case 'standard': return 3;
+    case 'premium': return -1;
+    default: return -1;
   }
 }
 
@@ -202,7 +202,7 @@ export default function TeamManagement() {
   // Using premium tier as default
   const teamLimit = getTeamLimit(simpleTier);
   const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
-  const canAddMembers = currentTeamCount < teamLimit;
+  const canAddMembers = teamLimit === -1 || currentTeamCount < teamLimit;
 
   const handleInviteMember = (data: TeamMemberFormData) => {
     if (!canAddMembers) {
@@ -265,7 +265,7 @@ export default function TeamManagement() {
             <div className="bg-yellow-50 p-4 rounded-lg mb-6">
               <h3 className="font-semibold text-yellow-800 mb-2">Premium Plan includes:</h3>
               <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• Up to 5 team members</li>
+                <li>• Unlimited team members</li>
                 <li>• Custom role permissions</li>
                 <li>• Team invitation management</li>
                 <li>• Advanced access controls</li>
