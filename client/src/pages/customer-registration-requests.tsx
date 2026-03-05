@@ -158,16 +158,18 @@ export default function CustomerRegistrationRequests() {
   };
 
   // Filter requests based on search query - ensure requests is an array
-  const filteredRequests = (requests || []).filter(req => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      req.customerName?.toLowerCase().includes(query) ||
-      req.businessName?.toLowerCase().includes(query) ||
-      req.customerPhone?.includes(query) ||
-      req.customerEmail?.toLowerCase().includes(query)
-    );
-  });
+  const filteredRequests = (requests || [])
+    .filter(req => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        req.customerName?.toLowerCase().includes(query) ||
+        req.businessName?.toLowerCase().includes(query) ||
+        req.customerPhone?.includes(query) ||
+        req.customerEmail?.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''));
 
   const pendingRequests = (filteredRequests || []).filter(req => req.status === 'pending');
   const processedRequests = (filteredRequests || []).filter(req => req.status !== 'pending');
