@@ -677,7 +677,7 @@ export default function Customers() {
     return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
   };
 
-  const sortedCustomers = [...(searchResults || [])].sort((a, b) => b.totalSpent - a.totalSpent);
+  const sortedCustomers = [...(searchResults || [])].sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {
