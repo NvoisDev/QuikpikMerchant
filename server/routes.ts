@@ -8,7 +8,7 @@ import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
 import { validatePassword } from "./passwordUtils";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -2100,7 +2100,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
-        
+
+        // Create wholesaler-customer relationship so they appear in the Customers tab
+        await db.insert(wholesalerCustomerRelationships).values({
+          customerId: newCustomer.id,
+          wholesalerId: userId,
+          status: 'active',
+        });
+        console.log(`✅ Created wholesaler-customer relationship for ${newCustomer.id}`);
+
         if (customerGroupId && customerGroupId > 0) {
           try {
             await storage.addCustomerToGroup(customerGroupId, newCustomer.id);

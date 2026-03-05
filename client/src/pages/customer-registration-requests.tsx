@@ -77,6 +77,7 @@ export default function CustomerRegistrationRequests() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("none");
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewingRequest, setViewingRequest] = useState<RegistrationRequest | null>(null);
 
   // Fetch registration requests
   const { data: requests = [], isLoading, refetch } = useQuery<RegistrationRequest[]>({
@@ -479,6 +480,14 @@ export default function CustomerRegistrationRequests() {
                     <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
                       {request.status}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-7 px-2 text-gray-500 hover:text-gray-800"
+                      onClick={() => setViewingRequest(request)}
+                    >
+                      View
+                    </Button>
                     {request.status === 'rejected' && (
                       <Button
                         size="sm"
@@ -502,5 +511,112 @@ export default function CustomerRegistrationRequests() {
       )}
       </div>
     </div>
+
+    {/* View Full Details Dialog */}
+    <Dialog open={!!viewingRequest} onOpenChange={(open) => !open && setViewingRequest(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {viewingRequest?.status === 'approved' ? (
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-500" />
+            )}
+            Registration Details
+          </DialogTitle>
+          <DialogDescription>
+            Full information submitted with this registration request
+          </DialogDescription>
+        </DialogHeader>
+
+        {viewingRequest && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Status</span>
+              <Badge variant={viewingRequest.status === 'approved' ? 'default' : 'destructive'}>
+                {viewingRequest.status}
+              </Badge>
+            </div>
+
+            <div className="space-y-3 border-t pt-3">
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500">Full Name</p>
+                  <p className="text-sm font-medium">{viewingRequest.customerName}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Phone className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500">Phone Number</p>
+                  <p className="text-sm font-medium">{viewingRequest.customerPhone}</p>
+                </div>
+              </div>
+
+              {viewingRequest.customerEmail && (
+                <div className="flex items-start gap-3">
+                  <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-sm font-medium">{viewingRequest.customerEmail}</p>
+                  </div>
+                </div>
+              )}
+
+              {viewingRequest.businessName && (
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Business Name</p>
+                    <p className="text-sm font-medium">{viewingRequest.businessName}</p>
+                  </div>
+                </div>
+              )}
+
+              {viewingRequest.requestMessage && (
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Their Message</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingRequest.requestMessage}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {viewingRequest.responseMessage && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
+                <p className="text-xs font-medium text-gray-500">Your Response</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingRequest.responseMessage}</p>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-400 border-t pt-2">
+              Requested {format(new Date(viewingRequest.requestedAt), 'MMM d, yyyy')}
+              {viewingRequest.respondedAt && ` • Responded ${format(new Date(viewingRequest.respondedAt), 'MMM d, yyyy')}`}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          {viewingRequest?.status === 'rejected' && (
+            <Button
+              variant="outline"
+              className="text-green-600 border-green-300 hover:bg-green-50"
+              disabled={respondToRequestMutation.isPending}
+              onClick={() => {
+                respondToRequestMutation.mutate({ requestId: viewingRequest!.id, action: 'approve' });
+                setViewingRequest(null);
+              }}
+            >
+              Re-approve this customer
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setViewingRequest(null)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
