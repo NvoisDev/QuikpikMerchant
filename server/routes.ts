@@ -3569,10 +3569,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Let the schema handle all transformations
+      const wholesalerUser = await storage.getUser(targetUserId);
+      const defaultThreshold = wholesalerUser?.defaultLowStockThreshold ?? 50;
+
       const productData = insertProductSchema.parse({
         ...req.body,
-        wholesalerId: targetUserId
+        wholesalerId: targetUserId,
+        lowStockThreshold: req.body.lowStockThreshold ?? defaultThreshold,
       });
       const product = await storage.createProduct(productData);
       res.json(product);

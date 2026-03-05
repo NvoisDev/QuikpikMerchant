@@ -236,7 +236,7 @@ export default function ProductManagement() {
       palletMoq: "",
       palletStock: "",
       palletWeight: "",
-      lowStockThreshold: "",
+      lowStockThreshold: String(user?.defaultLowStockThreshold || 50),
       shelfLife: "",
       unit: "units",
       sellingFormat: "units" as "units" | "pallets" | "both",
@@ -683,7 +683,7 @@ export default function ProductManagement() {
         palletMoq: data.palletMoq && data.palletMoq !== "" ? parseInt(data.palletMoq) : null,
         palletStock: data.palletStock && data.palletStock !== "" ? parseInt(data.palletStock) : null,
         palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
-        lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
+        lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
         // Include promotional offers
         promotionalOffers: data.promotionalOffers || [],
@@ -731,7 +731,7 @@ export default function ProductManagement() {
         palletMoq: productData.palletMoq && productData.palletMoq !== "" ? parseInt(productData.palletMoq) : null,
         palletStock: productData.palletStock && productData.palletStock !== "" ? parseInt(productData.palletStock) : null,
         palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
-        lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
+        lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
         sellingFormat: productData.sellingFormat || "units",
         // Include promotional offers

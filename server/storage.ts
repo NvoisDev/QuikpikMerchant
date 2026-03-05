@@ -3613,6 +3613,11 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));
+
+    await db
+      .update(products)
+      .set({ lowStockThreshold: threshold })
+      .where(eq(products.wholesalerId, userId));
   }
 
   // Check and create stock alerts for products that fall below threshold
