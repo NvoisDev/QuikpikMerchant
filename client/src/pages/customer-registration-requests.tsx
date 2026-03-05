@@ -503,6 +503,20 @@ export default function CustomerRegistrationRequests() {
                         Re-approve
                       </Button>
                     )}
+                    {request.status === 'approved' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7 px-2 text-red-600 border-red-300 hover:bg-red-50"
+                        disabled={respondToRequestMutation.isPending}
+                        onClick={() => respondToRequestMutation.mutate({
+                          requestId: request.id,
+                          action: 'reject',
+                        })}
+                      >
+                        Revoke
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -612,7 +626,20 @@ export default function CustomerRegistrationRequests() {
                 setViewingRequest(null);
               }}
             >
-              Re-approve this customer
+              Re-approve
+            </Button>
+          )}
+          {viewingRequest?.status === 'approved' && (
+            <Button
+              variant="outline"
+              className="text-red-600 border-red-300 hover:bg-red-50"
+              disabled={respondToRequestMutation.isPending}
+              onClick={() => {
+                respondToRequestMutation.mutate({ requestId: viewingRequest!.id, action: 'reject' });
+                setViewingRequest(null);
+              }}
+            >
+              Revoke access
             </Button>
           )}
           <Button variant="ghost" onClick={() => setViewingRequest(null)}>Close</Button>

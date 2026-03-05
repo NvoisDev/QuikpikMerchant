@@ -2070,13 +2070,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const requestData = request[0];
       
-      if (requestData.status === 'approved') {
-        return res.status(400).json({ error: 'This customer has already been approved' });
-      }
       if (requestData.status === 'rejected' && action === 'reject') {
         return res.status(400).json({ error: 'This request has already been rejected' });
       }
-      
+      if (requestData.status === 'approved' && action === 'approve') {
+        return res.status(400).json({ error: 'This customer has already been approved' });
+      }
+
       // Update request status
       await storage.updateRegistrationRequestStatus(
         parseInt(requestId), 
@@ -2084,7 +2084,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         responseMessage
       );
-      
+
+      // If revoking an approved customer, archive the wholesaler-customer relationship
+      if (action === 'reject' && requestData.status === 'approved') {
+        try {
+          await db
+            .update(wholesalerCustomerRelationships)
+            .set({ status: 'inactive' })
+            .where(and(
+              eq(wholesalerCustomerRelationships.wholesalerId, userId),
+              sql`customer_id IN (SELECT id FROM users WHERE phone_number = ${requestData.customerPhone})`
+            ));
+          console.log(`✅ Revoked customer access for ${requestData.customerPhone}`);
+        } catch (revokeError) {
+          console.warn(`⚠️ Could not archive relationship during revoke:`, revokeError);
+        }
+      }
+
       if (action === 'approve') {
         // Parse customer name
         const { firstName, lastName } = parseCustomerName(requestData.customerName);
