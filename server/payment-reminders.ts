@@ -118,7 +118,7 @@ async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: s
         isBalancePayment: 'true',
       },
       customer_email: order.customerEmail || undefined,
-      expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      expires_at: Math.floor(Date.now() / 1000) + (23 * 60 * 60), // 23 hours (Stripe max is 24 hours)
     });
 
     const freshUrl = session.url || '';
