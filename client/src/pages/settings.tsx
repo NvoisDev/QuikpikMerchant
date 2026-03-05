@@ -2,12 +2,16 @@ import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -18,6 +22,34 @@ export default function Settings() {
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "account");
+  const [thresholdInput, setThresholdInput] = useState("");
+
+  const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number }>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  const updateThresholdMutation = useMutation({
+    mutationFn: async (threshold: number) =>
+      apiRequest("PATCH", "/api/settings/default-low-stock-threshold", { threshold }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/count"] });
+      setThresholdInput("");
+      toast({ title: "Threshold updated", description: "Default low stock threshold has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Failed to update", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleSaveThreshold = () => {
+    const val = parseInt(thresholdInput);
+    if (!thresholdInput || isNaN(val) || val < 0) {
+      toast({ title: "Invalid value", description: "Please enter a number of 0 or more.", variant: "destructive" });
+      return;
+    }
+    updateThresholdMutation.mutate(val);
+  };
   
   // Update active tab when URL changes
   useEffect(() => {
@@ -601,14 +633,73 @@ export default function Settings() {
               {activeTab === "notifications" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-base sm:text-lg font-medium mb-4">Notification Preferences</h3>
-                    <p className="text-gray-600 text-sm sm:text-base">Manage your notifications and stay updated with important information.</p>
+                    <h3 className="text-base sm:text-lg font-medium mb-1">Notification Preferences</h3>
+                    <p className="text-gray-500 text-sm">Control how and when you receive alerts from the platform.</p>
                   </div>
-                  
-                  {/* General notification settings */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
-                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">General Notification Settings</h4>
-                    <p className="text-gray-600 text-sm sm:text-base">Additional notification preferences coming soon.</p>
+
+                  {/* Stock Alerts Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Stock Alerts</h4>
+                    </div>
+
+                    {/* How it works */}
+                    <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-sm text-blue-800">
+                      <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
+                      <ul className="space-y-1 text-blue-700">
+                        <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
+                        <li>• You receive an email when any product drops to or below its threshold</li>
+                        <li>• Each product can only trigger <strong>one alert per 24 hours</strong></li>
+                      </ul>
+                    </div>
+
+                    {/* Default threshold setting */}
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Default low stock threshold</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Applied to all new products. Current default:{" "}
+                          <strong>{userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50} units</strong>
+                        </p>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder={String(userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50)}
+                          value={thresholdInput}
+                          onChange={(e) => setThresholdInput(e.target.value)}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-gray-500">units</span>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveThreshold}
+                          disabled={!thresholdInput || updateThresholdMutation.isPending}
+                          className="flex items-center gap-1.5"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          {updateThresholdMutation.isPending ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        To set a custom threshold per product, visit the{" "}
+                        <Link href="/stock-alerts" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                          Stock Alerts page <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Other notifications */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Other Notifications</h4>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                      <p className="text-sm text-gray-600">
+                        Order confirmations, payment receipts, and WhatsApp broadcast messages are sent automatically — no configuration needed.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
