@@ -17494,18 +17494,69 @@ https://quikpik.app`;
         return res.status(400).json({ message: 'No active subscription found' });
       }
 
-      // Cancel subscription at period end using service method
-      const subscription = await SubscriptionService.cancelSubscription(
-        user.stripeSubscriptionId,
-        { cancelAtPeriodEnd: true }
-      );
+      try {
+        // Cancel subscription at period end using service method
+        const subscription = await SubscriptionService.cancelSubscription(
+          user.stripeSubscriptionId,
+          { cancelAtPeriodEnd: true }
+        );
 
-      res.json({ 
-        success: true, 
-        message: 'Subscription will be canceled at the end of the current period',
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        currentPeriodEnd: subscription.current_period_end
-      });
+        return res.json({ 
+          success: true, 
+          message: 'Subscription will be canceled at the end of the current period',
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodEnd: subscription.current_period_end
+        });
+      } catch (stripeError: any) {
+        // If Stripe says the subscription doesn't exist, it's already gone — clean up the DB
+        const isStaleSubscription = 
+          stripeError?.message?.includes('No such subscription') ||
+          stripeError?.code === 'resource_missing';
+
+        if (isStaleSubscription) {
+          console.warn('⚠️ Stripe subscription not found — cleaning up stale ID for user:', userId, user.stripeSubscriptionId);
+
+          await db.update(users).set({
+            subscriptionStatus: 'free',
+            currentPlan: 'free',
+            stripeSubscriptionId: null,
+            subscriptionPeriodStart: null,
+            subscriptionPeriodEnd: null,
+            updatedAt: new Date()
+          }).where(eq(users.id, userId));
+
+          const existingSub = await db.select().from(userSubscriptions)
+            .where(eq(userSubscriptions.userId, userId));
+
+          if (existingSub.length > 0) {
+            await db.update(userSubscriptions).set({
+              planId: 'free',
+              stripeSubscriptionId: null,
+              status: 'canceled',
+              cancelAtPeriodEnd: null,
+              updatedAt: new Date()
+            }).where(eq(userSubscriptions.userId, userId));
+          } else {
+            await db.insert(userSubscriptions).values({
+              userId,
+              planId: 'free',
+              stripeSubscriptionId: null,
+              status: 'free',
+              currentPeriodStart: null,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: null
+            });
+          }
+
+          console.log('✅ Stale subscription cleared — user reverted to free plan:', userId);
+          return res.json({
+            success: true,
+            message: 'Subscription cancelled and plan reverted to Free'
+          });
+        }
+
+        throw stripeError;
+      }
     } catch (error) {
       console.error('❌ Failed to cancel subscription:', error);
       res.status(500).json({ 
