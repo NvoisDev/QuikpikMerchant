@@ -165,9 +165,21 @@ Every stock change is logged automatically with a before/after count and reason.
 - **Removed / Manual Decrease** — stock removed manually
 
 #### Stock Alerts
-- The system sends daily low-stock email alerts automatically at 8 AM
-- Each product is only alerted once per 24 hours to prevent repeat notifications
-- Low-stock threshold is based on your product settings — review and update thresholds to control when alerts fire
+Stock alerts help you stay on top of inventory without having to check manually:
+- **Automated daily check**: Every morning at **8 AM**, the system scans all your products and compares stock levels against their threshold
+- **Email alert**: If any product is at or below its threshold, you'll receive an email listing those products — and they'll appear on your Stock Alerts page
+- **24-hour limit per product**: A product can only trigger one alert per 24 hours, so you won't receive repeated alerts for the same item
+- **Per-product thresholds**: Each product has its own threshold (default 50 units). You can adjust this from the Stock Alerts page using the settings icon on each alert
+- **Global default**: Set a default threshold in Stock Alerts → Settings to apply to all new products going forward
+- **Resolving alerts**: Once you've restocked, mark the alert as resolved so it clears from your list
+- **Visual indicators**: Products that are low or out of stock also show a coloured badge on your Products page — amber for Low Stock, red for Out of Stock
+
+#### Notification Centre (Bell Icon)
+The bell icon in the top-right of every page shows everything that needs your attention in one place:
+- **Red badge**: Total count of pending items across all notification types
+- **Customer Requests**: New customers who have requested access to your wholesale store — click to approve or decline
+- **Stock Alerts**: Products running low or out of stock — click to go to the full Stock Alerts page
+- Clicking any item in the notification panel takes you directly to the relevant page to take action
 
 #### Pricing Strategy
 - Research competitor pricing in your category

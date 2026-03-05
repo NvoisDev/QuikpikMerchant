@@ -1,10 +1,17 @@
-import { ReactNode } from "react";
-import { Link } from "wouter";
+import { ReactNode, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Share2, Bell } from "lucide-react";
+import { Share2, Bell, AlertTriangle, Users, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+
+interface NotificationCounts {
+  total: number;
+  stockAlerts: number;
+  registrationRequests: number;
+}
 
 interface PageHeaderProps {
   title: string;
@@ -15,10 +22,17 @@ interface PageHeaderProps {
 export default function PageHeader({ title, description, children }: PageHeaderProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [open, setOpen] = useState(false);
 
-  const { data: alertsData } = useQuery<{ count: number }>({
-    queryKey: ["/api/stock-alerts/count"],
+  const { data: counts } = useQuery<NotificationCounts>({
+    queryKey: ["/api/notifications/count"],
+    refetchInterval: 60000,
   });
+
+  const total = counts?.total ?? 0;
+  const stockAlerts = counts?.stockAlerts ?? 0;
+  const registrationRequests = counts?.registrationRequests ?? 0;
 
   const handleShareStore = async () => {
     const effectiveUserId =
@@ -80,16 +94,87 @@ export default function PageHeader({ title, description, children }: PageHeaderP
           >
             <Share2 className="h-5 w-5" />
           </Button>
-          <Link href="/stock-alerts">
-            <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
-              <Bell className="h-5 w-5" />
-              {(alertsData?.count ?? 0) > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {alertsData!.count}
-                </span>
+
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
+                <Bell className="h-5 w-5" />
+                {total > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    {total > 99 ? "99+" : total}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0">
+              <div className="border-b border-gray-100 px-4 py-3">
+                <h3 className="font-semibold text-gray-900">Notifications</h3>
+                {total > 0 && (
+                  <p className="text-xs text-gray-500 mt-0.5">{total} item{total !== 1 ? "s" : ""} need your attention</p>
+                )}
+              </div>
+
+              {total === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-700">You're all caught up!</p>
+                  <p className="text-xs text-gray-500 mt-1">No pending items right now</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {registrationRequests > 0 && (
+                    <div
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate("/customers?tab=registration");
+                      }}
+                    >
+                      <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          {registrationRequests} customer{registrationRequests !== 1 ? "s" : ""} waiting for approval
+                        </p>
+                        <p className="text-xs text-gray-500">Review and approve or decline requests</p>
+                      </div>
+                      <span className="flex-shrink-0 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full px-2 py-0.5">
+                        {registrationRequests}
+                      </span>
+                    </div>
+                  )}
+
+                  {stockAlerts > 0 && (
+                    <div
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate("/stock-alerts");
+                      }}
+                    >
+                      <div className="flex-shrink-0 w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          {stockAlerts} product{stockAlerts !== 1 ? "s" : ""} low on stock
+                        </p>
+                        <p className="text-xs text-gray-500">Review stock levels and restock as needed</p>
+                      </div>
+                      <span className="flex-shrink-0 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full px-2 py-0.5">
+                        {stockAlerts}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
-            </Button>
-          </Link>
+
+              <div className="border-t border-gray-100 px-4 py-2">
+                <p className="text-xs text-gray-400">Checks every 60 seconds · Stock alerts sent daily at 8 AM</p>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>

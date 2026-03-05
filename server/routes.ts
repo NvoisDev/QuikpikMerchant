@@ -13796,6 +13796,26 @@ https://quikpik.app`;
     }
   });
 
+  // Unified notifications count for the bell icon dropdown
+  app.get('/api/notifications/count', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const [stockAlerts, registrationRequests] = await Promise.all([
+        storage.getUnresolvedStockAlertsCount(userId),
+        storage.getPendingRegistrationRequests(userId),
+      ]);
+      const registrationCount = registrationRequests.length;
+      res.json({
+        total: stockAlerts + registrationCount,
+        stockAlerts,
+        registrationRequests: registrationCount,
+      });
+    } catch (error) {
+      console.error("Error fetching notifications count:", error);
+      res.status(500).json({ message: "Failed to fetch notifications count" });
+    }
+  });
+
   app.patch('/api/stock-alerts/:alertId/read', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;

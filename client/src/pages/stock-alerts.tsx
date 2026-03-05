@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Package, Check, X, Settings, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, Package, Check, X, Settings, Eye, EyeOff, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
@@ -263,6 +263,21 @@ export default function StockAlerts() {
         </div>
       </PageHeader>
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+
+        {/* How stock alerts work */}
+        <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+          <Info className="h-5 w-5 flex-shrink-0 mt-0.5 text-blue-500" />
+          <div className="space-y-1">
+            <p className="font-semibold">How stock alerts work</p>
+            <ul className="space-y-1 text-blue-700">
+              <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
+              <li>• If a product is at or below its threshold, you'll receive an <strong>email alert</strong> and it will appear here</li>
+              <li>• Each product can only trigger <strong>one alert per 24 hours</strong> — you won't be flooded with repeats</li>
+              <li>• Use the <strong>settings icon</strong> on each alert below to adjust the threshold for that product, or use <strong>Settings</strong> above to set a global default for new products</li>
+            </ul>
+          </div>
+        </div>
+
       {alerts.length === 0 ? (
         <Card>
           <CardContent className="pt-6">

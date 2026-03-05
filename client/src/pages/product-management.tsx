@@ -2380,6 +2380,12 @@ export default function ProductManagement() {
                                     {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                   </Badge>
                                 )}
+                                {product.stock === 0 && product.status !== "out_of_stock" && (
+                                  <Badge className="text-xs bg-red-500 text-white">Out of Stock</Badge>
+                                )}
+                                {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
+                                  <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
+                                )}
                               </div>
                             </div>
                             <DropdownMenu>
