@@ -45,8 +45,15 @@ import {
   MessageSquare,
   Users,
   AlertCircle,
-  Search
+  Search,
+  MoreHorizontal
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 
 interface RegistrationRequest {
@@ -479,44 +486,36 @@ export default function CustomerRegistrationRequests() {
                       {request.customerPhone}
                       {request.respondedAt ? ` • ${format(new Date(request.respondedAt), 'MMM d')}` : ''}
                     </p>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs h-7 px-2 text-gray-500 hover:text-gray-800"
-                        onClick={() => setViewingRequest(request)}
-                      >
-                        View
-                      </Button>
-                      {request.status === 'rejected' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7 px-2 text-green-600 border-green-300 hover:bg-green-50"
-                          disabled={respondToRequestMutation.isPending}
-                          onClick={() => respondToRequestMutation.mutate({
-                            requestId: request.id,
-                            action: 'approve',
-                          })}
-                        >
-                          Re-approve
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      )}
-                      {request.status === 'approved' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7 px-2 text-red-600 border-red-300 hover:bg-red-50"
-                          disabled={respondToRequestMutation.isPending}
-                          onClick={() => respondToRequestMutation.mutate({
-                            requestId: request.id,
-                            action: 'reject',
-                          })}
-                        >
-                          Revoke
-                        </Button>
-                      )}
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewingRequest(request)}>
+                          View details
+                        </DropdownMenuItem>
+                        {request.status === 'rejected' && (
+                          <DropdownMenuItem
+                            className="text-green-600"
+                            disabled={respondToRequestMutation.isPending}
+                            onClick={() => respondToRequestMutation.mutate({ requestId: request.id, action: 'approve' })}
+                          >
+                            Re-approve
+                          </DropdownMenuItem>
+                        )}
+                        {request.status === 'approved' && (
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            disabled={respondToRequestMutation.isPending}
+                            onClick={() => respondToRequestMutation.mutate({ requestId: request.id, action: 'reject' })}
+                          >
+                            Revoke
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
