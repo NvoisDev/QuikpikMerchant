@@ -509,7 +509,7 @@ export default function WholesalerDashboard() {
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
                       <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {(alertsData as any)?.count > 0 ? `${(alertsData as any).count} low stock alerts` : 'Stock levels healthy'}
+                        {(notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
