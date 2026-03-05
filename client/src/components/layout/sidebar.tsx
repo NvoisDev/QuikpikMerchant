@@ -133,7 +133,9 @@ export default function Sidebar() {
             const isPremiumFeature = item.premiumOnly;
             const isLocked = isPremiumFeature && isFreeUser;
             const isComingSoon = item.comingSoon;
-            
+            const hasAccess = checkTabAccess(item.tabName);
+            if (!hasAccess) return null;
+
             return (
               <Link key={item.name} href={isComingSoon ? "#" : isLocked ? "/subscription-pricing" : item.href}>
                 <div

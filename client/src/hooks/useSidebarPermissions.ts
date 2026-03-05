@@ -69,15 +69,16 @@ export function getTabNameFromPath(path: string): string {
     '': 'dashboard',
     'dashboard': 'dashboard',
     'products': 'products',
+    'promotions': 'products',
     'orders': 'orders',
     'customers': 'customers',
     'campaigns': 'campaigns',
-    'business-performance': 'analytics',
-    'advertising': 'advertising',
+    'integrations': 'integrations',
     'marketplace': 'marketplace',
     'team-management': 'team-management',
-    // Subscription removed
+    'subscription-pricing': 'subscription',
     'settings': 'settings',
+    'help': 'settings',
   };
   
   return pathToTabMap[firstSegment] || firstSegment;

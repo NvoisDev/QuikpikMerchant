@@ -13,13 +13,13 @@ import {
   ShoppingCart, 
   Users, 
   MessageSquare, 
-  BarChart3, 
   Store, 
   Settings,
   UserCog,
   CreditCard,
   Lock,
-  Shield
+  Shield,
+  Puzzle
 } from 'lucide-react';
 
 const TAB_CONFIGS = [
@@ -43,21 +43,21 @@ const TAB_CONFIGS = [
   },
   { 
     name: 'customers', 
-    label: 'Customer Groups', 
+    label: 'Customers', 
     icon: Users,
     description: 'Customer management and group organization'
   },
   { 
     name: 'campaigns', 
-    label: 'Campaigns', 
+    label: 'Broadcast', 
     icon: MessageSquare,
     description: 'WhatsApp broadcasting and messaging'
   },
   { 
-    name: 'analytics', 
-    label: 'Business Performance', 
-    icon: BarChart3,
-    description: 'Analytics, reports, and financial insights'
+    name: 'integrations', 
+    label: 'Integrations', 
+    icon: Puzzle,
+    description: 'Stripe, WhatsApp, and third-party service connections'
   },
   { 
     name: 'marketplace', 
