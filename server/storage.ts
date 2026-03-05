@@ -280,6 +280,7 @@ export interface IStorage {
   resolveStockAlert(alertId: number, wholesalerId: string): Promise<void>;
   updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void>;
   updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void>;
+  getAllRegistrationRequests(wholesalerId: string): Promise<any[]>;
   checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void>;
   
   // Real-time inventory monitoring operations
@@ -4374,6 +4375,14 @@ export class DatabaseStorage implements IStorage {
         eq(customerRegistrationRequests.wholesalerId, wholesalerId),
         eq(customerRegistrationRequests.status, 'pending')
       ))
+      .orderBy(desc(customerRegistrationRequests.requestedAt));
+  }
+
+  async getAllRegistrationRequests(wholesalerId: string) {
+    return await db
+      .select()
+      .from(customerRegistrationRequests)
+      .where(eq(customerRegistrationRequests.wholesalerId, wholesalerId))
       .orderBy(desc(customerRegistrationRequests.requestedAt));
   }
 

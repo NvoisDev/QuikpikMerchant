@@ -459,24 +459,41 @@ export default function CustomerRegistrationRequests() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {processedRequests.slice(0, 5).map((request) => (
-                <div key={request.id} className="flex items-center justify-between py-2 border-b">
+              {processedRequests.slice(0, 10).map((request) => (
+                <div key={request.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div className="flex items-center space-x-3">
                     {request.status === 'approved' ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                     ) : (
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                     )}
                     <div>
                       <p className="font-medium">{request.customerName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {request.customerPhone} • {format(new Date(request.respondedAt!), 'MMM d')}
+                        {request.customerPhone}
+                        {request.respondedAt ? ` • ${format(new Date(request.respondedAt), 'MMM d')}` : ''}
                       </p>
                     </div>
                   </div>
-                  <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
-                    {request.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
+                      {request.status}
+                    </Badge>
+                    {request.status === 'rejected' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7 px-2 text-green-600 border-green-300 hover:bg-green-50"
+                        disabled={respondToRequestMutation.isPending}
+                        onClick={() => respondToRequestMutation.mutate({
+                          requestId: request.id,
+                          action: 'approve',
+                        })}
+                      >
+                        Re-approve
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

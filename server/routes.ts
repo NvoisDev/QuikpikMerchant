@@ -2034,7 +2034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req as any).user.id;
       console.log(`🔍 Fetching pending registration requests for wholesaler: ${userId}`);
       
-      const requests = await storage.getPendingRegistrationRequests(userId);
+      const requests = await storage.getAllRegistrationRequests(userId);
       
       console.log(`✅ Found ${requests.length} pending registration requests`);
       res.json(requests);
@@ -2070,8 +2070,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const requestData = request[0];
       
-      if (requestData.status !== 'pending') {
-        return res.status(400).json({ error: 'This request has already been processed' });
+      if (requestData.status === 'approved') {
+        return res.status(400).json({ error: 'This customer has already been approved' });
+      }
+      if (requestData.status === 'rejected' && action === 'reject') {
+        return res.status(400).json({ error: 'This request has already been rejected' });
       }
       
       // Update request status
@@ -2098,11 +2101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
         
-        // Add to customer group if specified - method doesn't exist on storage
         if (customerGroupId && customerGroupId > 0) {
           try {
-            // TODO: Implement addMemberToGroup in storage if needed
-            console.log(`✅ Customer group association functionality not implemented yet: ${customerGroupId}`);
+            await storage.addCustomerToGroup(customerGroupId, newCustomer.id);
+            console.log(`✅ Customer ${newCustomer.id} added to group ${customerGroupId}`);
           } catch (groupError) {
             console.warn(`⚠️ Failed to add customer to group ${customerGroupId}:`, groupError);
           }
