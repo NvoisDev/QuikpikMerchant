@@ -4365,7 +4365,10 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(customerRegistrationRequests)
-      .where(eq(customerRegistrationRequests.wholesalerId, wholesalerId))
+      .where(and(
+        eq(customerRegistrationRequests.wholesalerId, wholesalerId),
+        eq(customerRegistrationRequests.status, 'pending')
+      ))
       .orderBy(desc(customerRegistrationRequests.requestedAt));
   }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1265,7 +1266,16 @@ export default function ProductManagement() {
   return (
     <>
     <div className="bg-white min-h-screen">
-      <PageHeader title="Products" description="Manage your inventory, pricing, and product details." />
+      <PageHeader title="Products" description="Manage your inventory, pricing, and product details.">
+        {(alertsData as any)?.count > 0 && (
+          <Link href="/stock-alerts">
+            <Button variant="outline" size="sm" className="flex items-center gap-2 border-amber-300 text-amber-700 hover:bg-amber-50">
+              <AlertTriangle className="h-4 w-4" />
+              {(alertsData as any).count} Stock Alert{(alertsData as any).count !== 1 ? "s" : ""}
+            </Button>
+          </Link>
+        )}
+      </PageHeader>
       <div className="p-4 sm:p-6 lg:p-8">
             {/* Action Buttons Section */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
