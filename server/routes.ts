@@ -16252,6 +16252,22 @@ https://quikpik.app`;
       const result = await storage.deleteCustomer(customerId, targetUserId);
       
       if (result.success) {
+        // Sync: mark any approved registration request for this customer as rejected
+        try {
+          if (customer.phoneNumber) {
+            await db
+              .update(customerRegistrationRequests)
+              .set({ status: 'rejected', respondedAt: new Date() })
+              .where(and(
+                eq(customerRegistrationRequests.wholesalerId, targetUserId),
+                eq(customerRegistrationRequests.customerPhone, customer.phoneNumber),
+                eq(customerRegistrationRequests.status, 'approved')
+              ));
+          }
+        } catch (syncError) {
+          console.warn('⚠️ Could not sync registration request status after customer delete:', syncError);
+        }
+
         res.json({ 
           success: true, 
           message: result.message,
