@@ -351,7 +351,7 @@ export default function WholesalerDashboard() {
                     ) : (
                       <div className="divide-y divide-gray-100">
                         {(notifCounts?.registrationRequests ?? 0) > 0 && (
-                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/customers?tab=registration"); }}>
+                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/customer-registration-requests"); }}>
                             <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center">
                               <Users className="h-4 w-4 text-purple-600" />
                             </div>

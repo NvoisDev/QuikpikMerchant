@@ -127,7 +127,7 @@ export default function PageHeader({ title, description, children }: PageHeaderP
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => {
                         setOpen(false);
-                        navigate("/customers?tab=registration");
+                        navigate("/customer-registration-requests");
                       }}
                     >
                       <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center">
