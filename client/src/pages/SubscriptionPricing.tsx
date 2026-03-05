@@ -9,6 +9,7 @@ import { CheckIcon, X, StarIcon, CrownIcon } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { useAuth } from '@/hooks/useAuth';
 import clsx from 'clsx';
+import PageHeader from '@/components/PageHeader';
 
 interface SubscriptionPlan {
   id: string;
@@ -254,8 +255,9 @@ export default function SubscriptionPricing() {
 
   if (plansLoading || subscriptionLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
+      <div className="bg-white min-h-screen">
+        <PageHeader title="Subscription" description="Manage your plan and billing" />
+        <div className="px-4 py-8 text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
           <p className="mt-4 text-gray-600">Loading subscription plans...</p>
         </div>
@@ -264,16 +266,9 @@ export default function SubscriptionPricing() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Choose Your Subscription Plan
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Scale your wholesale business with the right features for your needs. 
-          Upgrade or downgrade anytime.
-        </p>
-      </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Subscription" description="Manage your plan and billing" />
+      <div className="px-4 py-6 max-w-4xl mx-auto">
 
       {/* Current Plan Status */}
       {currentSubscription && (
@@ -603,6 +598,7 @@ export default function SubscriptionPricing() {
             : undefined
         }}
       />
+      </div>
     </div>
   );
 }
