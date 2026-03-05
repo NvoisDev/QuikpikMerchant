@@ -183,6 +183,7 @@ export default function CustomerRegistrationRequests() {
   }
 
   return (
+    <>
     <div className="bg-white min-h-screen">
       <PageHeader title="Registration Requests" />
       <div className="container mx-auto p-6 space-y-6">
@@ -618,5 +619,6 @@ export default function CustomerRegistrationRequests() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
