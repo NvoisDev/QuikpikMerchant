@@ -285,12 +285,6 @@ export default function CustomerRegistrationRequests() {
                           <UserPlus className="h-4 w-4 text-blue-500" />
                           <h3 className="font-semibold">{request.customerName}</h3>
                         </div>
-                        {request.businessName && (
-                          <Badge variant="outline" className="w-fit">
-                            <Building2 className="h-3 w-3 mr-1" />
-                            {request.businessName}
-                          </Badge>
-                        )}
                       </div>
                       
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-muted-foreground">
@@ -347,9 +341,6 @@ export default function CustomerRegistrationRequests() {
                             <h4 className="font-medium">Customer Details</h4>
                             <div className="text-sm space-y-1">
                               <p><strong>Name:</strong> {request.customerName}</p>
-                              {request.businessName && (
-                                <p><strong>Business:</strong> {request.businessName}</p>
-                              )}
                               <p><strong>Phone:</strong> {request.customerPhone}</p>
                               {request.customerEmail && (
                                 <p><strong>Email:</strong> {request.customerEmail}</p>
@@ -580,15 +571,6 @@ export default function CustomerRegistrationRequests() {
                 </div>
               )}
 
-              {viewingRequest.businessName && (
-                <div className="flex items-start gap-3">
-                  <Building2 className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Business Name</p>
-                    <p className="text-sm font-medium">{viewingRequest.businessName}</p>
-                  </div>
-                </div>
-              )}
 
               {viewingRequest.requestMessage && (
                 <div className="flex items-start gap-3">
