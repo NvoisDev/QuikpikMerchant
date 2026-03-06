@@ -210,10 +210,6 @@ export default function CustomerRegistrationRequests() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">
-                <span className="sm:hidden">Registration Requests</span>
-                <span className="hidden sm:inline">Customer Registration Requests</span>
-              </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
                 Review and approve customer access requests
               </p>
