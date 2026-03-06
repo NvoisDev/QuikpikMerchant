@@ -196,7 +196,7 @@ export default function CustomerRegistrationRequests() {
   return (
     <>
     <div className="bg-white min-h-screen">
-      <PageHeader title="Registration Requests" />
+      <PageHeader title="Registration Requests" description="Review and approve customer access requests" />
       <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="space-y-4">
@@ -209,11 +209,6 @@ export default function CustomerRegistrationRequests() {
                 <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <div>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Review and approve customer access requests
-              </p>
-            </div>
           </div>
           <Badge variant="secondary" className="px-3 py-1 hidden sm:flex">
             {pendingRequests.length} Pending
