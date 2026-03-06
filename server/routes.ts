@@ -4075,10 +4075,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Allow transition from 'paid' or 'items_prepared' status directly to ready_for_collection
       // Also allow if paymentStatus is 'paid' (for orders where balance was paid but status wasn't updated)
+      // Also always allow collection/pickup orders — customer pays on arrival
       const isPaymentComplete = order.paymentStatus === 'paid' || parseFloat(order.amountOutstanding || '0') <= 0.01;
       const isValidStatus = order.status === 'paid' || order.status === 'items_prepared' || order.status === 'confirmed';
+      const isPickup = order.fulfillmentType === 'pickup';
       
-      if (!isValidStatus && !isPaymentComplete) {
+      if (!isValidStatus && !isPaymentComplete && !isPickup) {
         console.log(`❌ Order status is ${order.status}, paymentStatus is ${order.paymentStatus}, cannot mark as ready`);
         return res.status(400).json({ error: `Order must be paid to mark as ready. Current status: ${order.status}, payment: ${order.paymentStatus}` });
       }
