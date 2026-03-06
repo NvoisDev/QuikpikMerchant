@@ -64,6 +64,8 @@ interface RegistrationRequest {
   customerEmail?: string;
   businessName?: string;
   requestMessage?: string;
+  productsInterested?: string;
+  orderFrequency?: string;
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
   respondedAt?: string;
@@ -325,6 +327,18 @@ export default function CustomerRegistrationRequests() {
                           </p>
                         </div>
                       )}
+                      {request.productsInterested && (
+                        <div className="flex items-start space-x-2 mt-1">
+                          <span className="text-gray-400 mt-0.5 text-xs">📦</span>
+                          <p className="text-sm text-gray-600"><strong>Products:</strong> {request.productsInterested}</p>
+                        </div>
+                      )}
+                      {request.orderFrequency && (
+                        <div className="flex items-start space-x-2 mt-1">
+                          <span className="text-gray-400 mt-0.5 text-xs">🔁</span>
+                          <p className="text-sm text-gray-600"><strong>Frequency:</strong> {request.orderFrequency}</p>
+                        </div>
+                      )}
                     </div>
                     
                     <Dialog>
@@ -363,6 +377,18 @@ export default function CustomerRegistrationRequests() {
                               <div className="mt-2">
                                 <strong>Message:</strong>
                                 <p className="italic text-gray-600 mt-1">"{request.requestMessage}"</p>
+                              </div>
+                            )}
+                            {request.productsInterested && (
+                              <div className="mt-1">
+                                <strong>Products Interested In:</strong>
+                                <p className="text-gray-600 mt-0.5">{request.productsInterested}</p>
+                              </div>
+                            )}
+                            {request.orderFrequency && (
+                              <div className="mt-1">
+                                <strong>Order Frequency:</strong>
+                                <p className="text-gray-600 mt-0.5">{request.orderFrequency}</p>
                               </div>
                             )}
                           </div>
@@ -586,6 +612,24 @@ export default function CustomerRegistrationRequests() {
                   <div>
                     <p className="text-xs text-gray-500">Their Message</p>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingRequest.requestMessage}</p>
+                  </div>
+                </div>
+              )}
+              {viewingRequest.productsInterested && (
+                <div className="flex items-start gap-3">
+                  <span className="text-gray-400 mt-0.5 flex-shrink-0">📦</span>
+                  <div>
+                    <p className="text-xs text-gray-500">Products Interested In</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingRequest.productsInterested}</p>
+                  </div>
+                </div>
+              )}
+              {viewingRequest.orderFrequency && (
+                <div className="flex items-start gap-3">
+                  <span className="text-gray-400 mt-0.5 flex-shrink-0">🔁</span>
+                  <div>
+                    <p className="text-xs text-gray-500">Order Frequency</p>
+                    <p className="text-sm text-gray-700">{viewingRequest.orderFrequency}</p>
                   </div>
                 </div>
               )}
