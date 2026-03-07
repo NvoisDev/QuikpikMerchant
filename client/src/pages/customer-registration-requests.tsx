@@ -482,7 +482,7 @@ export default function CustomerRegistrationRequests() {
           <CardContent>
             <div className="space-y-3">
               {processedRequests.slice(0, 10).map((request) => (
-                <div key={request.id} className="py-3 border-b last:border-0 space-y-1.5">
+                <div key={request.id} className="py-3 border-b last:border-0 space-y-1.5 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors" onClick={() => setViewingRequest(request)}>
                   {/* Row 1: icon + name + badge */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -505,7 +505,7 @@ export default function CustomerRegistrationRequests() {
                     </p>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => e.stopPropagation()}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
