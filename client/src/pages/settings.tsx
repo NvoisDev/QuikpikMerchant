@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -17,12 +18,35 @@ export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [location] = useLocation();
+  const qrRef = useRef<HTMLCanvasElement>(null);
   
   // Get tab from URL parameter or default to "account"
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "account");
   const [thresholdInput, setThresholdInput] = useState("");
+
+  const downloadQR = () => {
+    const canvas = qrRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(user as any)?.businessName || 'store'}-qr-code.png`;
+    a.click();
+  };
+
+  const printQR = () => {
+    const canvas = qrRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const storeUrl = `https://quikpik.app/customer/${(user as any)?.id}`;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${(user as any)?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="url">${storeUrl}</div></body></html>`);
+    win.document.close();
+    win.onload = () => { win.print(); };
+  };
 
   const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number }>({
     queryKey: ["/api/auth/user"],
@@ -626,6 +650,39 @@ export default function Settings() {
                     </div>
                     
                     <PaymentTermsSettings user={user} />
+                  </div>
+
+                  {/* Store QR Code Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <QrCode className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Your Store QR Code</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-6">Customers scan this to go straight to your store and request access. Print it, share it, or put it on your packaging.</p>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
+                        <QRCodeCanvas
+                          ref={qrRef}
+                          value={`https://quikpik.app/customer/${(user as any)?.id}`}
+                          size={200}
+                          level="M"
+                          includeMargin={true}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 text-center break-all max-w-xs">
+                        quikpik.app/customer/{(user as any)?.id}
+                      </p>
+                      <div className="flex gap-3">
+                        <Button variant="outline" onClick={downloadQR} className="flex items-center gap-2">
+                          <Download className="h-4 w-4" />
+                          Download PNG
+                        </Button>
+                        <Button variant="outline" onClick={printQR} className="flex items-center gap-2">
+                          <Printer className="h-4 w-4" />
+                          Print
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
