@@ -19,14 +19,21 @@ export interface EmailBranding {
 
 function buildHeader(branding: EmailBranding): string {
   const hasHostedLogo = branding.logoUrl && branding.logoUrl.startsWith('http');
+  const initials = branding.businessName
+    .split(' ')
+    .map((w: string) => w[0] || '')
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
   if (hasHostedLogo) {
     return '<div style="text-align:center;padding:24px 20px 16px">' +
-      '<img src="' + branding.logoUrl + '" alt="' + branding.businessName + '" style="max-height:50px;max-width:160px">' +
-      '<div style="margin-top:8px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
+      '<img src="' + branding.logoUrl + '" alt="' + branding.businessName + '" style="max-height:60px;max-width:180px;display:block;margin:0 auto">' +
+      '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
       '</div>';
   }
   return '<div style="text-align:center;padding:24px 20px 16px">' +
-    '<div style="font-size:20px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
+    '<div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:#10b981;line-height:56px;font-size:22px;font-weight:bold;color:#fff;text-align:center">' + initials + '</div>' +
+    '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
     '</div>';
 }
 
