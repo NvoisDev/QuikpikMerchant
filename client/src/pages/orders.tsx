@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, Hand, AlertTriangle, RotateCcw } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -662,17 +663,16 @@ export default function OrdersFresh() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-gray-500">
-            Showing {displayedOrders} of {totalOrders} orders
-          </div>
-          <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
-            Refresh
-          </Button>
+    <div className="bg-white min-h-screen">
+    <PageHeader title="Orders" description="View and manage all your customer orders" />
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-end gap-3">
+        <div className="text-xs text-gray-500">
+          Showing {displayedOrders} of {totalOrders} orders
         </div>
+        <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
+          Refresh
+        </Button>
       </div>
 
       {/* Search and Filter */}
@@ -1445,6 +1445,7 @@ export default function OrdersFresh() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
