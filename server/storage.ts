@@ -3574,7 +3574,10 @@ export class DatabaseStorage implements IStorage {
         stockAlerts,
         and(
           eq(stockAlerts.productId, products.id),
-          eq(stockAlerts.isResolved, false)
+          or(
+            eq(stockAlerts.isResolved, false),
+            sql`${stockAlerts.createdAt} > NOW() - INTERVAL '24 hours'`
+          )
         )
       )
       .where(
