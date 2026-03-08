@@ -43,9 +43,28 @@ export default function Settings() {
     const storeUrl = `https://quikpik.app/customer/${(user as any)?.id}`;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${(user as any)?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="url">${storeUrl}</div></body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.tagline{font-size:14px;font-weight:600;color:#374151;margin-top:8px;text-align:center}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${(user as any)?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="tagline">Scan to sign up for my store</div><div class="url">${storeUrl}</div></body></html>`);
     win.document.close();
     win.onload = () => { win.print(); };
+  };
+
+  const generateInitialsDataUrl = (name: string): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 80;
+    canvas.height = 80;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(40, 40, 40, 0, Math.PI * 2);
+    ctx.fill();
+    const initials = name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials, 40, 40);
+    return canvas.toDataURL();
   };
 
   const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number }>({
@@ -649,14 +668,31 @@ export default function Settings() {
                     </div>
                     <p className="text-sm text-gray-500 mb-6">Customers scan this to go straight to your store and request access. Print it, share it, or put it on your packaging.</p>
                     <div className="flex flex-col items-center gap-4">
-                      <div className="p-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
-                        <QRCodeCanvas
-                          ref={qrRef}
-                          value={`https://quikpik.app/customer/${(user as any)?.id}`}
-                          size={200}
-                          level="M"
-                          includeMargin={true}
-                        />
+                      <div className="p-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm flex flex-col items-center">
+                        {(() => {
+                          const logoSrc = (() => {
+                            if ((user as any)?.logoType === 'uploaded' && (user as any)?.logoUrl?.startsWith('http')) {
+                              return (user as any).logoUrl as string;
+                            }
+                            if ((user as any)?.businessName) {
+                              return generateInitialsDataUrl((user as any).businessName);
+                            }
+                            return null;
+                          })();
+                          return (
+                            <QRCodeCanvas
+                              ref={qrRef}
+                              value={`https://quikpik.app/customer/${(user as any)?.id}`}
+                              size={200}
+                              level="H"
+                              includeMargin={true}
+                              imageSettings={logoSrc ? { src: logoSrc, height: 48, width: 48, excavate: true } : undefined}
+                            />
+                          );
+                        })()}
+                        <p className="text-xs font-semibold text-gray-600 text-center mt-2 tracking-wide">
+                          Scan to sign up for my store
+                        </p>
                       </div>
                       <p className="text-xs text-gray-400 text-center break-all max-w-xs">
                         quikpik.app/customer/{(user as any)?.id}
