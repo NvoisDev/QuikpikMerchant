@@ -385,11 +385,13 @@ export default function TeamManagement() {
               disabled={!canAddMembers}
             >
               {!canAddMembers ? (
-                <Crown className="h-4 w-4 mr-2" />
+                <Crown className="h-4 w-4 sm:mr-2" />
               ) : (
-                <UserPlus className="h-4 w-4 mr-2" />
+                <UserPlus className="h-4 w-4 sm:mr-2" />
               )}
-              {!canAddMembers ? "Upgrade Required" : "Invite Team Member"}
+              <span className="hidden sm:inline">
+                {!canAddMembers ? "Upgrade Required" : "Invite Team Member"}
+              </span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
