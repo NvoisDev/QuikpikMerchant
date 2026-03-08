@@ -25,7 +25,10 @@ export function requireFeatureAccess(feature: string, maxValue?: number) {
         });
       }
 
-      const userId = req.user.id;
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && (req.user as any).wholesalerId)
+        ? (req.user as any).wholesalerId
+        : req.user.id;
       const hasAccess = await SubscriptionService.checkFeatureAccess(userId, feature, maxValue);
 
       if (!hasAccess) {

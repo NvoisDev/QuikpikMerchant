@@ -140,11 +140,18 @@ export default function TeamInvitation() {
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <CardTitle className="text-green-600">Welcome to the Team!</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-4">
-              Your account has been created successfully. You'll be redirected to login shortly.
+          <CardContent className="text-center space-y-4">
+            <p className="text-gray-600">
+              Your account has been created successfully.
             </p>
-            <Button onClick={() => setLocation('/login')} className="bg-emerald-600 hover:bg-emerald-700">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-left">
+              <p className="text-emerald-800 font-medium text-sm mb-1">How to sign in:</p>
+              <p className="text-emerald-700 text-sm">
+                Go to the login page and select the <strong>Team Member</strong> tab. Then sign in with your email and the password you just created.
+              </p>
+            </div>
+            <p className="text-gray-400 text-xs">Redirecting to login page shortly…</p>
+            <Button onClick={() => setLocation('/login')} className="bg-emerald-600 hover:bg-emerald-700 w-full">
               Go to Login Now
             </Button>
           </CardContent>

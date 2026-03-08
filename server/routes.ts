@@ -310,38 +310,47 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
 
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-    // Get the current domain - use the actual running domain
-    const baseUrl = process.env.REPL_ID 
-      ? `https://${process.env.REPL_ID}-00-p1kaa4ro8p7u.janeway.replit.dev`
-      : 'https://quikpik.co';
-    
-    console.log('Team invitation URL will be:', `${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}`);
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN
+      ? (process.env.REPLIT_DEV_DOMAIN.startsWith('http')
+          ? process.env.REPLIT_DEV_DOMAIN
+          : `https://${process.env.REPLIT_DEV_DOMAIN}`)
+      : 'https://quikpik.app';
 
-    const inviteUrl = `${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}`;
-    const inviteBody = `${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${teamMember.firstName},</p><p style="margin:0 0 20px"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the comprehensive wholesale management platform.</p>${emailCard(`<p style="margin:0 0 6px"><strong>Your Role:</strong> ${emailBadge(teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1))}</p><p style="margin:0;color:#6b7280;font-size:14px">You'll have access to products, orders, customers, and broadcast management.</p>`)}<p style="margin:0 0 20px">As a team member, you'll be able to help manage the wholesale business including inventory, customer communications, and order processing.</p>${emailButton('Accept Invitation & Join Team', inviteUrl)}<p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0">Or copy and paste this link in your browser:<br><span style="word-break:break-all">${inviteUrl}</span></p>${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">This invitation was sent by <strong>${wholesaler.email}</strong>. If you didn't expect this invitation, you can safely ignore this email.</p>`;
+    const token = teamMember.inviteToken || String(teamMember.id);
+    const inviteUrl = `${baseUrl}/team-invitation?token=${encodeURIComponent(token)}&email=${encodeURIComponent(teamMember.email)}`;
+
+    // Build accurate permissions description from tab settings
+    let accessDescription = 'Full access to all platform areas.';
+    try {
+      const perms = await storage.getTabPermissions(wholesaler.id);
+      const mainTabs = ['products', 'orders', 'customers', 'campaigns', 'analytics'];
+      const tabLabels: Record<string, string> = {
+        products: 'Products', orders: 'Orders', customers: 'Customers',
+        campaigns: 'Broadcast', analytics: 'Analytics',
+      };
+      const allowed = mainTabs.filter(tab => {
+        const perm = perms.find((p: any) => p.tabName === tab);
+        return !perm || !perm.isRestricted;
+      });
+      if (allowed.length > 0 && allowed.length < mainTabs.length) {
+        accessDescription = `Access to: ${allowed.map(t => tabLabels[t]).join(', ')}.`;
+      }
+    } catch { /* keep default */ }
+
+    const roleLabel = teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1);
+    const inviteBody = `${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${teamMember.firstName},</p><p style="margin:0 0 20px"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the wholesale management platform.</p>${emailCard(`<p style="margin:0 0 6px"><strong>Your Role:</strong> ${emailBadge(roleLabel)}</p><p style="margin:0;color:#6b7280;font-size:14px">${accessDescription}</p>`)}<p style="margin:0 0 4px">This invitation expires in <strong>7 days</strong>. Click the button below to create your account and get started.</p><br>${emailButton('Accept Invitation & Join Team', inviteUrl)}<p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0">Or copy and paste this link in your browser:<br><span style="word-break:break-all">${inviteUrl}</span></p>${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">This invitation was sent by <strong>${wholesaler.email}</strong>. If you didn't expect this invitation, you can safely ignore this email.</p>`;
 
     const msg = {
       to: teamMember.email,
-      from: {
-        email: 'hello@quikpik.co',
-        name: 'Quikpik Team'
-      },
-      subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
+      from: { email: 'hello@quikpik.co', name: 'Quikpik Team' },
+      subject: `You're invited to join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
       html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
     };
 
     const response = await sgMail.send(msg);
-    console.log('Team invitation email sent successfully to:', teamMember.email);
-    console.log('SendGrid response status:', response[0].statusCode);
-    console.log('SendGrid message ID:', response[0].headers['x-message-id']);
-    
-    // Add better delivery logging
     if (response[0].statusCode === 202) {
-      console.log('✅ Email accepted by SendGrid and queued for delivery');
-    } else {
-      console.log('⚠️ Unexpected status code:', response[0].statusCode);
+      console.log('✅ Team invitation email sent to:', teamMember.email);
     }
-    
     return true;
   } catch (error: any) {
     console.error('Error sending team invitation email:', error);
@@ -14028,12 +14037,47 @@ https://quikpik.app`;
   app.delete('/api/team-members/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const requestingUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId : req.user.id;
+
+      // Ownership check — only the wholesaler who created the member can delete them
+      const allMembers = await storage.getAllTeamMembers();
+      const target = allMembers.find(m => m.id === parseInt(id));
+      if (!target || target.wholesalerId !== requestingUserId) {
+        return res.status(403).json({ message: "Not authorised to remove this team member" });
+      }
       
       await storage.deleteTeamMember(parseInt(id));
       res.json({ message: "Team member removed successfully" });
     } catch (error) {
       console.error("Error deleting team member:", error);
       res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
+  // Suspend or reactivate a team member
+  app.patch('/api/team-members/:id/status', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const requestingUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId : req.user.id;
+
+      if (!['active', 'suspended'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'active' or 'suspended'" });
+      }
+
+      const allMembers = await storage.getAllTeamMembers();
+      const target = allMembers.find(m => m.id === parseInt(id));
+      if (!target || target.wholesalerId !== requestingUserId) {
+        return res.status(403).json({ message: "Not authorised to update this team member" });
+      }
+
+      await storage.updateTeamMemberStatus(parseInt(id), status);
+      res.json({ message: status === 'suspended' ? "Team member suspended" : "Team member reactivated" });
+    } catch (error) {
+      console.error("Error updating team member status:", error);
+      res.status(500).json({ message: "Failed to update team member status" });
     }
   });
 
@@ -14078,10 +14122,10 @@ https://quikpik.app`;
         return res.status(400).json({ message: "Email parameter is required" });
       }
 
-      // Get team member by ID and verify email matches
-      const teamMembers = await storage.getAllTeamMembers();
-      const teamMember = teamMembers.find(member => 
-        member.id === parseInt(token) && 
+      // Look up by inviteToken (secure UUID) or fall back to id for legacy links
+      const allMembers = await storage.getAllTeamMembers();
+      const teamMember = allMembers.find(member => 
+        (member.inviteToken === token || member.id === parseInt(token)) &&
         member.email === email && 
         member.status === 'pending'
       );
@@ -14090,7 +14134,12 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Invalid or expired invitation" });
       }
 
-      // Get wholesaler details
+      // Check 7-day expiry
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      if (teamMember.invitedAt && new Date() > new Date(new Date(teamMember.invitedAt).getTime() + sevenDaysMs)) {
+        return res.status(410).json({ message: "This invitation has expired. Please ask your team owner to send a new one." });
+      }
+
       const wholesaler = await storage.getUser(teamMember.wholesalerId);
       
       res.json({
@@ -14120,10 +14169,10 @@ https://quikpik.app`;
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // Get team member by ID and verify email matches
-      const teamMembers = await storage.getAllTeamMembers();
-      const teamMember = teamMembers.find(member => 
-        member.id === parseInt(token) && 
+      // Look up by inviteToken (secure UUID) or fall back to id for legacy links
+      const allMembers = await storage.getAllTeamMembers();
+      const teamMember = allMembers.find(member => 
+        (member.inviteToken === token || member.id === parseInt(token)) &&
         member.email === email && 
         member.status === 'pending'
       );
@@ -14132,7 +14181,12 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Invalid or expired invitation" });
       }
 
-      // Create user account for team member with generated ID
+      // Check 7-day expiry
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      if (teamMember.invitedAt && new Date() > new Date(new Date(teamMember.invitedAt).getTime() + sevenDaysMs)) {
+        return res.status(410).json({ message: "This invitation has expired. Please ask your team owner to send a new one." });
+      }
+
       const userId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       const userData = {
@@ -14140,23 +14194,42 @@ https://quikpik.app`;
         email: teamMember.email,
         firstName: firstName,
         lastName: lastName || '',
-        role: 'wholesaler', // Team members are wholesaler role with limited permissions
+        role: 'wholesaler',
+        subscriptionTier: 'team_member',
         businessName: '',
         businessDescription: '',
         businessPhone: '',
         businessAddress: '',
         preferredCurrency: 'GBP',
-        onboardingCompleted: true, // Team members skip onboarding
+        onboardingCompleted: true,
         onboardingStep: 0,
         isFirstLogin: false,
-        productLimit: -1, // Team members inherit wholesaler's limits
-        // passwordHash will be set by createUserWithPassword method
+        productLimit: -1,
       };
 
       const newUser = await storage.createUserWithPassword(userData, password);
       
-      // Update team member status to active and link to user
+      // Mark invitation as accepted (sets joinedAt)
       await storage.updateTeamMemberStatus(teamMember.id, 'active');
+
+      // Notify the wholesaler that their team member has joined
+      try {
+        const wholesaler = await storage.getUser(teamMember.wholesalerId);
+        if (wholesaler?.email && process.env.SENDGRID_API_KEY) {
+          sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+          const fullName = `${firstName}${lastName ? ' ' + lastName : ''}`;
+          const notifyBody = `${emailHeading('Team Member Joined!', { size: '22px', color: '#10b981' })}<p style="margin:0 0 16px"><strong>${fullName}</strong> has accepted your invitation and joined <strong>${wholesaler.businessName || wholesaler.firstName}</strong> on Quikpik. They can now sign in using the Team Member tab and start working.</p>${emailCard(`<p style="margin:0 0 4px"><strong>Name:</strong> ${fullName}</p><p style="margin:0 0 4px"><strong>Email:</strong> ${teamMember.email}</p><p style="margin:0"><strong>Role:</strong> ${teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1)}</p>`)}<p style="margin:16px 0 0;color:#6b7280;font-size:13px">You can manage your team members from the Team Management page in your dashboard.</p>`;
+          await sgMail.send({
+            to: wholesaler.email,
+            from: { email: 'hello@quikpik.co', name: 'Quikpik Team' },
+            subject: `${fullName} has joined your team`,
+            html: wrapCustomerEmail(notifyBody, { businessName: wholesaler.businessName || wholesaler.firstName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${fullName} accepted your invitation and is ready to work` })
+          });
+          console.log('✅ Wholesaler notified of new team member:', wholesaler.email);
+        }
+      } catch (notifyErr) {
+        console.error('Warning: failed to notify wholesaler of team member join:', notifyErr);
+      }
       
       res.json({ 
         message: "Team member account created successfully",
@@ -14223,14 +14296,24 @@ https://quikpik.app`;
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Find the team member record to get wholesaler info
-      const teamMembers = await storage.getAllTeamMembers();
-      const teamMember = teamMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
+      // Find the team member record to get wholesaler info and check status
+      const allMembers = await storage.getAllTeamMembers();
+      const teamMember = allMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
+
+      // Block suspended team members
+      if (teamMember?.status === 'suspended') {
+        return res.status(403).json({ message: "Your account has been suspended. Please contact your team administrator." });
+      }
       
       // Get wholesaler information if team member is linked
       let wholesalerInfo = null;
       if (teamMember?.wholesalerId) {
         wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
+      }
+
+      // Record last login time
+      if (teamMember?.id) {
+        await storage.updateTeamMemberLastLogin(teamMember.id);
       }
 
       // Create session for team member with wholesaler context
@@ -17345,7 +17428,10 @@ https://quikpik.app`;
   // Get user's current subscription
   app.get('/api/subscriptions/current', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
       const subscription = await SubscriptionService.getUserSubscription(userId);
       res.json(subscription);
     } catch (error) {

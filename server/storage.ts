@@ -316,6 +316,8 @@ export interface IStorage {
   updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
   deleteTeamMember(id: number): Promise<void>;
   updateTeamMemberRole(id: number, role: string): Promise<void>;
+  updateTeamMemberStatus(id: number, status: string): Promise<TeamMember>;
+  updateTeamMemberLastLogin(id: number): Promise<void>;
   getTeamMembersCount(wholesalerId: string): Promise<number>;
   
   // Tab permission operations
@@ -3484,7 +3486,7 @@ export class DatabaseStorage implements IStorage {
       .insert(teamMembers)
       .values({
         ...teamMember,
-        inviteToken: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        inviteToken: crypto.randomUUID(),
       })
       .returning();
     return newMember;
@@ -3708,11 +3710,21 @@ export class DatabaseStorage implements IStorage {
 
   // Team Members - Additional methods
   async updateTeamMemberStatus(id: number, status: string): Promise<TeamMember> {
+    const updates: any = { status, updatedAt: new Date() };
+    if (status === 'active') {
+      updates.joinedAt = new Date();
+    }
     const [member] = await db.update(teamMembers)
-      .set({ status, updatedAt: new Date() })
+      .set(updates)
       .where(eq(teamMembers.id, id))
       .returning();
     return member;
+  }
+
+  async updateTeamMemberLastLogin(id: number): Promise<void> {
+    await db.update(teamMembers)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(teamMembers.id, id));
   }
 
   async getTeamMemberCount(wholesalerId: string): Promise<number> {

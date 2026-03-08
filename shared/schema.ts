@@ -246,8 +246,10 @@ export const teamMembers = pgTable("team_members", {
   role: varchar("role").notNull().default("member"), // owner, admin, member
   permissions: jsonb("permissions").default({}), // JSON object with permission flags
   status: varchar("status").notNull().default("pending"), // pending, active, suspended
+  inviteToken: varchar("invite_token"), // secure random UUID for invitation links
   invitedAt: timestamp("invited_at").defaultNow(),
   joinedAt: timestamp("joined_at"),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

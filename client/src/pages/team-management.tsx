@@ -31,8 +31,17 @@ import {
   ExternalLink,
   Settings,
   Edit,
-  Crown
+  Crown,
+  PauseCircle,
+  PlayCircle,
+  MoreVertical
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { TeamMember } from "@shared/schema";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
@@ -199,6 +208,28 @@ export default function TeamManagement() {
     },
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ memberId, status }: { memberId: number; status: string }) => {
+      await apiRequest("PATCH", `/api/team-members/${memberId}/status`, { status });
+    },
+    onSuccess: (_, { status }) => {
+      toast({
+        title: status === 'suspended' ? "Team member suspended" : "Team member reactivated",
+        description: status === 'suspended'
+          ? "They can no longer log in until reactivated."
+          : "They can now log in again.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update member status",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Using premium tier as default
   const teamLimit = getTeamLimit(simpleTier);
   const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
@@ -223,12 +254,25 @@ export default function TeamManagement() {
   };
 
   const handleCopyInviteLink = (member: TeamMember) => {
-    const inviteLink = `${window.location.origin}/team-invitation?token=${member.id}&email=${encodeURIComponent(member.email)}`;
+    const token = (member as any).inviteToken || member.id;
+    const inviteLink = `${window.location.origin}/team-invitation?token=${encodeURIComponent(token)}&email=${encodeURIComponent(member.email)}`;
     navigator.clipboard.writeText(inviteLink);
     toast({
       title: "Invitation link copied",
       description: "You can now share this link directly with the team member.",
     });
+  };
+
+  const formatLastLogin = (lastLoginAt: string | null | undefined) => {
+    if (!lastLoginAt) return 'Never logged in';
+    const diff = Date.now() - new Date(lastLoginAt).getTime();
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `Last active ${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `Last active ${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (mins > 0) return `Last active ${mins} minute${mins > 1 ? 's' : ''} ago`;
+    return 'Last active just now';
   };
 
   const handleEditRole = (member: TeamMember) => {
@@ -328,11 +372,11 @@ export default function TeamManagement() {
   return (
     <div className="bg-white min-h-screen">
       <PageHeader title="Team" description="Manage team access and permissions">
+        {user?.role !== 'team_member' && (
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               onClick={() => {
-                // Show upgrade modal if user can't add members
                 if (!canAddMembers) {
                   setShowUpgradeModal(true);
                 }
@@ -458,6 +502,7 @@ export default function TeamManagement() {
             </Form>
           </DialogContent>
         </Dialog>
+        )}
       </PageHeader>
       <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
@@ -580,52 +625,90 @@ export default function TeamManagement() {
                       </span>
                     </div>
                     
-                    {/* Actions - Mobile responsive */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {member.status === 'pending' && (
-                        <>
+                    {/* Last login display */}
+                    <p className="text-xs text-gray-400 hidden sm:block min-w-[130px]">
+                      {formatLastLogin((member as any).lastLoginAt)}
+                    </p>
+
+                    {/* Actions — owner only */}
+                    {user?.role !== 'team_member' && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {member.status === 'pending' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendInvite(member.id)}
+                              disabled={resendInviteMutation.isPending}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 text-xs"
+                            >
+                              <Mail className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">{resendInviteMutation.isPending ? "Sending..." : "Resend Email"}</span>
+                              <span className="sm:hidden">Resend</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopyInviteLink(member)}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 text-xs"
+                            >
+                              <Copy className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">Copy Link</span>
+                              <span className="sm:hidden">Copy</span>
+                            </Button>
+                          </>
+                        )}
+                        {member.status !== 'pending' && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleResendInvite(member.id)}
-                            disabled={resendInviteMutation.isPending}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 text-xs"
+                            onClick={() => handleEditRole(member)}
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
                           >
-                            <Mail className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">{resendInviteMutation.isPending ? "Sending..." : "Resend Email"}</span>
-                            <span className="sm:hidden">Resend</span>
+                            <Edit className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Edit Role</span>
+                            <span className="sm:hidden">Edit</span>
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyInviteLink(member)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 text-xs"
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">Copy Link</span>
-                            <span className="sm:hidden">Copy</span>
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRole(member)}
-                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">Edit Role</span>
-                        <span className="sm:hidden">Edit</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteMember(member.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 text-xs px-2">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {member.status === 'active' && (
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'suspended' })}
+                                className="text-amber-600"
+                              >
+                                <PauseCircle className="h-4 w-4 mr-2" />
+                                Suspend access
+                              </DropdownMenuItem>
+                            )}
+                            {member.status === 'suspended' && (
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'active' })}
+                                className="text-green-600"
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Reactivate
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteMember(member.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove member
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
+                    {user?.role === 'team_member' && (
+                      <p className="text-xs text-gray-400 italic">Read only</p>
+                    )}
                   </div>
                 </div>
               ))}
