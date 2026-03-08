@@ -671,7 +671,7 @@ export default function Settings() {
                       <div className="p-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm flex flex-col items-center">
                         {(() => {
                           const logoSrc = (() => {
-                            if ((user as any)?.logoType === 'uploaded' && (user as any)?.logoUrl?.startsWith('http')) {
+                            if ((user as any)?.logoType === 'custom' && (user as any)?.logoUrl) {
                               return (user as any).logoUrl as string;
                             }
                             if ((user as any)?.businessName) {
