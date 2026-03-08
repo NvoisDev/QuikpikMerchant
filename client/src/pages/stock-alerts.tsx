@@ -27,6 +27,7 @@ interface StockAlert {
     name: string;
     sku: string;
     imageUrl?: string;
+    stock: number;
     lowStockThreshold: number;
   };
 }
@@ -310,7 +311,7 @@ export default function StockAlerts() {
                       
                       <div className="text-xs md:text-sm text-gray-600 space-y-1">
                         <p>
-                          <span className="font-medium">Current Stock:</span> {alert.currentStock} units
+                          <span className="font-medium">Current Stock:</span> {alert.product.stock} units
                         </p>
                         <p>
                           <span className="font-medium">Alert Threshold:</span> {alert.product.lowStockThreshold} units
