@@ -1,5 +1,5 @@
 import { storage } from './storage';
-import { generateWholesalerOrderNotificationEmail } from './email-templates';
+import { generateWholesalerOrderNotificationEmail, getEmailLogoUrl } from './email-templates';
 import { sendEmail } from './sendgrid-service';
 import { ShippingAutomationService } from './shipping-automation';
 import { getCompleteDeliveryAddress, getEmailDeliveryAddress, getAddressComponentsForEmail } from './utils/address-helper';
@@ -479,11 +479,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         fulfillmentType: fulfillmentType,
         items: enrichedItemsForEmail,
         wholesaler: {
+          id: wholesaler.id,
           businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
           firstName: wholesaler.firstName || '',
           lastName: wholesaler.lastName || '',
           email: wholesaler.email,
-          logoUrl: wholesaler.logoUrl
+          logoUrl: wholesaler.logoUrl,
+          logoType: wholesaler.logoType,
         },
         orderDate: new Date().toISOString(),
         paymentMethod: 'Card Payment'
@@ -642,6 +644,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         subtotal: parseFloat(orderData.subtotal),
         totalAmount: parseFloat(orderData.total),
         fulfillmentType: fulfillmentType,
+        wholesalerLogoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl),
         shippingAddress: completeShippingAddress
       });
 

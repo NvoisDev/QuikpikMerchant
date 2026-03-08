@@ -11,6 +11,23 @@ function formatDeliveryAddressPlainText(address: string): string {
   return addressLines.join('\n');
 }
 
+/**
+ * Converts a stored wholesaler logo (which may be a base64 data URL) into a
+ * publicly-servable URL suitable for use in emails.
+ */
+export function getEmailLogoUrl(
+  wholesalerId: string | undefined | null,
+  logoType: string | null | undefined,
+  logoUrl: string | null | undefined
+): string | undefined {
+  if (!logoUrl) return undefined;
+  if (logoType === 'custom' && wholesalerId) {
+    return `https://quikpik.app/api/logo/${wholesalerId}`;
+  }
+  if (logoUrl.startsWith('http')) return logoUrl;
+  return undefined;
+}
+
 export interface EmailBranding {
   businessName: string;
   logoUrl?: string | null;
@@ -139,11 +156,13 @@ export interface OrderEmailData {
     sellingType?: string;
   }>;
   wholesaler: {
+    id?: string | null;
     businessName: string;
     firstName: string;
     lastName: string;
     email: string;
     logoUrl?: string | null;
+    logoType?: string | null;
   };
   orderDate: string;
   paymentMethod?: string;
@@ -194,7 +213,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 
   const html = wrapCustomerEmail(body, {
     businessName: data.wholesaler.businessName,
-    logoUrl: data.wholesaler.logoUrl,
+    logoUrl: getEmailLogoUrl(data.wholesaler.id, data.wholesaler.logoType, data.wholesaler.logoUrl),
   }, { preheader: 'New order ' + data.orderNumber + ' from ' + data.customerName + ' - \u00A3' + data.total });
 
   const text = 'New Order ' + data.orderNumber + ' - ' + data.customerName + '\n\n' +

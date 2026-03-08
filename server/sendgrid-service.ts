@@ -157,6 +157,7 @@ export async function sendWholesalerOrderNotification(orderData: {
   subtotal: number;
   totalAmount: number;
   fulfillmentType: string;
+  wholesalerLogoUrl?: string | null;
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
@@ -186,7 +187,7 @@ export async function sendWholesalerOrderNotification(orderData: {
 
   const body = `${emailHeading('New Order Received', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">You have a new order from <strong>${orderData.customerName}</strong>.</p>${emailCard(`${emailHeading('Customer Information', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${orderData.customerName}</p><p style="margin:0 0 6px"><strong>Email:</strong> <a href="mailto:${orderData.customerEmail}" style="color:#10b981;text-decoration:none">${orderData.customerEmail}</a></p><p style="margin:0 0 6px"><strong>Phone:</strong> <a href="tel:${orderData.customerPhone}" style="color:#10b981;text-decoration:none">${orderData.customerPhone}</a></p><p style="margin:0 0 6px"><strong>Fulfillment:</strong> ${emailBadge(orderData.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup', orderData.fulfillmentType === 'delivery' ? '#3b82f6' : '#10b981')}</p>${addressHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${emailTable(['Product', 'Qty', 'Price', 'Total'], itemRows)}${emailCard(`<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:6px 0"><strong>Subtotal:</strong></td><td style="padding:6px 0;text-align:right">£${orderData.subtotal.toFixed(2)}</td></tr><tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:17px;font-weight:700">Total Order Value:</td><td style="padding:12px 0 4px;text-align:right;font-size:17px;font-weight:700;color:#10b981">£${orderData.totalAmount.toFixed(2)}</td></tr></table>`)}${emailCard(`${emailHeading('Next Steps', { size: '16px', color: '#0f766e' })}<p style="margin:0;color:#0f766e">${orderData.fulfillmentType === 'delivery' ? 'Contact the customer within 24 hours to arrange delivery details.' : 'Contact the customer to arrange pickup details.'}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order Details', 'https://quikpik.co/orders')}`;
 
-  const html = wrapCustomerEmail(body, { businessName: orderData.wholesalerName, logoUrl: undefined }, { preheader: `New order ${orderData.orderNumber} from ${orderData.customerName}` });
+  const html = wrapCustomerEmail(body, { businessName: orderData.wholesalerName, logoUrl: orderData.wholesalerLogoUrl }, { preheader: `New order ${orderData.orderNumber} from ${orderData.customerName}` });
 
   return await sendEmail({
     to: orderData.wholesalerEmail,

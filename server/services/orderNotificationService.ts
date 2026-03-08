@@ -3,7 +3,7 @@ import { whatsAppBusinessService } from "../whatsapp-simple";
 import { sendSMS } from "../services/smsService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
-import { wrapCustomerEmail, emailHeading, emailCard, emailBadge } from "../email-templates";
+import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, getEmailLogoUrl } from "../email-templates";
 
 export interface OrderStatusNotification {
   orderId: number;
@@ -185,7 +185,7 @@ export class OrderNotificationService {
         to: notification.customerEmail,
         from: 'hello@quikpik.co',
         subject: emailContent.subject,
-        html: wrapCustomerEmail(emailBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: emailContent.body })
+        html: wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: emailContent.body })
       });
       console.log(`📧 Email notification sent for order ${notification.orderNumber}`);
     } catch (error) {

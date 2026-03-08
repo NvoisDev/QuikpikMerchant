@@ -133,7 +133,7 @@ import { sendSMS } from "./services/smsService";
 import { sendEmail } from "./sendgrid-service";
 import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
-import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
+import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, getEmailLogoUrl, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
@@ -327,7 +327,7 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
         name: 'Quikpik Team'
       },
       subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
-      html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
+      html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
     };
 
     const response = await sgMail.send(msg);
@@ -2027,7 +2027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const emailSubject = `New Customer Registration Request - ${customerName}`;
           const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p><p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
-          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `New enquiry from ${customerName}` });
+          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
           console.log(`📏 Registration email size: ${Buffer.byteLength(regHtml, 'utf8')} bytes`);
           await sendEmail({
             to: wholesaler.email,
@@ -2176,7 +2176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               wholesalerEmail: wholesaler.email || 'support@quikpik.co',
               wholesalerPhone: wholesaler.phoneNumber || '',
               wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
-              portalUrl
+              portalUrl,
+              wholesalerId: wholesaler.id,
+              wholesalerLogoType: wholesaler.logoType,
+              wholesalerLogoUrl: wholesaler.logoUrl,
             });
             
             console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
@@ -2197,7 +2200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: requestData.customerEmail,
               from: 'hello@quikpik.co',
               subject: `Registration Approved - Welcome to ${businessName}`,
-              html: wrapCustomerEmail(approvedBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Your registration with ${businessName} has been approved` })
+              html: wrapCustomerEmail(approvedBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your registration with ${businessName} has been approved` })
             });
             console.log(`📧 Approval notification sent to ${requestData.customerEmail}`);
           } catch (emailError) {
@@ -2217,7 +2220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: requestData.customerEmail,
               from: 'hello@quikpik.co',
               subject: `Registration Request Update - ${businessName}`,
-              html: wrapCustomerEmail(rejectedBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Update on your registration with ${businessName}` })
+              html: wrapCustomerEmail(rejectedBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your registration with ${businessName}` })
             });
             console.log(`📧 Rejection notification sent to ${requestData.customerEmail}`);
           } catch (emailError) {
@@ -5667,7 +5670,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 wholesalerEmail: wholesaler.email || 'support@quikpik.co',
                 wholesalerPhone: wholesaler.phoneNumber || '',
                 wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
-                portalUrl
+                portalUrl,
+                wholesalerId: wholesaler.id,
+                wholesalerLogoType: wholesaler.logoType,
+                wholesalerLogoUrl: wholesaler.logoUrl,
               });
               
               console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
@@ -6053,11 +6059,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               fulfillmentType: shippingInfo && shippingInfo.option === 'delivery' ? 'delivery' : 'pickup',
               items: enrichedItemsForEmail,
               wholesaler: {
+                id: wholesaler.id,
                 businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
                 firstName: wholesaler.firstName || '',
                 lastName: wholesaler.lastName || '',
                 email: wholesaler.email,
-                logoUrl: wholesaler.logoUrl
+                logoUrl: wholesaler.logoUrl,
+                logoType: wholesaler.logoType,
               },
               orderDate: new Date().toISOString(),
               paymentMethod: 'Card Payment'
@@ -6180,11 +6188,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fulfillmentType: order.fulfillmentType || 'pickup',
         items: enrichedItems,
         wholesaler: {
+          id: wholesaler.id,
           businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
           firstName: wholesaler.firstName || '',
           lastName: wholesaler.lastName || '',
           email: wholesaler.email,
-          logoUrl: wholesaler.logoUrl
+          logoUrl: wholesaler.logoUrl,
+          logoType: wholesaler.logoType,
         },
         orderDate: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
         paymentMethod: 'Card Payment'
@@ -6722,7 +6732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Cancellation Request for Order ${order.orderNumber}`,
-            html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
+            html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
           });
           console.log(`📧 Cancellation request email sent to ${wholesaler.email} for order ${order.orderNumber}`);
         }
@@ -7051,7 +7061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: customerEmail,
               from: 'hello@quikpik.co',
               subject: `Cancellation Approved - Order ${order.orderNumber}`,
-              html: wrapCustomerEmail(approvedCancelBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
+              html: wrapCustomerEmail(approvedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
             });
           } else {
             const rejectedCancelBody = `${emailHeading('Cancellation Request Update', { size: '22px' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}${emailCard(`${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Your order remains active. If you have any questions or concerns, please contact us directly:</p><p style="margin:0 0 4px"><strong>${businessName}</strong></p>${wholesaler?.phoneNumber ? `<p style="margin:0 0 4px">Phone: ${wholesaler.phoneNumber}</p>` : ''}${wholesaler?.email ? `<p style="margin:0">Email: ${wholesaler.email}</p>` : ''}`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}`;
@@ -7060,7 +7070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: customerEmail,
               from: 'hello@quikpik.co',
               subject: `Order ${order.orderNumber} - Cancellation Request Update`,
-              html: wrapCustomerEmail(rejectedCancelBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Update on your cancellation request for order ${order.orderNumber}` }),
+              html: wrapCustomerEmail(rejectedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your cancellation request for order ${order.orderNumber}` }),
             });
           }
           console.log(`📧 Cancellation response email sent to ${customerEmail}`);
@@ -8025,7 +8035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 to: customer.email,
                 from: 'hello@quikpik.co',
                 subject: emailSubject,
-                html: wrapCustomerEmail(welcomeBody, { businessName, logoUrl: wholesaler?.logoUrl }, { preheader: `Welcome to ${businessName} - your wholesale portal is ready` })
+                html: wrapCustomerEmail(welcomeBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Welcome to ${businessName} - your wholesale portal is ready` })
               });
 
               notificationResults.email = emailSuccess;
@@ -12291,7 +12301,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               wholesalerName,
               wholesalerEmail: wholesaler.email || 'support@quikpik.co',
               wholesalerPhone: wholesaler.phoneNumber,
-              portalUrl
+              portalUrl,
+              wholesalerId: wholesaler.id,
+              wholesalerLogoType: wholesaler.logoType,
+              wholesalerLogoUrl: wholesaler.logoUrl,
             });
             
             console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
@@ -12523,7 +12536,10 @@ Please contact the customer to confirm this order.
                 wholesalerName,
                 wholesalerEmail: wholesaler.email || 'support@quikpik.co',
                 wholesalerPhone: wholesaler.phoneNumber,
-                portalUrl
+                portalUrl,
+                wholesalerId: wholesaler.id,
+                wholesalerLogoType: wholesaler.logoType,
+                wholesalerLogoUrl: wholesaler.logoUrl,
               });
               
               console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
@@ -12930,7 +12946,7 @@ Please contact the customer to confirm this order.
       const wholesalerUser = await storage.getUser(order.wholesalerId);
       const refundBody = `${emailHeading('Refund Receipt', { size: '22px', color: '#dc2626' })}${emailCard(`<p style="margin:0;font-size:15px;color:#7f1d1d">${isFullRefund ? 'Full refund' : 'Partial refund'} of <strong>${currencySymbol}${refundAmount.toFixed(2)}</strong> has been processed for Order #${order.id}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}${emailCard(`${emailHeading('Refund Summary', { size: '16px' })}<p style="margin:0 0 6px"><strong>Original Order Total:</strong> ${currencySymbol}${parseFloat(order.total).toFixed(2)}</p><p style="margin:0 0 6px"><strong>Refund Amount:</strong> <span style="color:#dc2626">${currencySymbol}${refundAmount.toFixed(2)}</span></p><p style="margin:0 0 6px"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p><p style="margin:0"><strong>Reference:</strong> ${refund ? refund.id : 'Manual Refund'}</p>${reason ? `<p style="margin:10px 0 0;padding-top:10px;border-top:1px solid #e5e7eb"><strong>Reason:</strong> ${reason}</p>` : ''}`)}${emailCard(`${emailHeading('Processing Information', { size: '16px', color: '#0369a1' })}<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within 5-10 business days.${isFullRefund ? ' Your order has been cancelled and any items will be restocked.' : ''}</p>`, { borderColor: '#7dd3fc', bgColor: '#f0f9ff' })}<p style="margin:20px 0 0;text-align:center;color:#6b7280">We apologize for any inconvenience.</p>`;
 
-      const emailContent = wrapCustomerEmail(refundBody, { businessName, logoUrl: wholesalerUser?.logoUrl }, { preheader: `Refund of ${currencySymbol}${refundAmount.toFixed(2)} processed for Order #${order.id}` });
+      const emailContent = wrapCustomerEmail(refundBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser?.id, wholesalerUser?.logoType, wholesalerUser?.logoUrl) }, { preheader: `Refund of ${currencySymbol}${refundAmount.toFixed(2)} processed for Order #${order.id}` });
 
       await sgMail.send({
         to: customer.email,
@@ -13028,7 +13044,10 @@ Please contact the customer to confirm this order.
                   wholesalerName,
                   wholesalerEmail: wholesaler.email || 'support@quikpik.co',
                   wholesalerPhone: wholesaler.phoneNumber,
-                  portalUrl
+                  portalUrl,
+                  wholesalerId: wholesaler.id,
+                  wholesalerLogoType: wholesaler.logoType,
+                  wholesalerLogoUrl: wholesaler.logoUrl,
                 });
                 
                 console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
@@ -14168,7 +14187,7 @@ https://quikpik.app`;
           name: 'Quikpik Team'
         },
         subject: `Welcome to Quikpik, ${user.firstName}!`,
-        html: wrapCustomerEmail(welcomeBody, { businessName: user.businessName || `${user.firstName}'s Business` || 'Quikpik', logoUrl: user.logoUrl }, { preheader: 'Welcome to Quikpik - your wholesale platform is ready' })
+        html: wrapCustomerEmail(welcomeBody, { businessName: user.businessName || `${user.firstName}'s Business` || 'Quikpik', logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) }, { preheader: 'Welcome to Quikpik - your wholesale platform is ready' })
       });
 
       console.log(`✅ Welcome email sent to ${user.email}`);
@@ -14524,7 +14543,7 @@ https://quikpik.app`;
       await storage.setPasswordResetToken(email, hashedToken, expiresAt);
       
       // Send password reset email with PLAIN token
-      await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: user.logoUrl });
+      await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) });
       
       console.log(`🔐 Password reset email sent to ${email}`);
       
@@ -16110,7 +16129,10 @@ https://quikpik.app`;
             wholesalerEmail: wholesaler.email || 'support@quikpik.co',
             wholesalerPhone: wholesaler.phoneNumber,
             wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
-            portalUrl
+            portalUrl,
+            wholesalerId: wholesaler.id,
+            wholesalerLogoType: wholesaler.logoType,
+            wholesalerLogoUrl: wholesaler.logoUrl,
           });
           
           console.log('✅ WELCOME MESSAGES COMPLETED. RESULT:', welcomeResult);
@@ -16192,7 +16214,10 @@ https://quikpik.app`;
           wholesalerName,
           wholesalerEmail: wholesaler.email || 'support@quikpik.co',
           wholesalerPhone: wholesaler.phoneNumber,
-          portalUrl
+          portalUrl,
+          wholesalerId: wholesaler.id,
+          wholesalerLogoType: wholesaler.logoType,
+          wholesalerLogoUrl: wholesaler.logoUrl,
         });
         
         console.log('✅ Manual welcome messages sent. Result:', welcomeResult);
@@ -16319,7 +16344,10 @@ https://quikpik.app`;
         wholesalerEmail: wholesaler.email || 'support@quikpik.co',
         wholesalerPhone: wholesaler.phoneNumber,
         wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
-        portalUrl
+        portalUrl,
+        wholesalerId: wholesaler.id,
+        wholesalerLogoType: wholesaler.logoType,
+        wholesalerLogoUrl: wholesaler.logoUrl,
       });
       
       res.json(welcomeResult);
@@ -16360,7 +16388,10 @@ https://quikpik.app`;
         wholesalerEmail: wholesaler.email || 'support@quikpik.co',
         wholesalerPhone: wholesaler.phoneNumber,
         wholesalerAccountName,
-        portalUrl
+        portalUrl,
+        wholesalerId: wholesaler.id,
+        wholesalerLogoType: wholesaler.logoType,
+        wholesalerLogoUrl: wholesaler.logoUrl,
       });
       
       res.json({
@@ -17170,7 +17201,7 @@ https://quikpik.app`;
                 const customer = order.retailerId ? await storage.getUser(order.retailerId) : null;
                 const orderNum = order.orderNumber || `#${orderId}`;
                 const isFullyPaid = amountOutstanding <= 0;
-                const branding = { businessName: wholesaler?.businessName || 'Quikpik', logoUrl: wholesaler?.logoUrl };
+                const branding = { businessName: wholesaler?.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) };
 
                 // Email to wholesaler
                 if (wholesaler?.email) {
@@ -18043,7 +18074,7 @@ https://quikpik.app`;
             ? `<p style="margin:4px 0 0"><b>Fulfillment:</b> Delivery</p>${fullDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Address:</b> ${fullDeliveryAddressText}</p>` : ''}`
             : `<p style="margin:4px 0 0"><b>Fulfillment:</b> Collection</p>`;
           const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0"><b>Subtotal:</b></td><td style="padding:4px 0;text-align:right">£${subtotal.toFixed(2)}</td></tr>${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
-          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: wholesaler.logoUrl }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${total.toFixed(2)}` });
+          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${total.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({
             to: wholesaler.email,

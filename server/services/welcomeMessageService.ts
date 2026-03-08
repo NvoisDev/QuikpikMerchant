@@ -11,6 +11,9 @@ interface WelcomeMessageParams {
   wholesalerPhone?: string;
   wholesalerAccountName?: string;
   portalUrl: string;
+  wholesalerId?: string | null;
+  wholesalerLogoType?: string | null;
+  wholesalerLogoUrl?: string | null;
 }
 
 interface WelcomeResult {
@@ -48,7 +51,10 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
         wholesalerName,
         wholesalerEmail,
         wholesalerAccountName,
-        portalUrl
+        portalUrl,
+        wholesalerId: params.wholesalerId,
+        wholesalerLogoType: params.wholesalerLogoType,
+        wholesalerLogoUrl: params.wholesalerLogoUrl,
       });
       result.emailSent = emailSuccess;
       if (!emailSuccess) {
