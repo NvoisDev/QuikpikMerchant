@@ -13805,17 +13805,6 @@ https://quikpik.app`;
   const httpServer = createServer(app);
 
   // Stock Alert endpoints
-  app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const alerts = await storage.getUnresolvedStockAlerts(userId);
-      res.json(alerts);
-    } catch (error) {
-      console.error("Error fetching stock alerts:", error);
-      res.status(500).json({ message: "Failed to fetch stock alerts" });
-    }
-  });
-
   app.get('/api/stock-alerts/count', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
