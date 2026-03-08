@@ -990,7 +990,7 @@ export default function OrdersFresh() {
 
   return (
     <div className="bg-white min-h-screen">
-    <PageHeader title="Orders">
+    <PageHeader title="Orders" description="View and manage all your customer orders">
       <span className="text-xs text-gray-500 whitespace-nowrap hidden sm:inline">
         {statusFilter ? (
           <>Showing {displayedOrders} {statusFilter}</>
