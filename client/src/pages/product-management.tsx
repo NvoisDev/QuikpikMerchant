@@ -1627,6 +1627,27 @@ export default function ProductManagement() {
 
                       <FormField
                         control={form.control}
+                        name="lowStockThreshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Low Stock Alert Threshold</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder={String(user?.defaultLowStockThreshold || 50)}
+                                {...field}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">
+                              You'll be alerted when stock drops to or below this number. Leave blank to use your default from Settings.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
                         name="status"
                         render={({ field }) => (
                           <FormItem>
