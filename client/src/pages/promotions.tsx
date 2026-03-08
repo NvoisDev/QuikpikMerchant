@@ -148,13 +148,18 @@ export default function Promotions() {
   });
 
   useEffect(() => {
-    if (urlProductId && products.length > 0) {
-      setProductFilter(urlProductId);
-      setForm((f) => ({ ...f, productId: urlProductId }));
+    if (!urlProductId || promosLoading || products.length === 0) return;
+    setProductFilter(urlProductId);
+    const existingPromos = promotions.filter((p) => String(p.productId) === urlProductId);
+    if (existingPromos.length === 0) {
       setEditingPromo(null);
+      setForm({ ...emptyForm, productId: urlProductId });
       setIsDialogOpen(true);
+    } else if (existingPromos.length === 1) {
+      openEdit(existingPromos[0]);
     }
-  }, [urlProductId, products.length]);
+    // 2+ promos: just show filtered list, no dialog
+  }, [urlProductId, promosLoading, products.length, promotions.length]);
 
   const createMutation = useMutation({
     mutationFn: async (data: { productId: string; body: Record<string, unknown> }) => {
