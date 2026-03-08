@@ -266,18 +266,19 @@ export default function StockAlerts() {
                 className={`${getAlertColor(alert.alertType)} ${!alert.isRead ? 'border-l-4' : 'border'}`}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {getAlertIcon(alert.alertType)}
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <span className="font-medium text-sm truncate">{alert.product.name}</span>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    {/* Info block — full width on mobile */}
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0">{getAlertIcon(alert.alertType)}</div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <span className="font-medium text-sm">{alert.product.name}</span>
                           {!alert.isRead && (
-                            <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">New</Badge>
+                            <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">New</Badge>
                           )}
                           <Badge
                             variant={alert.alertType === 'out_of_stock' ? 'destructive' : 'secondary'}
-                            className="text-xs shrink-0"
+                            className="text-xs"
                           >
                             {alert.alertType === 'out_of_stock' ? 'Out of Stock' : 'Low Stock'}
                           </Badge>
@@ -288,7 +289,8 @@ export default function StockAlerts() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* Action buttons — full width row on mobile */}
+                    <div className="flex items-center gap-2">
                       {!alert.isRead && (
                         <Button
                           variant="ghost"
