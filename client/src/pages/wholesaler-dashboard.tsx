@@ -18,6 +18,7 @@ import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { AlertTriangle } from "lucide-react";
 import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
