@@ -739,9 +739,9 @@ export default function Settings() {
                     {/* Default threshold setting */}
                     <div className="border border-gray-200 rounded-lg p-4 space-y-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-800">Default low stock threshold</p>
+                        <p className="text-sm font-medium text-gray-800">Default Low Stock Threshold</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          Applied to all new products. Current default:{" "}
+                          Used for any product that doesn't have its own threshold set. Also applied automatically to all new products you create. Current default:{" "}
                           <strong>{userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50} units</strong>
                         </p>
                       </div>

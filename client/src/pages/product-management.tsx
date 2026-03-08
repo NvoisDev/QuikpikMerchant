@@ -1639,7 +1639,7 @@ export default function ProductManagement() {
                               />
                             </FormControl>
                             <p className="text-xs text-gray-500 mt-1">
-                              You'll be alerted when stock drops to or below this number. Leave blank to use your default from Settings.
+                              Overrides the default for this product only. Leave blank to fall back to your account default (currently {user?.defaultLowStockThreshold || 50} units — set in Settings → Notifications).
                             </p>
                             <FormMessage />
                           </FormItem>

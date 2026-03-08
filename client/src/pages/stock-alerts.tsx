@@ -375,7 +375,7 @@ export default function StockAlerts() {
           <DialogHeader>
             <DialogTitle>Adjust Stock Alert Threshold</DialogTitle>
             <DialogDescription>
-              Set a custom low stock threshold for "{selectedAlert?.product.name}"
+              Set a threshold for this product only — this overrides your account default. You'll be alerted when stock drops to or below this number.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
@@ -389,7 +389,7 @@ export default function StockAlerts() {
                 onChange={(e) => setProductThreshold(e.target.value)}
               />
               <p className="text-sm text-gray-600">
-                You'll be alerted when stock falls to or below this level
+                This applies to this product only and overrides your account default.
               </p>
             </div>
             <div className="flex gap-2">
