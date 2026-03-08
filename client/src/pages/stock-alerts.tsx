@@ -313,7 +313,7 @@ export default function StockAlerts() {
                           <span className="font-medium">Current Stock:</span> {alert.currentStock} units
                         </p>
                         <p>
-                          <span className="font-medium">Alert Threshold:</span> {alert.threshold} units
+                          <span className="font-medium">Alert Threshold:</span> {alert.product.lowStockThreshold} units
                         </p>
                         <p>
                           <span className="font-medium">Alert Type:</span>{" "}
