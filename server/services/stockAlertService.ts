@@ -15,6 +15,7 @@ export interface StockAlert {
   wholesalerName: string;
   wholesalerEmail?: string;
   wholesalerPhone?: string;
+  wholesalerLogoUrl?: string | null;
   suggestedReorderQuantity: number;
 }
 
@@ -49,8 +50,8 @@ export class StockAlertService {
         .where(and(
           eq(products.status, 'active'),
           or(
-            lt(products.stock, products.moq),
-            lt(products.stock, products.lowStockThreshold)
+            lte(products.stock, products.moq),
+            lte(products.stock, products.lowStockThreshold)
           ),
           or(
             isNull(products.lastStockAlertSentAt),
@@ -84,6 +85,10 @@ export class StockAlertService {
         );
 
         const threshold = Math.max(product.moq || 1, product.lowStockThreshold || 50);
+        const logoUrl = wholesalerData.logoType === 'custom' && wholesalerData.logoUrl
+          ? `https://quikpik.app/api/logo/${product.wholesalerId}`
+          : (wholesalerData.logoUrl?.startsWith('http') ? wholesalerData.logoUrl : undefined);
+
         const alert: StockAlert = {
           productId: product.id,
           productName: product.name,
@@ -93,6 +98,7 @@ export class StockAlertService {
           wholesalerName: wholesalerData.businessName || `${wholesalerData.firstName} ${wholesalerData.lastName}`.trim(),
           wholesalerEmail: wholesalerData.email || undefined,
           wholesalerPhone: wholesalerData.phoneNumber || undefined,
+          wholesalerLogoUrl: logoUrl,
           suggestedReorderQuantity
         };
 
@@ -194,7 +200,7 @@ export class StockAlertService {
 
     body += emailButton('View Dashboard', 'https://quikpik.app/login');
 
-    return wrapCustomerEmail(body, { businessName: wholesaler.wholesalerName, logoUrl: undefined }, { preheader: `${alerts.length} products need restocking` });
+    return wrapCustomerEmail(body, { businessName: wholesaler.wholesalerName, logoUrl: wholesaler.wholesalerLogoUrl }, { preheader: `${alerts.length} products need restocking` });
   }
 
   /**

@@ -366,6 +366,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
 
+  // Public logo endpoint — used in emails so no auth required
+  app.get('/api/logo/:wholesalerId', async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      const result = await db.select({ logoUrl: users.logoUrl, logoType: users.logoType }).from(users).where(eq(users.id, wholesalerId)).limit(1);
+      if (!result.length || !result[0].logoUrl) return res.status(404).end();
+      const { logoUrl, logoType } = result[0];
+      if (logoType === 'custom' && logoUrl.startsWith('data:')) {
+        const match = logoUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) return res.status(400).end();
+        const [, mimeType, base64Data] = match;
+        const buffer = Buffer.from(base64Data, 'base64');
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+      }
+      if (logoUrl.startsWith('http')) return res.redirect(logoUrl);
+      return res.status(404).end();
+    } catch (error) {
+      console.error('Error serving logo:', error);
+      res.status(500).end();
+    }
+  });
+
   // Test auth endpoint for development
   app.get('/api/test-auth', async (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
