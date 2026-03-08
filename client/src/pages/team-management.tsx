@@ -454,7 +454,7 @@ export default function TeamManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="member">
+                          <SelectItem value="member" textValue="Member">
                             <div className="flex flex-col py-1">
                               <div className="flex items-center gap-2">
                                 <Shield className="w-4 h-4 text-gray-400" />
@@ -463,7 +463,7 @@ export default function TeamManagement() {
                               <span className="text-xs text-gray-500">Access only to areas you allow in Tab Permissions</span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="admin">
+                          <SelectItem value="admin" textValue="Admin">
                             <div className="flex flex-col py-1">
                               <div className="flex items-center gap-2">
                                 <ShieldCheck className="w-4 h-4 text-blue-500" />
