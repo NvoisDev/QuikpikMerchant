@@ -5471,7 +5471,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             productName: item.product.name,
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice),
-            sellingType: item.sellingType || 'units' // CRITICAL: Preserve selling type for order creation
+            sellingType: item.sellingType || 'units', // CRITICAL: Preserve selling type for order creation
+            appliedOfferLabel: item.appliedOfferLabel || null,
+            freeItems: item.freeItems || 0
           })))
         }
       }, {
@@ -5527,7 +5529,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   productName: item.product.name,
                   quantity: item.quantity,
                   unitPrice: parseFloat(item.unitPrice),
-                  sellingType: item.sellingType || 'units'
+                  sellingType: item.sellingType || 'units',
+                  appliedOfferLabel: item.appliedOfferLabel || null,
+                  freeItems: item.freeItems || 0
                 })))
               }
             };
@@ -6020,7 +6024,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 productName: product?.name || `Product #${item.productId}`,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+                total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
+                appliedOfferLabel: item.appliedOfferLabel || null,
+                freeItems: item.freeItems || 0
               };
             }));
 
