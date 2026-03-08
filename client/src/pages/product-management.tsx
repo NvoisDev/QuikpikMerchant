@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen, Tag } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -123,6 +123,7 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 
 export default function ProductManagement() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   
   // SECURITY FIX: Removed hardcoded mock user to prevent data isolation bugs
   // Users must be properly authenticated to access any data
@@ -2460,6 +2461,19 @@ export default function ProductManagement() {
                                 >
                                   <Copy className="h-4 w-4 mr-2" />
                                   Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => navigate(`/promotions?productId=${product.id}`)}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
+                                  <div className="relative mr-2">
+                                    <Tag className="h-4 w-4" />
+                                    {product.promoActive && (
+                                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500" />
+                                    )}
+                                  </div>
+                                  Promotions
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-red-600 focus:text-red-600">
                                   <Trash2 className="h-4 w-4 mr-2" />

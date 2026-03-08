@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,10 +131,13 @@ function formatDate(dateStr?: string): string {
 
 export default function Promotions() {
   const { toast } = useToast();
+  const search = useSearch();
+  const urlProductId = new URLSearchParams(search).get("productId") || "";
   const [filter, setFilter] = useState<"all" | "active" | "scheduled" | "expired">("all");
+  const [productFilter, setProductFilter] = useState<string>(urlProductId);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>({ ...emptyForm, productId: urlProductId });
 
   const { data: promotions = [], isLoading: promosLoading } = useQuery<Promotion[]>({
     queryKey: ["/api/promotions"],
@@ -142,6 +146,15 @@ export default function Promotions() {
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
+
+  useEffect(() => {
+    if (urlProductId && products.length > 0) {
+      setProductFilter(urlProductId);
+      setForm((f) => ({ ...f, productId: urlProductId }));
+      setEditingPromo(null);
+      setIsDialogOpen(true);
+    }
+  }, [urlProductId, products.length]);
 
   const createMutation = useMutation({
     mutationFn: async (data: { productId: string; body: Record<string, unknown> }) => {
@@ -206,12 +219,12 @@ export default function Promotions() {
   function closeDialog() {
     setIsDialogOpen(false);
     setEditingPromo(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, productId: productFilter });
   }
 
   function openCreate() {
     setEditingPromo(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, productId: productFilter });
     setIsDialogOpen(true);
   }
 
@@ -282,7 +295,9 @@ export default function Promotions() {
   const scheduledCount = promoStatuses.filter((p) => p.status === "scheduled").length;
   const expiredCount = promoStatuses.filter((p) => p.status === "expired").length;
 
-  const filtered = filter === "all" ? promoStatuses : promoStatuses.filter((p) => p.status === filter);
+  const statusFiltered = filter === "all" ? promoStatuses : promoStatuses.filter((p) => p.status === filter);
+  const filtered = productFilter ? statusFiltered.filter((p) => String(p.productId) === productFilter) : statusFiltered;
+  const filteredProductName = productFilter ? (products as Product[]).find((p) => String(p.id) === productFilter)?.name : undefined;
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -315,7 +330,7 @@ export default function Promotions() {
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {(["all", "active", "scheduled", "expired"] as const).map((tab) => (
           <Button
             key={tab}
@@ -327,6 +342,19 @@ export default function Promotions() {
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </Button>
         ))}
+        {filteredProductName && (
+          <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-3 py-1 text-sm text-green-800">
+            <Tag className="h-3.5 w-3.5" />
+            <span className="font-medium">{filteredProductName}</span>
+            <button
+              onClick={() => setProductFilter("")}
+              className="ml-1 text-green-600 hover:text-green-900 font-bold leading-none"
+              aria-label="Clear product filter"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
 
       {promosLoading ? (
