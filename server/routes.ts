@@ -16901,6 +16901,7 @@ https://quikpik.app`;
         : req.user.id;
       const unreadOnly = req.query.unreadOnly === 'true';
 
+      await storage.syncStockAlerts(wholesalerId);
       const alerts = await storage.getStockAlerts(wholesalerId, unreadOnly);
       res.json(alerts);
     } catch (error) {

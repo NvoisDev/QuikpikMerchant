@@ -276,6 +276,7 @@ export interface IStorage {
   createStockAlert(alert: InsertStockAlert): Promise<StockAlert>;
   getUnresolvedStockAlerts(wholesalerId: string): Promise<(StockAlert & { product: Product })[]>;
   getUnresolvedStockAlertsCount(wholesalerId: string): Promise<number>;
+  syncStockAlerts(wholesalerId: string): Promise<void>;
   markStockAlertAsRead(alertId: number, wholesalerId: string): Promise<void>;
   resolveStockAlert(alertId: number, wholesalerId: string): Promise<void>;
   updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void>;
@@ -3554,14 +3555,49 @@ export class DatabaseStorage implements IStorage {
   async getUnresolvedStockAlertsCount(wholesalerId: string): Promise<number> {
     const result = await db
       .select({ count: count() })
-      .from(stockAlerts)
+      .from(products)
       .where(
         and(
-          eq(stockAlerts.wholesalerId, wholesalerId),
-          eq(stockAlerts.isResolved, false)
+          eq(products.wholesalerId, wholesalerId),
+          eq(products.status, 'active'),
+          sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
         )
       );
     return result[0]?.count || 0;
+  }
+
+  async syncStockAlerts(wholesalerId: string): Promise<void> {
+    const lowStockProducts = await db
+      .select({ product: products })
+      .from(products)
+      .leftJoin(
+        stockAlerts,
+        and(
+          eq(stockAlerts.productId, products.id),
+          eq(stockAlerts.isResolved, false)
+        )
+      )
+      .where(
+        and(
+          eq(products.wholesalerId, wholesalerId),
+          eq(products.status, 'active'),
+          sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`,
+          isNull(stockAlerts.id)
+        )
+      );
+
+    for (const { product } of lowStockProducts) {
+      await db.insert(stockAlerts).values({
+        productId: product.id,
+        wholesalerId,
+        alertType: product.stock === 0 ? 'out_of_stock' : 'low_stock',
+        currentStock: product.stock,
+        threshold: product.lowStockThreshold || 50,
+        isRead: false,
+        isResolved: false,
+        notificationSent: false,
+      });
+    }
   }
 
   async markStockAlertAsRead(alertId: number, wholesalerId: string): Promise<void> {
