@@ -1,13 +1,13 @@
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Package, Check, X, Settings, Eye, EyeOff, Info } from "lucide-react";
+import { AlertTriangle, Package, Check, X, Settings, Eye, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
@@ -181,32 +181,12 @@ export default function StockAlerts() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex flex-col items-center space-y-6">
-          {/* Enhanced Loading Animation */}
-          <div className="flex space-x-2">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="w-2 h-6 bg-gradient-to-t from-orange-400 to-red-500 rounded-full animate-pulse"
-                style={{
-                  animationDelay: `${i * 0.15}s`,
-                  animationDuration: '1.5s'
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-sm text-gray-500 text-center">Loading stock alerts...</p>
-          
-          {/* Skeleton Content */}
-          <div className="w-full space-y-4 mt-8">
-            <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
-            <div className="space-y-3">
-              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          </div>
+      <div className="bg-white min-h-screen">
+        <PageHeader title="Stock Alerts" description="Monitor and manage low stock notifications" />
+        <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -215,203 +195,174 @@ export default function StockAlerts() {
   return (
     <div className="bg-white min-h-screen">
       <PageHeader title="Stock Alerts" description="Monitor and manage low stock notifications">
-        
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="text-left md:text-right">
-            <p className="text-xs md:text-sm text-gray-600">Default Threshold for New Products</p>
-            <p className="text-base md:text-lg font-semibold">{user?.defaultLowStockThreshold || 50} units</p>
-          </div>
-          
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Stock Alert Settings</DialogTitle>
+              <DialogDescription>
+                Default threshold for new products is currently <strong>{user?.defaultLowStockThreshold || 50} units</strong>. Update it below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="defaultThreshold">Default Low Stock Threshold</Label>
+                <Input
+                  id="defaultThreshold"
+                  type="number"
+                  min="0"
+                  placeholder={user?.defaultLowStockThreshold?.toString() || "50"}
+                  value={defaultThreshold}
+                  onChange={(e) => setDefaultThreshold(e.target.value)}
+                />
+                <p className="text-sm text-gray-500">
+                  Applies to all new products. Individual products can override this.
+                </p>
+              </div>
+              <Button
+                onClick={handleUpdateDefaultThreshold}
+                disabled={!defaultThreshold || updateDefaultThresholdMutation.isPending}
+                className="w-full"
+              >
+                {updateDefaultThresholdMutation.isPending ? "Updating..." : "Update Default"}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Stock Alert Settings</DialogTitle>
-                <DialogDescription>
-                  Configure default low stock threshold for new products
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="defaultThreshold">Default Low Stock Threshold</Label>
-                  <Input
-                    id="defaultThreshold"
-                    type="number"
-                    min="0"
-                    placeholder={user?.defaultLowStockThreshold?.toString() || "50"}
-                    value={defaultThreshold}
-                    onChange={(e) => setDefaultThreshold(e.target.value)}
-                  />
-                  <p className="text-sm text-gray-600">
-                    This threshold will be used for all new products you create
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleUpdateDefaultThreshold}
-                  disabled={!defaultThreshold || updateDefaultThresholdMutation.isPending}
-                  className="w-full"
-                >
-                  {updateDefaultThresholdMutation.isPending ? "Updating..." : "Update Default"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </PageHeader>
-      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-
-        {/* How stock alerts work */}
-        <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-          <Info className="h-5 w-5 flex-shrink-0 mt-0.5 text-blue-500" />
-          <div className="space-y-1">
-            <p className="font-semibold">How stock alerts work</p>
-            <ul className="space-y-1 text-blue-700">
-              <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
-              <li>• If a product is at or below its threshold, you'll receive an <strong>email alert</strong> and it will appear here</li>
-              <li>• Each product can only trigger <strong>one alert per 24 hours</strong> — you won't be flooded with repeats</li>
-              <li>• Use the <strong>settings icon</strong> on each alert below to adjust the threshold for that product, or use <strong>Settings</strong> above to set a global default for new products</li>
-            </ul>
-          </div>
-        </div>
-
-      {alerts.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <Package className="h-12 w-12 text-gray-400 mx-auto" />
-              <div>
-                <h3 className="text-lg font-medium">No Stock Alerts</h3>
-                <p className="text-gray-600">All your products have healthy stock levels</p>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {alerts.map((alert: StockAlert) => (
-            <Card key={alert.id} className={`${getAlertColor(alert.alertType)} ${!alert.isRead ? 'border-l-4' : ''}`}>
-              <CardContent className="p-3 md:p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div className="flex items-start space-x-3 md:space-x-4">
-                    {getAlertIcon(alert.alertType)}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-medium text-sm md:text-base">{alert.product.name}</h3>
-                        {!alert.isRead && (
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">
-                            New
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="text-xs md:text-sm text-gray-600 space-y-1">
-                        <p>
-                          <span className="font-medium">Current Stock:</span> {alert.product.stock} units
-                        </p>
-                        <p>
-                          <span className="font-medium">Alert Threshold:</span> {alert.product.lowStockThreshold} units
-                        </p>
-                        <p>
-                          <span className="font-medium">Alert Type:</span>{" "}
-                          <Badge variant={alert.alertType === 'out_of_stock' ? 'destructive' : 'secondary'} className="text-xs">
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
+
+      <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+
+        {/* Compact info banner */}
+        <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
+          <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
+          <p>
+            Stock is checked daily at <strong>8 AM</strong>. Products at or below their threshold appear here and trigger an email alert — one per product per 24 hours. Use <strong>Adjust</strong> on any card to set a per-product threshold.
+          </p>
+        </div>
+
+        {alerts.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center space-y-3">
+                <Package className="h-10 w-10 text-gray-300 mx-auto" />
+                <div>
+                  <h3 className="text-base font-medium text-gray-700">No stock alerts</h3>
+                  <p className="text-sm text-gray-500">All your products have healthy stock levels</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {alerts.map((alert: StockAlert) => (
+              <Card
+                key={alert.id}
+                className={`${getAlertColor(alert.alertType)} ${!alert.isRead ? 'border-l-4' : 'border'}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getAlertIcon(alert.alertType)}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="font-medium text-sm truncate">{alert.product.name}</span>
+                          {!alert.isRead && (
+                            <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">New</Badge>
+                          )}
+                          <Badge
+                            variant={alert.alertType === 'out_of_stock' ? 'destructive' : 'secondary'}
+                            className="text-xs shrink-0"
+                          >
                             {alert.alertType === 'out_of_stock' ? 'Out of Stock' : 'Low Stock'}
                           </Badge>
-                        </p>
+                        </div>
                         <p className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
+                          {alert.product.stock} in stock · threshold {alert.product.lowStockThreshold} · {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
                         </p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 ml-7 md:ml-0 flex-wrap">
-                    {!alert.isRead && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMarkAsRead(alert.id)}
-                        disabled={markAsReadMutation.isPending}
-                        className="h-8 w-8 p-0 md:h-9 md:w-auto md:px-3"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUpdateProductThreshold(alert)}
-                      className="h-8 text-xs md:text-sm"
-                    >
-                      <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                      Adjust
-                    </Button>
-                    
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleResolveAlert(alert.id)}
-                      disabled={resolveAlertMutation.isPending}
-                      className="h-8 text-xs md:text-sm"
-                    >
-                      <Check className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                      Resolve
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
-      {/* Product Threshold Dialog */}
-      <Dialog open={thresholdDialogOpen} onOpenChange={setThresholdDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adjust Stock Alert Threshold</DialogTitle>
-            <DialogDescription>
-              Set a threshold for this product only — this overrides your account default. You'll be alerted when stock drops to or below this number.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="productThreshold">Low Stock Threshold</Label>
-              <Input
-                id="productThreshold"
-                type="number"
-                min="0"
-                value={productThreshold}
-                onChange={(e) => setProductThreshold(e.target.value)}
-              />
-              <p className="text-sm text-gray-600">
-                This applies to this product only and overrides your account default.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleSubmitThreshold}
-                disabled={!productThreshold || updateProductThresholdMutation.isPending}
-                className="flex-1"
-              >
-                {updateProductThresholdMutation.isPending ? "Updating..." : "Update Threshold"}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setThresholdDialogOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!alert.isRead && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkAsRead(alert.id)}
+                          disabled={markAsReadMutation.isPending}
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                          title="Mark as read"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateProductThreshold(alert)}
+                        className="h-8 text-xs px-3"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
+                        Adjust
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleResolveAlert(alert.id)}
+                        disabled={resolveAlertMutation.isPending}
+                        className="h-8 text-xs px-3 bg-green-600 hover:bg-green-700"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Resolve
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+
+        {/* Per-product threshold dialog */}
+        <Dialog open={thresholdDialogOpen} onOpenChange={setThresholdDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adjust Alert Threshold</DialogTitle>
+              <DialogDescription>
+                Set a threshold for <strong>{selectedAlert?.product.name}</strong> only. This overrides your account default — you'll be alerted when stock drops to or below this number.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="productThreshold">Low Stock Threshold</Label>
+                <Input
+                  id="productThreshold"
+                  type="number"
+                  min="0"
+                  value={productThreshold}
+                  onChange={(e) => setProductThreshold(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSubmitThreshold}
+                  disabled={!productThreshold || updateProductThresholdMutation.isPending}
+                  className="flex-1"
+                >
+                  {updateProductThresholdMutation.isPending ? "Updating..." : "Update Threshold"}
+                </Button>
+                <Button variant="outline" onClick={() => setThresholdDialogOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
