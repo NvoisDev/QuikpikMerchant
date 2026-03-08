@@ -2406,7 +2406,7 @@ export default function ProductManagement() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
                                 <DropdownMenuItem
-                                  onClick={() => !product.status === 'locked' && handleEdit(product)}
+                                  onClick={() => product.status !== 'locked' && handleEdit(product)}
                                   disabled={product.status === 'locked'}
                                   className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
