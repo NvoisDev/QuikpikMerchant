@@ -14112,6 +14112,12 @@ https://quikpik.app`;
     }
   });
 
+  // Helper: returns true if an invitation issued at invitedAt has passed the 7-day window
+  function isInvitationExpired(invitedAt: Date | string | null | undefined): boolean {
+    if (!invitedAt) return false;
+    return Date.now() > new Date(invitedAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+  }
+
   // Team invitation acceptance endpoints
   app.get('/api/team-invitation/:token', async (req, res) => {
     try {
@@ -14134,9 +14140,7 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Invalid or expired invitation" });
       }
 
-      // Check 7-day expiry
-      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-      if (teamMember.invitedAt && new Date() > new Date(new Date(teamMember.invitedAt).getTime() + sevenDaysMs)) {
+      if (isInvitationExpired(teamMember.invitedAt)) {
         return res.status(410).json({ message: "This invitation has expired. Please ask your team owner to send a new one." });
       }
 
@@ -14181,9 +14185,7 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Invalid or expired invitation" });
       }
 
-      // Check 7-day expiry
-      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-      if (teamMember.invitedAt && new Date() > new Date(new Date(teamMember.invitedAt).getTime() + sevenDaysMs)) {
+      if (isInvitationExpired(teamMember.invitedAt)) {
         return res.status(410).json({ message: "This invitation has expired. Please ask your team owner to send a new one." });
       }
 
@@ -14194,7 +14196,8 @@ https://quikpik.app`;
         email: teamMember.email,
         firstName: firstName,
         lastName: lastName || '',
-        role: 'wholesaler',
+        role: 'team_member',
+        wholesalerId: teamMember.wholesalerId,
         subscriptionTier: 'team_member',
         businessName: '',
         businessDescription: '',

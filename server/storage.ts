@@ -3712,7 +3712,13 @@ export class DatabaseStorage implements IStorage {
   async updateTeamMemberStatus(id: number, status: string): Promise<TeamMember> {
     const updates: any = { status, updatedAt: new Date() };
     if (status === 'active') {
-      updates.joinedAt = new Date();
+      const [existing] = await db.select({ joinedAt: teamMembers.joinedAt })
+        .from(teamMembers)
+        .where(eq(teamMembers.id, id))
+        .limit(1);
+      if (!existing?.joinedAt) {
+        updates.joinedAt = new Date();
+      }
     }
     const [member] = await db.update(teamMembers)
       .set(updates)
