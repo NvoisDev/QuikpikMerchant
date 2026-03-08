@@ -340,7 +340,7 @@ export default function StockTracker({ product }: StockTrackerProps) {
                       <div className="text-sm text-gray-600">
                         {movement.reason || 'No reason provided'}
                         {movement.customerName && ` • Customer: ${movement.customerName}`}
-                        {movement.orderId && ` • Order #${movement.orderId}`}
+                        {movement.orderId && ` • Order ${(movement as any).orderNumber || `#${movement.orderId}`}`}
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(movement.createdAt).toLocaleString()}

@@ -1012,6 +1012,8 @@ export class DatabaseStorage implements IStorage {
         orderItemQuantity: orderItems.quantity,
         orderItemUnitPrice: orderItems.unitPrice,
         orderItemTotal: orderItems.total,
+        orderItemAppliedOfferLabel: orderItems.appliedOfferLabel,
+        orderItemFreeItems: orderItems.freeItems,
         productId: products.id,
         productName: products.name,
         productImageUrl: products.imageUrl,
@@ -1035,6 +1037,8 @@ export class DatabaseStorage implements IStorage {
         quantity: item.orderItemQuantity,
         unitPrice: item.orderItemUnitPrice,
         total: item.orderItemTotal,
+        appliedOfferLabel: item.orderItemAppliedOfferLabel || null,
+        freeItems: item.orderItemFreeItems || 0,
         product: {
           id: item.productId,
           name: item.productName,
@@ -3372,7 +3376,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getStockMovements(productId: number): Promise<StockMovement[]> {
+  async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null })[]> {
     return await db
       .select({
         id: stockMovements.id,
@@ -3387,8 +3391,10 @@ export class DatabaseStorage implements IStorage {
         orderId: stockMovements.orderId,
         customerName: stockMovements.customerName,
         createdAt: stockMovements.createdAt,
+        orderNumber: orders.orderNumber,
       })
       .from(stockMovements)
+      .leftJoin(orders, eq(stockMovements.orderId, orders.id))
       .where(eq(stockMovements.productId, productId))
       .orderBy(desc(stockMovements.createdAt));
   }

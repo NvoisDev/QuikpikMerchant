@@ -1836,6 +1836,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             productId: products.id,
             productName: products.name,
             sellingType: orderItems.sellingType, // CRITICAL FIX: Include selling type in query
+            appliedOfferLabel: orderItems.appliedOfferLabel,
+            freeItems: orderItems.freeItems,
           })
           .from(orderItems)
           .leftJoin(products, eq(orderItems.productId, products.id))
@@ -1857,7 +1859,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             quantity: item.quantity,
             unitPrice: item.unitPrice || "0",
             total: item.total || "0",
-            sellingType: item.sellingType || "units" // CRITICAL FIX: Include selling type in response
+            sellingType: item.sellingType || "units", // CRITICAL FIX: Include selling type in response
+            appliedOfferLabel: item.appliedOfferLabel || null,
+            freeItems: item.freeItems || 0,
           })),
           wholesaler: wholesalerDetails ? {
             id: order.wholesalerId,
