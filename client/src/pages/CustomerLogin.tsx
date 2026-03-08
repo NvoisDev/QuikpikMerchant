@@ -275,17 +275,6 @@ export default function CustomerLogin() {
       {/* Left side - Authentication form */}
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md mx-auto">
-          {/* Back to Home Link */}
-          <div className="mb-8">
-            <button 
-              onClick={handleBackToHome}
-              className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors group bg-transparent border-none p-0 font-inherit cursor-pointer"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-              Back to Home
-            </button>
-          </div>
-
           {/* Logo and welcome */}
           <div className="text-center mb-8">
             {step === 2 && selectedWholesaler?.logoUrl ? (
@@ -524,18 +513,8 @@ export default function CustomerLogin() {
                     
                     <div className="flex space-x-3">
                       <Button 
-                        type="button"
-                        variant="outline"
-                        onClick={handleBack}
-                        disabled={isLoading}
-                        className="flex-1 h-12"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button 
                         type="submit" 
-                        className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
+                        className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
                         disabled={isLoading || lastFourDigits.length !== 4}
                       >
                         {isLoading ? (
