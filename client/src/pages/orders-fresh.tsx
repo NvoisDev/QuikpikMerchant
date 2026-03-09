@@ -1374,7 +1374,7 @@ export default function OrdersFresh() {
                           ) : order.status === 'cancelled' ? (
                             <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
                           ) : (
-                            <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
+                            <Badge className="bg-gray-100 text-gray-800 text-xs">Unfulfilled</Badge>
                           )}
                           {order.isQuote ? (
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
@@ -1511,7 +1511,7 @@ export default function OrdersFresh() {
                         ) : order.status === 'cancelled' ? (
                           <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
                         ) : (
-                          <Badge className="bg-gray-100 text-gray-800 text-xs">Pending</Badge>
+                          <Badge className="bg-gray-100 text-gray-800 text-xs">Unfulfilled</Badge>
                         )}
                         {order.isQuote ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
@@ -1810,7 +1810,7 @@ export default function OrdersFresh() {
                   ) : selectedOrder.status === 'cancelled' ? (
                     <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">Cancelled</Badge>
                   ) : (
-                    <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Pending</Badge>
+                    <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Unfulfilled</Badge>
                   )}
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status !== 'cancelled' && (
                     <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Partially Refunded</Badge>
