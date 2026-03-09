@@ -1104,42 +1104,37 @@ export default function OrdersFresh() {
             )}
           </select>
           
-          {/* Additional Archive Filters */}
-          {archiveTab === 'archived' && (
-            <>
-              <select 
-                className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                value={paymentStatusFilter}
-                onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              >
-                <option value="">All Payment</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="part_paid">Part-paid</option>
-              </select>
-              
-              <select 
-                className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                value={deliveryTypeFilter}
-                onChange={(e) => setDeliveryTypeFilter(e.target.value)}
-              >
-                <option value="">All Type</option>
-                <option value="pickup">Collection</option>
-                <option value="delivery">Delivery</option>
-              </select>
-              
-              <select 
-                className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                value={dateRangeFilter}
-                onChange={(e) => setDateRangeFilter(e.target.value)}
-              >
-                <option value="">All Time</option>
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="90">Last 90 days</option>
-              </select>
-            </>
-          )}
+          <select 
+            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+          >
+            <option value="">All Payment</option>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="part_paid">Part-paid</option>
+          </select>
+          
+          <select 
+            className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={deliveryTypeFilter}
+            onChange={(e) => setDeliveryTypeFilter(e.target.value)}
+          >
+            <option value="">All Type</option>
+            <option value="pickup">Collection</option>
+            <option value="delivery">Delivery</option>
+          </select>
+          
+          <select 
+            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={dateRangeFilter}
+            onChange={(e) => setDateRangeFilter(e.target.value)}
+          >
+            <option value="">All Time</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
           
           {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter) && (
             <Button
