@@ -37,7 +37,8 @@ import {
   Share2,
   CreditCard,
   Eye,
-  Tag
+  Tag,
+  CheckCircle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
