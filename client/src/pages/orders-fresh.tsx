@@ -1092,9 +1092,7 @@ export default function OrdersFresh() {
             {archiveTab === 'active' ? (
               <>
                 <option value="unfulfilled">Unfulfilled</option>
-                <option value="shipped">Shipped</option>
                 <option value="ready_for_collection">Ready for Collection</option>
-                <option value="refunded">Refunded</option>
               </>
             ) : (
               <>
