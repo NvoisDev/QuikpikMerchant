@@ -1297,7 +1297,7 @@ export default function OrdersFresh() {
           <CardTitle className="text-lg">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredByStatus.length === 0 ? (
+          {filteredByDate.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">
@@ -1327,7 +1327,7 @@ export default function OrdersFresh() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredByStatus.slice(0, 50).map((order, index, arr) => {
+                  {filteredByDate.slice(0, 50).map((order, index, arr) => {
                     const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
                     const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
                     const showSeparator = index === 0 || currentLabel !== prevLabel;
