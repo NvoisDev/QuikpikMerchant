@@ -888,8 +888,13 @@ export default function OrdersFresh() {
   
   // Orders are already filtered by active/archived tab on the server
   // Apply status filter client-side if selected - with null safety
-  const filteredByStatus = statusFilter 
-    ? orders.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase())
+  const UNFULFILLED_STATUSES = ['pending', 'paid', 'confirmed', 'processing'];
+  const filteredByStatus = statusFilter
+    ? orders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        if (statusFilter === 'unfulfilled') return UNFULFILLED_STATUSES.includes(s);
+        return s === statusFilter.toLowerCase();
+      })
     : orders;
   
   // Apply payment status filter (archive tab only)
@@ -938,7 +943,7 @@ export default function OrdersFresh() {
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders - with null safety
   const paidOrders = filteredByDate.filter(o => (o.status || '') === 'paid').length;
-  const pendingOrders = filteredByDate.filter(o => (o.status || '') === 'pending').length;
+  const unfulfilledOrders = filteredByDate.filter(o => UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase())).length;
   
   // Tab badge counts come from server stats (accurate across all pages)
   const activeCount = orderStats?.activeCount ?? 0;
@@ -1086,13 +1091,9 @@ export default function OrdersFresh() {
             <option value="">All Status</option>
             {archiveTab === 'active' ? (
               <>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="processing">Processing</option>
+                <option value="unfulfilled">Unfulfilled</option>
                 <option value="shipped">Shipped</option>
                 <option value="ready_for_collection">Ready for Collection</option>
-                <option value="delivered">Delivered</option>
                 <option value="refunded">Refunded</option>
               </>
             ) : (
@@ -1175,8 +1176,8 @@ export default function OrdersFresh() {
             <p className="text-sm font-bold text-yellow-800">{orderStats?.ordersCount ?? displayedOrders}</p>
           </div>
           <div className="rounded-lg bg-orange-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-orange-700">Pending</p>
-            <p className="text-sm font-bold text-orange-800">{orderStats?.pendingOrdersCount ?? pendingOrders}</p>
+            <p className="text-[11px] font-medium text-orange-700">Unfulfilled</p>
+            <p className="text-sm font-bold text-orange-800">{unfulfilledOrders}</p>
           </div>
         </div>
       )}
