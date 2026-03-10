@@ -4044,35 +4044,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get individual order details - REQUIRES AUTHENTICATION
-  app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
-    try {
-      const orderId = parseInt(req.params.id);
-      if (isNaN(orderId)) {
-        return res.status(400).json({ error: 'Invalid order ID' });
-      }
-
-      // Use authenticated user's ID for proper data isolation - SECURITY FIX
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-      console.log(`📦 Fetching order details for order ${orderId} by authenticated user`);
-
-      // Get order with full details including items
-      const orders = await storage.getOrders(wholesalerId, undefined, undefined);
-      const order = orders.find(o => o.id === orderId);
-
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      res.json(order);
-    } catch (error) {
-      console.error("❌ Error fetching order details:", error);
-      res.status(500).json({ error: "Failed to fetch order details" });
-    }
-  });
-
   // Mark order as ready for collection/delivery
   app.put('/api/orders/:id/ready-for-collection', requireAuth, async (req: any, res) => {
     try {
@@ -4366,59 +4337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update order status
-  app.patch('/api/orders/:id/status', async (req: any, res) => {
-    try {
-      const orderId = parseInt(req.params.id);
-      const { status } = req.body;
-
-      if (isNaN(orderId)) {
-        return res.status(400).json({ error: 'Invalid order ID' });
-      }
-
-      if (!status) {
-        return res.status(400).json({ error: 'Status is required' });
-      }
-
-      console.log(`📦 Updating order ${orderId} status to: ${status}`);
-
-      // Update order status using storage method
-      const updated = await storage.updateOrderStatus(orderId, status);
-      if (!updated) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      // Send real-time notifications to customer
-      try {
-        const customer = await storage.getUser(updated.retailerId);
-        const wholesaler = await storage.getUser(updated.wholesalerId);
-        
-        if (customer && wholesaler) {
-          await orderNotificationService.sendOrderStatusUpdate({
-            orderId: updated.id,
-            orderNumber: updated.orderNumber,
-            status: updated.status,
-            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
-            customerPhone: customer.phoneNumber || '',
-            customerEmail: customer.email || undefined,
-            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
-            trackingNumber: updated.deliveryTrackingNumber || undefined,
-            estimatedDelivery: undefined // TODO: Add estimated delivery calculation
-          });
-          console.log(`📱 Real-time notifications sent for order ${orderId}`);
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send order notifications:', notificationError);
-        // Don't fail the status update if notifications fail
-      }
-
-      console.log(`✅ Order ${orderId} status updated to ${status}`);
-      res.json({ success: true, order: updated });
-    } catch (error) {
-      console.error("❌ Error updating order status:", error);
-      res.status(500).json({ error: "Failed to update order status" });
-    }
-  });
+  // Update order status (auth + ownership enforced — see full handler below)
 
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
@@ -6326,21 +6245,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
-      const userId = req.user.id;
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // Only wholesaler can update order status
-      if (order.wholesalerId !== userId) {
+      // Only the owning wholesaler (or their team members) can update order status
+      if (order.wholesalerId !== wholesalerId) {
         return res.status(403).json({ message: "Not authorized to update this order" });
       }
 
       const updatedOrder = await storage.updateOrderStatus(id, status);
 
-      // Auto-archive fulfilled orders
+      // Send real-time notifications to the customer
+      try {
+        if (updatedOrder) {
+          const customer = await storage.getUser(updatedOrder.retailerId);
+          const wholesaler = await storage.getUser(updatedOrder.wholesalerId);
+          if (customer && wholesaler) {
+            await orderNotificationService.sendOrderStatusUpdate({
+              orderId: updatedOrder.id,
+              orderNumber: updatedOrder.orderNumber,
+              status: updatedOrder.status,
+              customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+              customerPhone: customer.phoneNumber || '',
+              customerEmail: customer.email || undefined,
+              wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+              trackingNumber: updatedOrder.deliveryTrackingNumber || undefined,
+              estimatedDelivery: undefined
+            });
+          }
+        }
+      } catch (notificationError) {
+        console.error('Failed to send order status notifications:', notificationError);
+        // Don't fail the status update if notifications fail
+      }
+
+      // Auto-archive fulfilled orders after 24 hours
       if (status === 'fulfilled') {
         setTimeout(async () => {
           try {
@@ -6349,7 +6294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (error) {
             console.error(`Failed to auto-archive order ${id}:`, error);
           }
-        }, 24 * 60 * 60 * 1000); // Archive after 24 hours
+        }, 24 * 60 * 60 * 1000);
       }
 
       res.json(updatedOrder);
@@ -9086,23 +9031,6 @@ Write a professional, sales-focused description that highlights the key benefits
   app.post('/api/ai/optimize-timing', requireAuth, async (req: any, res) => {
     try {
       const { customerGroup, previousCampaignData } = req.body;
-      
-      const timing = await optimizeMessageTiming({
-        customerGroup: customerGroup || 'General',
-        businessType: req.user.businessType || 'General',
-        previousCampaignData: previousCampaignData || []
-      });
-      
-      res.json(timing);
-    } catch (error) {
-      console.error("AI timing optimization error:", error);
-      res.status(500).json({ message: "Failed to optimize campaign timing" });
-    }
-  });
-
-  app.post('/api/ai/optimize-timing', requireAuth, async (req: any, res) => {
-    try {
-      const { customerGroup, previousCampaignData } = req.body;
       const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const user = await storage.getUser(userId);
       
@@ -10072,62 +10000,6 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Twilio WhatsApp configuration routes
-  app.post('/api/whatsapp/configure', requireAuth, async (req: any, res) => {
-    try {
-      const { provider } = req.body;
-      const wholesalerId = req.user.id;
-
-      if (provider === 'twilio') {
-        const { accountSid, authToken, phoneNumber } = req.body;
-        if (!accountSid || !authToken || !phoneNumber) {
-          return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
-        }
-
-        // Save Twilio configuration to user settings
-        await storage.updateUserSettings(wholesalerId, {
-          whatsappProvider: 'twilio',
-          twilioAccountSid: accountSid,
-          twilioAuthToken: authToken,
-          twilioPhoneNumber: phoneNumber,
-          whatsappEnabled: true
-        });
-
-        res.json({
-          success: true,
-          message: "Twilio WhatsApp configuration saved successfully"
-        });
-
-      } else if (provider === 'direct') {
-        const { businessPhoneId, accessToken, appId, businessPhone, businessName } = req.body;
-        if (!businessPhoneId || !accessToken || !appId) {
-          return res.status(400).json({ message: "Business Phone ID, Access Token, and App ID are required for Direct WhatsApp API" });
-        }
-
-        // Save Direct WhatsApp configuration to user settings
-        await storage.updateUserSettings(wholesalerId, {
-          whatsappProvider: 'direct',
-          whatsappBusinessPhoneId: businessPhoneId,
-          whatsappAccessToken: accessToken,
-          whatsappAppId: appId,
-          whatsappBusinessPhone: businessPhone || '',
-          whatsappBusinessName: businessName || '',
-          whatsappEnabled: true
-        });
-
-        res.json({
-          success: true,
-          message: "Direct WhatsApp Business API configuration saved successfully"
-        });
-
-      } else {
-        return res.status(400).json({ message: "Provider must be 'twilio' or 'direct'" });
-      }
-    } catch (error: any) {
-      console.error("Error saving Twilio configuration:", error);
-      res.status(500).json({ message: "Failed to save Twilio configuration" });
-    }
-  });
-
   app.post('/api/whatsapp/verify', requireAuth, async (req: any, res) => {
     try {
       const { provider } = req.body;
@@ -10201,45 +10073,6 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/whatsapp/status', requireAuth, async (req: any, res) => {
-    try {
-      const wholesalerId = req.user.id;
-      const user = await storage.getUser(wholesalerId);
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check if WhatsApp is properly configured
-      const isConfigured = user.whatsappProvider === 'direct' 
-        ? !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
-        : !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber);
-
-      res.json({
-        enabled: user.whatsappEnabled || false,
-        isConfigured, // Frontend expects this field
-        provider: user.whatsappProvider || 'twilio',
-        whatsappProvider: user.whatsappProvider || 'twilio',
-        // Twilio fields
-        twilioAccountSid: user.twilioAccountSid || null,
-        twilioAuthToken: user.twilioAuthToken ? "configured" : null,
-        twilioPhoneNumber: user.twilioPhoneNumber || null,
-        // Direct WhatsApp fields
-        whatsappBusinessPhoneId: user.whatsappBusinessPhoneId || null,
-        whatsappAccessToken: user.whatsappAccessToken ? "configured" : null,
-        whatsappAppId: user.whatsappAppId || null,
-        whatsappBusinessPhone: user.whatsappBusinessPhone || null,
-        whatsappBusinessName: user.whatsappBusinessName || null,
-        // Legacy fields
-        serviceProvider: user.whatsappProvider === 'direct' ? "Direct WhatsApp Business API" : "Twilio WhatsApp",
-        configured: isConfigured // Keep for backward compatibility
-      });
-    } catch (error: any) {
-      console.error("Error fetching WhatsApp status:", error);
-      res.status(500).json({ message: "Failed to fetch WhatsApp status" });
-    }
-  });
-
   app.post('/api/whatsapp/enable', requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
@@ -10254,35 +10087,6 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error: any) {
       console.error("Error enabling WhatsApp:", error);
       res.status(500).json({ message: "Failed to enable WhatsApp integration" });
-    }
-  });
-
-  // AI-powered product generation endpoints
-  app.post('/api/ai/generate-description', requireAuth, async (req: any, res) => {
-    try {
-      const { productName, category } = req.body;
-      
-      if (!productName) {
-        return res.status(400).json({ message: "Product name is required" });
-      }
-
-      const description = await generateProductDescription(productName, category);
-      res.json({ description });
-    } catch (error: any) {
-      console.error("Error generating description:", error);
-      
-      // Check if it's a quota/billing issue
-      if (error.code === 'insufficient_quota') {
-        res.status(402).json({ 
-          message: "AI description generation is temporarily unavailable. Please manually enter a product description.",
-          fallback: true
-        });
-      } else {
-        res.status(500).json({ 
-          message: "Failed to generate description. Please enter manually.",
-          fallback: true 
-        });
-      }
     }
   });
 
@@ -15974,76 +15778,6 @@ https://quikpik.app`;
     }
   });
 
-  // Tab permissions routes
-  app.get('/api/tab-permissions', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Only allow wholesaler (owner) to view permissions
-      if (req.user.role === 'team_member') {
-        return res.status(403).json({ message: "Only business owners can manage permissions" });
-      }
-      
-      const permissions = await storage.getTabPermissions(userId);
-      
-      // If no permissions exist, create defaults
-      if (permissions.length === 0) {
-        await storage.createDefaultTabPermissions(userId);
-        const defaultPermissions = await storage.getTabPermissions(userId);
-        return res.json(defaultPermissions);
-      }
-      
-      res.json(permissions);
-    } catch (error) {
-      console.error("Error fetching tab permissions:", error);
-      res.status(500).json({ message: "Failed to fetch tab permissions" });
-    }
-  });
-
-  app.put('/api/tab-permissions/:tabName', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { tabName } = req.params;
-      const { isRestricted, allowedRoles } = req.body;
-      
-      // Only allow wholesaler (owner) to modify permissions
-      if (req.user.role === 'team_member') {
-        return res.status(403).json({ message: "Only business owners can manage permissions" });
-      }
-      
-      const permission = await storage.updateTabPermission(userId, tabName, isRestricted, allowedRoles);
-      
-      res.json({
-        success: true,
-        message: `Permissions updated for ${tabName}`,
-        permission
-      });
-    } catch (error) {
-      console.error("Error updating tab permission:", error);
-      res.status(500).json({ message: "Failed to update tab permission" });
-    }
-  });
-
-  app.get('/api/tab-permissions/check/:tabName', requireAuth, async (req: any, res) => {
-    try {
-      const { tabName } = req.params;
-      const user = req.user;
-      
-      let hasAccess = true;
-      
-      // If user is team member, check permissions
-      if (user.role === 'team_member' && user.wholesalerId) {
-        const userRole = 'member'; // Team members are 'member' role by default
-        hasAccess = await storage.checkTabAccess(user.wholesalerId, tabName, userRole);
-      }
-      
-      res.json({ hasAccess });
-    } catch (error) {
-      console.error("Error checking tab access:", error);
-      res.status(500).json({ message: "Failed to check tab access" });
-    }
-  });
-
   // Bulk check all tab permissions for team members
   app.get('/api/tab-permissions/check-all', requireAuth, async (req: any, res) => {
     try {
@@ -16656,31 +16390,6 @@ https://quikpik.app`;
     }
   });
 
-  // Customer merge endpoint
-  app.post('/api/customers/merge', requireAuth, async (req: any, res) => {
-    try {
-      const { primaryCustomerId, duplicateCustomerIds, mergedData } = req.body;
-      
-      if (!primaryCustomerId || !Array.isArray(duplicateCustomerIds) || duplicateCustomerIds.length === 0) {
-        return res.status(400).json({ error: 'Primary customer ID and duplicate customer IDs are required' });
-      }
-      
-      console.log('Merging customers:', { primaryCustomerId, duplicateCustomerIds, mergedData });
-      
-      // Merge customer records
-      const mergedCustomer = await storage.mergeCustomers(primaryCustomerId, duplicateCustomerIds, mergedData);
-      
-      res.json({ 
-        success: true, 
-        mergedCustomer,
-        message: `Successfully merged ${duplicateCustomerIds.length} duplicate customer records`
-      });
-    } catch (error) {
-      console.error('Error merging customers:', error);
-      res.status(500).json({ error: 'Failed to merge customers' });
-    }
-  });
-
   app.patch('/api/customers/bulk', requireAuth, async (req: any, res) => {
     try {
       const { customerUpdates } = req.body;
@@ -16768,147 +16477,6 @@ https://quikpik.app`;
         success: false, 
         message: 'Failed to verify email code' 
       });
-    }
-  });
-
-  // Analytics API Endpoints
-  
-  // Dashboard Analytics
-  app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      
-      // Get core data
-      const [orders, products, customers] = await Promise.all([
-        storage.getOrders(targetUserId),
-        storage.getProducts(targetUserId),
-        storage.getAllCustomers(targetUserId)
-      ]);
-
-      // Calculate date ranges
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      // Filter orders by status and date
-      const validOrders = orders.filter(order => 
-        ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
-      );
-
-      const todayOrders = validOrders.filter(order => 
-        new Date(order.createdAt) >= today
-      );
-      const yesterdayOrders = validOrders.filter(order => 
-        new Date(order.createdAt) >= yesterday && new Date(order.createdAt) < today
-      );
-      const lastWeekOrders = validOrders.filter(order => 
-        new Date(order.createdAt) >= lastWeek
-      );
-      const lastMonthOrders = validOrders.filter(order => 
-        new Date(order.createdAt) >= lastMonth
-      );
-
-      // Calculate metrics
-      const totalRevenue = validOrders.reduce((sum, order) => 
-        sum + parseFloat(order.total || '0'), 0
-      );
-      const todayRevenue = todayOrders.reduce((sum, order) => 
-        sum + parseFloat(order.total || '0'), 0
-      );
-      const yesterdayRevenue = yesterdayOrders.reduce((sum, order) => 
-        sum + parseFloat(order.total || '0'), 0
-      );
-
-      // Weekly revenue trend
-      const weeklyRevenue = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
-        
-        const dayOrders = validOrders.filter(order => {
-          const orderDate = new Date(order.createdAt);
-          return orderDate >= startOfDay && orderDate < endOfDay;
-        });
-        
-        const dayRevenue = dayOrders.reduce((sum, order) => 
-          sum + parseFloat(order.total || '0'), 0
-        );
-        
-        weeklyRevenue.push({
-          date: date.toISOString().split('T')[0],
-          revenue: Math.round(dayRevenue * 100) / 100
-        });
-      }
-
-      // Product performance
-      const productSales = new Map();
-      for (const order of validOrders) {
-        const orderItems = await storage.getOrderItems(order.id);
-        for (const item of orderItems) {
-          const current = productSales.get(item.productId) || { 
-            quantity: 0, 
-            revenue: 0, 
-            productName: '' 
-          };
-          
-          const product = products.find(p => p.id === item.productId);
-          current.quantity += item.quantity;
-          current.revenue += parseFloat(item.unitPrice || '0') * item.quantity;
-          current.productName = product?.name || 'Unknown Product';
-          productSales.set(item.productId, current);
-        }
-      }
-
-      const topProducts = Array.from(productSales.entries())
-        .map(([productId, data]) => ({
-          productId,
-          name: data.productName,
-          quantity: data.quantity,
-          revenue: Math.round(data.revenue * 100) / 100
-        }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-
-      // Low stock alerts
-      const lowStockProducts = products
-        .filter(product => product.stock <= (product.lowStockThreshold || 10))
-        .map(product => ({
-          id: product.id,
-          name: product.name,
-          stock: product.stock,
-          threshold: product.lowStockThreshold || 10
-        }))
-        .sort((a, b) => a.stock - b.stock);
-
-      const analytics = {
-        overview: {
-          totalRevenue: Math.round(totalRevenue * 100) / 100,
-          todayRevenue: Math.round(todayRevenue * 100) / 100,
-          yesterdayRevenue: Math.round(yesterdayRevenue * 100) / 100,
-          revenueChange: yesterdayRevenue > 0 ? 
-            Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100) : 0,
-          totalOrders: validOrders.length,
-          todayOrders: todayOrders.length,
-          totalProducts: products.length,
-          totalCustomers: customers.length,
-          lastWeekOrders: lastWeekOrders.length,
-          lastMonthOrders: lastMonthOrders.length
-        },
-        trends: {
-          weeklyRevenue,
-          topProducts,
-          lowStockProducts: lowStockProducts.slice(0, 10)
-        }
-      };
-
-      res.json(analytics);
-    } catch (error) {
-      console.error("Error fetching dashboard analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
     }
   });
 
@@ -17139,21 +16707,6 @@ https://quikpik.app`;
     }
   });
 
-  // Real-time inventory monitoring endpoints
-  app.get('/api/inventory/status', requireAuth, async (req: any, res) => {
-    try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-
-      const status = await storage.getInventoryStatus(wholesalerId);
-      res.json(status);
-    } catch (error) {
-      console.error("Error fetching inventory status:", error);
-      res.status(500).json({ message: "Failed to fetch inventory status" });
-    }
-  });
-
   app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -17167,24 +16720,6 @@ https://quikpik.app`;
     } catch (error) {
       console.error("Error fetching stock alerts:", error);
       res.status(500).json({ message: "Failed to fetch stock alerts" });
-    }
-  });
-
-  app.get('/api/products/:id/stock-status', async (req, res) => {
-    try {
-      const productId = parseInt(req.params.id);
-      if (isNaN(productId)) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-
-      const stockStatus = await storage.getProductStockStatus(productId);
-      res.json(stockStatus);
-    } catch (error) {
-      console.error("Error fetching product stock status:", error);
-      if (error instanceof Error && error.message === 'Product not found') {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.status(500).json({ message: "Failed to fetch product stock status" });
     }
   });
 
