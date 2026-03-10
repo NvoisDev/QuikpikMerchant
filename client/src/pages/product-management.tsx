@@ -2316,8 +2316,8 @@ export default function ProductManagement() {
         {/* Content */}
         <div className="p-8">
           {/* Filters and Search */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search products..."
