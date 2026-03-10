@@ -177,7 +177,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/forgot-password', '/reset-password', '/admin', '/super-admin'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
