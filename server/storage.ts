@@ -4618,7 +4618,6 @@ export class DatabaseStorage implements IStorage {
 
       for (const permission of defaultPermissions) {
         await db.insert(tabPermissions).values({
-          id: crypto.randomUUID(),
           wholesalerId,
           tabName: permission.tabName,
           isRestricted: permission.isRestricted,
@@ -4646,19 +4645,28 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
 
       if (existingPermission.length === 0) {
-        // Create new permission
-        const newPermission = {
-          id: crypto.randomUUID(),
+        // Create new permission — omit id so the serial column auto-generates it
+        await db.insert(tabPermissions).values({
           wholesalerId,
           tabName,
           isRestricted,
           allowedRoles,
           createdAt: new Date(),
           updatedAt: new Date()
-        };
-        
-        await db.insert(tabPermissions).values(newPermission);
-        return newPermission;
+        });
+
+        // Fetch the newly created row to return the full typed object
+        const inserted = await db
+          .select()
+          .from(tabPermissions)
+          .where(
+            and(
+              eq(tabPermissions.wholesalerId, wholesalerId),
+              eq(tabPermissions.tabName, tabName)
+            )
+          )
+          .limit(1);
+        return inserted[0];
       } else {
         // Update existing permission
         await db
