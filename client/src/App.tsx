@@ -119,7 +119,7 @@ function AuthenticatedRoutes() {
           <Route path="/marketplace" component={Marketplace} />
           {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
             <>
-              <Route path="/" component={WholesalerDashboard} />
+              <Route path="/" component={user?.role === 'team_member' ? OrdersFresh : WholesalerDashboard} />
               <Route path="/dashboard" component={WholesalerDashboard} />
               <Route path="/products" component={ProductManagement} />
               <Route path="/promotions" component={Promotions} />
