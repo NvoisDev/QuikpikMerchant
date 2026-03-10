@@ -34,7 +34,8 @@ import {
   Crown,
   PauseCircle,
   PlayCircle,
-  MoreVertical
+  MoreVertical,
+  KeyRound
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -227,6 +228,25 @@ export default function TeamManagement() {
         description: error.message || "Failed to update member status",
         variant: "destructive",
       });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      const response = await apiRequest("POST", `/api/team-members/${memberId}/reset-password`);
+      return response.json();
+    },
+    onSuccess: (data, memberId) => {
+      const member = Array.isArray(teamMembers) ? teamMembers.find((m: TeamMember) => m.id === memberId) : null;
+      toast({
+        title: "Reset email sent",
+        description: `Password reset link sent to ${member?.firstName || 'team member'}.`,
+      });
+    },
+    onError: async (error: any) => {
+      let msg = "Failed to send password reset email.";
+      try { const d = await error.json?.(); if (d?.message) msg = d.message; } catch {}
+      toast({ title: "Error", description: msg, variant: "destructive" });
     },
   });
 
@@ -679,6 +699,16 @@ export default function TeamManagement() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {member.status !== 'pending' && (
+                              <DropdownMenuItem
+                                onClick={() => resetPasswordMutation.mutate(member.id)}
+                                className="text-blue-600"
+                                disabled={resetPasswordMutation.isPending}
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" />
+                                Send password reset
+                              </DropdownMenuItem>
+                            )}
                             {member.status === 'active' && (
                               <DropdownMenuItem
                                 onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'suspended' })}

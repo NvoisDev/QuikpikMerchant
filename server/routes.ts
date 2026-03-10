@@ -14191,6 +14191,57 @@ https://quikpik.app`;
     }
   });
 
+  app.post('/api/team-members/:id/reset-password', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+
+      // Only the wholesaler owner can trigger this — not a team_member themselves
+      if (req.user.role === 'team_member') {
+        return res.status(403).json({ message: "Only the account owner can reset team member passwords" });
+      }
+
+      const requestingUserId = req.user.id;
+
+      // Ownership check — same pattern as delete/suspend
+      const allMembers = await storage.getAllTeamMembers();
+      const target = allMembers.find(m => m.id === parseInt(id));
+      if (!target || target.wholesalerId !== requestingUserId) {
+        return res.status(403).json({ message: "Not authorised to reset this team member's password" });
+      }
+
+      // Pending members haven't accepted the invite / set a password yet
+      if (target.status === 'pending') {
+        return res.status(400).json({ message: "This member hasn't accepted their invite yet. Use 'Resend invite' instead." });
+      }
+
+      // Find their user account by email
+      const userRecord = await storage.getUserByEmail(target.email, 'team_member');
+      if (!userRecord) {
+        return res.status(400).json({ message: "No active account found for this team member" });
+      }
+
+      // Generate reset token and store it
+      const { token, hashedToken } = generateResetToken();
+      const expiresAt = createResetExpiration();
+      await storage.updateUser(userRecord.id, { passwordResetToken: hashedToken, passwordResetExpires: expiresAt });
+
+      // Get wholesaler branding for the email
+      const wholesaler = await storage.getUser(requestingUserId);
+      const branding = {
+        businessName: wholesaler?.businessName || 'Quikpik Merchant',
+        logoUrl: getEmailLogoUrl(requestingUserId, wholesaler?.logoType, wholesaler?.logoUrl),
+      };
+
+      // Send the reset email to the team member
+      await sendPasswordResetEmail(target.email, token, target.firstName || undefined, branding);
+
+      res.json({ message: `Password reset email sent to ${target.firstName || target.email}` });
+    } catch (error) {
+      console.error("Error sending team member password reset:", error);
+      res.status(500).json({ message: "Failed to send password reset email" });
+    }
+  });
+
   // Helper: returns true if an invitation issued at invitedAt has passed the 7-day window
   function isInvitationExpired(invitedAt: Date | string | null | undefined): boolean {
     if (!invitedAt) return false;
