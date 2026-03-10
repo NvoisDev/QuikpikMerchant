@@ -7,7 +7,7 @@ import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
-import { validatePassword } from "./passwordUtils";
+import { validatePassword, hashPassword, verifyPassword } from "./passwordUtils";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 
@@ -3401,6 +3401,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           responseUser = {
             ...responseUser,
             businessName: wholesalerInfo.businessName,
+            logoType: wholesalerInfo.logoType,
+            logoUrl: wholesalerInfo.logoUrl,
             isTeamMember: true,
             role: 'team_member'
           };
@@ -14115,6 +14117,43 @@ https://quikpik.app`;
     } catch (error) {
       console.error("Error resending team invitation:", error);
       res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  app.post('/api/team-members/change-password', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'team_member') {
+        return res.status(403).json({ message: "Only team members can change their password here" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters" });
+      }
+
+      if (!user.passwordHash) {
+        return res.status(400).json({ message: "No password set on this account" });
+      }
+
+      const isValid = await verifyPassword(currentPassword, user.passwordHash);
+      if (!isValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      const newHash = await hashPassword(newPassword);
+      await storage.updateUser(userId, { passwordHash: newHash });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error changing team member password:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
 

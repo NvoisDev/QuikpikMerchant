@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +105,39 @@ export default function Settings() {
 
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) =>
+      apiRequest("POST", "/api/team-members/change-password", data),
+    onSuccess: () => {
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      toast({ title: "Password updated", description: "Your password has been changed successfully." });
+    },
+    onError: async (error: any) => {
+      let msg = "Failed to change password. Please try again.";
+      try { const d = await error.json?.(); if (d?.message) msg = d.message; } catch {}
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const handleChangePassword = () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast({ title: "Missing fields", description: "Please fill in all password fields.", variant: "destructive" });
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast({ title: "Too short", description: "New password must be at least 8 characters.", variant: "destructive" });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({ title: "Passwords don't match", description: "New password and confirm password must match.", variant: "destructive" });
+      return;
+    }
+    changePasswordMutation.mutate({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+  };
+
   const [accountForm, setAccountForm] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -229,18 +262,20 @@ export default function Settings() {
                   <span className="font-medium text-sm sm:text-base">Account</span>
                 </div>
 
-                {/* Business Settings */}
-                <div 
-                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
-                    activeTab === "business" 
-                      ? "bg-blue-50 text-blue-700" 
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setActiveTab("business")}
-                >
-                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
-                  <span className="text-sm sm:text-base">Business</span>
-                </div>
+                {/* Business Settings - hidden for team members */}
+                {user.role !== 'team_member' && (
+                  <div 
+                    className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
+                      activeTab === "business" 
+                        ? "bg-blue-50 text-blue-700" 
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setActiveTab("business")}
+                  >
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                    <span className="text-sm sm:text-base">Business</span>
+                  </div>
+                )}
 
                 {/* Notification Settings */}
                 <div 
@@ -398,6 +433,82 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
+
+                  {/* Change Password — only for team members */}
+                  {user.role === 'team_member' && (
+                    <div>
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-gray-500" />
+                        Change Password
+                      </h3>
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-1">Current Password</label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords.current ? "text" : "password"}
+                              value={passwordForm.currentPassword}
+                              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                              className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Enter current password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                              {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-1">New Password</label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords.new ? "text" : "password"}
+                              value={passwordForm.newPassword}
+                              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                              className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="At least 8 characters"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                              {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-1">Confirm New Password</label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords.confirm ? "text" : "password"}
+                              value={passwordForm.confirmPassword}
+                              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                              className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Re-enter new password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                              {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleChangePassword}
+                          disabled={changePasswordMutation.isPending}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium"
+                        >
+                          {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
