@@ -17623,7 +17623,7 @@ https://quikpik.app`;
       }
       if (filterWholesalerId) conditions.push(eq(orders.wholesalerId, filterWholesalerId));
 
-      const query = db
+      let q = db
         .select({
           id: orders.id,
           orderNumber: orders.orderNumber,
@@ -17639,13 +17639,11 @@ https://quikpik.app`;
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .leftJoin(users, eq(orders.wholesalerId, users.id))
-        .orderBy(desc(orders.createdAt))
-        .limit(1000);
+        .leftJoin(users, eq(orders.wholesalerId, users.id)) as any;
 
-      const recentOrders = conditions.length > 0
-        ? await query.where(and(...conditions))
-        : await query;
+      if (conditions.length > 0) q = q.where(and(...conditions));
+
+      const recentOrders = await q.orderBy(desc(orders.createdAt)).limit(1000);
 
       let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0;
       const processedOrders = recentOrders.map(o => {
