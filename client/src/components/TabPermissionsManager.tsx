@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useTabPermissions, useUpdateTabPermission } from '@/hooks/useTabPermissions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Home, 
   Package, 
@@ -89,6 +90,8 @@ export default function TabPermissionsManager() {
   const { data: permissions = [], isLoading } = useTabPermissions();
   const updatePermission = useUpdateTabPermission();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isOwner = user?.role !== 'team_member';
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handlePermissionChange = async (tabName: string, isRestricted: boolean) => {
@@ -158,7 +161,9 @@ export default function TabPermissionsManager() {
       <Alert>
         <Lock className="w-4 h-4" />
         <AlertDescription>
-          Control which dashboard tabs your team members can access. Restricted tabs will be hidden from team member navigation.
+          {isOwner
+            ? "Control which dashboard tabs your team members can access. Restricted tabs will be hidden from team member navigation."
+            : "Only the account owner can change these permissions. You are viewing them in read-only mode."}
         </AlertDescription>
       </Alert>
 
@@ -199,7 +204,7 @@ export default function TabPermissionsManager() {
                     <Switch
                       checked={isRestricted}
                       onCheckedChange={(checked) => handlePermissionChange(tab.name, checked)}
-                      disabled={isUpdating}
+                      disabled={!isOwner || isUpdating}
                       className="data-[state=checked]:bg-red-500"
                     />
                   </div>
