@@ -1156,14 +1156,18 @@ export default function OrdersFresh() {
       {/* Statistics Cards - only show on Active tab */}
       {archiveTab === 'active' && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="rounded-lg bg-green-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-green-700">Net Revenue</p>
-            <p className="text-sm font-bold text-green-800">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</p>
-          </div>
-          <div className="rounded-lg bg-blue-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-blue-700">Paid Orders</p>
-            <p className="text-sm font-bold text-blue-800">{orderStats?.paidOrdersCount ?? paidOrders}</p>
-          </div>
+          {user?.role !== 'team_member' && (
+            <div className="rounded-lg bg-green-50 px-3 py-2">
+              <p className="text-[11px] font-medium text-green-700">Net Revenue</p>
+              <p className="text-sm font-bold text-green-800">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</p>
+            </div>
+          )}
+          {user?.role !== 'team_member' && (
+            <div className="rounded-lg bg-blue-50 px-3 py-2">
+              <p className="text-[11px] font-medium text-blue-700">Paid Orders</p>
+              <p className="text-sm font-bold text-blue-800">{orderStats?.paidOrdersCount ?? paidOrders}</p>
+            </div>
+          )}
           <div className="rounded-lg bg-yellow-50 px-3 py-2">
             <p className="text-[11px] font-medium text-yellow-700">Active Orders</p>
             <p className="text-sm font-bold text-yellow-800">{orderStats?.ordersCount ?? displayedOrders}</p>
