@@ -48,9 +48,13 @@ function AdminLogin() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/google");
+      const res = await fetch("/api/auth/google?returnTo=/admin");
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        setLoading(false);
+      }
     } catch {
       setLoading(false);
     }

@@ -3156,6 +3156,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google Auth routes
   app.get('/api/auth/google', (req, res) => {
     try {
+      const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null;
+      if (returnTo) {
+        (req.session as any).returnTo = returnTo;
+      }
       const authUrl = getGoogleAuthUrl();
       res.json({ authUrl });
     } catch (error) {
@@ -3218,13 +3222,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`✅ Session saved successfully for ${user.email}`);
         
+        // Use returnTo if set (e.g. from /admin login)
+        const returnTo = (req.session as any).returnTo;
+        if (returnTo) {
+          delete (req.session as any).returnTo;
+          console.log(`↩️ Redirecting to returnTo: ${returnTo}`);
+          return res.redirect(returnTo);
+        }
+
         // Check if this is a new user who needs to complete signup
         if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
           console.log(`👋 New user detected, redirecting to complete signup profile`);
-          // Redirect new users to complete their profile
           res.redirect('/signup-complete');
         } else {
-          // Redirect returning users with complete profiles to dashboard
           console.log(`✅ Returning user with complete profile, redirecting to dashboard`);
           res.redirect('/dashboard');
         }
