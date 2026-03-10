@@ -17465,6 +17465,199 @@ https://quikpik.app`;
   });
 
   // =====================================================
+  // ADMIN PANEL ENDPOINTS - Quikpik platform owner only
+  // =====================================================
+  const ADMIN_EMAILS = ['hello@quikpik.co', 'mogunjemilua@gmail.com'];
+
+  app.get('/api/admin/platform-stats', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth] = await Promise.all([
+        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived })
+          .from(users).where(eq(users.role, 'wholesaler')),
+        db.select({
+          subtotal: orders.subtotal,
+          platformFee: orders.platformFee,
+          customerTransactionFee: orders.customerTransactionFee,
+        }).from(orders),
+        db.select({ count: count() }).from(users)
+          .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart))),
+        db.select({ count: count() }).from(orders)
+          .where(gte(orders.createdAt, monthStart)),
+      ]);
+
+      const totalWholesalers = allWholesalers.length;
+      const activeWholesalers = allWholesalers.filter(w => !w.archived).length;
+      const suspendedWholesalers = allWholesalers.filter(w => w.archived).length;
+      const wholesalersByPlan = {
+        free: allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free').length,
+        standard: allWholesalers.filter(w => w.subscriptionTier === 'standard').length,
+        premium: allWholesalers.filter(w => w.subscriptionTier === 'premium').length,
+      };
+
+      let totalGMV = 0, totalCustomerFees = 0, totalPlatformFees = 0;
+      for (const o of allOrdersData) {
+        totalGMV += parseFloat(o.subtotal || '0');
+        totalCustomerFees += parseFloat((o.customerTransactionFee as any) || '0');
+        totalPlatformFees += parseFloat(o.platformFee || '0');
+      }
+
+      res.json({
+        totalWholesalers,
+        activeWholesalers,
+        suspendedWholesalers,
+        wholesalersByPlan,
+        totalOrders: allOrdersData.length,
+        ordersThisMonth: Number(ordersThisMonth[0]?.count || 0),
+        totalGMV,
+        totalCustomerFees,
+        totalPlatformFees,
+        totalGrossRevenue: totalCustomerFees + totalPlatformFees,
+        newWholesalersThisMonth: Number(newWholesalers[0]?.count || 0),
+      });
+    } catch (error) {
+      console.error('Admin platform-stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch platform stats' });
+    }
+  });
+
+  app.get('/api/admin/wholesalers', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
+
+      const wholesalerIds = wholesalersList.map(w => w.id);
+      let ordersByWholesaler: Record<string, { count: number; gmv: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
+
+      if (wholesalerIds.length > 0) {
+        const orderStats = await db.select({
+          wholesalerId: orders.wholesalerId,
+          subtotal: orders.subtotal,
+          platformFee: orders.platformFee,
+          customerTransactionFee: orders.customerTransactionFee,
+          createdAt: orders.createdAt,
+        }).from(orders).where(inArray(orders.wholesalerId, wholesalerIds));
+
+        for (const o of orderStats) {
+          const wid = o.wholesalerId;
+          if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+          ordersByWholesaler[wid].count++;
+          ordersByWholesaler[wid].gmv += parseFloat(o.subtotal || '0');
+          ordersByWholesaler[wid].customerFees += parseFloat((o.customerTransactionFee as any) || '0');
+          ordersByWholesaler[wid].platformFees += parseFloat(o.platformFee || '0');
+          const oDate = o.createdAt ? new Date(o.createdAt) : null;
+          if (oDate && (!ordersByWholesaler[wid].lastOrderAt || oDate > ordersByWholesaler[wid].lastOrderAt!)) {
+            ordersByWholesaler[wid].lastOrderAt = oDate;
+          }
+        }
+      }
+
+      const result = wholesalersList.map(w => {
+        const stats = ordersByWholesaler[w.id] || { count: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+        return {
+          id: w.id,
+          email: w.email,
+          firstName: w.firstName,
+          lastName: w.lastName,
+          businessName: w.businessName,
+          phoneNumber: w.phoneNumber,
+          subscriptionTier: w.subscriptionTier || 'free',
+          createdAt: w.createdAt,
+          archived: w.archived,
+          orderCount: stats.count,
+          totalGMV: stats.gmv,
+          customerFeesEarned: stats.customerFees,
+          platformFeesEarned: stats.platformFees,
+          totalFeesEarned: stats.customerFees + stats.platformFees,
+          lastOrderAt: stats.lastOrderAt,
+        };
+      }).sort((a, b) => b.totalFeesEarned - a.totalFeesEarned);
+
+      res.json(result);
+    } catch (error) {
+      console.error('Admin wholesalers error:', error);
+      res.status(500).json({ error: 'Failed to fetch wholesalers' });
+    }
+  });
+
+  app.get('/api/admin/revenue', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const recentOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          wholesalerId: orders.wholesalerId,
+          wholesalerName: users.businessName,
+          customerName: orders.customerName,
+          subtotal: orders.subtotal,
+          customerTransactionFee: orders.customerTransactionFee,
+          platformFee: orders.platformFee,
+          total: orders.total,
+          status: orders.status,
+          paymentStatus: orders.paymentStatus,
+          createdAt: orders.createdAt,
+        })
+        .from(orders)
+        .leftJoin(users, eq(orders.wholesalerId, users.id))
+        .orderBy(desc(orders.createdAt))
+        .limit(300);
+
+      let totalCustomerFees = 0, totalPlatformFees = 0;
+      const processedOrders = recentOrders.map(o => {
+        const custFee = parseFloat((o.customerTransactionFee as any) || '0');
+        const platFee = parseFloat(o.platformFee || '0');
+        totalCustomerFees += custFee;
+        totalPlatformFees += platFee;
+        return {
+          ...o,
+          customerTransactionFee: custFee,
+          platformFee: platFee,
+          subtotal: parseFloat(o.subtotal || '0'),
+          totalQuikpikIncome: custFee + platFee,
+        };
+      });
+
+      res.json({
+        orders: processedOrders,
+        totals: {
+          totalCustomerFees,
+          totalPlatformFees,
+          totalGrossRevenue: totalCustomerFees + totalPlatformFees,
+        },
+      });
+    } catch (error) {
+      console.error('Admin revenue error:', error);
+      res.status(500).json({ error: 'Failed to fetch revenue data' });
+    }
+  });
+
+  app.patch('/api/admin/wholesalers/:id/toggle-status', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+
+      const newArchived = !targetUser[0].archived;
+      await db.update(users).set({ archived: newArchived }).where(eq(users.id, req.params.id));
+
+      res.json({ id: req.params.id, archived: newArchived, businessName: targetUser[0].businessName });
+    } catch (error) {
+      console.error('Admin toggle-status error:', error);
+      res.status(500).json({ error: 'Failed to toggle status' });
+    }
+  });
+
+  // =====================================================
   // QUICK QUOTE - Create quote with custom prices and payment link
   // =====================================================
   app.post('/api/quotes', requireAuth, async (req: any, res) => {
