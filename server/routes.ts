@@ -17486,8 +17486,10 @@ https://quikpik.app`;
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+      const PLAN_PRICES: Record<string, number> = { free: 0, standard: 9.99, premium: 19.99 };
+
       const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth] = await Promise.all([
-        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived })
+        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
           .from(users).where(eq(users.role, 'wholesaler')),
         db.select({
           subtotal: orders.subtotal,
@@ -17509,6 +17511,15 @@ https://quikpik.app`;
         premium: allWholesalers.filter(w => w.subscriptionTier === 'premium').length,
       };
 
+      // Subscription MRR — count active paying wholesalers
+      const activeStandard = allWholesalers.filter(w => w.subscriptionTier === 'standard' && !w.archived).length;
+      const activePremium  = allWholesalers.filter(w => w.subscriptionTier === 'premium'  && !w.archived).length;
+      const subscriptionMRR = (activeStandard * PLAN_PRICES.standard) + (activePremium * PLAN_PRICES.premium);
+      const subscriptionBreakdown = {
+        standard: { count: activeStandard, mrr: activeStandard * PLAN_PRICES.standard },
+        premium:  { count: activePremium,  mrr: activePremium  * PLAN_PRICES.premium  },
+      };
+
       let totalGMV = 0, totalCustomerFees = 0, totalPlatformFees = 0;
       for (const o of allOrdersData) {
         totalGMV += parseFloat(o.subtotal || '0');
@@ -17528,6 +17539,8 @@ https://quikpik.app`;
         totalPlatformFees,
         totalGrossRevenue: totalCustomerFees + totalPlatformFees,
         newWholesalersThisMonth: Number(newWholesalers[0]?.count || 0),
+        subscriptionRevenueMRR: subscriptionMRR,
+        subscriptionBreakdown,
       });
     } catch (error) {
       console.error('Admin platform-stats error:', error);
@@ -17599,7 +17612,18 @@ https://quikpik.app`;
     try {
       if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
 
-      const recentOrders = await db
+      const { from, to, wholesalerId: filterWholesalerId } = req.query as Record<string, string>;
+
+      const conditions: any[] = [];
+      if (from)  conditions.push(gte(orders.createdAt, new Date(from)));
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(orders.createdAt, toDate));
+      }
+      if (filterWholesalerId) conditions.push(eq(orders.wholesalerId, filterWholesalerId));
+
+      const query = db
         .select({
           id: orders.id,
           orderNumber: orders.orderNumber,
@@ -17617,19 +17641,25 @@ https://quikpik.app`;
         .from(orders)
         .leftJoin(users, eq(orders.wholesalerId, users.id))
         .orderBy(desc(orders.createdAt))
-        .limit(300);
+        .limit(1000);
 
-      let totalCustomerFees = 0, totalPlatformFees = 0;
+      const recentOrders = conditions.length > 0
+        ? await query.where(and(...conditions))
+        : await query;
+
+      let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0;
       const processedOrders = recentOrders.map(o => {
         const custFee = parseFloat((o.customerTransactionFee as any) || '0');
         const platFee = parseFloat(o.platformFee || '0');
+        const sub = parseFloat(o.subtotal || '0');
         totalCustomerFees += custFee;
         totalPlatformFees += platFee;
+        totalGMV += sub;
         return {
           ...o,
           customerTransactionFee: custFee,
           platformFee: platFee,
-          subtotal: parseFloat(o.subtotal || '0'),
+          subtotal: sub,
           totalQuikpikIncome: custFee + platFee,
         };
       });
@@ -17640,6 +17670,7 @@ https://quikpik.app`;
           totalCustomerFees,
           totalPlatformFees,
           totalGrossRevenue: totalCustomerFees + totalPlatformFees,
+          totalGMV,
         },
       });
     } catch (error) {
