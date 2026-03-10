@@ -645,6 +645,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         totalAmount: parseFloat(orderData.total),
         fulfillmentType: fulfillmentType,
         wholesalerLogoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl),
+        placedByName: (order as any).placedByName || null,
         shippingAddress: completeShippingAddress
       });
 

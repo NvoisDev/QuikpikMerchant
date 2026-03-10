@@ -17555,6 +17555,7 @@ https://quikpik.app`;
         amountPaid: '0.00',
         amountOutstanding: total.toFixed(2),
         paymentStatus: 'unpaid',
+        ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
 
       // Create order items with custom prices (supporting both units and pallets)
