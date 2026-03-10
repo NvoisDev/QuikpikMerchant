@@ -7,28 +7,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Users,
-  ShoppingCart,
-  TrendingUp,
-  Search,
-  LogOut,
-  LayoutDashboard,
-  ChevronRight,
+  Users, ShoppingCart, TrendingUp, Search, LogOut, LayoutDashboard, Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
 
-const BRAND = "#1a7a3d";
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
+
+// Brand palette
+const GREEN  = "#1a7a3d";
+const BLUE   = "#1d4ed8";
+const AMBER  = "#b45309";
+const INDIGO = "#4338ca";
 
 const fmt = (n: number) =>
   `£${(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -37,10 +31,11 @@ const planBadge = (tier: string) => {
   if (tier === "premium")
     return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-800 border border-green-200">Premium</span>;
   if (tier === "standard")
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-100">Standard</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Standard</span>;
   return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Free</span>;
 };
 
+// ── Login ────────────────────────────────────────────────────────────────────
 function AdminLogin() {
   const [loading, setLoading] = useState(false);
 
@@ -49,11 +44,8 @@ function AdminLogin() {
     try {
       const res = await fetch("/api/auth/google?returnTo=/admin");
       const data = await res.json();
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        setLoading(false);
-      }
+      if (data.authUrl) window.location.href = data.authUrl;
+      else setLoading(false);
     } catch {
       setLoading(false);
     }
@@ -61,30 +53,21 @@ function AdminLogin() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Green top stripe */}
-      <div className="h-1.5 w-full" style={{ background: BRAND }} />
-
+      <div className="h-1.5 w-full" style={{ background: GREEN }} />
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
         <div className="w-full max-w-sm">
-          {/* Logo + title */}
           <div className="text-center mb-8">
-            <img
-              src={logoSrc}
-              alt="Quikpik"
-              className="h-16 w-auto mx-auto mb-5"
-            />
-            <h1 className="text-xl font-bold" style={{ color: BRAND }}>Admin Portal</h1>
+            <img src={logoSrc} alt="Quikpik" className="h-16 w-auto mx-auto mb-5" />
+            <h1 className="text-xl font-bold" style={{ color: GREEN }}>Admin Portal</h1>
             <p className="text-sm text-gray-500 mt-1">Platform administration</p>
           </div>
-
-          {/* Card */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <p className="text-sm text-gray-500 mb-5 text-center">
               Sign in with your Quikpik admin account to continue.
             </p>
             <Button
               className="w-full text-white text-sm h-11 rounded-xl font-medium"
-              style={{ background: BRAND }}
+              style={{ background: GREEN }}
               onClick={handleGoogleLogin}
               disabled={loading}
             >
@@ -98,7 +81,7 @@ function AdminLogin() {
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
@@ -109,7 +92,6 @@ function AdminLogin() {
               )}
             </Button>
           </div>
-
           <p className="text-center text-xs text-gray-400 mt-5">
             Access restricted to authorised administrators only.
           </p>
@@ -119,6 +101,7 @@ function AdminLogin() {
   );
 }
 
+// ── Access denied ────────────────────────────────────────────────────────────
 function AccessDenied({ email, onSignOut }: { email: string; onSignOut: () => void }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -130,14 +113,14 @@ function AccessDenied({ email, onSignOut }: { email: string; onSignOut: () => vo
         </p>
         <p className="text-sm text-gray-400 mb-6">Contact the platform owner if you believe this is a mistake.</p>
         <Button variant="outline" size="sm" onClick={onSignOut} className="text-gray-600">
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign out
+          <LogOut className="h-4 w-4 mr-2" />Sign out
         </Button>
       </div>
     </div>
   );
 }
 
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function SuperAdmin() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
@@ -149,23 +132,17 @@ export default function SuperAdmin() {
   const isAdmin = !!user && ADMIN_EMAILS.includes(user.email || "");
 
   const { data: stats, isLoading: statsLoading } = useQuery<any>({
-    queryKey: ["/api/admin/platform-stats"],
-    enabled: isAdmin,
+    queryKey: ["/api/admin/platform-stats"], enabled: isAdmin,
   });
-
   const { data: wholesalers = [], isLoading: wholesalersLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/wholesalers"],
-    enabled: isAdmin,
+    queryKey: ["/api/admin/wholesalers"], enabled: isAdmin,
   });
-
   const { data: revenueData, isLoading: revenueLoading } = useQuery<any>({
-    queryKey: ["/api/admin/revenue"],
-    enabled: isAdmin,
+    queryKey: ["/api/admin/revenue"], enabled: isAdmin,
   });
 
   const toggleStatus = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-status`),
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
@@ -210,11 +187,10 @@ export default function SuperAdmin() {
   const filteredOrders = useMemo(() => {
     if (!orderSearch.trim()) return revenueOrders;
     const q = orderSearch.toLowerCase();
-    return revenueOrders.filter(
-      o =>
-        (o.orderNumber || "").toLowerCase().includes(q) ||
-        (o.wholesalerName || "").toLowerCase().includes(q) ||
-        (o.customerName || "").toLowerCase().includes(q)
+    return revenueOrders.filter(o =>
+      (o.orderNumber || "").toLowerCase().includes(q) ||
+      (o.wholesalerName || "").toLowerCase().includes(q) ||
+      (o.customerName || "").toLowerCase().includes(q)
     );
   }, [revenueOrders, orderSearch]);
 
@@ -229,18 +205,17 @@ export default function SuperAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Green header */}
-      <header className="sticky top-0 z-20" style={{ background: BRAND }}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          {/* Logo + title */}
-          <div className="flex items-center gap-3">
-            <img src={logoSrc} alt="Quikpik" className="h-7 w-auto brightness-0 invert" />
-            <span className="hidden sm:block text-white font-semibold text-sm opacity-80">Admin</span>
-          </div>
 
-          {/* Profile + sign out */}
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-20" style={{ background: GREEN }}>
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Shield className="h-5 w-5 text-white opacity-90" />
+            <span className="text-white font-bold text-sm tracking-wide">Quikpik</span>
+            <span className="text-white/60 text-sm font-normal">Admin</span>
+          </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
                 <span className="text-xs font-bold text-white">{initials}</span>
               </div>
@@ -260,52 +235,25 @@ export default function SuperAdmin() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* ── Content ── */}
       <main className="flex-1 max-w-screen-xl mx-auto w-full px-4 sm:px-6 py-6">
 
-        {/* Page heading */}
         <div className="mb-5">
-          <h1 className="text-lg font-bold text-gray-900">Overview</h1>
+          <h1 className="text-lg font-bold text-gray-900">Dashboard</h1>
           <p className="text-xs text-gray-400 mt-0.5">Platform-wide data across all wholesalers</p>
         </div>
 
-        {/* Stat cards */}
+        {/* Stat cards — 4 distinct colours */}
         {statsLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 h-20 animate-pulse" />
-            ))}
+            {[...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 h-20 animate-pulse" />)}
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <StatCard
-              label="Wholesalers"
-              value={stats?.totalWholesalers || 0}
-              sub={`${stats?.activeWholesalers || 0} active`}
-              icon={<Users className="h-4 w-4" style={{ color: BRAND }} />}
-              accent
-            />
-            <StatCard
-              label="Gross Revenue"
-              value={fmt(stats?.totalGrossRevenue)}
-              sub="All-time earnings"
-              icon={<TrendingUp className="h-4 w-4" style={{ color: BRAND }} />}
-              accent
-            />
-            <StatCard
-              label="Total Orders"
-              value={(stats?.totalOrders || 0).toLocaleString()}
-              sub={`${stats?.ordersThisMonth || 0} this month`}
-              icon={<ShoppingCart className="h-4 w-4" style={{ color: BRAND }} />}
-              accent
-            />
-            <StatCard
-              label="Total GMV"
-              value={fmt(stats?.totalGMV)}
-              sub="Gross merchandise"
-              icon={<LayoutDashboard className="h-4 w-4" style={{ color: BRAND }} />}
-              accent
-            />
+            <StatCard label="Wholesalers"   value={stats?.totalWholesalers || 0}               sub={`${stats?.activeWholesalers || 0} active`}  icon={<Users className="h-4 w-4" />}          color={GREEN} />
+            <StatCard label="Gross Revenue" value={fmt(stats?.totalGrossRevenue)}               sub="All-time earnings"                           icon={<TrendingUp className="h-4 w-4" />}      color={BLUE} />
+            <StatCard label="Total Orders"  value={(stats?.totalOrders || 0).toLocaleString()}  sub={`${stats?.ordersThisMonth || 0} this month`} icon={<ShoppingCart className="h-4 w-4" />}    color={AMBER} />
+            <StatCard label="Total GMV"     value={fmt(stats?.totalGMV)}                        sub="Gross merchandise"                           icon={<LayoutDashboard className="h-4 w-4" />} color={INDIGO} />
           </div>
         )}
 
@@ -313,11 +261,11 @@ export default function SuperAdmin() {
         <Tabs defaultValue="overview" className="space-y-4">
           <div className="overflow-x-auto pb-1">
             <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex gap-0.5 min-w-max shadow-sm">
-              {["overview", "wholesalers", "revenue", "orders"].map((tab) => (
+              {(["overview", "wholesalers", "revenue", "orders"] as const).map((tab) => (
                 <TabsTrigger
                   key={tab}
                   value={tab}
-                  className="text-xs px-4 py-1.5 rounded-lg capitalize data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:bg-[#1a7a3d]"
+                  className="text-xs px-4 py-1.5 rounded-lg data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:bg-[#1a7a3d]"
                 >
                   {tab === "orders" ? "All Orders" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </TabsTrigger>
@@ -325,47 +273,45 @@ export default function SuperAdmin() {
             </TabsList>
           </div>
 
-          {/* Overview */}
+          {/* ── Overview ── */}
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <PlanCard label="Free" count={stats?.wholesalersByPlan?.free || 0} />
-              <PlanCard label="Standard" count={stats?.wholesalersByPlan?.standard || 0} highlight />
-              <PlanCard label="Premium" count={stats?.wholesalersByPlan?.premium || 0} highlight />
+              <PlanCard label="Free"     count={stats?.wholesalersByPlan?.free || 0}     color="#6b7280" bg="#f9fafb" />
+              <PlanCard label="Standard" count={stats?.wholesalersByPlan?.standard || 0} color={BLUE}    bg="#eff6ff" />
+              <PlanCard label="Premium"  count={stats?.wholesalersByPlan?.premium || 0}  color={GREEN}   bg="#f0faf4" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Card className="border-gray-200 shadow-none rounded-xl">
-                <CardHeader className="pb-3 pt-4 px-4">
+                <CardHeader className="pb-2 pt-4 px-4">
                   <CardTitle className="text-sm font-semibold text-gray-700">This Month</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2.5">
                   <Row label="New wholesalers joined" value={stats?.newWholesalersThisMonth || 0} />
-                  <Row label="Orders placed" value={stats?.ordersThisMonth || 0} />
+                  <Row label="Orders placed"          value={stats?.ordersThisMonth || 0} />
                 </CardContent>
               </Card>
 
               <Card className="border-gray-200 shadow-none rounded-xl">
-                <CardHeader className="pb-3 pt-4 px-4">
+                <CardHeader className="pb-2 pt-4 px-4">
                   <CardTitle className="text-sm font-semibold text-gray-700">Revenue Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2.5">
-                  <Row label="Customer fees (5.5% + £0.50)" value={fmt(stats?.totalCustomerFees)} green />
-                  <Row label="Wholesaler fees (3.3%)" value={fmt(stats?.totalPlatformFees)} green />
+                  <Row label="Customer fees (5.5% + £0.50)" value={fmt(stats?.totalCustomerFees)}   color={BLUE} />
+                  <Row label="Wholesaler fees (3.3%)"       value={fmt(stats?.totalPlatformFees)}   color={AMBER} />
                   <div className="pt-1.5 border-t border-gray-100">
-                    <Row label="Total earned" value={fmt(stats?.totalGrossRevenue)} bold />
+                    <Row label="Total earned" value={fmt(stats?.totalGrossRevenue)} color={GREEN} bold />
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Wholesalers */}
+          {/* ── Wholesalers ── */}
           <TabsContent value="wholesalers">
             <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
               <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  All Wholesalers ({wholesalers.length})
-                </CardTitle>
+                <CardTitle className="text-sm font-semibold text-gray-700">All Wholesalers ({wholesalers.length})</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {wholesalersLoading ? (
@@ -374,62 +320,44 @@ export default function SuperAdmin() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="hover:bg-transparent" style={{ background: "#f0faf4" }}>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Business</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Plan</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Orders</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>GMV</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Cust. Fees</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Platform Fees</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Total Fees</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Joined</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Status</TableHead>
-                          <TableHead />
+                        <TableRow className="hover:bg-transparent bg-[#f0faf4]">
+                          {["Business","Plan","Orders","GMV","Cust. Fees","Platform Fees","Total Fees","Joined","Status",""].map((h, i) => (
+                            <TableHead key={i} className={`text-xs font-semibold text-[${GREEN}] ${i >= 2 && i <= 6 ? "text-right" : ""}`} style={{ color: GREEN }}>{h}</TableHead>
+                          ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {wholesalers.map((w: any) => (
                           <TableRow key={w.id} className="hover:bg-green-50/30">
                             <TableCell>
-                              <div>
-                                <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName} ${w.lastName}`}</p>
-                                <p className="text-xs text-gray-400">{w.email}</p>
-                              </div>
+                              <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName} ${w.lastName}`}</p>
+                              <p className="text-xs text-gray-400">{w.email}</p>
                             </TableCell>
                             <TableCell>{planBadge(w.subscriptionTier)}</TableCell>
                             <TableCell className="text-xs text-right text-gray-600">{w.orderCount}</TableCell>
                             <TableCell className="text-xs text-right text-gray-600">{fmt(w.totalGMV)}</TableCell>
-                            <TableCell className="text-xs text-right text-gray-700">{fmt(w.customerFeesEarned)}</TableCell>
-                            <TableCell className="text-xs text-right text-gray-700">{fmt(w.platformFeesEarned)}</TableCell>
-                            <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
-                            <TableCell className="text-xs text-gray-400">
-                              {w.createdAt ? format(new Date(w.createdAt), "dd MMM yy") : "—"}
+                            <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.customerFeesEarned)}</TableCell>
+                            <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.platformFeesEarned)}</TableCell>
+                            <TableCell className="text-xs text-right font-bold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
+                            <TableCell className="text-xs text-gray-400">{w.createdAt ? format(new Date(w.createdAt), "dd MMM yy") : "—"}</TableCell>
+                            <TableCell>
+                              {w.archived
+                                ? <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">Suspended</span>
+                                : <span className="text-xs px-2 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>Active</span>
+                              }
                             </TableCell>
                             <TableCell>
-                              {w.archived ? (
-                                <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">Suspended</span>
-                              ) : (
-                                <span className="text-xs px-2 py-0.5 rounded border" style={{ background: "#f0faf4", color: BRAND, borderColor: "#bbdfc8" }}>Active</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs border-gray-200 hover:bg-gray-50"
-                                disabled={toggleStatus.isPending}
-                                onClick={() => toggleStatus.mutate(w.id)}
-                              >
+                              <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200 hover:bg-gray-50" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(w.id)}>
                                 {w.archived ? "Activate" : "Suspend"}
                               </Button>
                             </TableCell>
                           </TableRow>
                         ))}
-                        <TableRow className="hover:bg-transparent border-t-2 border-gray-200" style={{ background: "#f0faf4" }}>
-                          <TableCell colSpan={3} className="text-xs font-bold" style={{ color: BRAND }}>Grand Total</TableCell>
+                        <TableRow className="hover:bg-transparent bg-[#f0faf4] border-t-2 border-gray-200">
+                          <TableCell colSpan={3} className="text-xs font-bold" style={{ color: GREEN }}>Grand Total</TableCell>
                           <TableCell className="text-xs text-right font-semibold text-gray-700">{fmt(wholesalers.reduce((s: number, w: any) => s + (w.totalGMV || 0), 0))}</TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-gray-700">{fmt(wholesalers.reduce((s: number, w: any) => s + (w.customerFeesEarned || 0), 0))}</TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-gray-700">{fmt(wholesalers.reduce((s: number, w: any) => s + (w.platformFeesEarned || 0), 0))}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold" style={{ color: BLUE }}>{fmt(wholesalers.reduce((s: number, w: any) => s + (w.customerFeesEarned || 0), 0))}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold" style={{ color: AMBER }}>{fmt(wholesalers.reduce((s: number, w: any) => s + (w.platformFeesEarned || 0), 0))}</TableCell>
                           <TableCell className="text-xs text-right font-bold text-gray-900">{fmt(wholesalers.reduce((s: number, w: any) => s + (w.totalFeesEarned || 0), 0))}</TableCell>
                           <TableCell colSpan={3} />
                         </TableRow>
@@ -441,12 +369,12 @@ export default function SuperAdmin() {
             </Card>
           </TabsContent>
 
-          {/* Revenue */}
+          {/* ── Revenue ── */}
           <TabsContent value="revenue" className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <StatCard label="Customer Fees" value={fmt(revenueTotals.totalCustomerFees)} sub="5.5% + £0.50 per order" icon={<ChevronRight className="h-4 w-4" style={{ color: BRAND }} />} accent />
-              <StatCard label="Platform Fees" value={fmt(revenueTotals.totalPlatformFees)} sub="3.3% per order" icon={<ChevronRight className="h-4 w-4" style={{ color: BRAND }} />} accent />
-              <StatCard label="Gross Revenue" value={fmt(revenueTotals.totalGrossRevenue)} sub="Combined total" icon={<TrendingUp className="h-4 w-4" style={{ color: BRAND }} />} accent />
+              <StatCard label="Customer Fees"  value={fmt(revenueTotals.totalCustomerFees)}  sub="5.5% + £0.50 per order" icon={<TrendingUp className="h-4 w-4" />}   color={BLUE} />
+              <StatCard label="Platform Fees"  value={fmt(revenueTotals.totalPlatformFees)}  sub="3.3% per order"         icon={<TrendingUp className="h-4 w-4" />}   color={AMBER} />
+              <StatCard label="Gross Revenue"  value={fmt(revenueTotals.totalGrossRevenue)}  sub="Combined total"         icon={<TrendingUp className="h-4 w-4" />}   color={GREEN} />
             </div>
 
             <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
@@ -457,23 +385,23 @@ export default function SuperAdmin() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="hover:bg-transparent" style={{ background: "#f0faf4" }}>
-                        <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Wholesaler</TableHead>
-                        <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Plan</TableHead>
-                        <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Orders</TableHead>
-                        <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Customer Fees</TableHead>
-                        <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Platform Fees</TableHead>
-                        <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Total Earned</TableHead>
+                      <TableRow className="hover:bg-transparent bg-blue-50">
+                        <TableHead className="text-xs font-semibold text-blue-700">Wholesaler</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-700">Plan</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-700 text-right">Orders</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-700 text-right">Customer Fees</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-700 text-right">Platform Fees</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-700 text-right">Total Earned</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {wholesalerRevenueSummary.map((w, i) => (
-                        <TableRow key={i} className="hover:bg-green-50/30">
+                        <TableRow key={i} className="hover:bg-blue-50/30">
                           <TableCell className="text-xs font-medium text-gray-800">{w.name}</TableCell>
                           <TableCell>{planBadge(w.tier)}</TableCell>
                           <TableCell className="text-xs text-right text-gray-600">{w.orders}</TableCell>
-                          <TableCell className="text-xs text-right text-gray-700">{fmt(w.customerFees)}</TableCell>
-                          <TableCell className="text-xs text-right text-gray-700">{fmt(w.platformFees)}</TableCell>
+                          <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.customerFees)}</TableCell>
+                          <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.platformFees)}</TableCell>
                           <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.total)}</TableCell>
                         </TableRow>
                       ))}
@@ -485,9 +413,7 @@ export default function SuperAdmin() {
 
             <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
               <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  Per-Order Breakdown ({revenueOrders.length} orders)
-                </CardTitle>
+                <CardTitle className="text-sm font-semibold text-gray-700">Per-Order Breakdown ({revenueOrders.length} orders)</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {revenueLoading ? (
@@ -497,30 +423,28 @@ export default function SuperAdmin() {
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="hover:bg-transparent" style={{ background: "#f0faf4" }}>
-                            <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Order #</TableHead>
-                            <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Wholesaler</TableHead>
-                            <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Customer</TableHead>
-                            <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>GMV</TableHead>
-                            <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Cust. Fee</TableHead>
-                            <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Platform Fee</TableHead>
-                            <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>Total</TableHead>
-                            <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Date</TableHead>
+                          <TableRow className="hover:bg-transparent bg-blue-50">
+                            <TableHead className="text-xs font-semibold text-blue-700">Order #</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700">Wholesaler</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700">Customer</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700 text-right">GMV</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700 text-right">Cust. Fee</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700 text-right">Platform Fee</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700 text-right">Total</TableHead>
+                            <TableHead className="text-xs font-semibold text-blue-700">Date</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {revenuePaged.map((o: any) => (
-                            <TableRow key={o.id} className="hover:bg-green-50/30">
+                            <TableRow key={o.id} className="hover:bg-blue-50/30">
                               <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
                               <TableCell className="text-xs text-gray-700">{o.wholesalerName || "—"}</TableCell>
                               <TableCell className="text-xs text-gray-600">{o.customerName || "—"}</TableCell>
                               <TableCell className="text-xs text-right text-gray-600">{fmt(o.subtotal)}</TableCell>
-                              <TableCell className="text-xs text-right text-gray-700">{fmt(o.customerTransactionFee)}</TableCell>
-                              <TableCell className="text-xs text-right text-gray-700">{fmt(o.platformFee)}</TableCell>
+                              <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(o.customerTransactionFee)}</TableCell>
+                              <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(o.platformFee)}</TableCell>
                               <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(o.totalQuikpikIncome)}</TableCell>
-                              <TableCell className="text-xs text-gray-400">
-                                {o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}
-                              </TableCell>
+                              <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -541,22 +465,15 @@ export default function SuperAdmin() {
             </Card>
           </TabsContent>
 
-          {/* All Orders */}
+          {/* ── All Orders ── */}
           <TabsContent value="orders">
             <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
               <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-                  <CardTitle className="text-sm font-semibold text-gray-700">
-                    All Orders ({revenueOrders.length} recent)
-                  </CardTitle>
+                  <CardTitle className="text-sm font-semibold text-gray-700">All Orders ({revenueOrders.length} recent)</CardTitle>
                   <div className="relative w-full sm:w-56">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <Input
-                      placeholder="Search..."
-                      value={orderSearch}
-                      onChange={(e) => setOrderSearch(e.target.value)}
-                      className="pl-8 h-8 text-xs border-gray-200 focus-visible:ring-green-400"
-                    />
+                    <Input placeholder="Search..." value={orderSearch} onChange={e => setOrderSearch(e.target.value)} className="pl-8 h-8 text-xs border-gray-200" />
                   </div>
                 </div>
               </CardHeader>
@@ -567,44 +484,39 @@ export default function SuperAdmin() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="hover:bg-transparent" style={{ background: "#f0faf4" }}>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Order #</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Wholesaler</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Customer</TableHead>
-                          <TableHead className="text-xs font-semibold text-right" style={{ color: BRAND }}>GMV</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Status</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Payment</TableHead>
-                          <TableHead className="text-xs font-semibold" style={{ color: BRAND }}>Date</TableHead>
+                        <TableRow className="hover:bg-transparent bg-amber-50">
+                          <TableHead className="text-xs font-semibold text-amber-700">Order #</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700">Wholesaler</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700">Customer</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700 text-right">GMV</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700">Status</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700">Payment</TableHead>
+                          <TableHead className="text-xs font-semibold text-amber-700">Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredOrders.slice(0, 200).map((o: any) => (
-                          <TableRow key={o.id} className="hover:bg-green-50/30">
+                          <TableRow key={o.id} className="hover:bg-amber-50/30">
                             <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
                             <TableCell className="text-xs text-gray-700">{o.wholesalerName || "—"}</TableCell>
                             <TableCell className="text-xs text-gray-600">{o.customerName || "—"}</TableCell>
-                            <TableCell className="text-xs text-right text-gray-700">{fmt(o.subtotal)}</TableCell>
+                            <TableCell className="text-xs text-right font-medium text-gray-700">{fmt(o.subtotal)}</TableCell>
                             <TableCell>
                               <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
                                 {(o.status || "pending").replace(/_/g, " ")}
                               </span>
                             </TableCell>
                             <TableCell>
-                              {o.paymentStatus === "paid" ? (
-                                <span className="text-xs px-1.5 py-0.5 rounded border" style={{ background: "#f0faf4", color: BRAND, borderColor: "#bbdfc8" }}>paid</span>
-                              ) : (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
-                              )}
+                              {o.paymentStatus === "paid"
+                                ? <span className="text-xs px-1.5 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>paid</span>
+                                : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
+                              }
                             </TableCell>
-                            <TableCell className="text-xs text-gray-400">
-                              {o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}
-                            </TableCell>
+                            <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
                           </TableRow>
                         ))}
                         {filteredOrders.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center py-10 text-sm text-gray-400">No orders found</TableCell>
-                          </TableRow>
+                          <TableRow><TableCell colSpan={7} className="text-center py-10 text-sm text-gray-400">No orders found</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -619,38 +531,39 @@ export default function SuperAdmin() {
   );
 }
 
-function StatCard({ label, value, sub, icon, accent }: { label: string; value: string | number; sub: string; icon: React.ReactNode; accent?: boolean }) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub, icon, color }: {
+  label: string; value: string | number; sub: string; icon: React.ReactNode; color: string;
+}) {
+  const bg = color === GREEN ? "#f0faf4" : color === BLUE ? "#eff6ff" : color === AMBER ? "#fffbeb" : "#eef2ff";
   return (
-    <div className={`bg-white rounded-xl border p-4 ${accent ? "border-l-4" : "border-gray-200"}`}
-      style={accent ? { borderColor: "#e2e8f0", borderLeftColor: BRAND } : {}}>
+    <div className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderLeftWidth: 4, borderLeftColor: color }}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-gray-500 font-medium">{label}</span>
-        {icon}
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: bg, color }}>
+          {icon}
+        </div>
       </div>
-      <p className="text-lg font-bold leading-tight" style={{ color: BRAND }}>{value}</p>
+      <p className="text-lg font-bold leading-tight" style={{ color }}>{value}</p>
       <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
     </div>
   );
 }
 
-function PlanCard({ label, count, highlight }: { label: string; count: number; highlight?: boolean }) {
+function PlanCard({ label, count, color, bg }: { label: string; count: number; color: string; bg: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-      <p className="text-2xl font-bold" style={highlight ? { color: BRAND } : { color: "#374151" }}>{count}</p>
+    <div className="rounded-xl border border-gray-200 p-4 text-center" style={{ background: bg }}>
+      <p className="text-2xl font-bold" style={{ color }}>{count}</p>
       <p className="text-xs text-gray-500 mt-1">{label} Plan</p>
     </div>
   );
 }
 
-function Row({ label, value, bold, green }: { label: string; value: string | number; bold?: boolean; green?: boolean }) {
+function Row({ label, value, bold, color }: { label: string; value: string | number; bold?: boolean; color?: string }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-xs font-medium ${bold ? "font-bold text-gray-900" : ""}`}
-        style={green ? { color: BRAND } : {}}>
-        {value}
-      </span>
+      <span className={`text-xs ${bold ? "font-bold" : "font-medium"}`} style={{ color: color || "#374151" }}>{value}</span>
     </div>
   );
 }
-
