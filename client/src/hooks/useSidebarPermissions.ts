@@ -15,7 +15,7 @@ export function useSidebarPermissions() {
   const { user } = useAuth();
 
   // For team members, fetch permissions using their wholesaler ID check endpoint
-  const { data: permissionChecks = {} } = useQuery<Record<string, boolean>>({
+  const { data: permissionChecks = {}, isLoading: permissionsLoading } = useQuery<Record<string, boolean>>({
     queryKey: ['/api/tab-permissions/check-all'],
     enabled: user?.role === 'team_member',
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -27,13 +27,14 @@ export function useSidebarPermissions() {
       return true;
     }
 
-    // For team members, check individual tab access using the check endpoint
-    if (user?.role === 'team_member') {
-      // Use the permission check data if available, otherwise default to true for safety
-      return permissionChecks[tabName] !== false;
+    // While permissions are loading, show tabs to avoid a blank nav flash
+    if (permissionsLoading) {
+      return true;
     }
 
-    return true;
+    // Once loaded, only show if the backend explicitly returned true
+    // Any absent key or false value = restricted
+    return permissionChecks[tabName] === true;
   };
 
   const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
