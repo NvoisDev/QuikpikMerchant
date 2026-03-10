@@ -1643,7 +1643,7 @@ A: This display issue has been fixed. All email confirmations now show actual pr
 #### Contacting Support
 
 #### Free Plan Users
-- **Email Support**: Send detailed questions to support@quikpik.co
+- **Email Support**: Send detailed questions to hello@quikpik.co
 - **Response Time**: Within 48 hours
 - **Documentation**: Extensive help articles and guides
 

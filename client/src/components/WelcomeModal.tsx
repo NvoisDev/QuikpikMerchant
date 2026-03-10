@@ -101,7 +101,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
             <div className="space-y-2 text-sm text-green-700">
               <div className="flex items-center space-x-2">
                 <span>📧</span>
-                <span>Email: support@quikpik.co (2-hour response time)</span>
+                <span>Email: hello@quikpik.co (2-hour response time)</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => window.open('mailto:support@quikpik.co', '_blank')}
+              onClick={() => window.open('mailto:hello@quikpik.co', '_blank')}
               className="flex-1"
             >
               Contact Support

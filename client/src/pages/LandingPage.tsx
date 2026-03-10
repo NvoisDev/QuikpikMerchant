@@ -435,7 +435,7 @@ export default function LandingPage() {
                 Need immediate help?
               </p>
               <p className="text-gray-600 mb-4">
-                Email us at <a href="mailto:support@quikpik.co" className="text-emerald-600 hover:text-emerald-700 font-medium">support@quikpik.co</a>
+                Email us at <a href="mailto:hello@quikpik.co" className="text-emerald-600 hover:text-emerald-700 font-medium">hello@quikpik.co</a>
               </p>
               <p className="text-sm text-gray-500">
                 We typically respond within 2 hours during business hours
