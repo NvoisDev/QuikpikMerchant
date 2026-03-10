@@ -170,7 +170,7 @@ export default function TabPermissionsManager() {
       <div className="space-y-3">
         {TAB_CONFIGS.map((tab) => {
           const permission = getPermissionForTab(tab.name);
-          const isRestricted = permission?.isRestricted || false;
+          const isRestricted = permission?.isRestricted ?? true;
           const Icon = tab.icon;
           const isUpdating = updating === tab.name;
 

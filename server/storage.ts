@@ -4710,8 +4710,8 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
 
       if (permission.length === 0) {
-        // No permission set, default to allow
-        return true;
+        // No permission set, default to deny (restricted)
+        return false;
       }
 
       const tabPermission = permission[0];
