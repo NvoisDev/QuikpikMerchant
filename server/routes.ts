@@ -4473,6 +4473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerId = req.query.customerId;
       const archiveTab = req.query.archiveTab || 'active';
       const paymentStatusParam = req.query.paymentStatus as string | undefined;
+      const fulfillmentTypeParam = req.query.fulfillmentType as string | undefined;
+      const statusParam = req.query.status as string | undefined;
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
@@ -4498,6 +4500,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         searchConditions.push(eq(orders.paymentStatus, 'paid'));
       } else if (paymentStatusParam === 'unpaid') {
         searchConditions.push(sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} NOT IN ('paid'))`);
+      }
+
+      // Delivery type filter (pickup = collection, delivery = delivery)
+      if (fulfillmentTypeParam) {
+        searchConditions.push(eq(orders.fulfillmentType, fulfillmentTypeParam));
+      }
+
+      // Status filter (unfulfilled = multiple statuses, otherwise exact match)
+      if (statusParam) {
+        const UNFULFILLED_STATUSES = ['pending', 'paid', 'confirmed', 'processing'];
+        if (statusParam === 'unfulfilled') {
+          searchConditions.push(inArray(orders.status, UNFULFILLED_STATUSES));
+        } else {
+          searchConditions.push(eq(orders.status, statusParam));
+        }
       }
 
       // Archived = cancelled OR (fulfilled AND paid)

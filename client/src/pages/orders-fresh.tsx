@@ -255,6 +255,9 @@ export default function OrdersFresh() {
 
   const customerIdRef = useRef(customerIdFilter);
   customerIdRef.current = customerIdFilter;
+  const deliveryTypeRef = useRef('');
+  const paymentStatusRef = useRef('');
+  const statusFilterRef = useRef('');
 
   const loadOrders = async (page = 1, search = '', tab = archiveTab) => {
     setLoading(true);
@@ -267,7 +270,10 @@ export default function OrdersFresh() {
         limit: ordersPerPage.toString(),
         archiveTab: tab,
         ...(search && { search }),
-        ...(custId && { customerId: custId })
+        ...(custId && { customerId: custId }),
+        ...(deliveryTypeRef.current && { fulfillmentType: deliveryTypeRef.current }),
+        ...(paymentStatusRef.current && { paymentStatus: paymentStatusRef.current }),
+        ...(statusFilterRef.current && { status: statusFilterRef.current }),
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -480,12 +486,9 @@ export default function OrdersFresh() {
 
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
+    statusFilterRef.current = status;
     setCurrentPage(1);
-    // Status filter is now applied client-side after tab filtering
-    // Only reload from server if there's a search query
-    if (searchQuery) {
-      loadOrders(1, searchQuery);
-    }
+    loadOrders(1, searchQuery);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -897,15 +900,9 @@ export default function OrdersFresh() {
       })
     : orders;
   
-  // Apply payment status filter (archive tab only)
-  const filteredByPayment = paymentStatusFilter
-    ? filteredByStatus.filter(o => (o.paymentStatus || '').toLowerCase() === paymentStatusFilter.toLowerCase())
-    : filteredByStatus;
-  
-  // Apply delivery type filter (archive tab only)
-  const filteredByDelivery = deliveryTypeFilter
-    ? filteredByPayment.filter(o => (o.fulfillmentType || '').toLowerCase() === deliveryTypeFilter.toLowerCase())
-    : filteredByPayment;
+  // Payment and delivery type filters are now applied server-side via loadOrders params
+  const filteredByPayment = filteredByStatus;
+  const filteredByDelivery = filteredByPayment;
   
   // Apply date range filter (archive tab only)
   const filteredByDate = dateRangeFilter
@@ -1020,7 +1017,7 @@ export default function OrdersFresh() {
       <div className="flex border-b border-gray-200">
         {customerIdFilter && (
           <button
-            onClick={() => { setArchiveTab('all'); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+            onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               archiveTab === 'all'
                 ? 'border-green-600 text-green-600'
@@ -1034,7 +1031,7 @@ export default function OrdersFresh() {
           </button>
         )}
         <button
-          onClick={() => { setArchiveTab('active'); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-green-600 text-green-600'
@@ -1047,7 +1044,7 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); }}
+          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-green-600 text-green-600'
@@ -1105,7 +1102,7 @@ export default function OrdersFresh() {
           <select 
             className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             value={paymentStatusFilter}
-            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            onChange={(e) => { paymentStatusRef.current = e.target.value; setPaymentStatusFilter(e.target.value); loadOrders(1, searchQuery); }}
           >
             <option value="">All Payment</option>
             <option value="paid">Paid</option>
@@ -1116,7 +1113,7 @@ export default function OrdersFresh() {
           <select 
             className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             value={deliveryTypeFilter}
-            onChange={(e) => setDeliveryTypeFilter(e.target.value)}
+            onChange={(e) => { deliveryTypeRef.current = e.target.value; setDeliveryTypeFilter(e.target.value); loadOrders(1, searchQuery); }}
           >
             <option value="">All Type</option>
             <option value="pickup">Collection</option>
@@ -1139,11 +1136,15 @@ export default function OrdersFresh() {
               variant="ghost"
               size="sm"
               onClick={() => {
+                deliveryTypeRef.current = '';
+                paymentStatusRef.current = '';
+                statusFilterRef.current = '';
                 handleSearch('');
                 setStatusFilter('');
                 setPaymentStatusFilter('');
                 setDeliveryTypeFilter('');
                 setDateRangeFilter('');
+                loadOrders(1, '');
               }}
               className="text-sm whitespace-nowrap"
             >
