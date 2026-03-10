@@ -17486,7 +17486,7 @@ https://quikpik.app`;
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const PLAN_PRICES: Record<string, number> = { free: 0, standard: 9.99, premium: 19.99 };
+      const PLAN_PRICES: Record<string, number> = { free: 0, standard: 19.99, premium: 39.99 };
 
       const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth] = await Promise.all([
         db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })

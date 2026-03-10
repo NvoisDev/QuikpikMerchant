@@ -47,7 +47,7 @@ export function SubscriptionUpgradeModal({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Standard
-                  <Badge variant="secondary">£9.99/month</Badge>
+                  <Badge variant="secondary">£19.99/month</Badge>
                 </CardTitle>
                 <CardDescription>Perfect for growing businesses</CardDescription>
               </CardHeader>
@@ -90,7 +90,7 @@ export function SubscriptionUpgradeModal({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Premium
-                  <Badge variant="default">£19.99/month</Badge>
+                  <Badge variant="default">£39.99/month</Badge>
                 </CardTitle>
                 <CardDescription>For scaling wholesale operations</CardDescription>
               </CardHeader>

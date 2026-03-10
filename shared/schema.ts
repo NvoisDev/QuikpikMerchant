@@ -321,7 +321,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   planId: varchar("plan_id").notNull().unique(), // 'free', 'standard', 'premium'
   stripeProductId: varchar("stripe_product_id"), // Stripe product ID (null for free)
   stripePriceId: varchar("stripe_price_id"), // Stripe price ID (null for free)
-  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(), // £0.00, £9.99, £19.99
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(), // £0.00, £19.99, £39.99
   currency: varchar("currency").default("GBP"),
   description: text("description"),
   features: jsonb("features").$type<string[]>().default([]), // Array of feature descriptions

@@ -26,7 +26,7 @@ const getPlanFeatures = (plan: string) => {
   const features = {
     premium: {
       name: "Premium",
-      price: "£19.99",
+      price: "£39.99",
       features: [
         "Unlimited products",
         "Unlimited broadcasts",
@@ -37,7 +37,7 @@ const getPlanFeatures = (plan: string) => {
     },
     standard: {
       name: "Standard", 
-      price: "£9.99",
+      price: "£19.99",
       features: [
         "Up to 50 products",
         "Up to 25 broadcasts per month",

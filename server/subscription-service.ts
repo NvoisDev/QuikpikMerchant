@@ -54,7 +54,7 @@ export class SubscriptionService {
           planId: "standard", 
           stripeProductId: "prod_standard", // Will be updated with real Stripe product ID
           stripePriceId: "price_standard", // Will be updated with real Stripe price ID
-          monthlyPrice: "9.99",
+          monthlyPrice: "19.99",
           currency: "GBP",
           description: "Perfect for growing wholesale businesses",
           features: [
@@ -76,7 +76,7 @@ export class SubscriptionService {
           planId: "premium",
           stripeProductId: "prod_premium", // Will be updated with real Stripe product ID  
           stripePriceId: "price_premium", // Will be updated with real Stripe price ID
-          monthlyPrice: "19.99",
+          monthlyPrice: "39.99",
           currency: "GBP", 
           description: "Everything you need to scale your wholesale business",
           features: [
