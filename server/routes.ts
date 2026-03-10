@@ -14150,6 +14150,40 @@ https://quikpik.app`;
       const newHash = await hashPassword(newPassword);
       await storage.updateUser(userId, { passwordHash: newHash });
 
+      // Send security notification email — fire-and-forget, don't fail the request if it errors
+      try {
+        const wholesaler = user.wholesalerId ? await storage.getUser(user.wholesalerId) : null;
+        const businessName = wholesaler?.businessName || 'Quikpik Merchant';
+        const logoUrl = getEmailLogoUrl(user.wholesalerId ?? undefined, wholesaler?.logoType, wholesaler?.logoUrl);
+        const branding = { businessName, logoUrl };
+
+        const changedAt = new Date().toLocaleString('en-GB', {
+          day: 'numeric', month: 'long', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London'
+        });
+
+        const body =
+          emailHeading('Password Changed', { color: '#10b981' }) +
+          emailBadge('Success', '#10b981') +
+          '<p style="font-size:15px;margin:16px 0 8px">Hi ' + (user.firstName || 'there') + ',</p>' +
+          '<p style="font-size:15px;margin:0 0 20px">Your <strong>' + businessName + '</strong> account password was successfully changed on <strong>' + changedAt + '</strong>.</p>' +
+          emailCard(
+            '<p style="margin:0;font-size:14px;color:#92400e"><strong>⚠ Didn\'t make this change?</strong><br>If you did not update your password, contact <strong>' + businessName + '</strong> or your account administrator immediately.</p>',
+            { borderColor: '#fbbf24', bgColor: '#fffbeb' }
+          );
+
+        const html = wrapCustomerEmail(body, branding, { preheader: 'Your account password was changed.' });
+
+        await sendEmail({
+          to: user.email!,
+          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@quikpik.app',
+          subject: 'Your password has been changed',
+          html,
+        });
+      } catch (emailError) {
+        console.error('Failed to send password-changed notification email:', emailError);
+      }
+
       res.json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Error changing team member password:", error);
