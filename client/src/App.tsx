@@ -86,6 +86,8 @@ function PublicRoutes() {
         <Route path="/auth-success" component={AuthSuccess} />
         <Route path="/select-wholesaler" component={WholesalerSelection} />
         <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
+        <Route path="/admin" component={SuperAdmin} />
+        <Route path="/super-admin" component={SuperAdmin} />
         <Route path="/" component={LandingPage} />
         <Route path="/landing" component={LandingPage} />
         <Route component={NotFound} />
@@ -143,7 +145,6 @@ function AuthenticatedRoutes() {
               <Route path="/preview-store/:id" component={CustomerPortal} />
               <Route path="/store/:id" component={CustomerPortal} />
               <Route path="/integrations" component={Integrations} />
-              <Route path="/super-admin" component={SuperAdmin} />
             </>
           ) : (
             <>

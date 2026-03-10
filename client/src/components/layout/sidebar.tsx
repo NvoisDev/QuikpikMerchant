@@ -31,7 +31,6 @@ import {
   Badge,
   Tag,
   Puzzle,
-  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -178,26 +177,6 @@ export default function Sidebar() {
             );
           })}
 
-          {/* Admin Panel link — only visible to platform owner */}
-          {(user?.email === 'hello@quikpik.co' || user?.email === 'mogunjemilua@gmail.com') && (
-            <Link href="/super-admin">
-              <div
-                className={cn(
-                  "flex items-center justify-between px-6 py-2 text-sm font-medium transition-colors cursor-pointer mt-2 border-t border-gray-100 pt-3",
-                  location === '/super-admin'
-                    ? "text-purple-700 bg-purple-50 border-r-4 border-purple-600"
-                    : "text-purple-600 hover:text-purple-800 hover:bg-purple-50"
-                )}
-                onClick={() => setIsCollapsed(true)}
-              >
-                <div className="flex items-center flex-1">
-                  <Shield className="mr-3 h-5 w-5 flex-shrink-0 text-purple-500" />
-                  <span className="flex-1">Admin Panel</span>
-                </div>
-                <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">ADMIN</span>
-              </div>
-            </Link>
-          )}
         </nav>
         
         {/* User Profile & Actions */}
