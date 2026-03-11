@@ -44,6 +44,7 @@ export interface Order {
     lastName: string;
     businessPhone?: string;
     businessAddress?: string;
+    deliveryNote?: string | null;
   };
   fulfillmentType: string;
   deliveryCarrier: string;
@@ -911,6 +912,12 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
               <span>Order Total:</span>
               <span>{formatCurrency(totalPaid)}</span>
             </div>
+            {order.wholesaler?.deliveryNote && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-1.5">
+                <span className="text-amber-600 text-xs mt-0.5">📦</span>
+                <p className="text-xs text-amber-800">{order.wholesaler.deliveryNote}</p>
+              </div>
+            )}
             
             {/* Deposit and payment breakdown */}
             {order.depositPercentage && order.depositPercentage < 100 && (

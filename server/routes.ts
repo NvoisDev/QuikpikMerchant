@@ -1849,7 +1849,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wholesalerId: order.wholesalerId,
           wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName}`,
           wholesalerEmail: wholesalerUser.email || '',
-          wholesalerPhone: wholesalerUser.businessPhone || ''
+          wholesalerPhone: wholesalerUser.businessPhone || '',
+          deliveryNote: (wholesalerUser as any).deliveryNote || null
         } : null;
 
         return {
@@ -1868,6 +1869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
             email: wholesalerDetails.wholesalerEmail || '',
             phone: wholesalerDetails.wholesalerPhone || '',
+            deliveryNote: wholesalerDetails.deliveryNote || null,
           } : null
         };
       }));
