@@ -1002,7 +1002,7 @@ export default function WholesalerDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={order.status === 'paid' ? 'default' : 'secondary'}>
-                            {order.status}
+                            {order.status.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                           </Badge>
                           <Link href={`/orders?id=${order.id}`}>
                             <Button variant="outline" size="sm" className="flex items-center gap-1">
