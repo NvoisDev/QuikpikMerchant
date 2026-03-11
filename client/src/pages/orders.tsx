@@ -1150,9 +1150,15 @@ export default function OrdersFresh() {
                 <h3 className="font-medium mb-2 text-sm">Payment Summary</h3>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span>Order Total:</span>
+                    <span>Products:</span>
                     <span>{formatCurrency(parseFloat(selectedOrder.subtotal || '0'))}</span>
                   </div>
+                  {parseFloat(selectedOrder.deliveryCost || '0') > 0 && (
+                    <div className="flex justify-between text-blue-700">
+                      <span>Delivery:</span>
+                      <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost || '0'))}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
                     <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || '0') * 0.033)}</span>
