@@ -1986,7 +1986,7 @@ export default function OrdersFresh() {
 
               {/* Payment Status Section for Quotes - Shows product values (excludes customer transaction fees) */}
               {selectedOrder.isQuote && (() => {
-                const productTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                 const customerTotal = parseFloat(selectedOrder.total || '0');
                 const paymentRatio = customerTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / customerTotal : 0;
                 const wholesalerPaid = productTotal * paymentRatio;
@@ -2197,7 +2197,7 @@ export default function OrdersFresh() {
                   {(() => {
                     const hasPaid = parseFloat(selectedOrder.amountPaid || '0') > 0;
                     const hasDeposit = (selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100;
-                    const pTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                    const pTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                     return (
                     <div className="flex items-start gap-2">
                       <div className={`w-2 h-2 rounded-full mt-1.5 ${hasPaid ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -2227,7 +2227,7 @@ export default function OrdersFresh() {
 
                   {/* Step 2: Balance Payment - Only show if there was a deposit and order is NOT cancelled */}
                   {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (() => {
-                    const prodTotal = parseFloat(selectedOrder.subtotal || selectedOrder.total || '0');
+                    const prodTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                     const custTotal = parseFloat(selectedOrder.total || '0');
                     const paidRatio = custTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / custTotal : 0;
                     const wPaid = prodTotal * paidRatio;
