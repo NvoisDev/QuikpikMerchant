@@ -135,6 +135,7 @@ export default function SuperAdmin() {
   const [planFilter, setPlanFilter] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [revenuePage, setRevenuePage] = useState(1);
+  const [activeTab, setActiveTab] = useState("overview");
   const PAGE_SIZE = 25;
 
   // Compute effective date range
@@ -200,6 +201,10 @@ export default function SuperAdmin() {
   const revenueTotals = revenueData?.totals || {};
   const subMRR: number = stats?.subscriptionRevenueMRR || 0;
   const subBreakdown = stats?.subscriptionBreakdown || { standard: { count: 0, mrr: 0 }, premium: { count: 0, mrr: 0 } };
+  const breakdownLabel = preset === "all_time" && !customFrom && !customTo
+    ? "All-time"
+    : (PRESETS.find(p => p.id === preset)?.label ?? "Custom range");
+  const planMRR = (tier: string) => tier === "premium" ? 39.99 : tier === "standard" ? 19.99 : 0;
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, { name: string; tier: string; orders: number; gmv: number; buyerFees: number; merchantFees: number; total: number }> = {};
@@ -305,7 +310,7 @@ export default function SuperAdmin() {
         )}
 
         {/* ── Filter bar ── */}
-        <div className="bg-white border border-gray-200 rounded-xl p-3 mb-4 shadow-sm">
+        {activeTab !== "overview" && <div className="bg-white border border-gray-200 rounded-xl p-3 mb-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             {/* Preset pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -387,10 +392,10 @@ export default function SuperAdmin() {
               {wholesalerFilter && ` · ${wholesalers.find((w: any) => w.id === wholesalerFilter)?.businessName || "selected wholesaler"}`}
             </p>
           )}
-        </div>
+        </div>}
 
         {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="overflow-x-auto pb-1">
             <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex gap-0.5 min-w-max shadow-sm">
               {(["overview", "wholesalers", "revenue", "orders"] as const).map((tab) => (
@@ -424,14 +429,14 @@ export default function SuperAdmin() {
 
               <Card className="border-gray-200 shadow-none rounded-xl">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-semibold text-gray-700">Revenue Breakdown (All-time)</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-gray-700">Revenue Breakdown ({breakdownLabel})</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2.5">
-                  <Row label="Buyer fees (5.5% + £0.50)"  value={fmt(stats?.totalCustomerFees)}  color={BLUE} />
-                  <Row label="Merchant fees (3.3%)"        value={fmt(stats?.totalPlatformFees)}  color={AMBER} />
-                  <Row label="Subscription MRR"            value={fmt(subMRR)}                    color={PURPLE} />
+                  <Row label="Buyer fees (5.5% + £0.50)"  value={fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
+                  <Row label="Merchant fees (3.3%)"        value={fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
+                  <Row label="Subscription MRR"            value={fmt(subMRR)}                           color={PURPLE} />
                   <div className="pt-1.5 border-t border-gray-100">
-                    <Row label="Total earned (fees + MRR)" value={fmt((stats?.totalGrossRevenue || 0) + subMRR)} color={GREEN} bold />
+                    <Row label="Total earned (fees + MRR)" value={fmt((revenueTotals.totalGrossRevenue || 0) + subMRR)} color={GREEN} bold />
                   </div>
                 </CardContent>
               </Card>
@@ -480,7 +485,7 @@ export default function SuperAdmin() {
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent bg-[#f0faf4]">
-                          {["Business","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Fees","Take Rate","Joined","Status",""].map((h, i) => (
+                          {["Business","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Sub. Revenue","Total Fees","Take Rate","Joined","Status",""].map((h, i) => (
                             <TableHead key={i} className="text-xs font-semibold" style={{ color: GREEN }}>{h}</TableHead>
                           ))}
                         </TableRow>
@@ -497,6 +502,7 @@ export default function SuperAdmin() {
                             <TableCell className="text-xs text-right text-gray-600">{fmt(w.totalGMV)}</TableCell>
                             <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.customerFeesEarned)}</TableCell>
                             <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.platformFeesEarned)}</TableCell>
+                            <TableCell className="text-xs text-right font-medium" style={{ color: PURPLE }}>{planMRR(w.subscriptionTier || "free") > 0 ? `${fmt(planMRR(w.subscriptionTier || "free"))}/mo` : "—"}</TableCell>
                             <TableCell className="text-xs text-right font-bold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
                             <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(w.totalFeesEarned, w.totalGMV)}</TableCell>
                             <TableCell className="text-xs text-gray-400">{w.createdAt ? format(new Date(w.createdAt), "dd MMM yy") : "—"}</TableCell>
