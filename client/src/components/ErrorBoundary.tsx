@@ -13,6 +13,15 @@ interface ErrorBoundaryProps {
   fallback?: React.ComponentType<{ error?: Error; reset: () => void }>;
 }
 
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.message?.includes("Failed to fetch dynamically imported module") ||
+    error.message?.includes("Importing a module script failed") ||
+    error.message?.includes("Loading chunk") ||
+    error.name === "ChunkLoadError"
+  );
+}
+
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -24,6 +33,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (isChunkLoadError(error)) {
+      window.location.reload();
+      return;
+    }
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
@@ -33,6 +46,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.hasError) {
+      if (this.state.error && isChunkLoadError(this.state.error)) {
+        return null;
+      }
+
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
         return <FallbackComponent error={this.state.error} reset={this.reset} />;
