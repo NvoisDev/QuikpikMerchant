@@ -866,10 +866,11 @@ export default function OrdersFresh() {
   // Calculate amounts after platform fee using actual database platform fees
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
+    const deliveryCost = parseFloat(order.deliveryCost || '0');
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : subtotal * 0.033;
-    return subtotal - feeToDeduct;
+    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal + delivery
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
+    return (subtotal + deliveryCost) - feeToDeduct;
   };
 
   // Helper function to determine if an order should be archived
@@ -1957,7 +1958,7 @@ export default function OrdersFresh() {
                   )}
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || '0') * 0.033)}</span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
                     const rawRefunded = parseFloat(selectedOrder.amountRefunded || '0');

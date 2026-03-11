@@ -5200,9 +5200,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
-      // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
-      const wholesalerPlatformFee = productSubtotal * 0.033;
-      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
+      // Wholesaler Platform Fee: 3.3% of products + delivery (deducted from what they receive)
+      const wholesalerPlatformFee = amountBeforeFees * 0.033;
+      const wholesalerReceives = amountBeforeFees - wholesalerPlatformFee;
 
       // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
       const stripeAmount = Math.round(totalCustomerPays * 100);
@@ -17747,8 +17747,8 @@ https://quikpik.app`;
       );
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
-      const customerTransactionFee = (productSubtotal * 0.055) + 0.50; // 5.5% + £0.50 on products only
-      const platformFee = productSubtotal * 0.033; // 3.3% platform fee (wholesaler pays internally)
+      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
+      const platformFee = subtotal * 0.033; // 3.3% platform fee on products + delivery
       const total = subtotal + customerTransactionFee;
 
       // Calculate deposit amount
