@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +105,9 @@ export default function Settings() {
 
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+  const [deliveryEnabled, setDeliveryEnabled] = useState((user as any)?.enableDelivery ?? true);
+  const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
+  const [savingDelivery, setSavingDelivery] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
@@ -178,8 +181,29 @@ export default function Settings() {
         logoType: user.logoType || 'business',
         logoUrl: user.logoUrl || ''
       });
+      setDeliveryEnabled((user as any).enableDelivery ?? true);
+      setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
     }
   }, [user]);
+
+  const handleSaveDelivery = async () => {
+    setSavingDelivery(true);
+    try {
+      const response = await apiRequest('PUT', '/api/user/profile', {
+        enableDelivery: deliveryEnabled,
+        deliveryFlatRate: deliveryEnabled && deliveryFlatRate ? parseFloat(deliveryFlatRate) : null,
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: "Delivery settings saved", description: "Your delivery preferences have been updated." });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      }
+    } catch {
+      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingDelivery(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -770,6 +794,58 @@ export default function Settings() {
                     )}
                   </div>
                   
+
+                  {/* Delivery Settings Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Truck className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Delivery Options</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Control whether you offer delivery to customers, and set your flat delivery rate.</p>
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Offer Delivery</p>
+                          <p className="text-xs text-gray-500 mt-0.5">When enabled, customers can choose delivery at checkout</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryEnabled(!deliveryEnabled)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${deliveryEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deliveryEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {deliveryEnabled && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">Flat Delivery Rate</label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">£</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="e.g. 5.99"
+                              value={deliveryFlatRate}
+                              onChange={(e) => setDeliveryFlatRateState(e.target.value)}
+                              className="w-32"
+                            />
+                            <span className="text-xs text-gray-400">per order</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">Leave blank to show delivery as "contact to arrange"</p>
+                        </div>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={handleSaveDelivery}
+                        disabled={savingDelivery}
+                        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {savingDelivery ? "Saving..." : "Save Delivery Settings"}
+                      </Button>
+                    </div>
+                  </div>
 
                   {/* Store QR Code Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">

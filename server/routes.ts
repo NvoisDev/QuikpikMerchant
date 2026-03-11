@@ -5178,7 +5178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         servicePriceType: typeof shippingInfo?.service?.price
       });
 
-      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
+      const deliveryCost = shippingInfo?.option === 'delivery' && shippingInfo?.flatDeliveryRate
+        ? parseFloat(shippingInfo.flatDeliveryRate) || 0
+        : parseFloat(shippingInfo?.service?.price || '0') || 0;
       console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
       
       const amountBeforeFees = productSubtotal + deliveryCost;

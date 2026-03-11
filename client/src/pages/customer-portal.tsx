@@ -1747,7 +1747,10 @@ export default function CustomerPortal() {
           }
         }),
         shippingInfo: {
-          option: shippingOption
+          option: shippingOption,
+          ...(shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+            ? { flatDeliveryRate: wholesaler.deliveryFlatRate }
+            : {})
         }
       };
       
@@ -4636,6 +4639,7 @@ export default function CustomerPortal() {
                         )}
                       </Label>
                     </div>
+                    {(wholesaler?.enableDelivery !== false) && (
                     <div className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-colors ${customerData.shippingOption === 'delivery' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                       <input
                         type="radio"
@@ -4677,11 +4681,18 @@ export default function CustomerPortal() {
                       <Label htmlFor="delivery" className="flex-1 cursor-pointer">
                         <div className="flex justify-between">
                           <span>Home delivery</span>
-                          <span className="text-blue-600 font-medium">Arranged by supplier</span>
+                          <span className="text-blue-600 font-medium">
+                            {wholesaler?.deliveryFlatRate ? `£${parseFloat(wholesaler.deliveryFlatRate).toFixed(2)}` : 'Arranged by supplier'}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600">The supplier will contact you to arrange delivery and discuss costs</p>
+                        <p className="text-sm text-gray-600">
+                          {wholesaler?.deliveryFlatRate
+                            ? `Flat delivery fee of £${parseFloat(wholesaler.deliveryFlatRate).toFixed(2)} added at checkout`
+                            : 'The supplier will contact you to arrange delivery and discuss costs'}
+                        </p>
                       </Label>
                     </div>
+                    )}
                   </div>
 
                   {/* Delivery Address Selector - Always show when delivery is selected */}
