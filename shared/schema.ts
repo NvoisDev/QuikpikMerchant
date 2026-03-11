@@ -216,6 +216,7 @@ export const users = pgTable("users", {
   enablePickup: boolean("enable_pickup").default(true),
   enableDelivery: boolean("enable_delivery").default(true),
   deliveryFlatRate: decimal("delivery_flat_rate", { precision: 10, scale: 2 }),
+  deliveryNote: text("delivery_note"),
   pickupAddress: text("pickup_address"), // Address for customer pickup
   pickupInstructions: text("pickup_instructions"), // Special pickup instructions
   

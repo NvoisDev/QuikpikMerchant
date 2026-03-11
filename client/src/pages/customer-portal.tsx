@@ -4533,6 +4533,21 @@ export default function CustomerPortal() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Delivery Note from Wholesaler */}
+                  {wholesaler?.deliveryNote && (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM3 4h14l-1.68 8.39A2 2 0 0113.35 14H6.65a2 2 0 01-1.97-1.61L3 4z" />
+                        </svg>
+                        <div className="text-sm text-amber-800">
+                          <p className="font-medium mb-0.5">Delivery Information</p>
+                          <p>{wholesaler.deliveryNote}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Customer Information Form */}

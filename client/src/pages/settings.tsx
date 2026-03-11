@@ -107,6 +107,7 @@ export default function Settings() {
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
   const [deliveryEnabled, setDeliveryEnabled] = useState((user as any)?.enableDelivery ?? true);
   const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
+  const [deliveryNote, setDeliveryNote] = useState((user as any)?.deliveryNote || '');
   const [savingDelivery, setSavingDelivery] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
@@ -183,6 +184,7 @@ export default function Settings() {
       });
       setDeliveryEnabled((user as any).enableDelivery ?? true);
       setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
+      setDeliveryNote((user as any).deliveryNote || '');
     }
   }, [user]);
 
@@ -192,6 +194,7 @@ export default function Settings() {
       const response = await apiRequest('PUT', '/api/user/profile', {
         enableDelivery: deliveryEnabled,
         deliveryFlatRate: deliveryEnabled && deliveryFlatRate ? parseFloat(deliveryFlatRate) : null,
+        deliveryNote: deliveryNote.trim() || null,
       });
       const data = await response.json();
       if (data.success) {
@@ -835,6 +838,17 @@ export default function Settings() {
                           <p className="text-xs text-gray-400 mt-1">Leave blank to show delivery as "contact to arrange"</p>
                         </div>
                       )}
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Delivery Note <span className="text-gray-400 font-normal">(shown to customers at checkout)</span></label>
+                        <textarea
+                          value={deliveryNote}
+                          onChange={(e) => setDeliveryNote(e.target.value)}
+                          placeholder='e.g. "Free delivery on orders over £100" or "Allow 2–3 working days"'
+                          rows={2}
+                          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-green-500 resize-none"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Customers will see this in the Order Summary during checkout</p>
+                      </div>
                       <Button
                         size="sm"
                         onClick={handleSaveDelivery}
