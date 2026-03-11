@@ -109,6 +109,7 @@ export default function QuickQuote() {
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
+  const [deliveryCharge, setDeliveryCharge] = useState<string>('');
   const [deliveryAddressId, setDeliveryAddressId] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState('');
   const [useCustomAddress, setUseCustomAddress] = useState(false);
@@ -183,6 +184,7 @@ export default function QuickQuote() {
       depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
       fulfillmentType: 'delivery' | 'pickup';
+      deliveryCharge?: number;
       deliveryAddressId?: number | null;
       deliveryAddress?: string;
       customAddressFields?: { addressLine1: string; city: string; postalCode: string; state: string; label: string };
@@ -263,14 +265,31 @@ export default function QuickQuote() {
     setQuoteItems(quoteItems.filter((_, i) => i !== index));
   };
 
-  const calculateTotal = () => {
+  const calculateProductSubtotal = () => {
     return quoteItems.reduce((sum, item) => sum + (item.customPrice * item.quantity), 0);
+  };
+
+  const calculateTotal = () => {
+    const productSubtotal = calculateProductSubtotal();
+    const delivery = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
+    return productSubtotal + delivery;
   };
 
   const calculateSavings = () => {
     const originalTotal = quoteItems.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
-    return originalTotal - calculateTotal();
+    return originalTotal - calculateProductSubtotal();
   };
+
+  // Pre-fill delivery charge from wholesaler flat rate when switching to delivery
+  useEffect(() => {
+    if (fulfillmentType === 'delivery' && deliveryCharge === '') {
+      const flatRate = (user as any)?.deliveryFlatRate;
+      if (flatRate) setDeliveryCharge(flatRate.toString());
+    }
+    if (fulfillmentType === 'pickup') {
+      setDeliveryCharge('');
+    }
+  }, [fulfillmentType]);
 
   const calculateDepositAmount = () => {
     return calculateTotal() * (depositPercentage / 100);
@@ -336,6 +355,7 @@ export default function QuickQuote() {
       balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
       ...(fulfillmentType === 'delivery' && {
+        deliveryCharge: parseFloat(deliveryCharge) || 0,
         deliveryAddressId: isUsingCustomAddress ? null : deliveryAddressId,
         deliveryAddress: isUsingCustomAddress ? `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}` : undefined,
         ...(isUsingCustomAddress ? { customAddressFields } : {}),
@@ -884,6 +904,18 @@ export default function QuickQuote() {
                 </div>
               )}
               <Separator />
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Products</span>
+                  <span>£{calculateProductSubtotal().toFixed(2)}</span>
+                </div>
+                {fulfillmentType === 'delivery' && (parseFloat(deliveryCharge) || 0) > 0 && (
+                  <div className="flex justify-between text-blue-700">
+                    <span>Delivery</span>
+                    <span>£{(parseFloat(deliveryCharge) || 0).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
                 <span>£{calculateTotal().toFixed(2)}</span>
@@ -914,6 +946,28 @@ export default function QuickQuote() {
                   </Button>
                 </div>
               </div>
+
+              {fulfillmentType === 'delivery' && (
+                <div>
+                  <Label className="text-sm font-medium mb-1 block">Delivery Charge</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">£</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={deliveryCharge}
+                      onChange={(e) => setDeliveryCharge(e.target.value)}
+                      className="w-28 text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
+                    />
+                    <span className="text-xs text-gray-400">editable per quote</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {(user as any)?.deliveryFlatRate ? `Default rate: £${parseFloat((user as any).deliveryFlatRate).toFixed(2)}` : 'No default rate set in settings'}
+                  </p>
+                </div>
+              )}
 
               {fulfillmentType === 'delivery' && selectedCustomer && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">

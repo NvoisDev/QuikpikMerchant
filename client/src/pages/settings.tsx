@@ -819,8 +819,7 @@ export default function Settings() {
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deliveryEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                       </div>
-                      {deliveryEnabled && (
-                        <div>
+                      <div>
                           <label className="text-sm font-medium text-gray-700 mb-1 block">Flat Delivery Rate</label>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">£</span>
@@ -837,7 +836,6 @@ export default function Settings() {
                           </div>
                           <p className="text-xs text-gray-400 mt-1">Leave blank to show delivery as "contact to arrange"</p>
                         </div>
-                      )}
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Delivery Note <span className="text-gray-400 font-normal">(shown to customers at checkout)</span></label>
                         <textarea
