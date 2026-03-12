@@ -1364,7 +1364,9 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex gap-1 flex-wrap">
-                          {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
+                          {parseFloat(order.amountRefunded || '0') > 0 ? (
+                            <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
+                          ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
                             <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
                           ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
                             <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
@@ -1501,7 +1503,9 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
+                        {parseFloat(order.amountRefunded || '0') > 0 ? (
+                          <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
+                        ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
                           <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
                         ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
                           <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
