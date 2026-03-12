@@ -893,7 +893,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   value={emailCode}
                   onChange={handleEmailCodeChange}
                   maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-purple-600"
+                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
                   autoComplete="off"
                 />
               </div>
@@ -937,7 +937,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             ) : (
               <Button
                 onClick={handleEmailVerification}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                 disabled={isLoading || emailCode.length !== 6}
               >
                 {isLoading ? (
