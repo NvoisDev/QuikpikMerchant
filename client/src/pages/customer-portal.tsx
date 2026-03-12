@@ -4812,7 +4812,8 @@ export default function CustomerPortal() {
                         compact={true}
                       />
                       
-                      {/* Delivery Information Note */}
+                      {/* Delivery Information Note - only show when no flat rate is set */}
+                      {(!wholesaler?.deliveryFlatRate || parseFloat(wholesaler.deliveryFlatRate) === 0) && (
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <h5 className="font-medium text-blue-800 mb-1">Delivery Arrangement</h5>
                         <p className="text-sm text-blue-700">
@@ -4820,6 +4821,7 @@ export default function CustomerPortal() {
                           timing, and costs based on your location and order size.
                         </p>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
