@@ -4486,13 +4486,24 @@ export default function CustomerPortal() {
                         />
                       </div>
                       
+                      {customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate && parseFloat(wholesaler.deliveryFlatRate) > 0 && (
+                      <div className="flex justify-between text-blue-700">
+                        <span>Delivery</span>
+                        <PriceDisplay
+                          price={parseFloat(wholesaler.deliveryFlatRate)}
+                          currency="GBP"
+                          isGuestMode={false}
+                          size="small"
+                        />
+                      </div>
+                      )}
                       
                       <div className="flex justify-between text-gray-600">
                         <span>Transaction Fee (5.5% + £0.50)</span>
                         <PriceDisplay
                           price={(() => {
-                            const subtotal = cartStats.subtotal; // Use pure product subtotal
-                            const shipping = 0; // Delivery arranged directly by supplier
+                            const subtotal = cartStats.subtotal;
+                            const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                             const beforeFees = subtotal + shipping;
                             return (beforeFees * 0.055) + 0.50;
                           })()}
@@ -4508,8 +4519,8 @@ export default function CustomerPortal() {
                       <span>Total to Pay</span>
                       <PriceDisplay
                         price={(() => {
-                          const subtotal = cartStats.subtotal; // Use pure product subtotal
-                          const shipping = 0; // Delivery arranged directly by supplier
+                          const subtotal = cartStats.subtotal;
+                          const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                           const beforeFees = subtotal + shipping;
                           const transactionFee = (beforeFees * 0.055) + 0.50;
                           return beforeFees + transactionFee;
