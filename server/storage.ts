@@ -2947,6 +2947,8 @@ export class DatabaseStorage implements IStorage {
         sendDeliveryConfirmations: wholesaler.send_delivery_confirmations,
         enablePickup: wholesaler.enable_pickup,
         enableDelivery: wholesaler.enable_delivery,
+        deliveryFlatRate: wholesaler.delivery_flat_rate,
+        deliveryNote: wholesaler.delivery_note,
         pickupAddress: wholesaler.pickup_address,
         pickupInstructions: wholesaler.pickup_instructions,
         passwordHash: wholesaler.password_hash,
