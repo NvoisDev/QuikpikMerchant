@@ -707,7 +707,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
           </h1>
           <p className="text-gray-600 text-lg">
-            {authStep === 'step3' ? 'Verify your identity to continue' : `Accessing ${wholesaler?.businessName || 'Store'}`}
+            Accessing {wholesaler?.businessName || 'Store'} Wholesale
           </p>
         </div>
 
