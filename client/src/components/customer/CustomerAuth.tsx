@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Shield, ShoppingCart, Package, Star, MessageSquare, Mail, Building2, User, Phone, ArrowLeft } from "lucide-react";
+import { Loader2, Shield, ShoppingCart, Package, Star, MessageSquare, Mail, Building2, User, Phone, ArrowLeft, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
@@ -45,6 +45,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const [smsRequestInProgress, setSmsRequestInProgress] = useState(false);
   const [lastSmsTime, setLastSmsTime] = useState<number>(0);
+  const [autoVerifying, setAutoVerifying] = useState(false);
   
   // Registration request form state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -231,15 +232,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin - start at step 2 and check authentication
       setLastFourDigits(authParam);
-      setAuthStep('step2'); // Start directly at step 2 with the digits
+      setAutoVerifying(true);
       
       checkExistingSession().then(hasSession => {
         if (!hasSession) {
-          // No existing session, proceed with SMS verification
           console.log('🔗 FROM CUSTOMER LOGIN: No session found, sending SMS with digits', authParam);
-          handleAuthenticationFromLogin(authParam);
+          handleAuthenticationFromLogin(authParam).finally(() => {
+            setAutoVerifying(false);
+          });
+        } else {
+          setAutoVerifying(false);
         }
       });
     } else {
@@ -894,636 +897,413 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
   const themeConfig = getThemeConfig();
 
-  return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Side - White Background with Authentication Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-start justify-center p-3 sm:p-4 lg:p-4 overflow-y-auto">
-        <div className="w-full max-w-md mx-auto py-2 sm:py-4">
-          {/* Back Button - Mobile Optimized */}
-          <div className="mb-3 sm:mb-4">
-            <Button
-              onClick={() => window.location.href = '/customer-login'}
-              variant="ghost"
-              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 sm:p-3 rounded-full transition-all duration-200 flex items-center space-x-2 text-sm sm:text-base"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="font-medium">Back</span>
-            </Button>
-          </div>
-
-          {/* Wholesaler Logo/Initials Header with Store Name - Mobile Optimized */}
-          <div className="text-center mb-3 sm:mb-4">
-            <div className="mx-auto mb-2 sm:mb-3 relative">
-              {wholesaler?.logoUrl ? (
-                <img 
-                  src={wholesaler.logoUrl} 
-                  alt={wholesaler.businessName}
-                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mx-auto border-2 sm:border-3 border-gray-200 shadow-lg"
-                />
-              ) : (
-                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-2 sm:border-3 border-gray-200 shadow-lg">
-                  <span className="text-lg sm:text-xl font-bold text-white">
-                    {wholesaler && wholesaler.businessName ? getInitials(wholesaler.businessName) : 'Q'}
-                  </span>
-                </div>
-              )}
+  if (autoVerifying) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+        <div className="text-center max-w-md mx-auto">
+          {wholesaler?.logoUrl ? (
+            <img
+              src={wholesaler.logoUrl}
+              alt={wholesaler.businessName}
+              className="mx-auto h-20 w-20 rounded-full object-cover mb-6 border-2 border-gray-100 shadow-md"
+            />
+          ) : (
+            <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6 shadow-md">
+              <span className="text-2xl font-bold text-white">
+                {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
+              </span>
             </div>
-            {/* Store Name Display */}
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
-              {wholesaler?.businessName || 'Loading...'}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Customer Portal Access
+          )}
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying your access...</h2>
+          <p className="text-gray-500 text-sm">
+            Connecting you to {wholesaler?.businessName || 'the store'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md mx-auto">
+          <div className="text-center mb-8">
+            {wholesaler?.logoUrl ? (
+              <img
+                src={wholesaler.logoUrl}
+                alt={wholesaler.businessName}
+                className="mx-auto h-20 w-20 rounded-full object-cover mb-6 shadow-lg border-2 border-gray-100"
+              />
+            ) : (
+              <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6 shadow-lg">
+                <span className="text-2xl font-bold text-white">
+                  {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
+                </span>
+              </div>
+            )}
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
+            </h1>
+            <p className="text-gray-600 text-lg">
+              {authStep === 'step3' ? 'Verify your identity to continue' : `Accessing ${wholesaler?.businessName || 'Store'}`}
             </p>
           </div>
 
-          {/* Unified Authentication Card - Mobile Optimized */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl sm:shadow-2xl rounded-2xl sm:rounded-3xl overflow-hidden">
-            <CardContent className="p-3 sm:p-4">
-              <div className="space-y-3 sm:space-y-4">
+          <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-2">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <div className={`h-3 w-3 rounded-full transition-all duration-300 bg-green-600`}></div>
+                <div className={`h-0.5 w-8 transition-all duration-300 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+                <div className={`h-3 w-3 rounded-full transition-all duration-300 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+              </div>
+              <p className="text-sm text-gray-500">
+                {authStep === 'step3' ? 'Step 2 of 2' : 'Step 1 of 2'}
+              </p>
+            </CardHeader>
 
-                {/* Step 1: Phone Number Entry (Simplified 2-step flow) */}
-                {authStep === 'step2' && (
-                  <>
-                    <div className="space-y-3 sm:space-y-4">
-                      {/* Warm Welcome Header */}
-                      <div className="text-center mb-3 sm:mb-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 1 of 2</span>
-                          <span className="text-xs sm:text-sm text-gray-500">Quick Login</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mb-3 sm:mb-4">
-                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '50%' }}></div>
-                        </div>
-                        
-                        {/* Warm Welcome Message */}
-                        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-100 mb-3">
-                          <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
-                            Great to see you! 👋
-                          </h4>
-                          <p className="text-sm text-gray-600 mb-3">
-                            Your exclusive wholesale portal awaits
-                          </p>
-                          
-                          {/* Quick Benefits - What You Can Do */}
-                          <div className="grid grid-cols-2 gap-2 mt-3">
-                            <div className="bg-white/70 rounded-lg p-2 text-center">
-                              <span className="text-lg">📦</span>
-                              <p className="text-xs text-gray-600 mt-1">View Orders</p>
-                            </div>
-                            <div className="bg-white/70 rounded-lg p-2 text-center">
-                              <span className="text-lg">🔄</span>
-                              <p className="text-xs text-gray-600 mt-1">Quick Reorder</p>
-                            </div>
-                            <div className="bg-white/70 rounded-lg p-2 text-center">
-                              <span className="text-lg">🏷️</span>
-                              <p className="text-xs text-gray-600 mt-1">Exclusive Prices</p>
-                            </div>
-                            <div className="bg-white/70 rounded-lg p-2 text-center">
-                              <span className="text-lg">💬</span>
-                              <p className="text-xs text-gray-600 mt-1">Direct Contact</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Phone Entry Instruction */}
-                        <p className="text-xs sm:text-sm text-gray-600">
-                          Enter the last 4 digits of your phone number to continue
-                        </p>
+            <CardContent className="space-y-6">
+              {authStep === 'step2' && (
+                <div className="space-y-6">
+                  <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="lastFour" className="text-base font-medium">Phone Verification</Label>
+                      <div className="text-center mb-4">
+                        <p className="text-sm text-gray-600">Enter the last 4 digits of your phone number</p>
                       </div>
-                      <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
-                        Last 4 digits of your phone number
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="lastFour"
-                          type="password"
-                          placeholder="••••"
-                          value={lastFourDigits}
-                          onChange={handleLastFourChange}
-                          maxLength={4}
-                          className="text-center text-xl sm:text-2xl tracking-[0.4rem] sm:tracking-[0.8rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
-                        />
-                        <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">🔐</div>
-                        {/* Progress indicator for phone input */}
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-300 rounded-full"
-                            style={{ width: `${(lastFourDigits.length / 4) * 100}%` }}
-                          />
-                        </div>
-                      </div>
+                      <Input
+                        id="lastFour"
+                        type="text"
+                        placeholder="••••"
+                        value={lastFourDigits}
+                        onChange={handleLastFourChange}
+                        maxLength={4}
+                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
+                        disabled={isLoading}
+                        autoComplete="off"
+                      />
                     </div>
 
-                    {/* Enhanced Mobile-Optimized Error Display for Step 2 */}
                     {error && (
-                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg sm:rounded-xl border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
+                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
                         {error === "CUSTOMER_NOT_FOUND" ? (
-                          <AlertDescription className="text-center space-y-3 sm:space-y-4">
-                            <div className="flex items-center justify-center mb-1 sm:mb-2">
-                              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-1 sm:mr-2" />
-                              <span className="text-blue-800 font-semibold text-sm sm:text-base">Not registered yet?</span>
+                          <AlertDescription className="text-center space-y-3">
+                            <div className="flex items-center justify-center mb-1">
+                              <Building2 className="w-4 h-4 text-blue-600 mr-2" />
+                              <span className="text-blue-800 font-semibold text-sm">Not registered yet?</span>
                             </div>
-                            <p className="text-blue-700 text-xs sm:text-sm mb-2 sm:mb-3 px-2">
-                              You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store. 
-                              Request access by filling out a quick form below.
+                            <p className="text-blue-700 text-sm mb-3 px-2">
+                              You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store.
                             </p>
                             <div className="space-y-2">
                               <Button
+                                type="button"
                                 onClick={() => setShowRegistrationForm(true)}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 sm:h-11 text-sm sm:text-base"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
                               >
-                                <User className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                <User className="w-4 h-4 mr-2" />
                                 Request Access
                               </Button>
                               <Button
+                                type="button"
                                 onClick={() => setError("")}
                                 variant="outline"
-                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-10 sm:h-11 text-sm sm:text-base"
+                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-11 text-sm"
                               >
-                                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                <ArrowLeft className="w-4 h-4 mr-2" />
                                 Try Different Number
                               </Button>
                             </div>
                           </AlertDescription>
                         ) : error.includes("SMS failed") || error.includes("Failed to send") ? (
-                          <AlertDescription className="text-center space-y-2 sm:space-y-3">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
-                              <span className="text-orange-600 text-sm sm:text-lg">📱</span>
-                            </div>
-                            <h6 className="font-semibold text-gray-800 text-sm sm:text-base">SMS Delivery Issue</h6>
-                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
-                            <div className="bg-orange-50 p-2 sm:p-3 rounded-lg">
-                              <p className="text-xs text-orange-700 font-medium">Troubleshooting tips:</p>
-                              <ul className="text-xs text-orange-600 mt-1 space-y-1 text-left">
-                                <li>• Check your phone has signal</li>
-                                <li>• Wait 30 seconds and try again</li>
-                                <li>• Ensure your number is correct</li>
-                              </ul>
-                            </div>
+                          <AlertDescription className="text-center space-y-2">
+                            <h6 className="font-semibold text-gray-800 text-sm">SMS Delivery Issue</h6>
+                            <p className="text-sm text-gray-600 px-2">{error}</p>
                           </AlertDescription>
                         ) : (
                           <AlertDescription className="text-center">
-                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
+                            <p className="text-sm text-gray-600 px-2">{error}</p>
                           </AlertDescription>
                         )}
                       </Alert>
                     )}
 
-                    <div className="space-y-3">
-                      <Button 
-                        onClick={() => handleLogin()} 
-                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                        disabled={isLoading || lastFourDigits.length !== 4}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                            Sending verification code...
-                          </>
-                        ) : (
-                          <>
-                            <span>Access Store</span>
-                            <span className="ml-2 text-xl">🔓</span>
-                          </>
-                        )}
-                      </Button>
-
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 flex items-center justify-center">
-                          <Shield className="mr-1 h-3 w-3" />
-                          SMS verification is required for security
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Step 2: SMS Verification (was Step 3) */}
-                {authStep === 'step3' && customerData && (
-                  <>
-                    <div className="text-center mb-4">
-                      {/* Progress Bar */}
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs sm:text-sm font-medium text-gray-600">Step 2 of 2</span>
-                        <span className="text-xs sm:text-sm text-gray-500">Verification</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mb-4">
-                        <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '100%' }}></div>
-                      </div>
-                      
-                      <h4 className="text-base font-semibold text-gray-800 mb-1">
-                        Almost there, {customerData.name}! 🎉
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Just one more step to access your portal
-                      </p>
-                      {countdown > 0 && (
-                        <p className="text-xs text-blue-600 mt-2">
-                          Code expires in {formatCountdown(countdown)}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Verification Method Tabs */}
-                    {verificationMethod === 'both' ? (
-                      <div className="mb-6">
-                        <div className="flex bg-gray-100 rounded-xl p-1">
-                          <button
-                            onClick={() => setVerificationMethod('sms')}
-                            className="flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm bg-blue-500 text-white shadow-md"
-                          >
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            SMS
-                          </button>
-                          <button
-                            onClick={() => setVerificationMethod('email')}
-                            className="flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
-                          >
-                            <Mail className="mr-2 h-4 w-4" />
-                            Email
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {/* SMS Verification */}
-                    {(verificationMethod === 'sms' || verificationMethod === 'both') && (
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 px-2">
-                            Enter the 6-digit code sent to your phone
-                          </p>
-                        </div>
-                        <div className="relative">
-                          <Input
-                            type="text"
-                            placeholder="123456"
-                            value={smsCode}
-                            onChange={handleSMSCodeChange}
-                            maxLength={6}
-                            className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
-                          />
-                          <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📱</div>
-                          {/* Progress indicator for SMS input */}
-                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300 rounded-full"
-                              style={{ width: `${(smsCode.length / 6) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                        
-
-                      </div>
-                    )}
-
-                    {/* Email Verification */}
-                    {verificationMethod === 'email' && (
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 px-2">
-                            Enter the 6-digit code sent to:
-                          </p>
-                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-2 sm:mb-3 break-all px-2">
-                            {customerData.email}
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRequestEmail}
-                            disabled={isSMSLoading}
-                            className="text-xs h-8 sm:h-9"
-                          >
-                            {isSMSLoading ? (
-                              <>
-                                <Loader2 className="mr-1 h-2 w-2 sm:h-3 sm:w-3 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="mr-1 h-2 w-2 sm:h-3 sm:w-3" />
-                                Send Email Code
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <div className="relative">
-                          <Input
-                            type="text"
-                            placeholder="123456"
-                            value={emailCode}
-                            onChange={handleEmailCodeChange}
-                            maxLength={6}
-                            className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
-                          />
-                          <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📧</div>
-                          {/* Progress indicator for email input */}
-                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300 rounded-full"
-                              style={{ width: `${(emailCode.length / 6) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Enhanced Error Display for Step 3 Verification */}
-                    {error && (
-                      <Alert className="border-red-200 bg-red-50 rounded-lg sm:rounded-xl">
-                        <AlertDescription className="text-center space-y-2 sm:space-y-3">
-                          {error.includes("Invalid") || error.includes("incorrect") ? (
-                            <>
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                                <span className="text-red-600 text-sm sm:text-lg">❌</span>
-                              </div>
-                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">Code Incorrect</h6>
-                              <p className="text-xs text-gray-600 px-2">Double-check the code and try again. Make sure you're using the most recent code sent to you.</p>
-                            </>
-                          ) : error.includes("expired") ? (
-                            <>
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
-                                <span className="text-orange-600 text-sm sm:text-lg">⏰</span>
-                              </div>
-                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">Code Expired</h6>
-                              <p className="text-xs text-gray-600 px-2">Request a new verification code and try again.</p>
-                            </>
-                          ) : error.includes("Failed to send") || error.includes("SMS") ? (
-                            <>
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
-                                <span className="text-orange-600 text-sm sm:text-lg">📱</span>
-                              </div>
-                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">SMS Issue</h6>
-                              <p className="text-xs text-gray-600 px-2">{error}</p>
-                              <div className="bg-orange-50 p-2 rounded-lg">
-                                <p className="text-xs text-orange-700">Try resending or check your signal</p>
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
-                          )}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="space-y-2 sm:space-y-3">
-                      {verificationMethod === 'sms' || verificationMethod === 'both' ? (
-                        <Button 
-                          onClick={handleSMSVerification}
-                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                          disabled={isLoading || smsCode.length !== 6}
-                        >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                              Verifying SMS code...
-                            </>
-                          ) : (
-                            <>
-                              <span>Verify SMS Code</span>
-                              <span className="ml-2 text-xl">📱</span>
-                            </>
-                          )}
-                        </Button>
+                    <Button
+                      type="submit"
+                      className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                      disabled={isLoading || lastFourDigits.length !== 4}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending verification code...
+                        </>
                       ) : (
-                        <Button 
-                          onClick={handleEmailVerification}
-                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                          disabled={isLoading || emailCode.length !== 6}
-                        >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                              Verifying email code...
-                            </>
-                          ) : (
-                            <>
-                              <span>Verify Email Code</span>
-                              <span className="ml-2 text-xl">📧</span>
-                            </>
-                          )}
-                        </Button>
+                        "Access Store"
                       )}
+                    </Button>
+                  </form>
 
-                      <div className="flex space-x-3">
-                        <Button 
-                          variant="outline" 
-                          onClick={handleBackToPhone}
-                          className="flex-1 h-12 rounded-xl font-medium border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-700"
-                        >
-                          ← Back
-                        </Button>
-                        
-                        {verificationMethod === 'sms' || verificationMethod === 'both' ? (
-                          <Button 
-                            variant="outline"
-                            onClick={handleRequestSMS}
-                            disabled={isSMSLoading || countdown > 240}
-                            className="flex-1 h-12 rounded-xl font-medium border-2 border-blue-300 hover:border-blue-400 text-blue-600 hover:text-blue-700"
-                          >
-                            {isSMSLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Sending...
-                              </>
-                            ) : countdown > 240 ? (
-                              `Wait ${formatCountdown(countdown - 240)}`
-                            ) : (
-                              <>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Resend SMS
-                              </>
-                            )}
-                          </Button>
-                        ) : null}
-                      </div>
+                  <div className="border-t pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowRegistrationForm(true)}
+                      className="w-full flex items-center justify-center gap-2 text-sm text-green-700 hover:text-green-800 font-medium transition-colors py-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Not a customer yet? Request wholesale access
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {authStep === 'step3' && customerData && (
+                <div className="space-y-6">
+                  {countdown > 0 && (
+                    <p className="text-xs text-blue-600 text-center">
+                      Code expires in {formatCountdown(countdown)}
+                    </p>
+                  )}
+
+                  {verificationMethod === 'both' ? (
+                    <div className="flex bg-gray-100 rounded-xl p-1">
+                      <button
+                        onClick={() => setVerificationMethod('sms')}
+                        className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white shadow-sm"
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        SMS
+                      </button>
+                      <button
+                        onClick={() => setVerificationMethod('email')}
+                        className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Email
+                      </button>
                     </div>
-                  </>
-                )}
+                  ) : null}
 
-                {/* Legacy SMS step - should not be reached */}
-                {false && (
-                  <>
-                    <div className="text-center mb-6">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                        📱 SMS Verification
-                      </h4>
-                      <p className="text-sm text-gray-600">
+                  {(verificationMethod === 'sms' || verificationMethod === 'both') && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium block text-center">SMS Verification</Label>
+                      <p className="text-sm text-gray-600 text-center">
                         Enter the 6-digit code sent to your phone
                       </p>
-                      <div className="flex items-center justify-center space-x-2 my-4">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium">
-                        Step 2 of 2: SMS Code Verification
-                      </p>
-                      {countdown > 0 && (
-                        <p className="text-xs text-blue-600 mt-2">
-                          Code expires in {formatCountdown(countdown)}
-                        </p>
-                      )}
+                      <Input
+                        type="text"
+                        placeholder="123456"
+                        value={smsCode}
+                        onChange={handleSMSCodeChange}
+                        maxLength={6}
+                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
+                        autoComplete="off"
+                      />
                     </div>
+                  )}
 
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          placeholder="123456"
-                          value={smsCode}
-                          onChange={handleSMSCodeChange}
-                          maxLength={6}
-                          className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
-                        />
-                        <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
-                      </div>
-                    </div>
-
-                    {error && (
-                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
-                        <AlertDescription className="text-center">{error}</AlertDescription>
-                      </Alert>
-                    )}
-
+                  {verificationMethod === 'email' && (
                     <div className="space-y-3">
-                      <Button 
-                        onClick={handleSMSVerification}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                        disabled={isLoading || smsCode.length !== 6}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                            Verifying code...
-                          </>
-                        ) : (
-                          <>
-                            <span>Verify & Enter</span>
-                            <span className="ml-2 text-xl">✅</span>
-                          </>
-                        )}
-                      </Button>
-
-                      <div className="flex space-x-2">
-                        <Button 
+                      <Label className="text-base font-medium block text-center">Email Verification</Label>
+                      <p className="text-sm text-gray-600 text-center">
+                        Enter the 6-digit code sent to:
+                      </p>
+                      <p className="text-sm font-medium text-blue-600 text-center break-all">
+                        {customerData.email}
+                      </p>
+                      <div className="text-center">
+                        <Button
                           variant="outline"
-                          onClick={handleBackToPhone}
-                          className="flex-1 bg-gray-50 border-2 border-gray-200 text-gray-700 font-semibold h-12 rounded-2xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-300"
-                        >
-                          Back
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={handleRequestSMS}
-                          className="flex-1 bg-blue-50 border-2 border-blue-200 text-blue-700 font-semibold h-12 rounded-2xl hover:bg-blue-100 hover:border-blue-300 transition-all duration-300 disabled:opacity-50"
-                          disabled={isSMSLoading || countdown > 240} // Allow resend after 1 minute
+                          size="sm"
+                          onClick={handleRequestEmail}
+                          disabled={isSMSLoading}
+                          className="text-xs h-8"
                         >
                           {isSMSLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              Sending...
+                            </>
                           ) : (
-                            "Resend SMS"
+                            <>
+                              <Mail className="mr-1 h-3 w-3" />
+                              Send Email Code
+                            </>
                           )}
                         </Button>
                       </div>
+                      <Input
+                        type="text"
+                        placeholder="123456"
+                        value={emailCode}
+                        onChange={handleEmailCodeChange}
+                        maxLength={6}
+                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-purple-600"
+                        autoComplete="off"
+                      />
                     </div>
-                  </>
-                )}
+                  )}
 
-              </div>
+                  {error && (
+                    <Alert className="border-red-200 bg-red-50 rounded-lg">
+                      <AlertDescription className="text-center space-y-2">
+                        {error.includes("Invalid") || error.includes("incorrect") ? (
+                          <>
+                            <h6 className="font-semibold text-gray-800 text-sm">Code Incorrect</h6>
+                            <p className="text-xs text-gray-600">Double-check the code and try again.</p>
+                          </>
+                        ) : error.includes("expired") ? (
+                          <>
+                            <h6 className="font-semibold text-gray-800 text-sm">Code Expired</h6>
+                            <p className="text-xs text-gray-600">Request a new verification code and try again.</p>
+                          </>
+                        ) : (
+                          <p className="text-sm text-gray-600">{error}</p>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {verificationMethod === 'sms' || verificationMethod === 'both' ? (
+                    <Button
+                      onClick={handleSMSVerification}
+                      className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                      disabled={isLoading || smsCode.length !== 6}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        "Verify Code"
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleEmailVerification}
+                      className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                      disabled={isLoading || emailCode.length !== 6}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        "Verify Code"
+                      )}
+                    </Button>
+                  )}
+
+                  <div className="flex space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleBackToPhone}
+                      className="flex-1 h-11 font-medium border-2"
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back
+                    </Button>
+
+                    {(verificationMethod === 'sms' || verificationMethod === 'both') && (
+                      <Button
+                        variant="outline"
+                        onClick={handleRequestSMS}
+                        disabled={isSMSLoading || countdown > 240}
+                        className="flex-1 h-11 font-medium border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                      >
+                        {isSMSLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : countdown > 240 ? (
+                          `Wait ${formatCountdown(countdown - 240)}`
+                        ) : (
+                          <>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Resend SMS
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-          
-          {/* Footer positioned higher */}
+
           <div className="mt-6">
             <Footer />
           </div>
         </div>
       </div>
 
-      {/* Right Side - Dynamic Background */}
-      <div className={`hidden lg:block w-1/2 ${themeConfig.background} relative overflow-hidden transition-all duration-1000`}>
-        {/* Floating Icons */}
-        {themeConfig.floatingIcons.map((icon, index) => (
-          <div
-            key={index}
-            className={`absolute text-4xl animate-bounce opacity-20 hover:opacity-40 transition-opacity duration-300`}
-            style={{
-              left: `${15 + (index * 18)}%`,
-              top: `${20 + (index * 12)}%`,
-              animationDelay: `${index * 0.5}s`,
-              animationDuration: `${3 + (index * 0.5)}s`
-            }}
-          >
-            {icon}
-          </div>
-        ))}
-
-        {/* Floating Geometric Shapes */}
-        {themeConfig.shapes.map((shapeClass, index) => (
-          <div
-            key={index}
-            className={`absolute w-16 h-16 ${shapeClass} rounded-full opacity-10 animate-pulse`}
-            style={{
-              right: `${10 + (index * 15)}%`,
-              top: `${15 + (index * 20)}%`,
-              animationDelay: `${index * 0.8}s`,
-              animationDuration: `${2 + (index * 0.3)}s`
-            }}
-          />
-        ))}
-
-        {/* Bouncing Elements */}
-        <div className="absolute top-10 right-10 w-8 h-8 bg-yellow-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute bottom-20 left-10 w-6 h-6 bg-green-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/3 left-1/4 w-4 h-4 bg-blue-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '1.5s' }} />
-
-        {/* Centered Content for Right Side */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center p-8 max-w-md transform hover:scale-105 transition-transform duration-300">
-            <div className="mb-6">
-              <p className="text-2xl font-semibold text-gray-800 mb-2 animate-pulse">
-                {welcomeMessage.greeting}
-              </p>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 transform hover:scale-110 transition-transform duration-300">
-                {welcomeMessage.title}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-800 relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cdefs%3E%3Cpattern id='dots' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='2' fill='%23ffffff'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23dots)'/%3E%3C/svg%3E")`
+          }}
+        ></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/30"></div>
+        <div className="relative z-10 flex flex-col justify-center px-12 text-white">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h2 className="text-4xl font-bold leading-tight">
+                Your Wholesale Portal
               </h2>
-              <p className="text-xl text-gray-700 mb-4">
-                {welcomeMessage.subtitle}
-              </p>
-              {welcomeMessage.businessHours && (
-                <p className="text-gray-600 text-lg italic mb-4 animate-pulse">
-                  {welcomeMessage.businessHours}
-                </p>
-              )}
-            </div>
-
-            <div className="border-t border-gray-300 pt-4">
-              <p className="text-lg text-gray-700 animate-pulse">
-                Premium wholesale products with care
+              <p className="text-xl opacity-90">
+                Access exclusive wholesale products and special pricing from {wholesaler?.businessName || 'your trusted supplier'}.
               </p>
             </div>
-
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Wholesale Pricing</h3>
+                  <p className="text-sm opacity-80">Get better prices on bulk orders</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Easy Ordering</h3>
+                  <p className="text-sm opacity-80">Quick reorder and order tracking</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Secure Access</h3>
+                  <p className="text-sm opacity-80">Your data is always protected</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile-Optimized Registration Request Dialog */}
       <Dialog open={showRegistrationForm} onOpenChange={setShowRegistrationForm}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center text-base sm:text-lg">
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 text-blue-600" />
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-600" />
               Request Access to {wholesaler?.businessName || 'Store'}
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
+            <DialogDescription className="text-sm">
               Fill out this form to request access. The wholesaler will review your request and get back to you.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-3 sm:space-y-4 py-2">
+
+          <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="reg-name" className="text-sm font-medium">Name *</Label>
               <Input
@@ -1531,10 +1311,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 value={registrationData.name}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Your full name"
-                className="mt-1 h-9 sm:h-10 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
-            
             <div>
               <Label htmlFor="reg-business" className="text-sm font-medium">Business Name</Label>
               <Input
@@ -1542,10 +1321,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 value={registrationData.businessName}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, businessName: e.target.value }))}
                 placeholder="Your business name"
-                className="mt-1 h-9 sm:h-10 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
-            
             <div>
               <Label htmlFor="reg-phone" className="text-sm font-medium">Phone Number *</Label>
               <Input
@@ -1554,10 +1332,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 value={registrationData.phone}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="Your phone number"
-                className="mt-1 h-9 sm:h-10 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
-            
             <div>
               <Label htmlFor="reg-email" className="text-sm font-medium">Email</Label>
               <Input
@@ -1566,10 +1343,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 value={registrationData.email}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="Your email address"
-                className="mt-1 h-9 sm:h-10 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
-            
             <div>
               <Label htmlFor="reg-message" className="text-sm font-medium">Message (Optional)</Label>
               <Textarea
@@ -1577,33 +1353,33 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 value={registrationData.message}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="Tell them why you'd like access to their store..."
-                className="mt-1 resize-none text-sm h-20 sm:h-24"
+                className="mt-1 resize-none text-sm h-24"
                 rows={3}
               />
             </div>
           </div>
 
-          <DialogFooter className="space-y-2 sm:space-y-0 pt-2">
+          <DialogFooter className="pt-2">
             <Button
               onClick={() => setShowRegistrationForm(false)}
               variant="outline"
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
+              className="w-full sm:w-auto h-10 text-sm"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRegistrationSubmit}
               disabled={isSubmittingRegistration || !registrationData.name || !registrationData.phone}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-9 sm:h-10 text-sm"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-10 text-sm"
             >
               {isSubmittingRegistration ? (
                 <>
-                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Mail className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <Mail className="mr-2 h-4 w-4" />
                   Send Request
                 </>
               )}
