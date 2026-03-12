@@ -4927,18 +4927,17 @@ export default function CustomerPortal() {
                         },
                         wholesaler: wholesaler,
                         ...(() => {
-                          const fallbackSubtotal = orderData.subtotal || cartStats.subtotal;
-                          const fallbackShipping = orderData.shippingCost ||
-                            (customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
-                              ? parseFloat(wholesaler.deliveryFlatRate) : 0);
-                          const fallbackBeforeFees = fallbackSubtotal + fallbackShipping;
-                          const fallbackTransactionFee = orderData.transactionFee || ((fallbackBeforeFees * 0.055) + 0.50);
-                          const fallbackTotal = orderData.totalAmount || (fallbackBeforeFees + fallbackTransactionFee);
+                          const computedSubtotal = cartStats.subtotal;
+                          const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                            ? parseFloat(wholesaler.deliveryFlatRate) : 0;
+                          const computedBeforeFees = computedSubtotal + computedShipping;
+                          const computedTransactionFee = (computedBeforeFees * 0.055) + 0.50;
+                          const computedTotal = computedBeforeFees + computedTransactionFee;
                           return {
-                            subtotal: fallbackSubtotal,
-                            transactionFee: fallbackTransactionFee,
-                            shippingCost: fallbackShipping,
-                            totalAmount: fallbackTotal
+                            subtotal: computedSubtotal,
+                            transactionFee: computedTransactionFee,
+                            shippingCost: computedShipping,
+                            totalAmount: computedTotal
                           };
                         })()
                       };
