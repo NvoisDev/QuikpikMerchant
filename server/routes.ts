@@ -6991,7 +6991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.update(orders)
             .set({
               status: 'cancelled',
-              amountRefunded: stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : (refundType === 'credit' ? amountPaid.toFixed(2) : '0.00'),
+              amountRefunded: stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : (refundType === 'credit' || refundType === 'later') ? amountPaid.toFixed(2) : '0.00',
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
               notes: order.notes 

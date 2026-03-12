@@ -1364,7 +1364,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex gap-1 flex-wrap">
-                          {parseFloat(order.amountRefunded || '0') > 0 ? (
+                          {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
                             <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
                           ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
                             <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
@@ -1503,7 +1503,7 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {parseFloat(order.amountRefunded || '0') > 0 ? (
+                        {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
                           <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
                         ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
                           <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
