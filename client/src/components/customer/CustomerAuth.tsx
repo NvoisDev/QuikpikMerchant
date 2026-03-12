@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Shield, ShoppingCart, Package, MessageSquare, Mail, Building2, User, ArrowLeft, UserPlus } from "lucide-react";
+import { Loader2, MessageSquare, Mail, Building2, User, ArrowLeft, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 
@@ -688,369 +687,308 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md mx-auto">
-          <div className="text-center mb-8">
-            {wholesaler?.logoUrl ? (
-              <img
-                src={wholesaler.logoUrl}
-                alt={wholesaler.businessName}
-                className="mx-auto h-20 w-20 rounded-full object-cover mb-6 shadow-lg border-2 border-gray-100"
-              />
-            ) : (
-              <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6 shadow-lg">
-                <span className="text-2xl font-bold text-white">
-                  {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
-                </span>
-              </div>
-            )}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              {authStep === 'step3' ? 'Verify your identity to continue' : `Accessing ${wholesaler?.businessName || 'Store'}`}
-            </p>
-          </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 sm:px-6">
+      <div className="w-full max-w-md mx-auto">
+        <div className="text-center mb-8">
+          {wholesaler?.logoUrl ? (
+            <img
+              src={wholesaler.logoUrl}
+              alt={wholesaler.businessName}
+              className="mx-auto h-20 w-20 rounded-full object-cover mb-6 border-2 border-gray-100"
+            />
+          ) : (
+            <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6">
+              <span className="text-2xl font-bold text-white">
+                {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
+              </span>
+            </div>
+          )}
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
+          </h1>
+          <p className="text-gray-600 text-lg">
+            {authStep === 'step3' ? 'Verify your identity to continue' : `Accessing ${wholesaler?.businessName || 'Store'}`}
+          </p>
+        </div>
 
-          <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center pb-2">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className={`h-3 w-3 rounded-full transition-all duration-300 bg-green-600`}></div>
-                <div className={`h-0.5 w-8 transition-all duration-300 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-                <div className={`h-3 w-3 rounded-full transition-all duration-300 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-              </div>
-              <p className="text-sm text-gray-500">
-                {authStep === 'step3' ? 'Step 2 of 2' : 'Step 1 of 2'}
-              </p>
-            </CardHeader>
+        <div className="flex items-center justify-center space-x-2 mb-2">
+          <div className="h-3 w-3 rounded-full bg-green-600"></div>
+          <div className={`h-0.5 w-8 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+          <div className={`h-3 w-3 rounded-full ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+        </div>
+        <p className="text-sm text-gray-500 text-center mb-6">
+          {authStep === 'step3' ? 'Step 2 of 2' : 'Step 1 of 2'}
+        </p>
 
-            <CardContent className="space-y-6">
-              {authStep === 'step2' && (
-                <div className="space-y-6">
-                  <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="lastFour" className="text-base font-medium">Phone Verification</Label>
-                      <div className="text-center mb-4">
-                        <p className="text-sm text-gray-600">Enter the last 4 digits of your phone number</p>
+        {authStep === 'step2' && (
+          <div className="space-y-6">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="lastFour" className="text-base font-medium">Phone Verification</Label>
+                <p className="text-sm text-gray-600 text-center">Enter the last 4 digits of your phone number</p>
+                <Input
+                  id="lastFour"
+                  type="text"
+                  placeholder="••••"
+                  value={lastFourDigits}
+                  onChange={handleLastFourChange}
+                  maxLength={4}
+                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
+                  disabled={isLoading}
+                  autoComplete="off"
+                />
+              </div>
+
+              {error && (
+                <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
+                  {error === "CUSTOMER_NOT_FOUND" ? (
+                    <AlertDescription className="text-center space-y-3">
+                      <div className="flex items-center justify-center mb-1">
+                        <Building2 className="w-4 h-4 text-blue-600 mr-2" />
+                        <span className="text-blue-800 font-semibold text-sm">Not registered yet?</span>
                       </div>
-                      <Input
-                        id="lastFour"
-                        type="text"
-                        placeholder="••••"
-                        value={lastFourDigits}
-                        onChange={handleLastFourChange}
-                        maxLength={4}
-                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
-                        disabled={isLoading}
-                        autoComplete="off"
-                      />
-                    </div>
-
-                    {error && (
-                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
-                        {error === "CUSTOMER_NOT_FOUND" ? (
-                          <AlertDescription className="text-center space-y-3">
-                            <div className="flex items-center justify-center mb-1">
-                              <Building2 className="w-4 h-4 text-blue-600 mr-2" />
-                              <span className="text-blue-800 font-semibold text-sm">Not registered yet?</span>
-                            </div>
-                            <p className="text-blue-700 text-sm mb-3 px-2">
-                              You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store.
-                            </p>
-                            <div className="space-y-2">
-                              <Button
-                                type="button"
-                                onClick={() => setShowRegistrationForm(true)}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
-                              >
-                                <User className="w-4 h-4 mr-2" />
-                                Request Access
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={() => setError("")}
-                                variant="outline"
-                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-11 text-sm"
-                              >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Try Different Number
-                              </Button>
-                            </div>
-                          </AlertDescription>
-                        ) : error.includes("SMS failed") || error.includes("Failed to send") ? (
-                          <AlertDescription className="text-center space-y-2">
-                            <h6 className="font-semibold text-gray-800 text-sm">SMS Delivery Issue</h6>
-                            <p className="text-sm text-gray-600 px-2">{error}</p>
-                          </AlertDescription>
-                        ) : (
-                          <AlertDescription className="text-center">
-                            <p className="text-sm text-gray-600 px-2">{error}</p>
-                          </AlertDescription>
-                        )}
-                      </Alert>
-                    )}
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
-                      disabled={isLoading || lastFourDigits.length !== 4}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending verification code...
-                        </>
-                      ) : (
-                        "Access Store"
-                      )}
-                    </Button>
-                  </form>
-
-                  <div className="border-t pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowRegistrationForm(true)}
-                      className="w-full flex items-center justify-center gap-2 text-sm text-green-700 hover:text-green-800 font-medium transition-colors py-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Not a customer yet? Request wholesale access
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {authStep === 'step3' && customerData && (
-                <div className="space-y-6">
-                  {countdown > 0 && (
-                    <p className="text-xs text-blue-600 text-center">
-                      Code expires in {formatCountdown(countdown)}
-                    </p>
-                  )}
-
-                  {verificationMethod === 'both' ? (
-                    <div className="flex bg-gray-100 rounded-xl p-1">
-                      <button
-                        onClick={() => setVerificationMethod('sms')}
-                        className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white shadow-sm"
-                      >
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        SMS
-                      </button>
-                      <button
-                        onClick={() => setVerificationMethod('email')}
-                        className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Email
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {(verificationMethod === 'sms' || verificationMethod === 'both') && (
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium block text-center">SMS Verification</Label>
-                      <p className="text-sm text-gray-600 text-center">
-                        Enter the 6-digit code sent to your phone
+                      <p className="text-blue-700 text-sm mb-3 px-2">
+                        You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store.
                       </p>
-                      <Input
-                        type="text"
-                        placeholder="123456"
-                        value={smsCode}
-                        onChange={handleSMSCodeChange}
-                        maxLength={6}
-                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
-                        autoComplete="off"
-                      />
-                    </div>
-                  )}
-
-                  {verificationMethod === 'email' && (
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium block text-center">Email Verification</Label>
-                      <p className="text-sm text-gray-600 text-center">
-                        Enter the 6-digit code sent to:
-                      </p>
-                      <p className="text-sm font-medium text-blue-600 text-center break-all">
-                        {customerData.email}
-                      </p>
-                      <div className="text-center">
+                      <div className="space-y-2">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRequestEmail}
-                          disabled={isSMSLoading}
-                          className="text-xs h-8"
+                          type="button"
+                          onClick={() => setShowRegistrationForm(true)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
                         >
-                          {isSMSLoading ? (
-                            <>
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="mr-1 h-3 w-3" />
-                              Send Email Code
-                            </>
-                          )}
+                          <User className="w-4 h-4 mr-2" />
+                          Request Access
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => setError("")}
+                          variant="outline"
+                          className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-11 text-sm"
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-2" />
+                          Try Different Number
                         </Button>
                       </div>
-                      <Input
-                        type="text"
-                        placeholder="123456"
-                        value={emailCode}
-                        onChange={handleEmailCodeChange}
-                        maxLength={6}
-                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-purple-600"
-                        autoComplete="off"
-                      />
-                    </div>
-                  )}
-
-                  {error && (
-                    <Alert className="border-red-200 bg-red-50 rounded-lg">
-                      <AlertDescription className="text-center space-y-2">
-                        {error.includes("Invalid") || error.includes("incorrect") ? (
-                          <>
-                            <h6 className="font-semibold text-gray-800 text-sm">Code Incorrect</h6>
-                            <p className="text-xs text-gray-600">Double-check the code and try again.</p>
-                          </>
-                        ) : error.includes("expired") ? (
-                          <>
-                            <h6 className="font-semibold text-gray-800 text-sm">Code Expired</h6>
-                            <p className="text-xs text-gray-600">Request a new verification code and try again.</p>
-                          </>
-                        ) : (
-                          <p className="text-sm text-gray-600">{error}</p>
-                        )}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {verificationMethod === 'sms' || verificationMethod === 'both' ? (
-                    <Button
-                      onClick={handleSMSVerification}
-                      className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                      disabled={isLoading || smsCode.length !== 6}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        "Verify Code"
-                      )}
-                    </Button>
+                    </AlertDescription>
+                  ) : error.includes("SMS failed") || error.includes("Failed to send") ? (
+                    <AlertDescription className="text-center space-y-2">
+                      <h6 className="font-semibold text-gray-800 text-sm">SMS Delivery Issue</h6>
+                      <p className="text-sm text-gray-600 px-2">{error}</p>
+                    </AlertDescription>
                   ) : (
-                    <Button
-                      onClick={handleEmailVerification}
-                      className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
-                      disabled={isLoading || emailCode.length !== 6}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        "Verify Code"
-                      )}
-                    </Button>
+                    <AlertDescription className="text-center">
+                      <p className="text-sm text-gray-600 px-2">{error}</p>
+                    </AlertDescription>
                   )}
-
-                  <div className="flex space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={handleBackToPhone}
-                      className="flex-1 h-11 font-medium border-2"
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back
-                    </Button>
-
-                    {(verificationMethod === 'sms' || verificationMethod === 'both') && (
-                      <Button
-                        variant="outline"
-                        onClick={handleRequestSMS}
-                        disabled={isSMSLoading || countdown > 240}
-                        className="flex-1 h-11 font-medium border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
-                      >
-                        {isSMSLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Sending...
-                          </>
-                        ) : countdown > 240 ? (
-                          `Wait ${formatCountdown(countdown - 240)}`
-                        ) : (
-                          <>
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Resend SMS
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                </Alert>
               )}
-            </CardContent>
-          </Card>
 
-          <div className="mt-6">
-            <Footer />
+              <Button
+                type="submit"
+                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                disabled={isLoading || lastFourDigits.length !== 4}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending verification code...
+                  </>
+                ) : (
+                  "Access Store"
+                )}
+              </Button>
+            </form>
+
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                onClick={() => setShowRegistrationForm(true)}
+                className="w-full flex items-center justify-center gap-2 text-sm text-green-700 hover:text-green-800 font-medium transition-colors py-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Not a customer yet? Request wholesale access
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-800 relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cdefs%3E%3Cpattern id='dots' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='2' fill='%23ffffff'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23dots)'/%3E%3C/svg%3E")`
-          }}
-        ></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/30"></div>
-        <div className="relative z-10 flex flex-col justify-center px-12 text-white">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-4xl font-bold leading-tight">
-                Your Wholesale Portal
-              </h2>
-              <p className="text-xl opacity-90">
-                Access exclusive wholesale products and special pricing from {wholesaler?.businessName || 'your trusted supplier'}.
+        {authStep === 'step3' && customerData && (
+          <div className="space-y-6">
+            {countdown > 0 && (
+              <p className="text-xs text-blue-600 text-center">
+                Code expires in {formatCountdown(countdown)}
               </p>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Package className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Wholesale Pricing</h3>
-                  <p className="text-sm opacity-80">Get better prices on bulk orders</p>
-                </div>
+            )}
+
+            {verificationMethod === 'both' ? (
+              <div className="flex bg-gray-100 rounded-xl p-1">
+                <button
+                  onClick={() => setVerificationMethod('sms')}
+                  className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white shadow-sm"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  SMS
+                </button>
+                <button
+                  onClick={() => setVerificationMethod('email')}
+                  className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email
+                </button>
               </div>
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <ShoppingCart className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Easy Ordering</h3>
-                  <p className="text-sm opacity-80">Quick reorder and order tracking</p>
-                </div>
+            ) : null}
+
+            {(verificationMethod === 'sms' || verificationMethod === 'both') && (
+              <div className="space-y-3">
+                <Label className="text-base font-medium block text-center">SMS Verification</Label>
+                <p className="text-sm text-gray-600 text-center">
+                  Enter the 6-digit code sent to your phone
+                </p>
+                <Input
+                  type="text"
+                  placeholder="123456"
+                  value={smsCode}
+                  onChange={handleSMSCodeChange}
+                  maxLength={6}
+                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
+                  autoComplete="off"
+                />
               </div>
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5" />
+            )}
+
+            {verificationMethod === 'email' && (
+              <div className="space-y-3">
+                <Label className="text-base font-medium block text-center">Email Verification</Label>
+                <p className="text-sm text-gray-600 text-center">
+                  Enter the 6-digit code sent to:
+                </p>
+                <p className="text-sm font-medium text-blue-600 text-center break-all">
+                  {customerData.email}
+                </p>
+                <div className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRequestEmail}
+                    disabled={isSMSLoading}
+                    className="text-xs h-8"
+                  >
+                    {isSMSLoading ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="mr-1 h-3 w-3" />
+                        Send Email Code
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <div>
-                  <h3 className="font-semibold">Secure Access</h3>
-                  <p className="text-sm opacity-80">Your data is always protected</p>
-                </div>
+                <Input
+                  type="text"
+                  placeholder="123456"
+                  value={emailCode}
+                  onChange={handleEmailCodeChange}
+                  maxLength={6}
+                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-purple-600"
+                  autoComplete="off"
+                />
               </div>
+            )}
+
+            {error && (
+              <Alert className="border-red-200 bg-red-50 rounded-lg">
+                <AlertDescription className="text-center space-y-2">
+                  {error.includes("Invalid") || error.includes("incorrect") ? (
+                    <>
+                      <h6 className="font-semibold text-gray-800 text-sm">Code Incorrect</h6>
+                      <p className="text-xs text-gray-600">Double-check the code and try again.</p>
+                    </>
+                  ) : error.includes("expired") ? (
+                    <>
+                      <h6 className="font-semibold text-gray-800 text-sm">Code Expired</h6>
+                      <p className="text-xs text-gray-600">Request a new verification code and try again.</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-600">{error}</p>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {verificationMethod === 'sms' || verificationMethod === 'both' ? (
+              <Button
+                onClick={handleSMSVerification}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                disabled={isLoading || smsCode.length !== 6}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify Code"
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleEmailVerification}
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                disabled={isLoading || emailCode.length !== 6}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify Code"
+                )}
+              </Button>
+            )}
+
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleBackToPhone}
+                className="flex-1 h-11 font-medium border-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+
+              {(verificationMethod === 'sms' || verificationMethod === 'both') && (
+                <Button
+                  variant="outline"
+                  onClick={handleRequestSMS}
+                  disabled={isSMSLoading || countdown > 240}
+                  className="flex-1 h-11 font-medium border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  {isSMSLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : countdown > 240 ? (
+                    `Wait ${formatCountdown(countdown - 240)}`
+                  ) : (
+                    <>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Resend SMS
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
+        )}
+
+        <div className="mt-8">
+          <Footer />
         </div>
       </div>
 
