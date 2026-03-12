@@ -4873,8 +4873,9 @@ export default function CustomerPortal() {
                     wholesaler={wholesaler}
                     clientSecret={clientSecret}
                     totalAmount={(() => {
-                      const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
-                      const shipping = 0; // Delivery arranged directly by supplier
+                      const subtotal = cartStats.subtotal;
+                      const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                        ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                       const beforeFees = subtotal + shipping;
                       const transactionFee = (beforeFees * 0.055) + 0.50;
                       return beforeFees + transactionFee;
