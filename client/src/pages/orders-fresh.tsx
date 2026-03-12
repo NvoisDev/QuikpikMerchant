@@ -1403,7 +1403,12 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {order.status === 'fulfilled' ? (
+                        {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
+                          <Badge className="bg-purple-100 text-purple-800 text-xs">
+                            <CheckCircle className="w-2 h-2 mr-1" />
+                            Refunded
+                          </Badge>
+                        ) : order.status === 'fulfilled' ? (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">
                             <CheckCircle className="w-2 h-2 mr-1" />
                             Fulfilled
