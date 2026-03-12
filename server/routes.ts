@@ -5573,7 +5573,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         wholesalerPlatformFee,
         wholesalerReceives,
         selectedDeliveryAddressId,
-        selectedDeliveryAddress: selectedDeliveryAddressJson
+        selectedDeliveryAddress: selectedDeliveryAddressJson,
+        shippingCost: metadataShippingCost
       } = paymentIntent.metadata;
 
       // Parse shipping info from payment metadata
@@ -5841,8 +5842,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
-              deliveryCost: '0.00', // No cost - arranged directly by supplier
-              shippingTotal: '0.00' // No shipping total - handled separately
+              deliveryCost: parseFloat(metadataShippingCost || '0').toFixed(2),
+              shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2)
             };
             
             console.log('🚚 SIMPLIFIED DELIVERY: Order data with shipping fields:', {
@@ -11813,17 +11814,23 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
 
       // validatedTotalAmount is the product subtotal (without transaction fee)
-      // No shipping cost charged upfront - delivery is arranged directly by supplier
-      const shippingCost = 0;
+      // Include flat delivery rate if delivery is selected and wholesaler has one configured
+      const shippingCost = shippingInfo?.option === 'delivery' && shippingInfo?.flatDeliveryRate
+        ? parseFloat(shippingInfo.flatDeliveryRate) || 0
+        : (shippingInfo?.option === 'delivery' && wholesaler.deliveryFlatRate
+          ? parseFloat(wholesaler.deliveryFlatRate) || 0
+          : 0);
       
-      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
+      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo, 'wholesaler.deliveryFlatRate:', wholesaler.deliveryFlatRate);
       
+      // Both fees apply to products + delivery combined
+      const amountBeforeFees = validatedTotalAmount + shippingCost;
       // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
-      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
+      const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
+      const totalAmountWithFee = amountBeforeFees + customerTransactionFee;
       
-      // Platform collects 3.3% from subtotal 
-      const platformFee = validatedTotalAmount * 0.033;
+      // Platform collects 3.3% from subtotal + delivery
+      const platformFee = amountBeforeFees * 0.033;
       
       // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
       // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer

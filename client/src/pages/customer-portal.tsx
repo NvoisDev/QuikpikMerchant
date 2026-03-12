@@ -1872,7 +1872,10 @@ export default function CustomerPortal() {
           }
         }),
         shippingInfo: {
-          option: shippingOption
+          option: shippingOption,
+          ...(shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+            ? { flatDeliveryRate: wholesaler.deliveryFlatRate }
+            : {})
         }
       };
       
