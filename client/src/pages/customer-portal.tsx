@@ -4926,10 +4926,21 @@ export default function CustomerPortal() {
                           selectedDeliveryAddress: customerData.selectedDeliveryAddress
                         },
                         wholesaler: wholesaler,
-                        subtotal: orderData.subtotal || cartStats.subtotal,
-                        transactionFee: orderData.transactionFee || 0,
-                        shippingCost: orderData.shippingCost || 0,
-                        totalAmount: orderData.totalAmount || 0
+                        ...(() => {
+                          const fallbackSubtotal = orderData.subtotal || cartStats.subtotal;
+                          const fallbackShipping = orderData.shippingCost ||
+                            (customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                              ? parseFloat(wholesaler.deliveryFlatRate) : 0);
+                          const fallbackBeforeFees = fallbackSubtotal + fallbackShipping;
+                          const fallbackTransactionFee = orderData.transactionFee || ((fallbackBeforeFees * 0.055) + 0.50);
+                          const fallbackTotal = orderData.totalAmount || (fallbackBeforeFees + fallbackTransactionFee);
+                          return {
+                            subtotal: fallbackSubtotal,
+                            transactionFee: fallbackTransactionFee,
+                            shippingCost: fallbackShipping,
+                            totalAmount: fallbackTotal
+                          };
+                        })()
                       };
                       setCompletedOrder(orderDataWithCart);
                       
