@@ -6023,7 +6023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
               wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
-              shippingTotal: '0.00',
+              shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2),
               fulfillmentType: shippingInfo && shippingInfo.option === 'delivery' ? 'delivery' : 'pickup',
               items: enrichedItemsForEmail,
               wholesaler: {
