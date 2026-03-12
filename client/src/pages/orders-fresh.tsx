@@ -1217,7 +1217,7 @@ export default function OrdersFresh() {
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
                           <p><span className="font-medium">Customer:</span> {request.customer?.firstName} {request.customer?.lastName || request.customer?.phoneNumber}</p>
-                          <p><span className="font-medium">Reason:</span> {request.reasonCategory}</p>
+                          <p><span className="font-medium">Reason:</span> {request.reasonCategory?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
                           {request.reasonNotes && (
                             <p><span className="font-medium">Notes:</span> {request.reasonNotes}</p>
                           )}
@@ -2298,7 +2298,7 @@ export default function OrdersFresh() {
                           {new Date(selectedOrder.cancellationRequest.requestedAt).toLocaleDateString()} at {new Date(selectedOrder.cancellationRequest.requestedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </div>
                         <div className="text-xs text-gray-500">
-                          Reason: {selectedOrder.cancellationRequest.reasonCategory.replace(/_/g, ' ')}
+                          Reason: {selectedOrder.cancellationRequest.reasonCategory.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                           {selectedOrder.cancellationRequest.reasonNotes && ` - ${selectedOrder.cancellationRequest.reasonNotes}`}
                         </div>
                       </div>
