@@ -48,6 +48,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     const ap = params.get('auth');
     return !!(ap && ap.length === 4 && /^\d{4}$/.test(ap));
   });
+  const [cameFromLogin] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ap = params.get('auth');
+    return !!(ap && ap.length === 4 && /^\d{4}$/.test(ap));
+  });
   
   // Registration request form state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -707,7 +712,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
           </h1>
           <p className="text-gray-600 text-lg">
-            Accessing {wholesaler?.businessName || 'Store'} Wholesale
+            Accessing {wholesaler?.businessName || 'Store'}
           </p>
         </div>
 
@@ -715,9 +720,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           <div className="h-3 w-3 rounded-full bg-green-600"></div>
           <div className={`h-0.5 w-8 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
           <div className={`h-3 w-3 rounded-full ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+          {cameFromLogin && (
+            <>
+              <div className={`h-0.5 w-8 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+              <div className={`h-3 w-3 rounded-full ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+            </>
+          )}
         </div>
         <p className="text-sm text-gray-500 text-center mb-6">
-          {authStep === 'step3' ? 'Step 2 of 2' : 'Step 1 of 2'}
+          {authStep === 'step3'
+            ? cameFromLogin ? 'Step 3 of 3' : 'Step 2 of 2'
+            : cameFromLogin ? 'Step 2 of 3' : 'Step 1 of 2'}
         </p>
 
         {authStep === 'step2' && (
