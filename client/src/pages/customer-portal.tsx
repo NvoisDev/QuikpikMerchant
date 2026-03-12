@@ -4882,13 +4882,6 @@ export default function CustomerPortal() {
                     onSuccess={(orderData) => {
                       console.log('🛒 Payment successful, received order data:', orderData);
                       
-                      // Set completed order data for thank you page with backend order items
-                      const subtotal = cartStats.subtotal;
-                      const shipping = 0; // Delivery arranged directly by supplier
-                      const beforeFees = subtotal + shipping;
-                      const transactionFee = (beforeFees * 0.055) + 0.50;
-                      const totalAmount = beforeFees + transactionFee;
-                      
                       // CRITICAL FIX: Map cart to backend-compatible order items with correct selling types
                       const orderItems = cart.map(cartItem => {
                         let computedTotal: number;
@@ -4932,11 +4925,10 @@ export default function CustomerPortal() {
                           selectedDeliveryAddress: customerData.selectedDeliveryAddress
                         },
                         wholesaler: wholesaler,
-                        // Financial breakdown for ThankYouPage
-                        subtotal: subtotal,
-                        transactionFee: transactionFee,
-                        shippingCost: shipping,
-                        totalAmount: totalAmount
+                        subtotal: orderData.subtotal || cartStats.subtotal,
+                        transactionFee: orderData.transactionFee || 0,
+                        shippingCost: orderData.shippingCost || 0,
+                        totalAmount: orderData.totalAmount || 0
                       };
                       setCompletedOrder(orderDataWithCart);
                       
