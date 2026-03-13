@@ -11,7 +11,13 @@ if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
 }
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/webhooks/stripe') {
+    express.raw({ type: 'application/json', limit: '10mb' })(req, res, next);
+  } else {
+    express.json({ limit: '10mb' })(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {

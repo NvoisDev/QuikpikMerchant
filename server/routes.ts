@@ -941,16 +941,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // STRIPE WEBHOOK - Auto-update subscriptions when payment is confirmed
+  // STRIPE WEBHOOK - Signature-verified handler for all Stripe events
   app.post('/api/webhooks/stripe', async (req, res) => {
-    console.log(`🚀 MAIN SERVER WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Event data:`, JSON.stringify(req.body, null, 2));
-    
+    const sig = req.headers['stripe-signature'] as string;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!endpointSecret) {
+      console.error('❌ STRIPE_WEBHOOK_SECRET not configured');
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+
+    let event: Stripe.Event;
     try {
-      const event = req.body;
-      
+      event = stripe!.webhooks.constructEvent(req.body, sig, endpointSecret);
+      console.log(`✅ Stripe webhook verified: ${event.type} at ${new Date().toISOString()}`);
+    } catch (err) {
+      console.error('❌ Stripe webhook signature verification failed:', err);
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    try {
       if (event.type === 'checkout.session.completed') {
-        const session = event.data?.object;
+        const session = event.data.object as Stripe.Checkout.Session;
         console.log(`💳 Checkout completed: ${session?.id}`);
         console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
         
@@ -16890,211 +16902,6 @@ https://quikpik.app`;
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
       res.status(500).json({ message: 'Failed to fetch pending invitations' });
-    }
-  });
-
-  // ============================================================================
-  // STRIPE WEBHOOK HANDLER FOR SUBSCRIPTIONS
-  // ============================================================================
-
-  // Stripe webhook endpoint for subscription events  
-  app.post('/api/webhooks/stripe', (req, res, next) => {
-    if (req.originalUrl === '/api/webhooks/stripe') {
-      req.body = '';
-      req.on('data', (chunk) => {
-        req.body += chunk.toString();
-      });
-      req.on('end', () => {
-        next();
-      });
-    } else {
-      next();
-    }
-  }, async (req, res) => {
-    const sig = req.headers['stripe-signature'] as string;
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    
-    if (!endpointSecret) {
-      console.error('❌ STRIPE_WEBHOOK_SECRET is not configured');
-      return res.status(400).json({ error: 'Webhook secret not configured' });
-    }
-
-    let event: Stripe.Event;
-
-    try {
-      // Verify webhook signature
-      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-      console.log('✅ Stripe webhook verified:', event.type);
-    } catch (error) {
-      console.error('❌ Stripe webhook signature verification failed:', error);
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
-
-    try {
-      // Handle different subscription events
-      switch (event.type) {
-        case 'checkout.session.completed': {
-          const session = event.data.object as Stripe.Checkout.Session;
-          console.log('🛒 Checkout session completed:', session.id);
-          
-          if (session.mode === 'subscription' && session.subscription) {
-            // Retrieve the subscription details
-            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-            console.log('✅ Subscription created from checkout:', subscription.id);
-          }
-          
-          // Handle quote payment (deposit or full payment)
-          if (session.metadata?.isQuote === 'true' && session.metadata?.orderId) {
-            const orderId = parseInt(session.metadata.orderId);
-            const depositPercentage = parseInt(session.metadata.depositPercentage || '100');
-            const depositAmount = parseFloat(session.metadata.depositAmount || '0');
-            const totalAmount = parseFloat(session.metadata.totalAmount || '0');
-            const amountPaid = session.amount_total ? session.amount_total / 100 : depositAmount;
-            
-            console.log('💰 Quote payment received:', { orderId, depositPercentage, amountPaid, totalAmount });
-            
-            // Get existing order to calculate cumulative payment
-            const existingOrder = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-            const previouslyPaid = existingOrder[0] ? parseFloat(existingOrder[0].amountPaid || '0') : 0;
-            const totalPaidNow = previouslyPaid + amountPaid;
-            
-            // Calculate payment status and outstanding amount
-            const amountOutstanding = totalAmount - totalPaidNow;
-            const paymentStatus = amountOutstanding <= 0 ? 'paid' : 'part_paid';
-            
-            // Only set order status to 'paid' when fully paid, otherwise keep as 'pending'
-            const orderStatus = amountOutstanding <= 0 ? 'paid' : 'pending';
-            
-            // NOTE: Stock is decremented at quote CREATION time (field sales - products given in person)
-            // No stock decrementation needed here on payment
-            
-            // Update the order with payment info
-            // Only clear the payment link - user can generate a new one for remaining balance via UI
-            await db.update(orders)
-              .set({
-                amountPaid: totalPaidNow.toFixed(2),
-                amountOutstanding: amountOutstanding > 0 ? amountOutstanding.toFixed(2) : '0.00',
-                paymentStatus: paymentStatus,
-                status: orderStatus,
-                stripePaymentLinkUrl: null, // Clear old link - user generates new one for remaining balance
-                stripePaymentLinkId: null,
-              })
-              .where(eq(orders.id, orderId));
-            
-            console.log(`✅ Quote order ${orderId} updated: paid=${totalPaidNow}, outstanding=${amountOutstanding}, paymentStatus=${paymentStatus}, orderStatus=${orderStatus}`);
-
-            // Send payment notification emails to wholesaler and customer (with idempotency check)
-            try {
-              const order = existingOrder[0];
-              const prevPaidStr = order?.amountPaid || '0';
-              const alreadyProcessed = parseFloat(prevPaidStr) >= totalPaidNow;
-              if (order && !alreadyProcessed) {
-                const wholesaler = await storage.getUser(order.wholesalerId);
-                const customer = order.retailerId ? await storage.getUser(order.retailerId) : null;
-                const orderNum = order.orderNumber || `#${orderId}`;
-                const isFullyPaid = amountOutstanding <= 0;
-                const branding = { businessName: wholesaler?.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) };
-
-                // Email to wholesaler
-                if (wholesaler?.email) {
-                  const wBody = emailHeading(isFullyPaid ? 'Payment Received - Fully Paid' : 'Deposit Payment Received', { size: '20px', color: '#10b981' }) +
-                    '<p style="margin:0 0 16px">A payment has been received for order <b>' + orderNum + '</b>.</p>' +
-                    emailCard(
-                      '<p style="margin:0 0 4px"><b>Customer:</b> ' + (order.customerName || 'N/A') + '</p>' +
-                      '<p style="margin:0 0 4px"><b>Amount Paid:</b> £' + amountPaid.toFixed(2) + '</p>' +
-                      '<p style="margin:0 0 4px"><b>Total Paid:</b> £' + totalPaidNow.toFixed(2) + ' of £' + totalAmount.toFixed(2) + '</p>' +
-                      (isFullyPaid
-                        ? '<p style="margin:0"><b>Status:</b> ' + emailBadge('Fully Paid', '#10b981') + '</p>'
-                        : '<p style="margin:0 0 4px"><b>Outstanding:</b> £' + amountOutstanding.toFixed(2) + '</p><p style="margin:0"><b>Status:</b> ' + emailBadge('Partially Paid', '#f59e0b') + '</p>'),
-                      { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
-                    ) +
-                    emailButton('View Order', (process.env.APP_URL || 'https://quikpik.app') + '/orders');
-                  const wHtml = wrapCustomerEmail(wBody, branding, { preheader: (isFullyPaid ? 'Full payment' : 'Deposit') + ' received for ' + orderNum });
-                  await sendEmail({ to: wholesaler.email, from: 'hello@quikpik.co', subject: (isFullyPaid ? 'Payment Received' : 'Deposit Received') + ' - ' + orderNum, html: wHtml });
-                  console.log('📧 Payment notification sent to wholesaler:', wholesaler.email);
-                }
-
-                // Email to customer
-                if (customer?.email) {
-                  const cBody = emailHeading(isFullyPaid ? 'Payment Confirmed' : 'Deposit Payment Confirmed', { size: '20px', color: '#10b981' }) +
-                    '<p style="margin:0 0 16px">Thank you! Your payment for order <b>' + orderNum + '</b> has been received.</p>' +
-                    emailCard(
-                      '<p style="margin:0 0 4px"><b>Amount Paid:</b> £' + amountPaid.toFixed(2) + '</p>' +
-                      (isFullyPaid
-                        ? '<p style="margin:0"><b>Status:</b> ' + emailBadge('Fully Paid', '#10b981') + '</p>'
-                        : '<p style="margin:0 0 4px"><b>Remaining Balance:</b> £' + amountOutstanding.toFixed(2) + '</p><p style="margin:0"><b>Status:</b> ' + emailBadge('Deposit Paid', '#3b82f6') + '</p>'),
-                      { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
-                    ) +
-                    '<p style="margin:16px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + (wholesaler?.businessName || 'your wholesaler') + ' directly.</p>';
-                  const cHtml = wrapCustomerEmail(cBody, branding, { preheader: 'Payment confirmed for ' + orderNum });
-                  await sendEmail({ to: customer.email, from: 'hello@quikpik.co', subject: 'Payment Confirmed - ' + orderNum, html: cHtml });
-                  console.log('📧 Payment confirmation sent to customer:', customer.email);
-                }
-              }
-            } catch (emailErr) {
-              console.error('⚠️ Failed to send payment notification emails:', emailErr);
-            }
-          }
-          break;
-        }
-
-        case 'customer.subscription.created': {
-          const subscription = event.data.object as Stripe.Subscription;
-          console.log('🆕 Subscription created:', subscription.id);
-          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-          break;
-        }
-
-        case 'customer.subscription.updated': {
-          const subscription = event.data.object as Stripe.Subscription;
-          console.log('📝 Subscription updated:', subscription.id, 'Status:', subscription.status);
-          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-          break;
-        }
-
-        case 'customer.subscription.deleted': {
-          const subscription = event.data.object as Stripe.Subscription;
-          console.log('❌ Subscription deleted:', subscription.id);
-          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-          break;
-        }
-
-        case 'invoice.payment_succeeded': {
-          const invoice = event.data.object as Stripe.Invoice;
-          console.log('💰 Invoice payment succeeded:', invoice.id);
-          
-          if (invoice.subscription) {
-            // Subscription payment successful - update status if needed
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-          }
-          break;
-        }
-
-        case 'invoice.payment_failed': {
-          const invoice = event.data.object as Stripe.Invoice;
-          console.log('⚠️ Invoice payment failed:', invoice.id);
-          
-          if (invoice.subscription) {
-            // Subscription payment failed - update status
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
-          }
-          break;
-        }
-
-        default:
-          console.log('ℹ️ Unhandled Stripe webhook event type:', event.type);
-      }
-
-      res.json({ received: true, event: event.type });
-    } catch (error) {
-      console.error('❌ Error handling Stripe webhook:', error);
-      res.status(500).json({ 
-        error: 'Webhook handler failed',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
     }
   });
 
