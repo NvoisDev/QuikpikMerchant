@@ -140,7 +140,7 @@ import { orderNotificationService } from "./services/orderNotificationService";
 import { quickOrderService } from "./services/quickOrderService";
 import { multiWholesalerService } from "./services/multiWholesalerService";
 import { db } from "./db";
-import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
+import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull, like } from "drizzle-orm";
 // Subscription logging removed
 import { registerWebhookRoutes } from "./webhook-handler";
 import { getEmailDeliveryAddress } from "./utils/address-helper";
@@ -356,6 +356,65 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
     throw new Error('Failed to send invitation email: ' + (error.message || 'Unknown error'));
   }
 }
+
+// ─── Multi-PI Stripe refund helper ──────────────────────────────────────────
+// For deposit orders two separate Stripe payment intents are created (deposit
+// + balance).  The field stripePaymentIntentId stores them comma-separated,
+// newest last.  We refund from newest first and continue to older ones until
+// the full amount is covered.
+async function refundAcrossPaymentIntents(
+  stripeClient: Stripe,
+  piIdsStr: string,
+  totalAmountPounds: number,
+  metadata: Record<string, string>
+): Promise<{ totalRefunded: number; remaining: number; lastError: string | null }> {
+  const piIds = piIdsStr.split(',').map((s: string) => s.trim()).filter(Boolean).reverse(); // newest first
+  let remainingPence = Math.round(totalAmountPounds * 100);
+  let totalRefundedPence = 0;
+  let lastError: string | null = null;
+
+  for (const piId of piIds) {
+    if (remainingPence <= 0) break;
+    try {
+      // Retrieve the PI to find the latest charge and how much is still refundable
+      const pi = await stripeClient.paymentIntents.retrieve(piId);
+      const chargeId = (pi as any).latest_charge as string | null;
+      let refundablePence = remainingPence; // fallback: try full amount
+
+      if (chargeId) {
+        const charge = await stripeClient.charges.retrieve(chargeId);
+        refundablePence = charge.amount - charge.amount_refunded;
+      }
+
+      if (refundablePence <= 0) {
+        console.log(`💳 PI ${piId} fully refunded already, skipping`);
+        continue;
+      }
+
+      const refundThisPence = Math.min(remainingPence, refundablePence);
+      const refund = await stripeClient.refunds.create({
+        payment_intent: piId,
+        amount: refundThisPence,
+        reason: 'requested_by_customer',
+        metadata
+      });
+
+      totalRefundedPence += refund.amount;
+      remainingPence -= refund.amount;
+      console.log(`💳 Refunded £${(refund.amount / 100).toFixed(2)} from PI ${piId}, remaining: £${(remainingPence / 100).toFixed(2)}`);
+    } catch (e: any) {
+      lastError = e?.message || 'Unknown error';
+      console.error(`Stripe refund failed for PI ${piId}:`, e);
+    }
+  }
+
+  return {
+    totalRefunded: totalRefundedPence / 100,
+    remaining: remainingPence / 100,
+    lastError: totalRefundedPence > 0 && remainingPence === 0 ? null : lastError
+  };
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
@@ -1020,7 +1079,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               amountOutstanding: newOutstanding.toFixed(2),
               paymentStatus: paymentStatus,
               status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
-              stripePaymentIntentId: session.payment_intent as string || null, // Save Stripe reference for traceability and refunds
+              stripePaymentIntentId: (() => {
+                // Append the new PI to existing ones (comma-separated) so multi-PI refunds work
+                const newPi = session.payment_intent as string | null;
+                if (!newPi) return existingOrder.stripePaymentIntentId;
+                const existing = existingOrder.stripePaymentIntentId || '';
+                if (existing.split(',').map((s: string) => s.trim()).includes(newPi)) return existing;
+                return existing ? `${existing},${newPi}` : newPi;
+              })(),
               stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
               stripePaymentLinkId: null,
             })
@@ -5776,7 +5842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const existingOrderResult = await trx
               .select()
               .from(orders)
-              .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+              .where(like(orders.stripePaymentIntentId, `%${paymentIntentId}%`))
               .limit(1);
             
             if (existingOrderResult.length > 0) {
@@ -6452,30 +6518,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process Stripe refund if order was paid and refund requested
-      let stripeRefund = null;
+      let stripeRefundTotalPounds = 0;
       let stripeRefundError: string | null = null;
       const amountPaid = parseFloat(order.amountPaid || '0');
-      
+
       if (processRefund && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
-        try {
-          const refundAmountToProcess = returnedItems?.length > 0 ? refundAmount : amountPaid;
-          
-          if (refundAmountToProcess > 0 && refundAmountToProcess <= amountPaid) {
-            stripeRefund = await stripe.refunds.create({
-              payment_intent: order.stripePaymentIntentId,
-              amount: Math.round(refundAmountToProcess * 100),
-              reason: 'requested_by_customer',
-              metadata: {
-                order_id: id.toString(),
-                reason: reason || 'Order cancelled'
-              }
-            });
-            console.log(`💳 Stripe refund processed: £${refundAmountToProcess.toFixed(2)}`);
+        const refundAmountToProcess = returnedItems?.length > 0 ? refundAmount : amountPaid;
+        if (refundAmountToProcess > 0 && refundAmountToProcess <= amountPaid) {
+          const result = await refundAcrossPaymentIntents(
+            stripe,
+            order.stripePaymentIntentId,
+            refundAmountToProcess,
+            { order_id: id.toString(), reason: reason || 'Order cancelled' }
+          );
+          stripeRefundTotalPounds = result.totalRefunded;
+          if (result.totalRefunded === 0) {
+            stripeRefundError = result.lastError;
+          } else if (result.remaining > 0.01) {
+            // Partial Stripe success — some amount couldn't be refunded
+            stripeRefundError = `£${result.remaining.toFixed(2)} could not be refunded automatically`;
           }
-        } catch (stripeError: any) {
-          stripeRefundError = stripeError?.message || 'Unknown Stripe error';
-          console.error('Stripe refund failed:', stripeError);
-          // Continue with cancellation — stock restored and status updated, but refund is pending
         }
       }
 
@@ -6498,11 +6560,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update order with cancellation details
       const currentRefunded = parseFloat(order.amountRefunded || '0');
-      const stripeRefundAmount = stripeRefund ? stripeRefund.amount / 100 : 0;
       const amountPaidNum = parseFloat(order.amountPaid || '0');
       
       // Calculate total refunded: Stripe refund amount (card only)
-      let totalRefunded = currentRefunded + stripeRefundAmount;
+      let totalRefunded = currentRefunded + stripeRefundTotalPounds;
       
       // For full cancellation, always record the refund amount even if "later" refund type
       if (isFullCancellation && totalRefunded === 0 && amountPaidNum > 0) {
@@ -6517,8 +6578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const pendingRefundAmount = returnedItems?.length > 0 ? refundAmount : amountPaidNum;
-      const refundNote = stripeRefund 
-        ? `Stripe refund: £${stripeRefundAmount.toFixed(2)}` 
+      const refundNote = stripeRefundTotalPounds > 0
+        ? `Stripe refund: £${stripeRefundTotalPounds.toFixed(2)}${stripeRefundError ? ` (partial — ${stripeRefundError})` : ''}`
         : stripeRefundError
           ? `Refund failed: £${pendingRefundAmount.toFixed(2)} (${stripeRefundError})`
           : amountPaidNum > 0 
@@ -6526,7 +6587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : 'No payment taken';
       
       // Determine if refund was processed now
-      const refundProcessedNow = !!stripeRefund;
+      const refundProcessedNow = stripeRefundTotalPounds > 0;
       
       await db.update(orders)
         .set({
@@ -6553,8 +6614,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Build refund message based on what happened
           let refundMsg = '';
-          if (stripeRefund) {
-            refundMsg = `\n\nA refund of £${stripeRefundAmount.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
+          if (stripeRefundTotalPounds > 0) {
+            refundMsg = `\n\nA refund of £${stripeRefundTotalPounds.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
           } else if (amountPaid <= 0) {
             refundMsg = `\n\nNo payment was taken for this order, so no refund is required.`;
           }
@@ -6584,8 +6645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 : `<h2>Partial Return Processed</h2><p>Hi ${customer.firstName || 'there'},</p><p>A partial return has been processed for your order <strong>${order.orderNumber}</strong> with ${businessName}.</p>`;
               
               // Add refund details to email
-              if (stripeRefund) {
-                emailBody += `<div style="background:#f0f7ff;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#1e40af;">Refund Details</h3><p style="margin:0;">Amount: <strong>£${stripeRefundAmount.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">Refunded to your original payment method. Please allow 5-10 business days for the refund to appear on your statement.</p></div>`;
+              if (stripeRefundTotalPounds > 0) {
+                emailBody += `<div style="background:#f0f7ff;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#1e40af;">Refund Details</h3><p style="margin:0;">Amount: <strong>£${stripeRefundTotalPounds.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">Refunded to your original payment method. Please allow 5-10 business days for the refund to appear on your statement.</p></div>`;
               } else if (amountPaid <= 0) {
                 emailBody += `<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0;"><p style="margin:0;color:#666;">No payment was taken for this order, so no refund is required.</p></div>`;
               }
@@ -6648,39 +6709,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const amountToRefund = parseFloat(order.amountRefunded || '0');
       if (amountToRefund <= 0) return res.status(400).json({ message: "No pending refund amount recorded" });
 
-      try {
-        const stripeRefund = await stripe.refunds.create({
-          payment_intent: order.stripePaymentIntentId,
-          amount: Math.round(amountToRefund * 100),
-          reason: 'requested_by_customer',
-          metadata: { order_id: id.toString(), retry: 'true' }
-        });
+      const result = await refundAcrossPaymentIntents(
+        stripe,
+        order.stripePaymentIntentId,
+        amountToRefund,
+        { order_id: id.toString(), retry: 'true' }
+      );
 
-        const refundedAmount = stripeRefund.amount / 100;
-        console.log(`💳 Stripe retry refund processed: £${refundedAmount.toFixed(2)} for order ${order.orderNumber}`);
-
-        await db.update(orders)
-          .set({
-            refundedAt: new Date(),
-            notes: order.notes
-              ? `${order.notes}\n[${new Date().toISOString()}] Stripe refund retried and succeeded: £${refundedAmount.toFixed(2)}`
-              : `[${new Date().toISOString()}] Stripe refund retried and succeeded: £${refundedAmount.toFixed(2)}`
-          })
-          .where(eq(orders.id, id));
-
-        const updatedOrder = await storage.getOrder(id);
-        res.json({
-          message: `Refund of £${refundedAmount.toFixed(2)} successfully sent to Stripe`,
-          order: updatedOrder,
-          refund: { id: stripeRefund.id, amount: refundedAmount, status: stripeRefund.status }
-        });
-      } catch (stripeError: any) {
-        console.error('Stripe retry refund failed:', stripeError);
-        res.status(400).json({
+      if (result.totalRefunded === 0) {
+        return res.status(400).json({
           message: "Stripe refund failed",
-          error: stripeError?.message || 'Unknown Stripe error'
+          error: result.lastError || 'Could not refund from any payment intent'
         });
       }
+
+      const refundedAmount = result.totalRefunded;
+      const partialNote = result.remaining > 0.01 ? ` (£${result.remaining.toFixed(2)} could not be recovered automatically)` : '';
+      console.log(`💳 Stripe retry refund processed: £${refundedAmount.toFixed(2)} for order ${order.orderNumber}${partialNote}`);
+
+      await db.update(orders)
+        .set({
+          refundedAt: result.remaining <= 0.01 ? new Date() : undefined,
+          amountRefunded: result.remaining > 0.01 ? result.remaining.toFixed(2) : order.amountRefunded,
+          notes: order.notes
+            ? `${order.notes}\n[${new Date().toISOString()}] Stripe retry refund: £${refundedAmount.toFixed(2)}${partialNote}`
+            : `[${new Date().toISOString()}] Stripe retry refund: £${refundedAmount.toFixed(2)}${partialNote}`
+        })
+        .where(eq(orders.id, id));
+
+      const updatedOrder = await storage.getOrder(id);
+      res.json({
+        message: `Refund of £${refundedAmount.toFixed(2)} successfully sent to Stripe${partialNote}`,
+        order: updatedOrder,
+        refund: { amount: refundedAmount, remaining: result.remaining }
+      });
     } catch (error) {
       console.error("Error retrying refund:", error);
       res.status(500).json({ message: "Failed to retry refund" });
@@ -7018,23 +7080,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Process refund if applicable
-          let stripeRefund = null;
+          let stripeRefundedPounds = 0;
           const amountPaid = parseFloat(order.amountPaid || '0');
           
           if (refundType === 'card' && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
-            try {
-              stripeRefund = await stripe.refunds.create({
-                payment_intent: order.stripePaymentIntentId,
-                amount: Math.round(amountPaid * 100),
-                reason: 'requested_by_customer',
-                metadata: {
-                  order_id: order.id.toString(),
-                  reason: `Customer request: ${request.reasonCategory}`
-                }
-              });
-              console.log(`💳 Stripe refund processed for customer cancellation: £${amountPaid.toFixed(2)}`);
-            } catch (stripeError: any) {
-              console.error('Stripe refund failed:', stripeError);
+            const result = await refundAcrossPaymentIntents(
+              stripe,
+              order.stripePaymentIntentId,
+              amountPaid,
+              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` }
+            );
+            stripeRefundedPounds = result.totalRefunded;
+            if (result.totalRefunded > 0) {
+              console.log(`💳 Stripe refund processed for customer cancellation: £${result.totalRefunded.toFixed(2)}`);
             }
           }
           
@@ -7042,7 +7100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.update(orders)
             .set({
               status: 'cancelled',
-              amountRefunded: stripeRefund ? (stripeRefund.amount / 100).toFixed(2) : (refundType === 'credit' || refundType === 'later') ? amountPaid.toFixed(2) : '0.00',
+              amountRefunded: stripeRefundedPounds > 0 ? stripeRefundedPounds.toFixed(2) : (refundType === 'credit' || refundType === 'later') ? amountPaid.toFixed(2) : '0.00',
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
               notes: order.notes 
@@ -7231,42 +7289,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No payment information found for this order" });
       }
 
-      // Create Stripe refund
-      let refund = null;
+      // Create Stripe refund — distribute across all payment intents if needed
+      let refundResult: { totalRefunded: number; remaining: number; lastError: string | null } | null = null;
       if (stripe) {
-        try {
-          // Prepare refund parameters
-          const refundParams: any = {
-            payment_intent: paymentIntentId,
-            reason: 'requested_by_customer',
-            metadata: {
-              order_id: id.toString(),
-              reason: reason || 'Wholesaler initiated refund'
-            }
-          };
+        const amountPaid = parseFloat(order.amountPaid || '0');
+        let amountToRefundPounds = amountPaid; // default: full refund
 
-          // Only include amount if specified (for partial refunds)
-          if (amount && amount !== '') {
-            const refundAmount = Math.round(parseFloat(amount) * 100); // Convert to cents
-            if (!isNaN(refundAmount) && refundAmount > 0) {
-              refundParams.amount = refundAmount;
-            }
-          }
-          // For full refunds, omit the amount parameter entirely
+        if (amount && amount !== '') {
+          const parsed = parseFloat(amount);
+          if (!isNaN(parsed) && parsed > 0) amountToRefundPounds = parsed;
+        }
 
-          refund = await stripe.refunds.create(refundParams);
-        } catch (stripeError: any) {
-          console.error('Stripe refund failed:', stripeError);
-          return res.status(400).json({ 
-            message: `Refund failed: ${stripeError.message}`,
-            error: stripeError.code 
+        refundResult = await refundAcrossPaymentIntents(
+          stripe,
+          paymentIntentId,
+          amountToRefundPounds,
+          { order_id: id.toString(), reason: reason || 'Wholesaler initiated refund' }
+        );
+
+        if (refundResult.totalRefunded === 0) {
+          return res.status(400).json({
+            message: `Refund failed: ${refundResult.lastError || 'Could not refund from any payment intent'}`,
+            error: refundResult.lastError
           });
         }
       }
+      const refundedAmount = refundResult?.totalRefunded ?? 0;
 
       // Update order status to refunded or add refund note
+      const orderTotal = parseFloat(order.total || '0');
+      const isFullRefund = refundedAmount >= orderTotal - 0.01;
       let updatedOrder;
-      if (refund && refund.amount >= parseFloat(order.total) * 100) {
+      if (isFullRefund) {
         // Full refund - cancel order
         updatedOrder = await storage.updateOrderStatus(id, 'refunded');
         
@@ -7281,7 +7335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Partial refund - keep order active but add note
         const currentNotes = order.notes || '';
-        const refundNote = `Partial refund of ${refund ? '$' + (refund.amount / 100).toFixed(2) : amount} processed. Reason: ${reason || 'N/A'}`;
+        const refundNote = `Partial refund of £${refundedAmount.toFixed(2)} processed. Reason: ${reason || 'N/A'}`;
         await storage.updateOrderNotes(id, currentNotes + '\n' + refundNote);
         updatedOrder = order;
       }
@@ -7292,11 +7346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer?.email && wholesaler) {
-          // Create Stripe credit note for professional refund receipt
-          await createStripeRefundReceipt(order, refund, wholesaler, customer, reason);
-          
-          // Also send custom refund receipt email
-          await sendRefundReceipt(customer, order, refund, wholesaler, reason);
+          await createStripeRefundReceipt(order, null, wholesaler, customer, reason);
+          await sendRefundReceipt(customer, order, null, wholesaler, reason);
           console.log(`Refund receipt sent to ${customer.email} for order ${id}`);
         }
       } catch (error) {
@@ -7306,12 +7357,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         message: "Refund processed successfully",
         order: updatedOrder,
-        refund: refund ? {
-          id: refund.id,
-          amount: refund.amount / 100,
-          status: refund.status
-        } : null,
-        stockRestored: refund && refund.amount >= parseFloat(order.total) * 100
+        refund: { amount: refundedAmount, remaining: refundResult?.remaining ?? 0 },
+        stockRestored: isFullRefund
       });
     } catch (error) {
       console.error("Error processing refund:", error);

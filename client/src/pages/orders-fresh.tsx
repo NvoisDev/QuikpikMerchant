@@ -62,6 +62,7 @@ interface Order {
   refundReason?: string;
   refundedAt?: string;
   stripePaymentIntentId?: string;
+  notes?: string;
   cancelledAt?: string;
   cancellationRequest?: {
     id: number;
@@ -2497,7 +2498,9 @@ export default function OrdersFresh() {
                           <div className="text-xs text-gray-500">
                             {isProcessed
                               ? new Date(selectedOrder.refundedAt!).toLocaleDateString()
-                              : 'Not yet sent to Stripe'}
+                              : (selectedOrder.notes || '').includes('Refund failed:')
+                                ? 'Sent to Stripe but failed — use Retry'
+                                : 'Not yet sent to Stripe'}
                           </div>
                           {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
                             <div className="text-xs text-gray-400 mt-0.5">{selectedOrder.refundReason}</div>
