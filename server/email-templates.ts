@@ -68,19 +68,6 @@ export function wrapCustomerEmail(body: string, branding: EmailBranding, options
     '</td></tr></table></td></tr></table></body></html>';
 }
 
-export function wrapPlatformEmail(body: string, options?: { preheader?: string }): string {
-  const ph = options?.preheader ? '<div style="display:none;max-height:0;overflow:hidden">' + options.preheader + '</div>' : '';
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
-    '<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif">' + ph +
-    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7"><tr><td align="center" style="padding:20px 10px">' +
-    '<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:8px">' +
-    '<tr><td style="padding:20px 30px;background:#10b981;text-align:center;border-radius:8px 8px 0 0">' +
-    '<span style="font-size:22px;font-weight:bold;color:#fff">Quikpik</span></td></tr>' +
-    '<tr><td style="padding:24px 30px;font-size:15px;line-height:1.6;color:#374151">' + body + '</td></tr>' +
-    '<tr><td style="padding:16px 30px;border-top:1px solid #eee;text-align:center;font-size:12px;color:#aaa">' +
-    'Manage your business at <a href="https://quikpik.co" style="color:#10b981;text-decoration:none">quikpik.co</a>' +
-    '</td></tr></table></td></tr></table></body></html>';
-}
 
 export function emailButton(text: string, url: string, color?: string): string {
   const bg = color || '#10b981';
