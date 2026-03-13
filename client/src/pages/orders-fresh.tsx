@@ -16,7 +16,6 @@ import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
-import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 // Simple currency formatter
@@ -2149,18 +2148,48 @@ export default function OrdersFresh() {
                 </h3>
                 
                 <div className="space-y-3">
-                  {/* Upload Button */}
+                  {/* Upload Button - Direct file input to avoid nested dialog issues on mobile */}
                   <div>
-                    <ObjectUploader
-                      maxNumberOfFiles={5}
-                      maxFileSize={10485760}
-                      onGetUploadParameters={handlePhotoUpload}
-                      onComplete={handlePhotoComplete}
-                      buttonClassName="w-full text-xs"
+                    <input
+                      type="file"
+                      id={`order-photo-upload-${selectedOrder.id}`}
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (!files.length) return;
+                        for (const file of files) {
+                          if (file.size > 10485760) {
+                            toast({ title: "File too large", description: `${file.name} exceeds 10MB`, variant: "destructive" });
+                            continue;
+                          }
+                          try {
+                            const { url } = await handlePhotoUpload();
+                            const uploadResponse = await fetch(url, {
+                              method: 'PUT',
+                              body: file,
+                              headers: { 'Content-Type': file.type },
+                            });
+                            if (uploadResponse.ok) {
+                              await handlePhotoComplete({ successful: [{ url: url.split('?')[0], name: file.name }] });
+                            } else {
+                              toast({ title: "Upload Failed", description: `Failed to upload ${file.name}`, variant: "destructive" });
+                            }
+                          } catch (err) {
+                            // error toast already shown by handlePhotoUpload
+                          }
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <Button
+                      className="w-full text-xs bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => document.getElementById(`order-photo-upload-${selectedOrder.id}`)?.click()}
                     >
                       <Camera className="h-3 w-3 mr-2" />
                       Add Photo
-                    </ObjectUploader>
+                    </Button>
                   </div>
                   
                   {/* Display existing photos */}
