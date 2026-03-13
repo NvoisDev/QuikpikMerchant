@@ -4509,7 +4509,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Payment status filter
       if (paymentStatusParam === 'paid') {
+        // Paid = paymentStatus is paid AND not cancelled (refunded orders are cancelled)
         searchConditions.push(eq(orders.paymentStatus, 'paid'));
+        searchConditions.push(sql`${orders.status} != 'cancelled'`);
       } else if (paymentStatusParam === 'unpaid') {
         searchConditions.push(sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} NOT IN ('paid'))`);
       }
@@ -4700,7 +4702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate net revenue using subtotal for non-cancelled/refunded orders
       const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
       const totalRevenue = revenueOrders.reduce((sum, order) => {
-        const netAmount = parseFloat(order.subtotal || order.total || '0') - parseFloat(order.platformFee || '0');
+        const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
         return sum + (isNaN(netAmount) ? 0 : netAmount);
       }, 0);
 
@@ -4858,8 +4860,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const platformFee = subtotal * 0.033; // 3.3% platform fee
-      const total = subtotal + platformFee;
+      const platformFee = subtotal * 0.033; // 3.3% platform fee (wholesaler cost)
+      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 (customer pays)
+      const total = subtotal + customerTransactionFee; // total = what the customer pays
 
       // Get wholesaler from first product
       const firstProduct = await storage.getProduct(items[0].productId);
@@ -4871,6 +4874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         retailerId: userId,
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
         total: total.toFixed(2),
         deliveryAddress,
         notes,
