@@ -2030,21 +2030,29 @@ export default function OrdersFresh() {
                     <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
-                    const rawRefunded = parseFloat(selectedOrder.amountRefunded || '0');
-                    const subtotalAmt = parseFloat(selectedOrder.subtotal || '0');
-                    const refundDisplay = Math.min(rawRefunded, subtotalAmt);
-                    const isPartialRefund = refundDisplay < subtotalAmt;
+                    const wholesalerTotal = calculateNetAmount(selectedOrder);
+                    const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
+                    const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
+                    const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
+                    const wholesalerRefund = wholesalerTotal * refundProportion;
+                    const isPartialRefund = refundProportion < 0.999;
                     return (
                       <div className="flex justify-between text-purple-600">
                         <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
-                        <span>-{formatCurrency(refundDisplay)}</span>
+                        <span>-{formatCurrency(wholesalerRefund)}</span>
                       </div>
                     );
                   })()}
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
-                      <span>{formatCurrency(Math.max(0, calculateNetAmount(selectedOrder) - Math.min(parseFloat(selectedOrder.amountRefunded || '0'), parseFloat(selectedOrder.subtotal || '0'))))}</span>
+                      <span>{formatCurrency((() => {
+                        const wholesalerTotal = calculateNetAmount(selectedOrder);
+                        const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
+                        const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
+                        const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 0;
+                        return Math.max(0, wholesalerTotal * (1 - refundProportion));
+                      })())}</span>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
