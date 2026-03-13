@@ -570,7 +570,11 @@ export const orders = pgTable("orders", {
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("orders_wholesaler_created_idx").on(table.wholesalerId, table.createdAt),
+  index("orders_retailer_idx").on(table.retailerId),
+  index("orders_payment_status_idx").on(table.paymentStatus),
+]);
 
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),

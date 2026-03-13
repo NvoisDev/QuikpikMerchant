@@ -4559,34 +4559,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also get counts for both tabs (using search filter but not tab filter)
       const baseFilter = and(...searchConditions);
 
-      // Get total count for current tab
-      const totalCountQuery = await db
-        .select({ count: count() })
-        .from(orders)
-        .where(tabFilter);
-      const totalOrders = totalCountQuery[0].count;
+      // Run count, paginated results, and stats all in parallel — no full-table fetch
+      const [totalCountResult, ordersResult, tabStatsResult, baseStatsResult] = await Promise.all([
+        db.select({ count: count() }).from(orders).where(tabFilter),
+        db.select().from(orders).where(tabFilter).orderBy(desc(orders.createdAt)).limit(limit).offset((page - 1) * limit),
+        db.select({
+          paidOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} IN ('paid', 'completed', 'processing', 'shipped') THEN 1 END)::int`,
+          pendingOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)::int`,
+          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (${orders.total}::numeric - ${orders.platformFee}::numeric) ELSE 0 END), 0)::float`,
+        }).from(orders).where(tabFilter),
+        db.select({
+          activeCount: sql<number>`COUNT(CASE WHEN NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid')) THEN 1 END)::int`,
+          archivedCount: sql<number>`COUNT(CASE WHEN ${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid') THEN 1 END)::int`,
+        }).from(orders).where(baseFilter),
+      ]);
+
+      const totalOrders = totalCountResult[0].count;
       const totalPages = Math.ceil(totalOrders / limit);
-      
-      // Get paginated orders for current tab
-      const ordersResult = await db
-        .select()
-        .from(orders)
-        .where(tabFilter)
-        .orderBy(desc(orders.createdAt))
-        .limit(limit)
-        .offset((page - 1) * limit);
+      const { paidOrdersCount, pendingOrdersCount, totalRevenue } = tabStatsResult[0];
+      const { activeCount, archivedCount } = baseStatsResult[0];
 
       console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
-      
-      // Fetch cancellation requests for these orders to include in response
+
+      // Fetch cancellation requests for this page's orders only
       const orderIds = ordersResult.map(o => o.id);
       let cancellationRequestsMap: Record<number, any> = {};
-      
+
       if (orderIds.length > 0) {
         const requests = await db.select()
           .from(orderCancellationRequests)
           .where(inArray(orderCancellationRequests.orderId, orderIds));
-        
+
         requests.forEach(req => {
           cancellationRequestsMap[req.orderId] = {
             id: req.id,
@@ -4600,44 +4603,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
       }
-      
+
       // Attach cancellation request to each order
       const ordersWithRequests = ordersResult.map(order => ({
         ...order,
         cancellationRequest: cancellationRequestsMap[order.id] || null
       }));
-      
-      // Calculate tab counts using base filter (search but no tab filter)
-      const allOrdersForStats = await db.select().from(orders).where(baseFilter);
-      
-      const isArchivedOrder = (order: any) => {
-        const status = (order.status || '').toLowerCase();
-        const paymentStatus = (order.paymentStatus || '').toLowerCase();
-        if (status === 'cancelled') return true;
-        if (status === 'fulfilled' && paymentStatus === 'paid') return true;
-        return false;
-      };
-      
-      const activeCount = allOrdersForStats.filter(o => !isArchivedOrder(o)).length;
-      const archivedCount = allOrdersForStats.filter(o => isArchivedOrder(o)).length;
-      
-      // Calculate stats for current tab's orders
-      const tabOrders = archiveTab === 'all'
-        ? allOrdersForStats
-        : archiveTab === 'archived'
-          ? allOrdersForStats.filter(o => isArchivedOrder(o))
-          : allOrdersForStats.filter(o => !isArchivedOrder(o));
-      const paidOrdersCount = tabOrders.filter(o => ['paid', 'completed', 'processing', 'shipped'].includes(o.status || '')).length;
-      const pendingOrdersCount = tabOrders.filter(o => o.status === 'pending').length;
-      
-      // Calculate net revenue for non-cancelled orders in current tab
-      const revenueOrders = tabOrders.filter(o => o.status !== 'cancelled');
-      const totalRevenue = revenueOrders.reduce((sum, order) => {
-        const total = parseFloat(order.total || '0');
-        const platformFee = parseFloat(order.platformFee || '0');
-        const netAmount = total - platformFee;
-        return sum + (isNaN(netAmount) ? 0 : netAmount);
-      }, 0);
       
       res.json({
         orders: ordersWithRequests,
