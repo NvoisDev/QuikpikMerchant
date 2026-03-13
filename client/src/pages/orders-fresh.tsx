@@ -629,7 +629,7 @@ export default function OrdersFresh() {
         setShowCancelForm(false);
         setCancelReason('');
         setCancelReasonCategory('');
-        setProcessRefund(false);
+        setProcessRefund(true);
         setRefundType('card');
         setReturnItems([]);
         setRestockInventory(true);
@@ -1882,10 +1882,14 @@ export default function OrdersFresh() {
                     <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Unfulfilled</Badge>
                   )}
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status !== 'cancelled' && (
-                    <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Partially Refunded</Badge>
+                    selectedOrder.refundedAt
+                      ? <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Partially Refunded</Badge>
+                      : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>
                   )}
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status === 'cancelled' && (
-                    <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Refunded</Badge>
+                    selectedOrder.refundedAt
+                      ? <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Refunded</Badge>
+                      : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>
                   )}
                   {selectedOrder.fulfillmentType && (
                     <Badge variant="outline" className="text-xs px-2 py-1">
@@ -2090,11 +2094,12 @@ export default function OrdersFresh() {
                       </div>
                     )}
                     <div className="pt-2 border-t flex flex-wrap gap-2">
-                      {/* Show payment status badge - but if refunded, show Refunded badge instead */}
                       {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (
-                        <Badge className="bg-purple-600 text-white">
-                          Refunded
-                        </Badge>
+                        selectedOrder.refundedAt ? (
+                          <Badge className="bg-purple-600 text-white">Refunded</Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-800">Refund Pending</Badge>
+                        )
                       ) : (
                         <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
                           {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
