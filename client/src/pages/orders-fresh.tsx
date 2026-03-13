@@ -206,7 +206,7 @@ export default function OrdersFresh() {
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
-  const [processRefund, setProcessRefund] = useState(false);
+  const [processRefund, setProcessRefund] = useState(true);
   const [refundType, setRefundType] = useState<'card' | 'credit' | 'later'>('card');
   const [restockInventory, setRestockInventory] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
