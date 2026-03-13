@@ -61,6 +61,7 @@ interface Order {
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
+  stripePaymentIntentId?: string;
   cancelledAt?: string;
   cancellationRequest?: {
     id: number;
@@ -212,6 +213,7 @@ export default function OrdersFresh() {
   const [staffNote, setStaffNote] = useState('');
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isRetryingRefund, setIsRetryingRefund] = useState(false);
   
   // Cancellation requests state
   const [cancellationRequests, setCancellationRequests] = useState<any[]>([]);
@@ -601,21 +603,29 @@ export default function OrdersFresh() {
             console.log('Note: Could not update cancellation request status');
           }
         }
-        
-        const refundMessage = processRefund && refundType !== 'later'
-          ? refundType === 'card' 
-            ? ' A refund has been initiated and will appear on the customer\'s statement within 5-10 business days.'
-            : ' Store credit has been applied to the customer\'s account.'
-          : refundType === 'later' ? ' Refund will be processed separately.' : '';
-        
-        toast({
-          title: pendingCancellationRequestId ? "Cancellation Approved" : "Order Cancelled",
-          description: `The order has been successfully cancelled.${refundMessage}`,
-        });
+
+        if (data.refundFailed) {
+          toast({
+            title: pendingCancellationRequestId ? "Cancellation Approved" : "Order Cancelled",
+            description: `Order cancelled but the card refund failed — use "Retry Refund" in the order detail to resend it to Stripe.`,
+            variant: "destructive",
+          });
+        } else {
+          const refundMessage = processRefund && refundType !== 'later'
+            ? refundType === 'card' 
+              ? ' A refund has been initiated and will appear on the customer\'s statement within 5-10 business days.'
+              : ' Store credit has been applied to the customer\'s account.'
+            : refundType === 'later' ? ' Refund will be processed separately.' : '';
+          toast({
+            title: pendingCancellationRequestId ? "Cancellation Approved" : "Order Cancelled",
+            description: `The order has been successfully cancelled.${refundMessage}`,
+          });
+        }
+        const updatedOrder = data.order || { ...selectedOrder, status: 'cancelled' };
         setOrders(orders.map(order => 
-          order.id === selectedOrder.id ? { ...order, status: 'cancelled' } : order
+          order.id === selectedOrder.id ? { ...order, ...updatedOrder } : order
         ));
-        setSelectedOrder({ ...selectedOrder, status: 'cancelled' });
+        setSelectedOrder(updatedOrder);
         setShowCancelForm(false);
         setCancelReason('');
         setCancelReasonCategory('');
@@ -645,6 +655,36 @@ export default function OrdersFresh() {
       });
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  // Retry a pending Stripe refund
+  const retryRefund = async (orderId: number) => {
+    setIsRetryingRefund(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/retry-refund`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ title: "Refund Sent", description: data.message });
+        if (data.order) {
+          setSelectedOrder(data.order);
+          setOrders(orders.map(o => o.id === orderId ? { ...o, ...data.order } : o));
+        }
+        loadOrders(currentPage, statusFilter || searchQuery);
+      } else {
+        toast({
+          title: "Refund Failed",
+          description: data.error || data.message || "Stripe refund failed — check Stripe dashboard",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Network error — please try again", variant: "destructive" });
+    } finally {
+      setIsRetryingRefund(false);
     }
   };
 
@@ -1363,15 +1403,21 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex gap-1 flex-wrap">
-                          {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
-                            <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
-                          ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
-                          ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
-                          )}
+                          {(() => {
+                            const refAmt = parseFloat(order.amountRefunded || '0');
+                            const paidAmt = parseFloat(order.amountPaid || '0');
+                            if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
+                              return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                            } else if (refAmt > 0 && refAmt < paidAmt) {
+                              return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                            } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
+                              return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
+                            } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
+                              return <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>;
+                            } else {
+                              return <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>;
+                            }
+                          })()}
                           {order.status === 'fulfilled' ? (
                             <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
                           ) : order.status === 'ready_for_collection' ? (
@@ -1402,12 +1448,17 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
-                          <Badge className="bg-purple-100 text-purple-800 text-xs">
-                            <CheckCircle className="w-2 h-2 mr-1" />
-                            Refunded
-                          </Badge>
-                        ) : order.status === 'fulfilled' ? (
+                        {(() => {
+                          const refAmt = parseFloat(order.amountRefunded || '0');
+                          const paidAmt = parseFloat(order.amountPaid || '0');
+                          if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
+                            return <Badge className="bg-purple-100 text-purple-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                          } else if (refAmt > 0 && refAmt < paidAmt) {
+                            return <Badge className="bg-amber-100 text-amber-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                          }
+                          return null;
+                        })()}
+                        {order.status === 'fulfilled' ? (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">
                             <CheckCircle className="w-2 h-2 mr-1" />
                             Fulfilled
@@ -1507,15 +1558,21 @@ export default function OrdersFresh() {
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {parseFloat(order.amountRefunded || '0') > 0 || (order.status === 'cancelled' && order.refundedAt) ? (
-                          <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
-                        ) : (order.paymentStatus || '').toLowerCase() === 'paid' ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>
-                        ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
-                          <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>
-                        )}
+                        {(() => {
+                          const refAmt = parseFloat(order.amountRefunded || '0');
+                          const paidAmt = parseFloat(order.amountPaid || '0');
+                          if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
+                            return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                          } else if (refAmt > 0 && refAmt < paidAmt) {
+                            return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                          } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
+                            return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
+                          } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
+                            return <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>;
+                          } else {
+                            return <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>;
+                          }
+                        })()}
                         {order.status === 'fulfilled' ? (
                           <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
                         ) : order.status === 'ready_for_collection' ? (
@@ -2387,6 +2444,7 @@ export default function OrdersFresh() {
                     const paidAmt = parseFloat(selectedOrder.amountPaid || '0');
                     const isPartial = paidAmt > 0 && refundedAmt < paidAmt;
                     const isProcessed = !!selectedOrder.refundedAt;
+                    const canRetry = !isProcessed && !!selectedOrder.stripePaymentIntentId;
                     const label = isPartial
                       ? (isProcessed ? 'Partial refund to card' : 'Partial refund pending')
                       : (isProcessed ? 'Refund to card' : 'Refund pending');
@@ -2402,10 +2460,19 @@ export default function OrdersFresh() {
                           <div className="text-xs text-gray-500">
                             {isProcessed
                               ? new Date(selectedOrder.refundedAt!).toLocaleDateString()
-                              : 'Will be processed separately'}
+                              : 'Not yet sent to Stripe'}
                           </div>
                           {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
                             <div className="text-xs text-gray-400 mt-0.5">{selectedOrder.refundReason}</div>
+                          )}
+                          {canRetry && (
+                            <button
+                              onClick={() => retryRefund(selectedOrder.id)}
+                              disabled={isRetryingRefund}
+                              className="mt-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
+                            >
+                              {isRetryingRefund ? 'Sending...' : 'Retry Refund to Card'}
+                            </button>
                           )}
                         </div>
                       </div>
