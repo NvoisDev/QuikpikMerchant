@@ -715,15 +715,39 @@ export default function OrdersFresh() {
   };
 
   // Quick-open the cancel form from the dropdown (without a full modal fetch)
-  const openCancelForm = (order: Order) => {
+  const openCancelForm = async (order: Order) => {
+    // Open the cancel form immediately so it feels responsive
     setSelectedOrder(order);
     setCancelReasonCategory('');
     setCancelReason('');
-    setProcessRefund(false);
+    setProcessRefund(true);
     setRestockInventory(true);
     setSendNotification(true);
     setReturnItems([]);
     setShowCancelForm(true);
+
+    // Fetch full order details with items in the background and populate quantity editors
+    try {
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        const orderWithItems = await response.json();
+        setSelectedOrder(orderWithItems);
+        if (orderWithItems.items && orderWithItems.items.length > 0) {
+          setReturnItems(orderWithItems.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            sellingType: item.sellingType || 'units',
+            maxQty: item.quantity
+          })));
+        }
+      }
+    } catch (e) {
+      // Non-fatal — cancel form works without per-item editors
+    }
   };
 
   // Mark order as ready for collection
@@ -2536,7 +2560,7 @@ export default function OrdersFresh() {
                           setReturnItems(selectedOrder.items.map(item => ({
                             productId: item.productId,
                             quantity: item.quantity,
-                            sellingType: 'unit',
+                            sellingType: (item as any).sellingType || 'units',
                             maxQty: item.quantity
                           })));
                         }
