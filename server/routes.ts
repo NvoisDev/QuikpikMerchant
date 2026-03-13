@@ -6678,10 +6678,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reasonCategory: reasonCategory || null,
         refundFailed: !!stripeRefundError,
         refundError: stripeRefundError,
-        refund: stripeRefund ? {
-          id: stripeRefund.id,
-          amount: stripeRefundAmount,
-          status: stripeRefund.status,
+        refund: stripeRefundTotalPounds > 0 ? {
+          amount: stripeRefundTotalPounds,
           type: 'card'
         } : null
       });
