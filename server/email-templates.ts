@@ -254,3 +254,97 @@ export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailDat
 
   return { subject, html, text };
 }
+
+export interface RefundLineItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  sellingType?: string;
+}
+
+export function buildItemisedRefundEmail(options: {
+  customerName: string;
+  orderNumber: string;
+  isFullCancellation: boolean;
+  returnedItems: RefundLineItem[];
+  retainedItems?: RefundLineItem[];
+  refundAmount: number;
+  deliveryRefunded?: number;
+  refundTimeline?: string;
+  businessName: string;
+  businessPhone?: string;
+  businessEmail?: string;
+}): string {
+  const {
+    customerName, orderNumber, isFullCancellation,
+    returnedItems, retainedItems, refundAmount,
+    deliveryRefunded, refundTimeline, businessName,
+    businessPhone, businessEmail,
+  } = options;
+
+  const heading = isFullCancellation
+    ? emailHeading('Order Cancelled', { size: '22px', color: '#DC2626' })
+    : emailHeading('Partial Return Processed', { size: '22px', color: '#EA580C' });
+
+  const intro = '<p style="margin:0 0 8px">Hi ' + (customerName || 'there') + ',</p>' +
+    '<p style="margin:0 0 20px">' +
+    (isFullCancellation
+      ? 'Your order <strong>' + orderNumber + '</strong> with ' + businessName + ' has been cancelled.'
+      : 'A partial return has been processed for your order <strong>' + orderNumber + '</strong> with ' + businessName + '.') +
+    '</p>';
+
+  const returnRows = returnedItems.map(item => [
+    item.productName,
+    item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
+    '\u00A3' + item.unitPrice.toFixed(2),
+    '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),
+  ]);
+
+  const returnedLabel = isFullCancellation ? 'Cancelled Items' : 'Returned Items';
+  const returnedSection = emailHeading(returnedLabel, { size: '16px', color: '#DC2626' }) +
+    emailTable(['Item', 'Qty', 'Unit Price', 'Subtotal'], returnRows);
+
+  let summaryRows = '<tr><td style="padding:4px 0">Items refund:</td><td style="padding:4px 0;text-align:right">\u00A3' +
+    (refundAmount - (deliveryRefunded || 0)).toFixed(2) + '</td></tr>';
+  if (deliveryRefunded && deliveryRefunded > 0) {
+    summaryRows += '<tr><td style="padding:4px 0">Delivery refund:</td><td style="padding:4px 0;text-align:right">\u00A3' +
+      deliveryRefunded.toFixed(2) + '</td></tr>';
+  }
+  summaryRows += '<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-weight:bold;font-size:16px">Total Refund:</td>' +
+    '<td style="padding:8px 0;text-align:right;font-weight:bold;font-size:16px;color:#DC2626">\u00A3' + refundAmount.toFixed(2) + '</td></tr>';
+
+  const refundSummary = emailCard(
+    '<table width="100%" cellpadding="0" cellspacing="0">' + summaryRows + '</table>',
+    { borderColor: '#FECACA', bgColor: '#FEF2F2' }
+  );
+
+  let retainedSection = '';
+  if (retainedItems && retainedItems.length > 0) {
+    const retainedRows = retainedItems.map(item => [
+      item.productName,
+      item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
+      '\u00A3' + item.unitPrice.toFixed(2),
+      '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),
+    ]);
+    retainedSection = emailCard(
+      emailHeading('Items You\'re Keeping', { size: '16px', color: '#059669' }) +
+      emailTable(['Item', 'Qty', 'Unit Price', 'Subtotal'], retainedRows),
+      { borderColor: '#A7F3D0', bgColor: '#ECFDF5' }
+    );
+  }
+
+  const timeline = refundTimeline || '5-10 business days';
+  const processingNote = emailCard(
+    emailHeading('Processing Information', { size: '16px', color: '#0369a1' }) +
+    '<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within ' + timeline + '.</p>',
+    { borderColor: '#7dd3fc', bgColor: '#f0f9ff' }
+  );
+
+  const contactBlock = '<p style="margin:20px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + businessName + ':</p>' +
+    '<ul style="margin:8px 0;padding-left:20px;font-size:14px;color:#6b7280">' +
+    (businessPhone ? '<li>Phone: ' + businessPhone + '</li>' : '') +
+    (businessEmail ? '<li>Email: ' + businessEmail + '</li>' : '') +
+    '</ul>';
+
+  return heading + intro + returnedSection + refundSummary + retainedSection + processingNote + contactBlock;
+}

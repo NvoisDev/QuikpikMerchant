@@ -133,7 +133,7 @@ import { sendSMS } from "./services/smsService";
 import { sendEmail } from "./sendgrid-service";
 import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
-import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, getEmailLogoUrl, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
+import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, getEmailLogoUrl, buildItemisedRefundEmail, type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
@@ -6625,54 +6625,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
           const amountPaid = parseFloat(order.amountPaid || '0');
           
-          // Build refund message based on what happened
-          let refundMsg = '';
-          if (stripeRefundTotalPounds > 0) {
-            refundMsg = `\n\nA refund of £${stripeRefundTotalPounds.toFixed(2)} has been processed to your original payment method. This typically takes 5-10 business days to appear on your statement.`;
-          } else if (amountPaid <= 0) {
-            refundMsg = `\n\nNo payment was taken for this order, so no refund is required.`;
+          // Build itemised lists for the email
+          const refundLineItems: RefundLineItem[] = [];
+          const retainedLineItems: RefundLineItem[] = [];
+          const deliveryRefundedAmount = (refundDelivery && !isFullCancellation) ? parseFloat(order.deliveryCost || '0') : 0;
+
+          if (returnedItems && returnedItems.length > 0) {
+            for (const ri of returnedItems) {
+              const oi = orderItems.find(o => o.productId === ri.productId);
+              if (oi) {
+                const product = await storage.getProduct(ri.productId);
+                const returnQty = Math.min(ri.quantity, oi.quantity);
+                refundLineItems.push({
+                  productName: product?.name || `Product #${ri.productId}`,
+                  quantity: returnQty,
+                  unitPrice: parseFloat(oi.unitPrice),
+                  sellingType: ri.sellingType || oi.sellingType || 'units',
+                });
+                const keptQty = oi.quantity - returnQty;
+                if (keptQty > 0) {
+                  retainedLineItems.push({
+                    productName: product?.name || `Product #${ri.productId}`,
+                    quantity: keptQty,
+                    unitPrice: parseFloat(oi.unitPrice),
+                    sellingType: ri.sellingType || oi.sellingType || 'units',
+                  });
+                }
+              }
+            }
+            for (const oi of orderItems) {
+              const ri = returnedItems.find((r: any) => r.productId === oi.productId);
+              if (!ri) {
+                const product = await storage.getProduct(oi.productId);
+                retainedLineItems.push({
+                  productName: product?.name || `Product #${oi.productId}`,
+                  quantity: oi.quantity,
+                  unitPrice: parseFloat(oi.unitPrice),
+                  sellingType: oi.sellingType || 'units',
+                });
+              }
+            }
+          } else {
+            for (const oi of orderItems) {
+              const product = await storage.getProduct(oi.productId);
+              refundLineItems.push({
+                productName: product?.name || `Product #${oi.productId}`,
+                quantity: oi.quantity,
+                unitPrice: parseFloat(oi.unitPrice),
+                sellingType: oi.sellingType || 'units',
+              });
+            }
           }
-          
+
+          const actualRefundAmount = stripeRefundTotalPounds > 0 ? stripeRefundTotalPounds : refundAmount;
+
           // SMS notification
           if (customer?.phoneNumber) {
-            const message = isFullCancellation 
-              ? `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`
-              : `Hi ${customer.firstName || 'there'}, a partial return has been processed for your order ${order.orderNumber} with ${businessName}.${refundMsg}\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
+            let smsMsg = '';
+            if (isFullCancellation) {
+              smsMsg = `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
+              if (stripeRefundTotalPounds > 0) {
+                smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${refundLineItems.length} item(s) has been processed. Allow 5-10 business days.`;
+              } else if (amountPaid <= 0) {
+                smsMsg += ` No payment was taken, so no refund is required.`;
+              }
+            } else {
+              smsMsg = `Hi ${customer.firstName || 'there'}, ${refundLineItems.length} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
+              if (stripeRefundTotalPounds > 0) {
+                smsMsg += ` Refund of £${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
+              }
+            }
+            smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
             
-            await sendSMS({
-              to: customer.phoneNumber,
-              message,
-            });
+            await sendSMS({ to: customer.phoneNumber, message: smsMsg });
             console.log(`📱 Cancellation SMS sent to ${customer.phoneNumber}`);
           }
           
-          // Email notification
+          // Email notification with itemised receipt
           if (customer?.email) {
             try {
               const emailSubject = isFullCancellation 
                 ? `Order ${order.orderNumber} Cancelled - ${businessName}`
                 : `Partial Return Processed - Order ${order.orderNumber}`;
-              
-              let emailBody = isFullCancellation
-                ? `<h2>Order Cancelled</h2><p>Hi ${customer.firstName || 'there'},</p><p>Your order <strong>${order.orderNumber}</strong> with ${businessName} has been cancelled.</p>`
-                : `<h2>Partial Return Processed</h2><p>Hi ${customer.firstName || 'there'},</p><p>A partial return has been processed for your order <strong>${order.orderNumber}</strong> with ${businessName}.</p>`;
-              
-              // Add refund details to email
-              if (stripeRefundTotalPounds > 0) {
-                emailBody += `<div style="background:#f0f7ff;padding:15px;border-radius:8px;margin:20px 0;"><h3 style="margin:0 0 10px 0;color:#1e40af;">Refund Details</h3><p style="margin:0;">Amount: <strong>£${stripeRefundTotalPounds.toFixed(2)}</strong></p><p style="margin:5px 0 0 0;font-size:14px;color:#666;">Refunded to your original payment method. Please allow 5-10 business days for the refund to appear on your statement.</p></div>`;
-              } else if (amountPaid <= 0) {
-                emailBody += `<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0;"><p style="margin:0;color:#666;">No payment was taken for this order, so no refund is required.</p></div>`;
+
+              let emailBody: string;
+              if (actualRefundAmount > 0) {
+                emailBody = buildItemisedRefundEmail({
+                  customerName: customer.firstName || 'there',
+                  orderNumber: order.orderNumber,
+                  isFullCancellation,
+                  returnedItems: refundLineItems,
+                  retainedItems: retainedLineItems.length > 0 ? retainedLineItems : undefined,
+                  refundAmount: actualRefundAmount,
+                  deliveryRefunded: deliveryRefundedAmount > 0 ? deliveryRefundedAmount : undefined,
+                  businessName,
+                  businessPhone: wholesaler.phoneNumber || undefined,
+                  businessEmail: wholesaler.email || undefined,
+                });
+              } else {
+                emailBody = buildItemisedRefundEmail({
+                  customerName: customer.firstName || 'there',
+                  orderNumber: order.orderNumber,
+                  isFullCancellation,
+                  returnedItems: refundLineItems,
+                  retainedItems: retainedLineItems.length > 0 ? retainedLineItems : undefined,
+                  refundAmount: 0,
+                  businessName,
+                  businessPhone: wholesaler.phoneNumber || undefined,
+                  businessEmail: wholesaler.email || undefined,
+                });
               }
-              
-              emailBody += `<p>If you have any questions, please contact ${businessName}:</p><ul><li>Phone: ${wholesaler.phoneNumber || 'N/A'}</li><li>Email: ${wholesaler.email || 'N/A'}</li></ul><p style="color:#666;font-size:12px;margin-top:30px;">This is an automated message from Quikpik.</p>`;
               
               await sendEmail({
                 to: customer.email,
                 subject: emailSubject,
-                html: emailBody,
+                html: wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: isFullCancellation ? `Order ${order.orderNumber} has been cancelled` : `Partial return for order ${order.orderNumber}` }),
                 from: `${businessName} via Quikpik <hello@quikpik.co>`
               });
-              console.log(`📧 Cancellation email sent to ${customer.email}`);
+              console.log(`📧 Itemised cancellation email sent to ${customer.email}`);
             } catch (emailError) {
               console.error('Failed to send cancellation email:', emailError);
             }
@@ -7133,49 +7203,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const customerEmail = (order as any)?.customerEmail;
         const customerName = (order as any)?.customerName || 'Customer';
         
+        // Build itemised data for the approved cancellation email
+        let cancelledLineItems: RefundLineItem[] = [];
+        if (approved && order) {
+          const cancOrderItems = await storage.getOrderItems(order.id);
+          for (const oi of cancOrderItems) {
+            const product = await storage.getProduct(oi.productId);
+            cancelledLineItems.push({
+              productName: product?.name || `Product #${oi.productId}`,
+              quantity: oi.quantity,
+              unitPrice: parseFloat(oi.unitPrice),
+              sellingType: oi.sellingType || 'units',
+            });
+          }
+        }
+
+        const amountPaid = order ? parseFloat(order.amountPaid?.toString() || '0') : 0;
+
         // SMS notification
         if (customerPhone && order) {
           let message = '';
           
           if (approved) {
-            let refundMsg = '';
-            if (refundType === 'card') {
-              refundMsg = 'A refund has been processed and will appear on your statement within 5-10 business days.';
+            const itemCount = cancelledLineItems.length;
+            if (refundType === 'card' && amountPaid > 0) {
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}. Refund of £${amountPaid.toFixed(2)} processed — allow 5-10 business days.`;
             } else if (refundType === 'credit') {
-              refundMsg = 'Store credit has been applied to your account for future orders.';
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}. Store credit of £${amountPaid.toFixed(2)} applied.`;
+            } else {
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}.`;
             }
-            message = `✅ Your cancellation request for order ${order.orderNumber} has been approved by ${businessName}. ${refundMsg}`;
           } else {
             message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
           }
           
-          await sendSMS({
-            to: customerPhone,
-            message,
-          });
+          await sendSMS({ to: customerPhone, message });
           console.log(`📱 Cancellation response SMS sent to ${customerPhone}`);
         }
         
         // Email notification
         if (customerEmail && order) {
-          const orderTotal = parseFloat(order.total?.toString() || '0');
-          const amountPaid = parseFloat(order.amountPaid?.toString() || '0');
-          
           if (approved) {
-            let refundDetails = '';
-            if (refundType === 'card' && amountPaid > 0) {
-              refundDetails = `<p><strong>Refund Amount:</strong> £${amountPaid.toFixed(2)}</p><p>The refund has been processed to your original payment method and will appear on your statement within 5-10 business days.</p>`;
-            } else if (refundType === 'credit') {
-              refundDetails = `<p><strong>Store Credit:</strong> £${amountPaid.toFixed(2)}</p><p>Store credit has been applied to your account for future orders.</p>`;
-            }
+            const refundAmt = amountPaid > 0 ? amountPaid : 0;
             
-            const approvedCancelBody = `${emailHeading('Cancellation Approved', { size: '22px', color: '#10B981' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">Your cancellation request for <strong>Order ${order.orderNumber}</strong> has been approved.</p>${emailCard(`${refundDetails}`, { borderColor: '#A7F3D0', bgColor: '#ECFDF5' })}${emailCard(`${emailHeading('Order Summary', { size: '16px' })}<p style="margin:0 0 6px"><strong>Order Number:</strong> ${order.orderNumber}</p><p style="margin:0 0 6px"><strong>Original Total:</strong> £${orderTotal.toFixed(2)}</p><p style="margin:0"><strong>Status:</strong> ${emailBadge('Cancelled', '#EF4444')}</p>`)}<p style="margin:20px 0 0;text-align:center;color:#6b7280">Thank you for your understanding. We hope to serve you again soon!</p>`;
+            const approvedEmailBody = buildItemisedRefundEmail({
+              customerName,
+              orderNumber: order.orderNumber,
+              isFullCancellation: true,
+              returnedItems: cancelledLineItems,
+              refundAmount: refundAmt,
+              businessName,
+              businessPhone: wholesaler?.phoneNumber || undefined,
+              businessEmail: wholesaler?.email || undefined,
+            });
 
             await sendEmail({
               to: customerEmail,
               from: 'hello@quikpik.co',
               subject: `Cancellation Approved - Order ${order.orderNumber}`,
-              html: wrapCustomerEmail(approvedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
+              html: wrapCustomerEmail(approvedEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
             });
           } else {
             const rejectedCancelBody = `${emailHeading('Cancellation Request Update', { size: '22px' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}${emailCard(`${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Your order remains active. If you have any questions or concerns, please contact us directly:</p><p style="margin:0 0 4px"><strong>${businessName}</strong></p>${wholesaler?.phoneNumber ? `<p style="margin:0 0 4px">Phone: ${wholesaler.phoneNumber}</p>` : ''}${wholesaler?.email ? `<p style="margin:0">Email: ${wholesaler.email}</p>` : ''}`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}`;
