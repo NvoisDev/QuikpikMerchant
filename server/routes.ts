@@ -6473,9 +6473,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         if (refundDelivery) {
-          const deliveryCost = parseFloat(order.deliveryCost || '0');
-          refundAmount += deliveryCost;
-          console.log(`🚚 Including delivery charge refund: £${deliveryCost.toFixed(2)}`);
+          const allFullyReturned = orderItems.every(oi => {
+            const ri = returnedItems.find((r: any) => r.productId === oi.productId);
+            return ri && ri.quantity >= oi.quantity;
+          });
+          if (!allFullyReturned) {
+            const deliveryCost = parseFloat(order.deliveryCost || '0');
+            refundAmount += deliveryCost;
+            console.log(`🚚 Including delivery charge refund: £${deliveryCost.toFixed(2)}`);
+          }
         }
       } else {
         // Full cancellation - restore all items

@@ -2068,15 +2068,12 @@ export default function OrdersFresh() {
                     <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
-                    const isCancelledAndRefunded = selectedOrder.status === 'cancelled' && !!selectedOrder.refundedAt;
                     const wholesalerTotal = calculateNetAmount(selectedOrder);
-                    const wholesalerRefund = isCancelledAndRefunded ? wholesalerTotal : (() => {
-                      const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
-                      const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
-                      const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
-                      return wholesalerTotal * refundProportion;
-                    })();
-                    const isPartialRefund = !isCancelledAndRefunded && wholesalerRefund < wholesalerTotal * 0.99;
+                    const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
+                    const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
+                    const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
+                    const wholesalerRefund = wholesalerTotal * refundProportion;
+                    const isPartialRefund = refundProportion < 0.99;
                     return (
                       <div className="flex justify-between text-purple-600">
                         <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
@@ -2147,7 +2144,7 @@ export default function OrdersFresh() {
                       {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (() => {
                         const refAmt = parseFloat(selectedOrder.amountRefunded || '0');
                         const paidAmt = parseFloat(selectedOrder.amountPaid || '0');
-                        const isFullRefund = selectedOrder.status === 'cancelled' && !!selectedOrder.refundedAt || (paidAmt > 0 && refAmt >= paidAmt * 0.99);
+                        const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
                         if (selectedOrder.refundedAt) {
                           return isFullRefund
                             ? <Badge className="bg-purple-600 text-white">Refunded</Badge>
