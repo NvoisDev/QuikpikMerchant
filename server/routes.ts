@@ -7137,13 +7137,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(orderCancellationRequests.id, requestId));
       
       // If approved, cancel the order
+      let custCancelStripeRefunded = 0;
+      let custCancelAmountPaid = 0;
       if (approved) {
         const order = await storage.getOrder(request.orderId);
         if (order) {
-          // Use the existing cancel logic
           const orderItems = await storage.getOrderItems(order.id);
           
-          // Restore stock for all items
           for (const item of orderItems) {
             const product = await storage.getProduct(item.productId);
             if (product) {
@@ -7158,28 +7158,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Process refund if applicable
-          let stripeRefundedPounds = 0;
-          const amountPaid = parseFloat(order.amountPaid || '0');
+          custCancelAmountPaid = parseFloat(order.amountPaid || '0');
           
-          if (refundType === 'card' && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
+          if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe) {
             const result = await refundAcrossPaymentIntents(
               stripe,
               order.stripePaymentIntentId,
-              amountPaid,
+              custCancelAmountPaid,
               { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` }
             );
-            stripeRefundedPounds = result.totalRefunded;
+            custCancelStripeRefunded = result.totalRefunded;
             if (result.totalRefunded > 0) {
               console.log(`💳 Stripe refund processed for customer cancellation: £${result.totalRefunded.toFixed(2)}`);
             }
           }
           
-          // Update order status
           await db.update(orders)
             .set({
               status: 'cancelled',
-              amountRefunded: stripeRefundedPounds > 0 ? stripeRefundedPounds.toFixed(2) : (refundType === 'credit' || refundType === 'later') ? amountPaid.toFixed(2) : '0.00',
+              amountRefunded: custCancelStripeRefunded > 0 ? custCancelStripeRefunded.toFixed(2) : (refundType === 'credit' || refundType === 'later') ? custCancelAmountPaid.toFixed(2) : '0.00',
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
               notes: order.notes 
@@ -7216,18 +7213,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        const amountPaid = order ? parseFloat(order.amountPaid?.toString() || '0') : 0;
-
         // SMS notification
         if (customerPhone && order) {
           let message = '';
           
           if (approved) {
             const totalCancelledQty = cancelledLineItems.reduce((sum, i) => sum + i.quantity, 0);
-            if (refundType === 'card' && amountPaid > 0) {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${amountPaid.toFixed(2)} processed — allow 5-10 business days.`;
-            } else if (refundType === 'credit') {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Store credit of £${amountPaid.toFixed(2)} applied.`;
+            if (refundType === 'card' && custCancelStripeRefunded > 0) {
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelStripeRefunded.toFixed(2)} processed — allow 5-10 business days.`;
+            } else if (refundType === 'credit' && custCancelAmountPaid > 0) {
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Store credit of £${custCancelAmountPaid.toFixed(2)} applied.`;
+            } else if (refundType === 'card' && custCancelAmountPaid > 0) {
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelAmountPaid.toFixed(2)} pending.`;
             } else {
               message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}.`;
             }
@@ -7242,12 +7239,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Email notification
         if (customerEmail && order) {
           if (approved) {
-            const refundAmt = amountPaid > 0 ? amountPaid : 0;
             const custCancelDeliveryCost = parseFloat(order.deliveryCost || '0');
+            const actualRefundAmt = custCancelStripeRefunded > 0
+              ? custCancelStripeRefunded
+              : (refundType === 'credit' ? custCancelAmountPaid : custCancelAmountPaid);
             const custRefundStatus: 'processed' | 'pending' | 'credit' | 'none' =
               refundType === 'credit' ? 'credit'
-              : refundType === 'card' && refundAmt > 0 ? 'processed'
-              : refundAmt > 0 ? 'pending'
+              : custCancelStripeRefunded > 0 ? 'processed'
+              : custCancelAmountPaid > 0 ? 'pending'
               : 'none';
             
             const approvedEmailBody = buildItemisedRefundEmail({
@@ -7255,7 +7254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               orderNumber: order.orderNumber,
               isFullCancellation: true,
               returnedItems: cancelledLineItems,
-              refundAmount: refundAmt,
+              refundAmount: actualRefundAmt,
               deliveryRefunded: custCancelDeliveryCost > 0 ? custCancelDeliveryCost : undefined,
               refundStatus: custRefundStatus,
               businessName,
