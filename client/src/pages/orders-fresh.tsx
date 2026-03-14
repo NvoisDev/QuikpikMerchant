@@ -1919,16 +1919,17 @@ export default function OrdersFresh() {
                   ) : (
                     <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Unfulfilled</Badge>
                   )}
-                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status !== 'cancelled' && (
-                    selectedOrder.refundedAt
-                      ? <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Partially Refunded</Badge>
-                      : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>
-                  )}
-                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && selectedOrder.status === 'cancelled' && (
-                    selectedOrder.refundedAt
+                  {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
+                    const refAmt = parseFloat(selectedOrder.amountRefunded || '0');
+                    const paidAmt = parseFloat(selectedOrder.amountPaid || '0');
+                    const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
+                    if (!selectedOrder.refundedAt) {
+                      return <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>;
+                    }
+                    return isFullRefund
                       ? <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Refunded</Badge>
-                      : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>
-                  )}
+                      : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Partial Refund</Badge>;
+                  })()}
                   {selectedOrder.fulfillmentType && (
                     <Badge variant="outline" className="text-xs px-2 py-1">
                       {selectedOrder.fulfillmentType === 'delivery' ? (
