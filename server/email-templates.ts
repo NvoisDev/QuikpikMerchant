@@ -334,11 +334,19 @@ export function buildItemisedRefundEmail(options: {
   }
 
   const timeline = refundTimeline || '5-10 business days';
-  const processingNote = emailCard(
-    emailHeading('Processing Information', { size: '16px', color: '#0369a1' }) +
-    '<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within ' + timeline + '.</p>',
-    { borderColor: '#7dd3fc', bgColor: '#f0f9ff' }
-  );
+  let processingNote = '';
+  if (refundAmount > 0) {
+    processingNote = emailCard(
+      emailHeading('Processing Information', { size: '16px', color: '#0369a1' }) +
+      '<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within ' + timeline + '.</p>',
+      { borderColor: '#7dd3fc', bgColor: '#f0f9ff' }
+    );
+  } else {
+    processingNote = emailCard(
+      '<p style="margin:0;color:#6b7280">No payment was taken for this order, so no refund is required.</p>',
+      { borderColor: '#e5e7eb', bgColor: '#f9fafb' }
+    );
+  }
 
   const contactBlock = '<p style="margin:20px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + businessName + ':</p>' +
     '<ul style="margin:8px 0;padding-left:20px;font-size:14px;color:#6b7280">' +

@@ -6685,17 +6685,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // SMS notification
           if (customer?.phoneNumber) {
             let smsMsg = '';
+            const totalReturnedQty = refundLineItems.reduce((sum, i) => sum + i.quantity, 0);
             if (isFullCancellation) {
               smsMsg = `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
               if (stripeRefundTotalPounds > 0) {
-                smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${refundLineItems.length} item(s) has been processed. Allow 5-10 business days.`;
+                smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${totalReturnedQty} item(s) has been processed. Allow 5-10 business days.`;
               } else if (amountPaid > 0) {
-                smsMsg += ` A refund of £${amountPaid.toFixed(2)} for ${refundLineItems.length} item(s) is pending.`;
+                smsMsg += ` A refund of £${amountPaid.toFixed(2)} for ${totalReturnedQty} item(s) is pending.`;
               } else {
                 smsMsg += ` No payment was taken, so no refund is required.`;
               }
             } else {
-              smsMsg = `Hi ${customer.firstName || 'there'}, ${refundLineItems.length} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
+              smsMsg = `Hi ${customer.firstName || 'there'}, ${totalReturnedQty} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
               if (stripeRefundTotalPounds > 0) {
                 smsMsg += ` Refund of £${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
               } else if (actualRefundAmount > 0) {
@@ -7232,13 +7233,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let message = '';
           
           if (approved) {
-            const itemCount = cancelledLineItems.length;
+            const totalCancelledQty = cancelledLineItems.reduce((sum, i) => sum + i.quantity, 0);
             if (refundType === 'card' && amountPaid > 0) {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}. Refund of £${amountPaid.toFixed(2)} processed — allow 5-10 business days.`;
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${amountPaid.toFixed(2)} processed — allow 5-10 business days.`;
             } else if (refundType === 'credit') {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}. Store credit of £${amountPaid.toFixed(2)} applied.`;
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Store credit of £${amountPaid.toFixed(2)} applied.`;
             } else {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${itemCount} item(s)) has been approved by ${businessName}.`;
+              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}.`;
             }
           } else {
             message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
