@@ -6608,6 +6608,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           refundReason: reason || 'Customer requested cancellation',
           refundedAt: refundProcessedNow ? new Date() : undefined,
           cancelledAt: isFullCancellation ? new Date() : undefined,
+          stockRestored: stockRestoredCount > 0,
+          stockRestoredCount: stockRestoredCount,
           notes: order.notes 
             ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
             : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}`

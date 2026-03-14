@@ -64,6 +64,8 @@ interface Order {
   stripePaymentIntentId?: string;
   notes?: string;
   cancelledAt?: string;
+  stockRestored?: boolean;
+  stockRestoredCount?: number;
   cancellationRequest?: {
     id: number;
     status: 'pending' | 'approved' | 'rejected';
@@ -2075,11 +2077,37 @@ export default function OrdersFresh() {
                     const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
                     const wholesalerRefund = wholesalerTotal * refundProportion;
                     const isPartialRefund = refundProportion < 0.99;
+                    const refundDateStr = selectedOrder.refundedAt
+                      ? new Date(selectedOrder.refundedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : null;
+                    const retained = wholesalerTotal - wholesalerRefund;
                     return (
-                      <div className="flex justify-between text-purple-600">
-                        <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
-                        <span>-{formatCurrency(wholesalerRefund)}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between text-purple-600">
+                          <div>
+                            <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
+                            {refundDateStr && <span className="text-xs text-purple-400 ml-1">· {refundDateStr}</span>}
+                          </div>
+                          <span>-{formatCurrency(wholesalerRefund)}</span>
+                        </div>
+                        {isPartialRefund && retained > 0 && (
+                          <div className="flex justify-between text-gray-500 text-xs mt-0.5">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <span>Retained by customer:</span>
+                              {refundDateStr && <span className="text-gray-400">· {refundDateStr}</span>}
+                              {selectedOrder.stockRestored && selectedOrder.stockRestoredCount && selectedOrder.stockRestoredCount > 0 && (
+                                <span className="text-green-600">· {selectedOrder.stockRestoredCount} unit{selectedOrder.stockRestoredCount !== 1 ? 's' : ''} restocked</span>
+                              )}
+                            </div>
+                            <span>{formatCurrency(retained)}</span>
+                          </div>
+                        )}
+                        {!isPartialRefund && selectedOrder.stockRestored && selectedOrder.stockRestoredCount && selectedOrder.stockRestoredCount > 0 && (
+                          <div className="text-xs text-green-600 mt-0.5">
+                            · {selectedOrder.stockRestoredCount} unit{selectedOrder.stockRestoredCount !== 1 ? 's' : ''} restocked
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                   <div className="border-t pt-1 mt-2">

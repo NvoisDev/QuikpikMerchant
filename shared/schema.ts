@@ -566,6 +566,8 @@ export const orders = pgTable("orders", {
   refundReason: text("refund_reason"), // Reason for refund/cancellation
   refundedAt: timestamp("refunded_at"), // When refund was processed
   cancelledAt: timestamp("cancelled_at"), // When order was cancelled
+  stockRestored: boolean("stock_restored").default(false), // Whether stock was returned to inventory
+  stockRestoredCount: integer("stock_restored_count").default(0), // Number of units returned to inventory
   placedByName: varchar("placed_by_name"), // Name of team member who placed the order (null = wholesaler owner)
 
   createdAt: timestamp("created_at").defaultNow(),
