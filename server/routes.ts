@@ -6689,13 +6689,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               smsMsg = `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
               if (stripeRefundTotalPounds > 0) {
                 smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${refundLineItems.length} item(s) has been processed. Allow 5-10 business days.`;
-              } else if (amountPaid <= 0) {
+              } else if (amountPaid > 0) {
+                smsMsg += ` A refund of £${amountPaid.toFixed(2)} for ${refundLineItems.length} item(s) is pending.`;
+              } else {
                 smsMsg += ` No payment was taken, so no refund is required.`;
               }
             } else {
               smsMsg = `Hi ${customer.firstName || 'there'}, ${refundLineItems.length} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
               if (stripeRefundTotalPounds > 0) {
                 smsMsg += ` Refund of £${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
+              } else if (actualRefundAmount > 0) {
+                smsMsg += ` Refund of £${actualRefundAmount.toFixed(2)} pending.`;
               }
             }
             smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
