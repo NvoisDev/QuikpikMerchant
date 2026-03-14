@@ -6396,7 +6396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
-      const { reason, reasonCategory, returnedItems, processRefund, refundType } = req.body;
+      const { reason, reasonCategory, returnedItems, processRefund, refundType, refundDelivery } = req.body;
       // returnedItems: Array<{ productId: number, quantity: number, sellingType: 'units' | 'pallets' }>
       // refundType: 'card' | 'credit' - determines if refund goes to original payment or store credit
 
@@ -6471,6 +6471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
             }
           }
+        }
+        if (refundDelivery) {
+          const deliveryCost = parseFloat(order.deliveryCost || '0');
+          refundAmount += deliveryCost;
+          console.log(`🚚 Including delivery charge refund: £${deliveryCost.toFixed(2)}`);
         }
       } else {
         // Full cancellation - restore all items

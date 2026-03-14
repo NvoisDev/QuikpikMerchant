@@ -212,6 +212,7 @@ export default function OrdersFresh() {
   const [restockInventory, setRestockInventory] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
   const [staffNote, setStaffNote] = useState('');
+  const [refundDelivery, setRefundDelivery] = useState(false);
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetryingRefund, setIsRetryingRefund] = useState(false);
@@ -574,6 +575,7 @@ export default function OrdersFresh() {
           processRefund: processRefund && refundType !== 'later',
           refundType: processRefund && refundType !== 'later' ? refundType : undefined,
           returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined,
+          refundDelivery: refundDelivery && itemsToReturn.length > 0,
           restockInventory,
           sendNotification,
           staffNote: staffNote || undefined
@@ -633,6 +635,7 @@ export default function OrdersFresh() {
         setProcessRefund(true);
         setRefundType('card');
         setReturnItems([]);
+        setRefundDelivery(false);
         setRestockInventory(true);
         setSendNotification(true);
         setStaffNote('');
@@ -722,6 +725,7 @@ export default function OrdersFresh() {
     setCancelReasonCategory('');
     setCancelReason('');
     setProcessRefund(true);
+    setRefundDelivery(false);
     setRestockInventory(true);
     setSendNotification(true);
     setReturnItems([]);
@@ -1812,19 +1816,27 @@ export default function OrdersFresh() {
                 {/* Refund payments */}
                 {(() => {
                   const totalPaid = parseFloat(selectedOrder?.amountPaid || '0');
-                  const calculatedRefund = returnItems.length > 0
-                    ? Math.min(
-                        returnItems.reduce((sum, ri) => {
-                          const oi = selectedOrder?.items?.find(i => i.productId === ri.productId);
-                          return sum + (ri.quantity * parseFloat(oi?.unitPrice || '0'));
-                        }, 0),
-                        totalPaid
-                      )
+                  const deliveryCostValue = parseFloat(selectedOrder?.deliveryCost || '0');
+                  const itemsRefund = returnItems.length > 0
+                    ? returnItems.reduce((sum, ri) => {
+                        const oi = selectedOrder?.items?.find(i => i.productId === ri.productId);
+                        return sum + (ri.quantity * parseFloat(oi?.unitPrice || '0'));
+                      }, 0)
                     : totalPaid;
+                  const calculatedRefund = Math.min(
+                    itemsRefund + (returnItems.length > 0 && refundDelivery ? deliveryCostValue : 0),
+                    totalPaid
+                  );
                   const isPartial = returnItems.some(ri => ri.quantity < ri.maxQty);
                   return (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
+                  {returnItems.length > 0 && deliveryCostValue > 0 && (
+                    <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg bg-gray-50">
+                      <input type="checkbox" checked={refundDelivery} onChange={(e) => setRefundDelivery(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
+                      <span className="text-sm text-gray-700">Include delivery charge refund ({formatCurrency(deliveryCostValue)})</span>
+                    </label>
+                  )}
                   <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('card'); setProcessRefund(true); }}>
                     <input type="radio" name="refundType" checked={refundType === 'card'} onChange={() => { setRefundType('card'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
                     <div className="ml-3 flex-1">
@@ -1875,6 +1887,7 @@ export default function OrdersFresh() {
                     setCancelReason('');
                     setProcessRefund(false);
                     setRefundType('card');
+                    setRefundDelivery(false);
                     setRestockInventory(true);
                     setSendNotification(true);
                     setStaffNote('');
@@ -2055,12 +2068,15 @@ export default function OrdersFresh() {
                     <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
+                    const isCancelledAndRefunded = selectedOrder.status === 'cancelled' && !!selectedOrder.refundedAt;
                     const wholesalerTotal = calculateNetAmount(selectedOrder);
-                    const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
-                    const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
-                    const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
-                    const wholesalerRefund = wholesalerTotal * refundProportion;
-                    const isPartialRefund = refundProportion < 0.999;
+                    const wholesalerRefund = isCancelledAndRefunded ? wholesalerTotal : (() => {
+                      const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
+                      const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
+                      const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
+                      return wholesalerTotal * refundProportion;
+                    })();
+                    const isPartialRefund = !isCancelledAndRefunded && wholesalerRefund < wholesalerTotal * 0.999;
                     return (
                       <div className="flex justify-between text-purple-600">
                         <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
@@ -2072,6 +2088,7 @@ export default function OrdersFresh() {
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
                       <span>{formatCurrency((() => {
+                        if (selectedOrder.status === 'cancelled' && selectedOrder.refundedAt) return 0;
                         const wholesalerTotal = calculateNetAmount(selectedOrder);
                         const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
                         const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
@@ -2127,13 +2144,17 @@ export default function OrdersFresh() {
                       </div>
                     )}
                     <div className="pt-2 border-t flex flex-wrap gap-2">
-                      {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (
-                        selectedOrder.refundedAt ? (
-                          <Badge className="bg-purple-600 text-white">Refunded</Badge>
-                        ) : (
-                          <Badge className="bg-amber-100 text-amber-800">Refund Pending</Badge>
-                        )
-                      ) : (
+                      {parseFloat(selectedOrder.amountRefunded || '0') > 0 ? (() => {
+                        const refAmt = parseFloat(selectedOrder.amountRefunded || '0');
+                        const paidAmt = parseFloat(selectedOrder.amountPaid || '0');
+                        const isFullRefund = selectedOrder.status === 'cancelled' && !!selectedOrder.refundedAt || (paidAmt > 0 && refAmt >= paidAmt * 0.99);
+                        if (selectedOrder.refundedAt) {
+                          return isFullRefund
+                            ? <Badge className="bg-purple-600 text-white">Refunded</Badge>
+                            : <Badge className="bg-amber-100 text-amber-800">Partial Refund</Badge>;
+                        }
+                        return <Badge className="bg-amber-100 text-amber-800">Refund Pending</Badge>;
+                      })() : (
                         <Badge className={getPaymentStatusColor(selectedOrder.paymentStatus || 'unpaid')}>
                           {getPaymentStatusLabel(selectedOrder.paymentStatus || 'unpaid')}
                         </Badge>
