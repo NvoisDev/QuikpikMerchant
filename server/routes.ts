@@ -6716,33 +6716,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ? `Order ${order.orderNumber} Cancelled - ${businessName}`
                 : `Partial Return Processed - Order ${order.orderNumber}`;
 
-              let emailBody: string;
-              if (actualRefundAmount > 0) {
-                emailBody = buildItemisedRefundEmail({
-                  customerName: customer.firstName || 'there',
-                  orderNumber: order.orderNumber,
-                  isFullCancellation,
-                  returnedItems: refundLineItems,
-                  retainedItems: retainedLineItems.length > 0 ? retainedLineItems : undefined,
-                  refundAmount: actualRefundAmount,
-                  deliveryRefunded: deliveryRefundedAmount > 0 ? deliveryRefundedAmount : undefined,
-                  businessName,
-                  businessPhone: wholesaler.phoneNumber || undefined,
-                  businessEmail: wholesaler.email || undefined,
-                });
-              } else {
-                emailBody = buildItemisedRefundEmail({
-                  customerName: customer.firstName || 'there',
-                  orderNumber: order.orderNumber,
-                  isFullCancellation,
-                  returnedItems: refundLineItems,
-                  retainedItems: retainedLineItems.length > 0 ? retainedLineItems : undefined,
-                  refundAmount: 0,
-                  businessName,
-                  businessPhone: wholesaler.phoneNumber || undefined,
-                  businessEmail: wholesaler.email || undefined,
-                });
-              }
+              const emailRefundStatus: 'processed' | 'pending' | 'none' = stripeRefundTotalPounds > 0
+                ? 'processed'
+                : (actualRefundAmount > 0 ? 'pending' : 'none');
+
+              const emailBody = buildItemisedRefundEmail({
+                customerName: customer.firstName || 'there',
+                orderNumber: order.orderNumber,
+                isFullCancellation,
+                returnedItems: refundLineItems,
+                retainedItems: retainedLineItems.length > 0 ? retainedLineItems : undefined,
+                refundAmount: actualRefundAmount,
+                deliveryRefunded: deliveryRefundedAmount > 0 ? deliveryRefundedAmount : undefined,
+                refundStatus: emailRefundStatus,
+                businessName,
+                businessPhone: wholesaler.phoneNumber || undefined,
+                businessEmail: wholesaler.email || undefined,
+              });
               
               await sendEmail({
                 to: customer.email,
@@ -7254,6 +7244,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (approved) {
             const refundAmt = amountPaid > 0 ? amountPaid : 0;
             const custCancelDeliveryCost = parseFloat(order.deliveryCost || '0');
+            const custRefundStatus: 'processed' | 'pending' | 'credit' | 'none' =
+              refundType === 'credit' ? 'credit'
+              : refundType === 'card' && refundAmt > 0 ? 'processed'
+              : refundAmt > 0 ? 'pending'
+              : 'none';
             
             const approvedEmailBody = buildItemisedRefundEmail({
               customerName,
@@ -7262,6 +7257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               returnedItems: cancelledLineItems,
               refundAmount: refundAmt,
               deliveryRefunded: custCancelDeliveryCost > 0 ? custCancelDeliveryCost : undefined,
+              refundStatus: custRefundStatus,
               businessName,
               businessPhone: wholesaler?.phoneNumber || undefined,
               businessEmail: wholesaler?.email || undefined,

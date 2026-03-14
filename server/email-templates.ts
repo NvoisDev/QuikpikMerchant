@@ -270,6 +270,7 @@ export function buildItemisedRefundEmail(options: {
   retainedItems?: RefundLineItem[];
   refundAmount: number;
   deliveryRefunded?: number;
+  refundStatus?: 'processed' | 'pending' | 'credit' | 'none';
   refundTimeline?: string;
   businessName: string;
   businessPhone?: string;
@@ -281,6 +282,7 @@ export function buildItemisedRefundEmail(options: {
     deliveryRefunded, refundTimeline, businessName,
     businessPhone, businessEmail,
   } = options;
+  const refundStatus = options.refundStatus || (refundAmount > 0 ? 'processed' : 'none');
 
   const heading = isFullCancellation
     ? emailHeading('Order Cancelled', { size: '22px', color: '#DC2626' })
@@ -335,11 +337,23 @@ export function buildItemisedRefundEmail(options: {
 
   const timeline = refundTimeline || '5-10 business days';
   let processingNote = '';
-  if (refundAmount > 0) {
+  if (refundStatus === 'processed') {
     processingNote = emailCard(
       emailHeading('Processing Information', { size: '16px', color: '#0369a1' }) +
       '<p style="margin:0;color:#0369a1">Your refund has been processed and will appear on your original payment method within ' + timeline + '.</p>',
       { borderColor: '#7dd3fc', bgColor: '#f0f9ff' }
+    );
+  } else if (refundStatus === 'pending') {
+    processingNote = emailCard(
+      emailHeading('Refund Pending', { size: '16px', color: '#EA580C' }) +
+      '<p style="margin:0;color:#EA580C">Your refund is being arranged and will be processed shortly. You will be notified once it has been completed.</p>',
+      { borderColor: '#FED7AA', bgColor: '#FFF7ED' }
+    );
+  } else if (refundStatus === 'credit') {
+    processingNote = emailCard(
+      emailHeading('Store Credit Applied', { size: '16px', color: '#059669' }) +
+      '<p style="margin:0;color:#059669">Store credit of \u00A3' + refundAmount.toFixed(2) + ' has been applied to your account for future orders.</p>',
+      { borderColor: '#A7F3D0', bgColor: '#ECFDF5' }
     );
   } else {
     processingNote = emailCard(
