@@ -6628,7 +6628,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Build itemised lists for the email
           const refundLineItems: RefundLineItem[] = [];
           const retainedLineItems: RefundLineItem[] = [];
-          const deliveryRefundedAmount = (refundDelivery && !isFullCancellation) ? parseFloat(order.deliveryCost || '0') : 0;
+          const deliveryCostNum = parseFloat(order.deliveryCost || '0');
+          const deliveryRefundedAmount = isFullCancellation
+            ? deliveryCostNum
+            : (refundDelivery ? deliveryCostNum : 0);
 
           if (returnedItems && returnedItems.length > 0) {
             for (const ri of returnedItems) {
@@ -7245,6 +7248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (customerEmail && order) {
           if (approved) {
             const refundAmt = amountPaid > 0 ? amountPaid : 0;
+            const custCancelDeliveryCost = parseFloat(order.deliveryCost || '0');
             
             const approvedEmailBody = buildItemisedRefundEmail({
               customerName,
@@ -7252,6 +7256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isFullCancellation: true,
               returnedItems: cancelledLineItems,
               refundAmount: refundAmt,
+              deliveryRefunded: custCancelDeliveryCost > 0 ? custCancelDeliveryCost : undefined,
               businessName,
               businessPhone: wholesaler?.phoneNumber || undefined,
               businessEmail: wholesaler?.email || undefined,
