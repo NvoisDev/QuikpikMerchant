@@ -1185,6 +1185,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (event.type === 'charge.refund.updated') {
+        const refund = event.data.object as Stripe.Refund;
+        console.log(`🔄 Refund updated: ${refund.id}, status: ${refund.status}, amount: ${refund.amount}`);
+
+        if (refund.status === 'succeeded' && refund.payment_intent) {
+          const paymentIntentId = typeof refund.payment_intent === 'string'
+            ? refund.payment_intent
+            : refund.payment_intent.id;
+
+          const matchingOrders = await db.select()
+            .from(orders)
+            .where(sql`${orders.stripePaymentIntentId} LIKE ${'%' + paymentIntentId + '%'}`)
+            .limit(1);
+
+          if (matchingOrders.length > 0) {
+            const order = matchingOrders[0];
+            if (!order.refundedAt) {
+              await db.update(orders)
+                .set({
+                  refundedAt: new Date(),
+                  notes: order.notes
+                    ? `${order.notes}\n[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
+                    : `[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
+                })
+                .where(eq(orders.id, order.id));
+              console.log(`✅ Refund confirmed for order ${order.orderNumber} (refund ${refund.id})`);
+            } else {
+              console.log(`ℹ️ Order ${order.orderNumber} already has refundedAt set, skipping`);
+            }
+          } else {
+            console.log(`⚠️ No order found for payment intent ${paymentIntentId}`);
+          }
+        }
+
+        return res.json({ received: true, type: event.type });
+      }
+
       // Acknowledge all other events
       res.json({ received: true, type: event.type });
       
@@ -6606,10 +6643,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amountRefunded: totalRefunded.toFixed(2),
           amountOutstanding: isFullCancellation ? '0.00' : undefined,
           refundReason: reason || 'Customer requested cancellation',
-          refundedAt: refundProcessedNow ? new Date() : undefined,
           cancelledAt: isFullCancellation ? new Date() : undefined,
-          stockRestored: stockRestoredCount > 0,
-          stockRestoredCount: stockRestoredCount,
+          stockRestored: (order.stockRestoredCount || 0) + stockRestoredCount > 0,
+          stockRestoredCount: (order.stockRestoredCount || 0) + stockRestoredCount,
           notes: order.notes 
             ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
             : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}`
@@ -6808,11 +6844,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await db.update(orders)
         .set({
-          refundedAt: result.remaining <= 0.01 ? new Date() : undefined,
           amountRefunded: result.remaining > 0.01 ? result.remaining.toFixed(2) : order.amountRefunded,
           notes: order.notes
-            ? `${order.notes}\n[${new Date().toISOString()}] Stripe retry refund: £${refundedAmount.toFixed(2)}${partialNote}`
-            : `[${new Date().toISOString()}] Stripe retry refund: £${refundedAmount.toFixed(2)}${partialNote}`
+            ? `${order.notes}\n[${new Date().toISOString()}] Stripe retry refund submitted: £${refundedAmount.toFixed(2)}${partialNote}`
+            : `[${new Date().toISOString()}] Stripe retry refund submitted: £${refundedAmount.toFixed(2)}${partialNote}`
         })
         .where(eq(orders.id, id));
 

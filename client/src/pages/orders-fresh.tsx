@@ -2079,7 +2079,9 @@ export default function OrdersFresh() {
                     const isPartialRefund = refundProportion < 0.99;
                     const refundDateStr = selectedOrder.refundedAt
                       ? new Date(selectedOrder.refundedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                      : null;
+                      : ((selectedOrder.notes || '').includes('Stripe refund:') || (selectedOrder.notes || '').includes('Stripe retry refund submitted:')
+                        ? 'pending confirmation'
+                        : null);
                     const retained = wholesalerTotal - wholesalerRefund;
                     return (
                       <>
@@ -2114,7 +2116,7 @@ export default function OrdersFresh() {
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
                       <span>{formatCurrency((() => {
-                        if (selectedOrder.status === 'cancelled' && selectedOrder.refundedAt) return 0;
+                        if (selectedOrder.status === 'cancelled' && parseFloat(selectedOrder.amountRefunded || '0') > 0) return 0;
                         const wholesalerTotal = calculateNetAmount(selectedOrder);
                         const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
                         const amountRefunded = parseFloat(selectedOrder.amountRefunded || '0');
@@ -2547,7 +2549,9 @@ export default function OrdersFresh() {
                               ? new Date(selectedOrder.refundedAt!).toLocaleDateString()
                               : (selectedOrder.notes || '').includes('Refund failed:')
                                 ? 'Sent to Stripe but failed — use Retry'
-                                : 'Not yet sent to Stripe'}
+                                : (selectedOrder.notes || '').includes('Stripe refund:') || (selectedOrder.notes || '').includes('Stripe retry refund submitted:')
+                                  ? 'Refund pending Stripe confirmation'
+                                  : 'Not yet sent to Stripe'}
                           </div>
                           {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
                             <div className="text-xs text-gray-400 mt-0.5">{selectedOrder.refundReason}</div>
