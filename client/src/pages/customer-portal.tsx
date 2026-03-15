@@ -31,6 +31,7 @@ import {
 import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/components/LazyComponents";
 import Logo from "@/components/ui/logo";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
+import CustomerHelp from "@/components/customer/CustomerHelp";
 import { format } from "date-fns";
 import {
   Order,
@@ -2724,23 +2725,26 @@ export default function CustomerPortal() {
         {/* Modern Tab Navigation - Only for authenticated users */}
         {isAuthenticated && !isGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 tab-theme-active">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
                 <Home className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden xs:inline sm:inline">Home</span>
+                <span className="hidden sm:inline">Home</span>
               </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 tab-theme-active">
+              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
                 <Package className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden xs:inline sm:inline">Products</span>
+                <span className="hidden sm:inline">Products</span>
               </TabsTrigger>
               <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0 tab-theme-active">
                 <History className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline whitespace-nowrap">Order History</span>
-                <span className="sm:hidden text-xs truncate">Orders</span>
+                <span className="hidden sm:inline whitespace-nowrap">Orders</span>
               </TabsTrigger>
-              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 tab-theme-active">
+              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
                 <User className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden xs:inline sm:inline">Account</span>
+                <span className="hidden sm:inline">Account</span>
+              </TabsTrigger>
+              <TabsTrigger value="help" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
+                <HelpCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Help</span>
               </TabsTrigger>
             </TabsList>
 
@@ -4395,6 +4399,15 @@ export default function CustomerPortal() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            <TabsContent value="help">
+              <CustomerHelp wholesaler={wholesaler ? {
+                businessName: wholesaler.businessName,
+                phoneNumber: wholesaler.phoneNumber,
+                businessPhone: wholesaler.businessPhone,
+                email: wholesaler.email,
+              } : undefined} />
             </TabsContent>
           </Tabs>
         )}

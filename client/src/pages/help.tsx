@@ -100,6 +100,40 @@ You can customize your business logo in three ways:
 
 Click "Save Changes" to update your profile.
         `
+      },
+      {
+        title: "Team Management",
+        content: `
+### Managing Your Team
+
+The **Team Management** page (accessible from the sidebar) lets you invite colleagues to help run your Quikpik Merchant account with role-based access.
+
+#### Inviting a Team Member
+1. Go to **Team Management** in the sidebar
+2. Click **"Invite Team Member"**
+3. Enter their name and email address
+4. Choose their role
+5. Click **Send Invitation** — they'll receive an email with a link to set up their account
+
+#### Team Roles & Permissions
+
+| Role | What They Can Do |
+|------|-----------------|
+| **Admin** | Full access: manage products, orders, customers, campaigns, settings, and team |
+| **Manager** | Products, orders, customers, campaigns — cannot access billing or team settings |
+| **Staff** | View and update orders, view products and customers |
+| **Viewer** | Read-only access across the platform |
+
+#### Managing Existing Members
+- **View status**: See whether an invitation is pending or accepted
+- **Remove member**: Revoke access at any time from the team list
+- Removed members lose access immediately
+
+#### Notes
+- Team members log in with their own email (via Google) — they don't use your credentials
+- Each team member's activity is scoped to your wholesaler account only; they cannot see other wholesalers' data
+- Invitations expire after 7 days. Resend from the team list if needed.
+        `
       }
     ]
   },
@@ -1042,6 +1076,35 @@ Your payment account has two key states:
 - Transfer timing depends on your country (usually 2-7 business days)
 - View transfer history in your Stripe dashboard
         `
+      },
+      {
+        title: "Payment Notification Emails",
+        content: `
+### Automatic Payment Notifications
+
+Both you and the customer receive email notifications automatically whenever a payment is received via Stripe — whether that's a deposit or a full/balance payment.
+
+#### What the Email Includes
+- Amount paid in this transaction
+- Cumulative total paid to date
+- Outstanding balance remaining (if any)
+- A **Paid in Full** or **Partially Paid** status badge
+- Order number and a link for reference
+
+#### When Notifications Are Sent
+- **Deposit payment received** — both parties notified immediately
+- **Balance payment received** — both parties notified, outstanding shown as £0.00 if fully settled
+- **Pay Later orders** — no payment notification is sent (there is no Stripe transaction)
+
+#### Filtering Orders by Payment Status
+On the Orders page, use the **Paid / Unpaid** dropdown filter to quickly view:
+- **Paid** — orders fully settled
+- **Unpaid** — orders with no payment received yet
+- Combine this with the status filter to find, for example, confirmed-but-unpaid orders outstanding
+
+#### Idempotency
+Payment emails include a duplicate-check so that if Stripe sends the same webhook more than once (a normal Stripe behaviour), the notification is only sent once per actual payment event.
+        `
       }
     ]
   },
@@ -1532,6 +1595,7 @@ No reminders are sent for Pay Later (0%) orders — there is no Stripe payment l
 - **Reduce any quantity** to process a partial return — the remaining items stay on the order
 - The **refund amount updates live** as you adjust quantities
 - When any item is below its full quantity, a **(partial refund)** label appears next to the amount
+- You can also tick **Refund delivery cost** to include the delivery charge in the refund
 
 #### Refund Method
 Choose how to process the refund:
@@ -1539,8 +1603,17 @@ Choose how to process the refund:
 - **Later** — No refund is processed now. The amount is recorded on the order for reference, and you can arrange payment separately.
 
 #### Additional Options
-- **Restock inventory** (ticked by default) — Restores stock for all returned items. A "Customer Return" movement entry is logged in each product's stock history with the before/after counts.
+- **Restock inventory** (ticked by default) — Restores stock for all returned items. A "Customer Return" movement entry is logged in each product's stock history. If a second partial return is processed on the same order, the restocked count accumulates correctly (e.g. 3 units + 5 units = 8 units shown in Payment Summary).
 - **Send notification** — Sends an SMS and email to the customer confirming the cancellation or partial return.
+
+#### Automatic Itemised Refund Email
+When "Send notification" is ticked, the customer automatically receives a detailed itemised email showing:
+- A table of every returned item with quantity and unit value
+- A delivery refund row (if delivery was included in the refund)
+- A "Retained items" section listing any items still on the order (for partial returns)
+- Refund status: **Processed** (card refund sent), **Pending** (later/manual), or **Credit note** (store credit)
+
+The wholesaler also receives a copy of this notification.
 
 #### What Happens After Cancellation
 
@@ -1553,13 +1626,23 @@ Choose how to process the refund:
 - Order remains active (status unchanged)
 - A purple **Partially Refunded** badge appears on the order
 - Timeline shows:
-  - Purple dot "Partial refund to card: £X" + date (if refunded to card)
-  - Amber dot "Partial refund pending: £X" (if "Later" was chosen)
+  - Purple dot "Partial refund to card: £X" (once Stripe confirms)
+  - Amber dot "Partial refund pending: £X" (submitted but awaiting Stripe confirmation, or "Later" chosen)
 - Payment summary shows a purple "Partial Refund: −£X" row and adjusted net amount
 
+#### Refund Confirmation States
+After a card refund is submitted to Stripe, it goes through two stages:
+1. **Refund pending Stripe confirmation** — the refund has been submitted. The order shows an amber "Refund Pending" badge while Stripe processes it (usually minutes to a few hours).
+2. **Confirmed** — Stripe has confirmed the refund succeeded. The badge turns purple, a confirmed date appears, and your net revenue is updated.
+
+This two-step process ensures the order only shows a confirmed refund date once the money has actually moved, rather than at submission time.
+
+#### Retry Failed Refunds
+If a Stripe refund fails (shown in red in the order timeline), use the **Retry Refund** button to re-submit. Once Stripe confirms the retry, the order updates automatically.
+
 #### Refund Timeline
-- Stripe refunds appear on the customer's statement within 5–10 business days
-- Customers receive an email and SMS confirming the cancellation/refund
+- Stripe refunds appear on the customer's statement within 5–10 business days after Stripe confirmation
+- Customers receive an itemised email and SMS confirming the cancellation/refund
 - All refund details are logged in the order notes for your audit trail
         `
       }
@@ -1661,8 +1744,7 @@ A: This display issue has been fixed. All email confirmations now show actual pr
 
 #### When Contacting Support
 Please include:
-- Your account name: Ibk Test
-- Your account email
+- Your account name and email
 - Detailed description of the issue
 - Screenshots if relevant
 - Steps you've already tried
