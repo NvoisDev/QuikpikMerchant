@@ -1196,7 +1196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const matchingOrders = await db.select()
             .from(orders)
-            .where(sql`${orders.stripePaymentIntentId} LIKE ${'%' + paymentIntentId + '%'}`)
+            .where(or(
+              eq(orders.stripePaymentIntentId, paymentIntentId),
+              sql`${orders.stripePaymentIntentId} LIKE ${paymentIntentId + ',%'}`,
+              sql`${orders.stripePaymentIntentId} LIKE ${'%,' + paymentIntentId}`,
+              sql`${orders.stripePaymentIntentId} LIKE ${'%,' + paymentIntentId + ',%'}`
+            ))
             .limit(1);
 
           if (matchingOrders.length > 0) {
