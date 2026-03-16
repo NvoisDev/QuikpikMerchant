@@ -1631,11 +1631,13 @@ The wholesaler also receives a copy of this notification.
 - Payment summary shows a purple "Partial Refund: −£X" row and adjusted net amount
 
 #### Refund Confirmation States
-After a card refund is submitted to Stripe, it goes through two stages:
-1. **Refund pending Stripe confirmation** — the refund has been submitted. The order shows an amber "Refund Pending" badge while Stripe processes it (usually minutes to a few hours).
-2. **Confirmed** — Stripe has confirmed the refund succeeded. The badge turns purple, a confirmed date appears, and your net revenue is updated.
+When you submit a card refund, Stripe doesn't process it instantly — it queues it and then sends back a confirmation a short time later (usually minutes, occasionally a few hours) to say it actually succeeded.
 
-This two-step process ensures the order only shows a confirmed refund date once the money has actually moved, rather than at submission time.
+This means refunds go through two stages:
+1. **Refund pending Stripe confirmation** (amber badge) — the refund has been submitted to Stripe but not yet confirmed. If Stripe quietly fails the refund after submission, the order won't incorrectly show a confirmed date.
+2. **Confirmed** (purple badge) — Stripe has confirmed the money moved. Only at this point is the confirmed date recorded on the order and your net revenue updated.
+
+The date you see on an order is always the moment the refund was confirmed — not just when you pressed the button.
 
 #### Retry Failed Refunds
 If a Stripe refund fails (shown in red in the order timeline), use the **Retry Refund** button to re-submit. Once Stripe confirms the retry, the order updates automatically.
