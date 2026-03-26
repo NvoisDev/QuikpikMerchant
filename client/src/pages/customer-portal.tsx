@@ -4192,6 +4192,13 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="account" className="space-y-6">
+              {isEnhancedPreviewMode ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                  <User className="w-12 h-12 mb-4 text-gray-300" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-1">Account Settings</h3>
+                  <p className="text-sm text-gray-400">This section is not available in preview mode.<br />Customers manage their details when logged into their own session.</p>
+                </div>
+              ) : (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Account Settings</h2>
                 
@@ -4399,6 +4406,7 @@ export default function CustomerPortal() {
                   </CardContent>
                 </Card>
               </div>
+              )}
             </TabsContent>
 
             <TabsContent value="help">
