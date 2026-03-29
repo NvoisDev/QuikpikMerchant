@@ -2269,7 +2269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: requestData.customerEmail || undefined,
           role: 'retailer',
           wholesalerId: userId,
-          customerType: (requestData as any).customerType || undefined,
+          customerType: requestData.customerType || undefined,
         });
         
         console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
@@ -17815,8 +17815,8 @@ https://quikpik.app`;
         phoneNumber: c.phoneNumber,
         postalCode: c.postalCode,
         customerType: c.customerType,
-        latitude: c.latitude ? parseFloat(c.latitude as any) : null,
-        longitude: c.longitude ? parseFloat(c.longitude as any) : null,
+        latitude: c.latitude != null ? parseFloat(String(c.latitude)) : null,
+        longitude: c.longitude != null ? parseFloat(String(c.longitude)) : null,
         geocodeStatus: c.geocodeStatus,
         wholesalerName: c.wholesalerId ? (wholesalerMap[c.wholesalerId] || 'Unknown') : 'No wholesaler',
         orderCount: orderCountMap[c.id] || 0,

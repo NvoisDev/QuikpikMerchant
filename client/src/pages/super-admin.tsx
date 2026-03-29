@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -60,11 +60,12 @@ function presetToDates(p: Preset): { from: string; to: string } | null {
 }
 
 // ── Customer type helpers ─────────────────────────────────────────────────────
+// Legend: blue=Retailer, green=Wholesaler, orange=Individual, grey=Untagged
 const TYPE_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  retail:      { label: "Retailer",    color: GREEN,   dot: "#1a7a3d" },
-  wholesale:   { label: "Wholesaler",  color: BLUE,    dot: "#1d4ed8" },
-  individual:  { label: "Individual",  color: AMBER,   dot: "#b45309" },
-  unknown:     { label: "Unknown",     color: "#6b7280", dot: "#9ca3af" },
+  retail:     { label: "Retailer",   color: BLUE,     dot: "#1d4ed8" },
+  wholesale:  { label: "Wholesaler", color: GREEN,    dot: "#1a7a3d" },
+  individual: { label: "Individual", color: "#d97706", dot: "#f59e0b" },
+  unknown:    { label: "Unknown",    color: "#6b7280", dot: "#9ca3af" },
 };
 
 function makeIcon(type: string | null) {
@@ -77,12 +78,145 @@ function makeIcon(type: string | null) {
   });
 }
 
+// Popup content with controlled select + explicit Save action
+function MarkerPopupContent({
+  customer,
+  onSave,
+  saving,
+}: {
+  customer: any;
+  onSave: (id: string, customerType: string) => void;
+  saving: boolean;
+}) {
+  const [selectedType, setSelectedType] = useState<string>(customer.customerType || "");
+  const dirty = selectedType !== (customer.customerType || "");
+  return (
+    <div style={{ minWidth: 190 }}>
+      <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{customer.name}</p>
+      <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>{customer.postalCode || "No postcode"}</p>
+      {customer.wholesalerName && (
+        <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>via {customer.wholesalerName}</p>
+      )}
+      {customer.orderCount > 0 && (
+        <p style={{ fontSize: 11, color: "#374151", marginBottom: 8 }}>
+          {customer.orderCount} order{customer.orderCount !== 1 ? "s" : ""}
+        </p>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+        <label style={{ fontSize: 11, color: "#6b7280", flexShrink: 0 }}>Type:</label>
+        <select
+          style={{ fontSize: 11, border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", background: "white", flex: 1 }}
+          value={selectedType}
+          onChange={e => setSelectedType(e.target.value)}
+        >
+          <option value="">Unknown</option>
+          <option value="retail">Retailer</option>
+          <option value="wholesale">Wholesaler</option>
+          <option value="individual">Individual</option>
+        </select>
+      </div>
+      <button
+        disabled={!dirty || saving}
+        onClick={() => onSave(customer.id, selectedType)}
+        style={{
+          width: "100%", fontSize: 11, padding: "4px 0", borderRadius: 4, border: "none", cursor: dirty && !saving ? "pointer" : "not-allowed",
+          background: dirty && !saving ? "#1a7a3d" : "#e5e7eb", color: dirty && !saving ? "white" : "#9ca3af", fontWeight: 600,
+        }}
+      >
+        {saving ? "Saving…" : "Save type"}
+      </button>
+    </div>
+  );
+}
+
+// Inline row editor for flagged customers
+function FlaggedRow({
+  customer,
+  onSave,
+  saving,
+}: {
+  customer: any;
+  onSave: (id: string, customerType: string, postalCode?: string) => void;
+  saving: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [selectedType, setSelectedType] = useState<string>(customer.customerType || "");
+  const [postcode, setPostcode] = useState<string>(customer.postalCode || "");
+
+  return (
+    <>
+      <TableRow className="hover:bg-amber-50/30">
+        <TableCell className="text-xs font-medium text-gray-800">{customer.name}</TableCell>
+        <TableCell className="text-xs text-gray-500 font-mono">{customer.postalCode || "—"}</TableCell>
+        <TableCell className="text-xs text-gray-500">{customer.wholesalerName || "—"}</TableCell>
+        <TableCell>
+          <span className="text-xs px-2 py-0.5 rounded border" style={{ background: TYPE_CONFIG[customer.customerType || "unknown"]?.dot + "22", color: TYPE_CONFIG[customer.customerType || "unknown"]?.color, borderColor: TYPE_CONFIG[customer.customerType || "unknown"]?.dot + "55" }}>
+            {TYPE_CONFIG[customer.customerType || "unknown"]?.label || "Unknown"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+            {customer.geocodeStatus || "pending"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <button
+            className="text-xs underline text-blue-600 hover:text-blue-800"
+            onClick={() => setEditing(e => !e)}
+          >
+            {editing ? "Cancel" : "Edit"}
+          </button>
+        </TableCell>
+      </TableRow>
+      {editing && (
+        <TableRow className="bg-amber-50/50">
+          <TableCell colSpan={6} className="py-2 px-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">Type:</span>
+                <select
+                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white"
+                  value={selectedType}
+                  onChange={e => setSelectedType(e.target.value)}
+                >
+                  <option value="">Unknown</option>
+                  <option value="retail">Retailer</option>
+                  <option value="wholesale">Wholesaler</option>
+                  <option value="individual">Individual</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">Postcode:</span>
+                <input
+                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 font-mono w-24 focus:outline-none focus:border-gray-400"
+                  value={postcode}
+                  onChange={e => setPostcode(e.target.value.toUpperCase())}
+                  placeholder="e.g. SW1A 1AA"
+                />
+              </div>
+              <button
+                disabled={saving}
+                className="text-xs px-3 py-1 rounded text-white font-medium disabled:opacity-50"
+                style={{ background: GREEN }}
+                onClick={() => { onSave(customer.id, selectedType, postcode); setEditing(false); }}
+              >
+                {saving ? "Saving…" : "Save & re-geocode"}
+              </button>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
+
 // ── CustomerMapTab ─────────────────────────────────────────────────────────────
 function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState("");
   const [searchQ, setSearchQ] = useState("");
+  const autoGeocodeTriggered = useRef(false);
 
   const { data: mapData, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/customers/map"],
@@ -98,20 +232,28 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
     onError: () => toast({ title: "Geocoding failed", variant: "destructive" }),
   });
 
-  const updateType = useMutation({
-    mutationFn: ({ id, customerType }: { id: string; customerType: string }) =>
-      apiRequest("PATCH", `/api/admin/customers/${id}/type`, { customerType }),
+  const updateCustomer = useMutation({
+    mutationFn: ({ id, customerType, postalCode }: { id: string; customerType: string; postalCode?: string }) =>
+      apiRequest("PATCH", `/api/admin/customers/${id}/type`, { customerType, ...(postalCode !== undefined ? { postalCode } : {}) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers/map"] });
-      toast({ title: "Customer type updated" });
+      toast({ title: "Customer updated" });
     },
-    onError: () => toast({ title: "Failed to update type", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to update customer", variant: "destructive" }),
   });
 
   const customers: any[] = mapData?.customers || [];
-  const geocoded = customers.filter(c => c.geocodeStatus === "success" && c.latitude && c.longitude);
-  const flagged   = customers.filter(c => c.geocodeStatus === "flagged" || (!c.latitude && !c.longitude));
-  const pending   = customers.filter(c => !c.geocodeStatus || c.geocodeStatus === "pending");
+  const geocoded = customers.filter(c => c.geocodeStatus === "success" && c.latitude != null && c.longitude != null);
+  const flagged   = customers.filter(c => c.geocodeStatus === "flagged" || (c.geocodeStatus !== "success" && (c.postalCode)));
+  const pending   = customers.filter(c => !c.geocodeStatus && !c.latitude);
+
+  // Auto-geocode ungeocoded customers on first data load
+  useEffect(() => {
+    if (!isLoading && pending.length > 0 && !autoGeocodeTriggered.current && !geocodeAll.isPending) {
+      autoGeocodeTriggered.current = true;
+      geocodeAll.mutate();
+    }
+  }, [isLoading, pending.length]);
 
   const filtered = useMemo(() => {
     let list = geocoded;
@@ -149,9 +291,14 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {(["retail", "wholesale", "individual", "unknown"] as const).map(t => {
           const cfg = TYPE_CONFIG[t];
+          const active = typeFilter === t;
           return (
-            <div key={t} className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm transition-shadow"
-              onClick={() => setTypeFilter(typeFilter === t ? "" : t)}>
+            <div
+              key={t}
+              className="bg-white rounded-xl border p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm transition-shadow"
+              style={{ borderColor: active ? cfg.dot : "#e5e7eb", boxShadow: active ? `0 0 0 2px ${cfg.dot}33` : undefined }}
+              onClick={() => setTypeFilter(active ? "" : t)}
+            >
               <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
               <div>
                 <p className="text-xs font-semibold" style={{ color: cfg.color }}>{typeCounts[t]}</p>
@@ -166,7 +313,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-          <Input placeholder="Search name, postcode…" value={searchQ} onChange={e => setSearchQ(e.target.value)} className="pl-8 h-8 text-xs border-gray-200" />
+          <Input placeholder="Search name, postcode, wholesaler…" value={searchQ} onChange={e => setSearchQ(e.target.value)} className="pl-8 h-8 text-xs border-gray-200" />
         </div>
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-8 text-gray-600 focus:outline-none focus:border-gray-400 bg-white">
@@ -176,22 +323,24 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
           <option value="individual">Individual</option>
           <option value="unknown">Unknown</option>
         </select>
-        <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200 gap-1.5" onClick={() => geocodeAll.mutate()} disabled={geocodeAll.isPending}>
+        <Button
+          size="sm" variant="outline" className="h-8 text-xs border-gray-200 gap-1.5"
+          onClick={() => geocodeAll.mutate()} disabled={geocodeAll.isPending}
+        >
           <RefreshCw className={`h-3.5 w-3.5 ${geocodeAll.isPending ? "animate-spin" : ""}`} />
-          Geocode all ({pending.length} pending)
+          Re-geocode ({pending.length + flagged.length} remaining)
         </Button>
       </div>
 
       {/* Map */}
       <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
-        <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100 flex-row items-center justify-between gap-2 flex">
+        <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100 flex-row items-center justify-between gap-2 flex flex-wrap">
           <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <MapPin className="h-4 w-4" style={{ color: GREEN }} />
             Customer Map ({filtered.length} shown)
           </CardTitle>
-          {/* Legend */}
           <div className="flex items-center gap-3 flex-wrap">
-            {(["retail", "wholesale", "individual"] as const).map(t => (
+            {(["retail", "wholesale", "individual", "unknown"] as const).map(t => (
               <div key={t} className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: TYPE_CONFIG[t].dot }} />
                 <span className="text-xs text-gray-500">{TYPE_CONFIG[t].label}</span>
@@ -200,7 +349,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div style={{ height: 420 }}>
+          <div style={{ height: 440 }}>
             <MapContainer center={ukCenter} zoom={6} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -209,28 +358,15 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
               {filtered.map((c: any) => (
                 <Marker
                   key={c.id}
-                  position={[Number(c.latitude), Number(c.longitude)]}
+                  position={[c.latitude as number, c.longitude as number]}
                   icon={makeIcon(c.customerType)}
                 >
                   <Popup>
-                    <div className="min-w-[180px]">
-                      <p className="font-semibold text-sm text-gray-900 mb-0.5">{c.name}</p>
-                      <p className="text-xs text-gray-500 mb-1">{c.postalCode || "No postcode"}</p>
-                      {c.wholesalerName && <p className="text-xs text-gray-400 mb-2">via {c.wholesalerName}</p>}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Type:</span>
-                        <select
-                          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white flex-1"
-                          defaultValue={c.customerType || ""}
-                          onChange={e => updateType.mutate({ id: c.id, customerType: e.target.value })}
-                        >
-                          <option value="">Unknown</option>
-                          <option value="retail">Retailer</option>
-                          <option value="wholesale">Wholesaler</option>
-                          <option value="individual">Individual</option>
-                        </select>
-                      </div>
-                    </div>
+                    <MarkerPopupContent
+                      customer={c}
+                      onSave={(id, customerType) => updateCustomer.mutate({ id, customerType })}
+                      saving={updateCustomer.isPending}
+                    />
                   </Popup>
                 </Marker>
               ))}
@@ -245,7 +381,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
           <CardHeader className="px-4 pt-4 pb-3 border-b border-amber-100 bg-amber-50/50">
             <CardTitle className="text-sm font-semibold text-amber-700 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Flagged / Ungeocoded ({flagged.length})
+              Flagged — address could not be geocoded ({flagged.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -253,35 +389,19 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-amber-50">
-                    {["Name","Postcode","Wholesaler","Type","Geocode Status"].map((h, i) => (
+                    {["Name","Postcode","Wholesaler","Type","Status",""].map((h, i) => (
                       <TableHead key={i} className="text-xs font-semibold text-amber-700">{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {flagged.map((c: any) => (
-                    <TableRow key={c.id} className="hover:bg-amber-50/30">
-                      <TableCell className="text-xs font-medium text-gray-800">{c.name}</TableCell>
-                      <TableCell className="text-xs text-gray-500 font-mono">{c.postalCode || "—"}</TableCell>
-                      <TableCell className="text-xs text-gray-500">{c.wholesalerName || "—"}</TableCell>
-                      <TableCell>
-                        <select
-                          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white"
-                          defaultValue={c.customerType || ""}
-                          onChange={e => updateType.mutate({ id: c.id, customerType: e.target.value })}
-                        >
-                          <option value="">Unknown</option>
-                          <option value="retail">Retailer</option>
-                          <option value="wholesale">Wholesaler</option>
-                          <option value="individual">Individual</option>
-                        </select>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
-                          {c.geocodeStatus || "pending"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
+                    <FlaggedRow
+                      key={c.id}
+                      customer={c}
+                      onSave={(id, customerType, postalCode) => updateCustomer.mutate({ id, customerType, postalCode })}
+                      saving={updateCustomer.isPending}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -293,7 +413,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
       {customers.length === 0 && (
         <div className="text-center py-16 text-sm text-gray-400">
           <MapPin className="h-8 w-8 mx-auto mb-3 text-gray-200" />
-          <p>No customers found. Geocode existing customers to populate the map.</p>
+          <p>No customers found.</p>
         </div>
       )}
     </div>
