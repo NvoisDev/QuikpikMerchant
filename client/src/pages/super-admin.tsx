@@ -18,6 +18,10 @@ import logoSrc from "@assets/Quikpik_1773118173684.png";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
 
@@ -59,20 +63,57 @@ function presetToDates(p: Preset): { from: string; to: string } | null {
   return null;
 }
 
-// ── Customer type helpers ─────────────────────────────────────────────────────
+// ── Customer map types ─────────────────────────────────────────────────────────
+interface MapCustomer {
+  id: string;
+  name: string;
+  businessName: string | null;
+  phoneNumber: string | null;
+  postalCode: string | null;
+  customerType: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geocodeStatus: string | null;
+  wholesalerName: string;
+  orderCount: number;
+}
+
+interface MapApiResponse {
+  customers: MapCustomer[];
+}
+
+interface CustomerUpdatePayload {
+  id: string;
+  customerType: string;
+  postalCode?: string;
+}
+
+// ── Customer type config ───────────────────────────────────────────────────────
 // Legend: blue=Retailer, green=Wholesaler, orange=Individual, grey=Untagged
 const TYPE_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  retail:     { label: "Retailer",   color: BLUE,     dot: "#1d4ed8" },
-  wholesale:  { label: "Wholesaler", color: GREEN,    dot: "#1a7a3d" },
+  retail:     { label: "Retailer",   color: BLUE,      dot: "#1d4ed8" },
+  wholesale:  { label: "Wholesaler", color: GREEN,     dot: "#1a7a3d" },
   individual: { label: "Individual", color: "#d97706", dot: "#f59e0b" },
   unknown:    { label: "Unknown",    color: "#6b7280", dot: "#9ca3af" },
 };
 
+function typeLabel(t: string | null): string {
+  return TYPE_CONFIG[t || "unknown"]?.label ?? "Unknown";
+}
+
+function typeDot(t: string | null): string {
+  return TYPE_CONFIG[t || "unknown"]?.dot ?? "#9ca3af";
+}
+
+function typeColor(t: string | null): string {
+  return TYPE_CONFIG[t || "unknown"]?.color ?? "#6b7280";
+}
+
 function makeIcon(type: string | null) {
-  const cfg = TYPE_CONFIG[type || "unknown"] || TYPE_CONFIG.unknown;
+  const dot = typeDot(type);
   return L.divIcon({
     className: "",
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${cfg.dot};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);"></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${dot};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);"></div>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
@@ -84,7 +125,7 @@ function MarkerPopupContent({
   onSave,
   saving,
 }: {
-  customer: any;
+  customer: MapCustomer;
   onSave: (id: string, customerType: string) => void;
   saving: boolean;
 }) {
@@ -98,7 +139,7 @@ function MarkerPopupContent({
         <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>via {customer.wholesalerName}</p>
       )}
       <p style={{ fontSize: 11, color: "#374151", marginBottom: 8 }}>
-        {customer.orderCount || 0} order{(customer.orderCount || 0) !== 1 ? "s" : ""}
+        {customer.orderCount} order{customer.orderCount !== 1 ? "s" : ""}
       </p>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
         <label style={{ fontSize: 11, color: "#6b7280", flexShrink: 0 }}>Type:</label>
@@ -117,8 +158,11 @@ function MarkerPopupContent({
         disabled={!dirty || saving}
         onClick={() => onSave(customer.id, selectedType)}
         style={{
-          width: "100%", fontSize: 11, padding: "4px 0", borderRadius: 4, border: "none", cursor: dirty && !saving ? "pointer" : "not-allowed",
-          background: dirty && !saving ? "#1a7a3d" : "#e5e7eb", color: dirty && !saving ? "white" : "#9ca3af", fontWeight: 600,
+          width: "100%", fontSize: 11, padding: "4px 0", borderRadius: 4, border: "none",
+          cursor: dirty && !saving ? "pointer" : "not-allowed",
+          background: dirty && !saving ? "#1a7a3d" : "#e5e7eb",
+          color: dirty && !saving ? "white" : "#9ca3af",
+          fontWeight: 600,
         }}
       >
         {saving ? "Saving…" : "Save type"}
@@ -127,19 +171,83 @@ function MarkerPopupContent({
   );
 }
 
-// Inline row editor for flagged customers
+// Dialog-based edit for each flagged customer — satisfies "direct link to edit"
+function EditCustomerDialog({
+  customer,
+  open,
+  onOpenChange,
+  onSave,
+  saving,
+}: {
+  customer: MapCustomer;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSave: (id: string, customerType: string, postalCode?: string) => void;
+  saving: boolean;
+}) {
+  const [selectedType, setSelectedType] = useState<string>(customer.customerType || "");
+  const [postcode, setPostcode] = useState<string>(customer.postalCode || "");
+
+  const handleSave = () => {
+    onSave(customer.id, selectedType, postcode !== customer.postalCode ? postcode : undefined);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-sm font-semibold">Edit Customer</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <p className="text-xs font-medium text-gray-900">{customer.name}</p>
+            <p className="text-xs text-gray-400">{customer.wholesalerName}</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-600">Customer type</Label>
+            <select
+              className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-gray-400"
+              value={selectedType}
+              onChange={e => setSelectedType(e.target.value)}
+            >
+              <option value="">Unknown</option>
+              <option value="retail">Retailer</option>
+              <option value="wholesale">Wholesaler</option>
+              <option value="individual">Individual</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-600">Postcode (re-geocodes on save)</Label>
+            <Input
+              className="text-xs font-mono h-8 border-gray-200"
+              value={postcode}
+              onChange={e => setPostcode(e.target.value.toUpperCase())}
+              placeholder="e.g. SW1A 1AA"
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button size="sm" variant="outline" className="text-xs" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button size="sm" className="text-xs text-white" style={{ background: GREEN }} disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Save & re-geocode"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FlaggedRow({
   customer,
   onSave,
   saving,
 }: {
-  customer: any;
+  customer: MapCustomer;
   onSave: (id: string, customerType: string, postalCode?: string) => void;
   saving: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [selectedType, setSelectedType] = useState<string>(customer.customerType || "");
-  const [postcode, setPostcode] = useState<string>(customer.postalCode || "");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <>
@@ -148,8 +256,12 @@ function FlaggedRow({
         <TableCell className="text-xs text-gray-500 font-mono">{customer.postalCode || "—"}</TableCell>
         <TableCell className="text-xs text-gray-500">{customer.wholesalerName || "—"}</TableCell>
         <TableCell>
-          <span className="text-xs px-2 py-0.5 rounded border" style={{ background: TYPE_CONFIG[customer.customerType || "unknown"]?.dot + "22", color: TYPE_CONFIG[customer.customerType || "unknown"]?.color, borderColor: TYPE_CONFIG[customer.customerType || "unknown"]?.dot + "55" }}>
-            {TYPE_CONFIG[customer.customerType || "unknown"]?.label || "Unknown"}
+          <span className="text-xs px-2 py-0.5 rounded border" style={{
+            background: typeDot(customer.customerType) + "22",
+            color: typeColor(customer.customerType),
+            borderColor: typeDot(customer.customerType) + "55",
+          }}>
+            {typeLabel(customer.customerType)}
           </span>
         </TableCell>
         <TableCell>
@@ -159,51 +271,21 @@ function FlaggedRow({
         </TableCell>
         <TableCell>
           <button
-            className="text-xs underline text-blue-600 hover:text-blue-800"
-            onClick={() => setEditing(e => !e)}
+            className="text-xs font-medium underline flex items-center gap-1"
+            style={{ color: BLUE }}
+            onClick={() => setDialogOpen(true)}
           >
-            {editing ? "Cancel" : "Edit"}
+            Edit customer
           </button>
         </TableCell>
       </TableRow>
-      {editing && (
-        <TableRow className="bg-amber-50/50">
-          <TableCell colSpan={6} className="py-2 px-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500">Type:</span>
-                <select
-                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white"
-                  value={selectedType}
-                  onChange={e => setSelectedType(e.target.value)}
-                >
-                  <option value="">Unknown</option>
-                  <option value="retail">Retailer</option>
-                  <option value="wholesale">Wholesaler</option>
-                  <option value="individual">Individual</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500">Postcode:</span>
-                <input
-                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 font-mono w-24 focus:outline-none focus:border-gray-400"
-                  value={postcode}
-                  onChange={e => setPostcode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SW1A 1AA"
-                />
-              </div>
-              <button
-                disabled={saving}
-                className="text-xs px-3 py-1 rounded text-white font-medium disabled:opacity-50"
-                style={{ background: GREEN }}
-                onClick={() => { onSave(customer.id, selectedType, postcode); setEditing(false); }}
-              >
-                {saving ? "Saving…" : "Save & re-geocode"}
-              </button>
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
+      <EditCustomerDialog
+        customer={customer}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSave={onSave}
+        saving={saving}
+      />
     </>
   );
 }
@@ -216,7 +298,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
   const [searchQ, setSearchQ] = useState("");
   const autoGeocodeTriggered = useRef(false);
 
-  const { data: mapData, isLoading } = useQuery<any>({
+  const { data: mapData, isLoading } = useQuery<MapApiResponse>({
     queryKey: ["/api/admin/customers/map"],
     enabled: isAdmin,
   });
@@ -234,7 +316,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
   });
 
   const updateCustomer = useMutation({
-    mutationFn: ({ id, customerType, postalCode }: { id: string; customerType: string; postalCode?: string }) =>
+    mutationFn: ({ id, customerType, postalCode }: CustomerUpdatePayload) =>
       apiRequest("PATCH", `/api/admin/customers/${id}/type`, { customerType, ...(postalCode !== undefined ? { postalCode } : {}) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers/map"] });
@@ -243,9 +325,9 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
     onError: () => toast({ title: "Failed to update customer", variant: "destructive" }),
   });
 
-  const customers: any[] = mapData?.customers || [];
+  const customers: MapCustomer[] = mapData?.customers || [];
   const geocoded = customers.filter(c => c.geocodeStatus === "success" && c.latitude != null && c.longitude != null);
-  const flagged   = customers.filter(c => c.geocodeStatus === "flagged" || (c.geocodeStatus !== "success" && (c.postalCode)));
+  const flagged   = customers.filter(c => c.geocodeStatus === "flagged" || (c.geocodeStatus !== "success" && !!c.postalCode));
   const pending   = customers.filter(c => !c.geocodeStatus && !c.latitude);
 
   // Auto-geocode ungeocoded customers on first data load
@@ -356,7 +438,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {filtered.map((c: any) => (
+              {filtered.map((c) => (
                 <Marker
                   key={c.id}
                   position={[c.latitude as number, c.longitude as number]}
@@ -396,7 +478,7 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {flagged.map((c: any) => (
+                  {flagged.map((c) => (
                     <FlaggedRow
                       key={c.id}
                       customer={c}
