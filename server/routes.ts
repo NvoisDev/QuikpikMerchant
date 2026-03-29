@@ -17839,20 +17839,30 @@ https://quikpik.app`;
         return res.status(400).json({ error: 'Invalid customer type. Must be retail, wholesale, or individual.' });
       }
 
-      const updateData: any = {};
+      const updateData: Record<string, string | null> = {};
       if (customerType !== undefined) updateData.customerType = customerType || null;
-      if (postalCode !== undefined) updateData.postalCode = postalCode || null;
 
-      if (postalCode) {
-        const coords = await geocodePostcode(postalCode);
-        if (coords) {
-          updateData.latitude = coords.lat.toString();
-          updateData.longitude = coords.lng.toString();
-          updateData.geocodeStatus = 'success';
-        } else {
-          updateData.geocodeStatus = 'flagged';
+      if (postalCode !== undefined) {
+        // Always update postalCode field
+        updateData.postalCode = postalCode || null;
+
+        if (!postalCode) {
+          // Postcode cleared — clear coordinates and flag the record
           updateData.latitude = null;
           updateData.longitude = null;
+          updateData.geocodeStatus = 'flagged';
+        } else {
+          // Postcode provided — attempt geocoding
+          const coords = await geocodePostcode(postalCode);
+          if (coords) {
+            updateData.latitude = coords.lat.toString();
+            updateData.longitude = coords.lng.toString();
+            updateData.geocodeStatus = 'success';
+          } else {
+            updateData.latitude = null;
+            updateData.longitude = null;
+            updateData.geocodeStatus = 'flagged';
+          }
         }
       }
 
