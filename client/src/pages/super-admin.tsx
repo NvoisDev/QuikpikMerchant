@@ -10,11 +10,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Users, ShoppingCart, TrendingUp, Search, LogOut, LayoutDashboard, Shield, Calendar,
+  Users, ShoppingCart, TrendingUp, Search, LogOut, LayoutDashboard, Shield, Calendar, MapPin, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
 
@@ -54,6 +57,247 @@ function presetToDates(p: Preset): { from: string; to: string } | null {
   if (p === "last_month")    { const m = subMonths(now, 1); return { from: toISODate(startOfMonth(m)), to: toISODate(endOfMonth(m)) }; }
   if (p === "last_3_months") return { from: toISODate(startOfMonth(subMonths(now, 2))), to: toISODate(endOfDay(now)) };
   return null;
+}
+
+// ── Customer type helpers ─────────────────────────────────────────────────────
+const TYPE_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  retail:      { label: "Retailer",    color: GREEN,   dot: "#1a7a3d" },
+  wholesale:   { label: "Wholesaler",  color: BLUE,    dot: "#1d4ed8" },
+  individual:  { label: "Individual",  color: AMBER,   dot: "#b45309" },
+  unknown:     { label: "Unknown",     color: "#6b7280", dot: "#9ca3af" },
+};
+
+function makeIcon(type: string | null) {
+  const cfg = TYPE_CONFIG[type || "unknown"] || TYPE_CONFIG.unknown;
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${cfg.dot};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+}
+
+// ── CustomerMapTab ─────────────────────────────────────────────────────────────
+function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [typeFilter, setTypeFilter] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+
+  const { data: mapData, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/customers/map"],
+    enabled: isAdmin,
+  });
+
+  const geocodeAll = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/customers/geocode-all"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers/map"] });
+      toast({ title: `Geocoded ${data?.processed ?? 0} customers` });
+    },
+    onError: () => toast({ title: "Geocoding failed", variant: "destructive" }),
+  });
+
+  const updateType = useMutation({
+    mutationFn: ({ id, customerType }: { id: string; customerType: string }) =>
+      apiRequest("PATCH", `/api/admin/customers/${id}/type`, { customerType }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers/map"] });
+      toast({ title: "Customer type updated" });
+    },
+    onError: () => toast({ title: "Failed to update type", variant: "destructive" }),
+  });
+
+  const customers: any[] = mapData?.customers || [];
+  const geocoded = customers.filter(c => c.geocodeStatus === "success" && c.latitude && c.longitude);
+  const flagged   = customers.filter(c => c.geocodeStatus === "flagged" || (!c.latitude && !c.longitude));
+  const pending   = customers.filter(c => !c.geocodeStatus || c.geocodeStatus === "pending");
+
+  const filtered = useMemo(() => {
+    let list = geocoded;
+    if (typeFilter) list = list.filter(c => (c.customerType || "unknown") === typeFilter);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      list = list.filter(c =>
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.postalCode || "").toLowerCase().includes(q) ||
+        (c.wholesalerName || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [geocoded, typeFilter, searchQ]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = { retail: 0, wholesale: 0, individual: 0, unknown: 0 };
+    for (const c of customers) {
+      const t = c.customerType || "unknown";
+      if (t in counts) counts[t]++;
+      else counts.unknown++;
+    }
+    return counts;
+  }, [customers]);
+
+  const ukCenter: [number, number] = [52.8, -1.8];
+
+  if (isLoading) {
+    return <div className="p-12 text-center text-sm text-gray-400">Loading customer map…</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {(["retail", "wholesale", "individual", "unknown"] as const).map(t => {
+          const cfg = TYPE_CONFIG[t];
+          return (
+            <div key={t} className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm transition-shadow"
+              onClick={() => setTypeFilter(typeFilter === t ? "" : t)}>
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
+              <div>
+                <p className="text-xs font-semibold" style={{ color: cfg.color }}>{typeCounts[t]}</p>
+                <p className="text-xs text-gray-400">{cfg.label}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          <Input placeholder="Search name, postcode…" value={searchQ} onChange={e => setSearchQ(e.target.value)} className="pl-8 h-8 text-xs border-gray-200" />
+        </div>
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-8 text-gray-600 focus:outline-none focus:border-gray-400 bg-white">
+          <option value="">All types</option>
+          <option value="retail">Retailer</option>
+          <option value="wholesale">Wholesaler</option>
+          <option value="individual">Individual</option>
+          <option value="unknown">Unknown</option>
+        </select>
+        <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200 gap-1.5" onClick={() => geocodeAll.mutate()} disabled={geocodeAll.isPending}>
+          <RefreshCw className={`h-3.5 w-3.5 ${geocodeAll.isPending ? "animate-spin" : ""}`} />
+          Geocode all ({pending.length} pending)
+        </Button>
+      </div>
+
+      {/* Map */}
+      <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
+        <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100 flex-row items-center justify-between gap-2 flex">
+          <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <MapPin className="h-4 w-4" style={{ color: GREEN }} />
+            Customer Map ({filtered.length} shown)
+          </CardTitle>
+          {/* Legend */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {(["retail", "wholesale", "individual"] as const).map(t => (
+              <div key={t} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: TYPE_CONFIG[t].dot }} />
+                <span className="text-xs text-gray-500">{TYPE_CONFIG[t].label}</span>
+              </div>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div style={{ height: 420 }}>
+            <MapContainer center={ukCenter} zoom={6} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {filtered.map((c: any) => (
+                <Marker
+                  key={c.id}
+                  position={[Number(c.latitude), Number(c.longitude)]}
+                  icon={makeIcon(c.customerType)}
+                >
+                  <Popup>
+                    <div className="min-w-[180px]">
+                      <p className="font-semibold text-sm text-gray-900 mb-0.5">{c.name}</p>
+                      <p className="text-xs text-gray-500 mb-1">{c.postalCode || "No postcode"}</p>
+                      {c.wholesalerName && <p className="text-xs text-gray-400 mb-2">via {c.wholesalerName}</p>}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Type:</span>
+                        <select
+                          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white flex-1"
+                          defaultValue={c.customerType || ""}
+                          onChange={e => updateType.mutate({ id: c.id, customerType: e.target.value })}
+                        >
+                          <option value="">Unknown</option>
+                          <option value="retail">Retailer</option>
+                          <option value="wholesale">Wholesaler</option>
+                          <option value="individual">Individual</option>
+                        </select>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Flagged customers */}
+      {flagged.length > 0 && (
+        <Card className="border-amber-200 shadow-none rounded-xl overflow-hidden">
+          <CardHeader className="px-4 pt-4 pb-3 border-b border-amber-100 bg-amber-50/50">
+            <CardTitle className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Flagged / Ungeocoded ({flagged.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent bg-amber-50">
+                    {["Name","Postcode","Wholesaler","Type","Geocode Status"].map((h, i) => (
+                      <TableHead key={i} className="text-xs font-semibold text-amber-700">{h}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {flagged.map((c: any) => (
+                    <TableRow key={c.id} className="hover:bg-amber-50/30">
+                      <TableCell className="text-xs font-medium text-gray-800">{c.name}</TableCell>
+                      <TableCell className="text-xs text-gray-500 font-mono">{c.postalCode || "—"}</TableCell>
+                      <TableCell className="text-xs text-gray-500">{c.wholesalerName || "—"}</TableCell>
+                      <TableCell>
+                        <select
+                          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white"
+                          defaultValue={c.customerType || ""}
+                          onChange={e => updateType.mutate({ id: c.id, customerType: e.target.value })}
+                        >
+                          <option value="">Unknown</option>
+                          <option value="retail">Retailer</option>
+                          <option value="wholesale">Wholesaler</option>
+                          <option value="individual">Individual</option>
+                        </select>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                          {c.geocodeStatus || "pending"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {customers.length === 0 && (
+        <div className="text-center py-16 text-sm text-gray-400">
+          <MapPin className="h-8 w-8 mx-auto mb-3 text-gray-200" />
+          <p>No customers found. Geocode existing customers to populate the map.</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Login ────────────────────────────────────────────────────────────────────
@@ -398,11 +642,11 @@ export default function SuperAdmin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="overflow-x-auto pb-1">
             <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex gap-0.5 min-w-max shadow-sm">
-              {(["overview", "wholesalers", "revenue", "orders"] as const).map((tab) => (
+              {(["overview", "wholesalers", "revenue", "orders", "customers"] as const).map((tab) => (
                 <TabsTrigger key={tab} value={tab}
                   className="text-xs px-4 py-1.5 rounded-lg data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:bg-[#1a7a3d]"
                 >
-                  {tab === "orders" ? "All Orders" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "orders" ? "All Orders" : tab === "customers" ? "Customer Map" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -709,6 +953,11 @@ export default function SuperAdmin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ── Customer Map ── */}
+          <TabsContent value="customers">
+            <CustomerMapTab isAdmin={isAdmin} />
           </TabsContent>
         </Tabs>
       </main>

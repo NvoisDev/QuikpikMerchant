@@ -147,7 +147,7 @@ export interface IStorage {
   // Customer shipping preference operations
   setCustomerShippingChoice(customerId: string, shippingChoice: 'pickup' | 'delivery'): Promise<void>;
   getCustomerShippingChoice(customerId: string): Promise<'pickup' | 'delivery' | null>;
-  createCustomer(customer: { phoneNumber: string; firstName: string; lastName?: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
+  createCustomer(customer: { phoneNumber: string; firstName: string; lastName?: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string; wholesalerId?: string; customerType?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   isCustomerInGroup(groupId: number, customerId: string): Promise<boolean>;
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
@@ -1986,6 +1986,7 @@ export class DatabaseStorage implements IStorage {
     postalCode?: string; 
     country?: string;
     wholesalerId?: string;
+    customerType?: string;
   }): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -2002,6 +2003,7 @@ export class DatabaseStorage implements IStorage {
         postalCode: customer.postalCode,
         country: customer.country || "United Kingdom",
         wholesalerId: customer.wholesalerId,
+        customerType: customer.customerType || null,
       })
       .returning();
     return user;
@@ -4392,7 +4394,10 @@ export class DatabaseStorage implements IStorage {
     customerName: string;
     customerEmail?: string;
     businessName?: string;
+    customerType?: string | null;
     requestMessage?: string;
+    productsInterested?: string | null;
+    orderFrequency?: string | null;
   }) {
     const [newRequest] = await db
       .insert(customerRegistrationRequests)

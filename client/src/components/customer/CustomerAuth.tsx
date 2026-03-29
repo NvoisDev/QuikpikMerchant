@@ -61,7 +61,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     businessName: '',
     phone: '',
     email: '',
-    message: ''
+    message: '',
+    customerType: ''
   });
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
 
@@ -89,6 +90,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           customerName: registrationData.name,
           customerEmail: registrationData.email,
           businessName: registrationData.businessName,
+          customerType: registrationData.customerType || null,
           requestMessage: registrationData.message
         })
       });
@@ -101,7 +103,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           description: data.message || "Your access request has been sent to the wholesaler.",
         });
         setShowRegistrationForm(false);
-        setRegistrationData({ name: '', businessName: '', phone: '', email: '', message: '' });
+        setRegistrationData({ name: '', businessName: '', phone: '', email: '', message: '', customerType: '' });
         setError(""); // Clear the customer not found error
       } else {
         toast({
@@ -1037,6 +1039,20 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 placeholder="Your business name"
                 className="mt-1 h-10 text-sm"
               />
+            </div>
+            <div>
+              <Label htmlFor="reg-customer-type" className="text-sm font-medium">Business Type <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <select
+                id="reg-customer-type"
+                value={registrationData.customerType}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, customerType: e.target.value }))}
+                className="mt-1 w-full h-10 text-sm border border-gray-200 rounded-md px-3 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+              >
+                <option value="">Select type...</option>
+                <option value="retail">Retailer</option>
+                <option value="wholesale">Wholesaler</option>
+                <option value="individual">Individual</option>
+              </select>
             </div>
             <div>
               <Label htmlFor="reg-phone" className="text-sm font-medium">Phone Number *</Label>

@@ -2109,7 +2109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit customer registration request to wholesaler
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {
-      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage, productsInterested, orderFrequency } = req.body;
+      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType } = req.body;
       
       console.log("🔍 Customer registration request:", { wholesalerId, customerPhone: customerPhone?.slice(-4) + "****", customerName });
       
@@ -2144,6 +2144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerName,
         customerEmail,
         businessName: req.body.businessName || null,
+        customerType: customerType || null,
         requestMessage,
         productsInterested: productsInterested || null,
         orderFrequency: orderFrequency || null,
@@ -2267,7 +2268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName,
           email: requestData.customerEmail || undefined,
           role: 'retailer',
-          wholesalerId: userId
+          wholesalerId: userId,
+          customerType: (requestData as any).customerType || undefined,
         });
         
         console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
@@ -17741,6 +17743,171 @@ https://quikpik.app`;
       res.status(500).json({ error: 'Failed to toggle status' });
     }
   });
+
+  // ── Admin: Customer Map Data ─────────────────────────────────────────────
+  async function geocodePostcode(postcode: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const clean = postcode.trim().replace(/\s+/g, '').toUpperCase();
+      const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`);
+      if (!response.ok) return null;
+      const data: any = await response.json();
+      if (data.status === 200 && data.result) {
+        return { lat: data.result.latitude, lng: data.result.longitude };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  app.get('/api/admin/customers/map', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const customers = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          businessName: users.businessName,
+          phoneNumber: users.phoneNumber,
+          postalCode: users.postalCode,
+          customerType: users.customerType,
+          latitude: users.latitude,
+          longitude: users.longitude,
+          geocodeStatus: users.geocodeStatus,
+          wholesalerId: users.wholesalerId,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.role, 'retailer'))
+        .orderBy(desc(users.createdAt));
+
+      const customerIds = customers.map(c => c.id);
+      let orderCountMap: Record<string, number> = {};
+      if (customerIds.length > 0) {
+        const counts = await db
+          .select({ retailerId: orders.retailerId, count: count() })
+          .from(orders)
+          .where(inArray(orders.retailerId, customerIds))
+          .groupBy(orders.retailerId);
+        for (const row of counts) {
+          if (row.retailerId) orderCountMap[row.retailerId] = Number(row.count);
+        }
+      }
+
+      const wholesalerIds = [...new Set(customers.map(c => c.wholesalerId).filter(Boolean))] as string[];
+      let wholesalerMap: Record<string, string> = {};
+      if (wholesalerIds.length > 0) {
+        const ws = await db
+          .select({ id: users.id, businessName: users.businessName, firstName: users.firstName, lastName: users.lastName })
+          .from(users)
+          .where(inArray(users.id, wholesalerIds));
+        for (const w of ws) {
+          wholesalerMap[w.id] = w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim() || 'Unknown';
+        }
+      }
+
+      const result = customers.map(c => ({
+        id: c.id,
+        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
+        businessName: c.businessName,
+        phoneNumber: c.phoneNumber,
+        postalCode: c.postalCode,
+        customerType: c.customerType,
+        latitude: c.latitude ? parseFloat(c.latitude as any) : null,
+        longitude: c.longitude ? parseFloat(c.longitude as any) : null,
+        geocodeStatus: c.geocodeStatus,
+        wholesalerName: c.wholesalerId ? (wholesalerMap[c.wholesalerId] || 'Unknown') : 'No wholesaler',
+        orderCount: orderCountMap[c.id] || 0,
+      }));
+
+      res.json({ customers: result });
+    } catch (error) {
+      console.error('Admin customers/map error:', error);
+      res.status(500).json({ error: 'Failed to fetch customer map data' });
+    }
+  });
+
+  app.patch('/api/admin/customers/:id/type', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const { customerType, postalCode } = req.body;
+      const validTypes = ['retail', 'wholesale', 'individual', null, ''];
+      if (customerType !== undefined && !validTypes.includes(customerType)) {
+        return res.status(400).json({ error: 'Invalid customer type. Must be retail, wholesale, or individual.' });
+      }
+
+      const updateData: any = {};
+      if (customerType !== undefined) updateData.customerType = customerType || null;
+      if (postalCode !== undefined) updateData.postalCode = postalCode || null;
+
+      if (postalCode) {
+        const coords = await geocodePostcode(postalCode);
+        if (coords) {
+          updateData.latitude = coords.lat.toString();
+          updateData.longitude = coords.lng.toString();
+          updateData.geocodeStatus = 'success';
+        } else {
+          updateData.geocodeStatus = 'flagged';
+          updateData.latitude = null;
+          updateData.longitude = null;
+        }
+      }
+
+      await db.update(users).set(updateData).where(eq(users.id, req.params.id));
+
+      const updated = await db.select({
+        id: users.id, customerType: users.customerType, postalCode: users.postalCode,
+        latitude: users.latitude, longitude: users.longitude, geocodeStatus: users.geocodeStatus,
+      }).from(users).where(eq(users.id, req.params.id)).limit(1);
+
+      res.json(updated[0] || {});
+    } catch (error) {
+      console.error('Admin customers/:id/type error:', error);
+      res.status(500).json({ error: 'Failed to update customer type' });
+    }
+  });
+
+  app.post('/api/admin/customers/geocode-all', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const pending = await db
+        .select({ id: users.id, postalCode: users.postalCode })
+        .from(users)
+        .where(and(eq(users.role, 'retailer'), isNull(users.latitude)));
+
+      let success = 0, flagged = 0;
+      for (const customer of pending) {
+        if (!customer.postalCode) {
+          await db.update(users).set({ geocodeStatus: 'flagged' }).where(eq(users.id, customer.id));
+          flagged++;
+          continue;
+        }
+        const coords = await geocodePostcode(customer.postalCode);
+        if (coords) {
+          await db.update(users).set({
+            latitude: coords.lat.toString(),
+            longitude: coords.lng.toString(),
+            geocodeStatus: 'success',
+          }).where(eq(users.id, customer.id));
+          success++;
+        } else {
+          await db.update(users).set({ geocodeStatus: 'flagged', latitude: null, longitude: null }).where(eq(users.id, customer.id));
+          flagged++;
+        }
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      res.json({ processed: pending.length, success, flagged });
+    } catch (error) {
+      console.error('Admin geocode-all error:', error);
+      res.status(500).json({ error: 'Failed to geocode customers' });
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────────
 
   // =====================================================
   // QUICK QUOTE - Create quote with custom prices and payment link

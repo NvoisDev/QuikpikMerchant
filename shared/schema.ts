@@ -233,7 +233,15 @@ export const users = pgTable("users", {
     clientSecret: string;
     environment: 'sandbox' | 'live';
   }>(),
-  
+
+  // Customer classification
+  customerType: varchar("customer_type", { length: 20 }), // 'retail' | 'wholesale' | 'individual'
+
+  // Geocoding fields (postcode centroid for privacy)
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  geocodeStatus: varchar("geocode_status", { length: 10 }), // 'success' | 'flagged'
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -637,6 +645,7 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   customerName: varchar("customer_name", { length: 255 }).notNull(),
   customerEmail: varchar("customer_email", { length: 255 }),
   businessName: varchar("business_name", { length: 255 }),
+  customerType: varchar("customer_type", { length: 20 }), // 'retail' | 'wholesale' | 'individual'
   requestMessage: text("request_message"),
   productsInterested: text("products_interested"),
   orderFrequency: varchar("order_frequency", { length: 255 }),
