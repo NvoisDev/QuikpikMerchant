@@ -17839,6 +17839,15 @@ https://quikpik.app`;
         return res.status(400).json({ error: 'Invalid customer type. Must be retail, wholesale, or individual.' });
       }
 
+      // Verify target is a customer/retailer record
+      const target = await db
+        .select({ id: users.id, role: users.role })
+        .from(users)
+        .where(eq(users.id, req.params.id))
+        .limit(1);
+      if (!target[0]) return res.status(404).json({ error: 'Customer not found' });
+      if (target[0].role !== 'retailer') return res.status(400).json({ error: 'Target user is not a customer' });
+
       const updateData: Record<string, string | null> = {};
       if (customerType !== undefined) updateData.customerType = customerType || null;
 
