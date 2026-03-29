@@ -4,6 +4,22 @@ import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
 import cron from 'node-cron';
+import { db } from "./db";
+import { sql } from "drizzle-orm";
+
+async function runStartupMigrations() {
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS customer_type VARCHAR(20)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS geocode_status VARCHAR(10)`,
+    `ALTER TABLE customer_registration_requests ADD COLUMN IF NOT EXISTS customer_type VARCHAR(20)`,
+  ];
+  for (const stmt of migrations) {
+    await db.execute(sql.raw(stmt));
+  }
+  console.log("✅ Startup DB migrations applied (customer map columns)");
+}
 
 // Set OAuth redirect URI for production deployment
 if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
@@ -60,6 +76,9 @@ app.use((req, res, next) => {
       console.error("❌ Server startup failed: Database connection could not be established");
       process.exit(1);
     }
+
+    // Apply idempotent schema migrations (ADD COLUMN IF NOT EXISTS)
+    await runStartupMigrations();
     
     // Stripe subscription system removed
 

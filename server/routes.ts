@@ -17843,7 +17843,7 @@ https://quikpik.app`;
       if (customerType !== undefined) updateData.customerType = customerType || null;
 
       if (postalCode !== undefined) {
-        // Always update postalCode field
+        // Explicit postcode supplied — update it and always re-geocode
         updateData.postalCode = postalCode || null;
 
         if (!postalCode) {
@@ -17854,6 +17854,29 @@ https://quikpik.app`;
         } else {
           // Postcode provided — attempt geocoding
           const coords = await geocodePostcode(postalCode);
+          if (coords) {
+            updateData.latitude = coords.lat.toString();
+            updateData.longitude = coords.lng.toString();
+            updateData.geocodeStatus = 'success';
+          } else {
+            updateData.latitude = null;
+            updateData.longitude = null;
+            updateData.geocodeStatus = 'flagged';
+          }
+        }
+      } else {
+        // No postcode in request — re-geocode using the customer's existing postcode
+        // if they have one and haven't been successfully geocoded yet
+        const existing = await db
+          .select({ postalCode: users.postalCode, geocodeStatus: users.geocodeStatus })
+          .from(users)
+          .where(eq(users.id, req.params.id))
+          .limit(1);
+        const existingPostcode = existing[0]?.postalCode;
+        const alreadyGeocoded = existing[0]?.geocodeStatus === 'success';
+
+        if (existingPostcode && !alreadyGeocoded) {
+          const coords = await geocodePostcode(existingPostcode);
           if (coords) {
             updateData.latitude = coords.lat.toString();
             updateData.longitude = coords.lng.toString();
