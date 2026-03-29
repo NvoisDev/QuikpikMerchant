@@ -97,11 +97,9 @@ function MarkerPopupContent({
       {customer.wholesalerName && (
         <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>via {customer.wholesalerName}</p>
       )}
-      {customer.orderCount > 0 && (
-        <p style={{ fontSize: 11, color: "#374151", marginBottom: 8 }}>
-          {customer.orderCount} order{customer.orderCount !== 1 ? "s" : ""}
-        </p>
-      )}
+      <p style={{ fontSize: 11, color: "#374151", marginBottom: 8 }}>
+        {customer.orderCount || 0} order{(customer.orderCount || 0) !== 1 ? "s" : ""}
+      </p>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
         <label style={{ fontSize: 11, color: "#6b7280", flexShrink: 0 }}>Type:</label>
         <select
@@ -224,10 +222,13 @@ function CustomerMapTab({ isAdmin }: { isAdmin: boolean }) {
   });
 
   const geocodeAll = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/admin/customers/geocode-all"),
-    onSuccess: (data: any) => {
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/customers/geocode-all");
+      return res.json() as Promise<{ processed: number; success: number; flagged: number }>;
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers/map"] });
-      toast({ title: `Geocoded ${data?.processed ?? 0} customers` });
+      toast({ title: `Geocoded ${data?.processed ?? 0} customers (${data?.success ?? 0} located, ${data?.flagged ?? 0} flagged)` });
     },
     onError: () => toast({ title: "Geocoding failed", variant: "destructive" }),
   });

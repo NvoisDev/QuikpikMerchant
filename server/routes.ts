@@ -17877,7 +17877,7 @@ https://quikpik.app`;
       const pending = await db
         .select({ id: users.id, postalCode: users.postalCode })
         .from(users)
-        .where(and(eq(users.role, 'retailer'), isNull(users.latitude)));
+        .where(and(eq(users.role, 'retailer'), or(isNull(users.latitude), isNull(users.longitude))));
 
       let success = 0, flagged = 0;
       for (const customer of pending) {
