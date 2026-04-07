@@ -716,8 +716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Locks excess products and suspends excess team members for the new tier
   // ===================================================================
   const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number; groups: number }> = {
-    free:     { products: 10, invitedMembersAllowed: 0, groups: 2  },  // owner only, 0 in teamMembers table
-    standard: { products: 50, invitedMembersAllowed: 2, groups: 5  },  // owner + 2 invited = 3 total
+    free:     { products: 10, invitedMembersAllowed: 0, groups: 2  },  // owner only; 0 invited members in teamMembers table
+    standard: { products: 50, invitedMembersAllowed: 3, groups: 5  },  // keep first 3 active invited members
     premium:  { products: -1, invitedMembersAllowed: -1, groups: -1 }, // unlimited
   };
 
@@ -3948,7 +3948,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/products/:id', async (req: any, res) => {
+  // Protected route: only authenticated wholesalers/team members can fetch a product by ID.
+  // The customer portal uses /api/customer-products/:wholesalerId for product listing.
+  app.get('/api/products/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3957,14 +3959,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const product = await storage.getProduct(id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
-      }
-      // Locked products are hidden from customer-facing requests.
-      // Authenticated wholesalers/team members may still view them.
-      if ((product as any).status === 'locked') {
-        const isWholesaler = !!(req.session as any)?.userId || !!(req.session as any)?.user?.id;
-        if (!isWholesaler) {
-          return res.status(404).json({ message: "Product not found" });
-        }
       }
       res.json(product);
     } catch (error) {

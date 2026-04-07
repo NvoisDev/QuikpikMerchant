@@ -257,11 +257,11 @@ async function getCurrentTeamMemberCount(userId: string): Promise<number> {
         eq(teamMembers.wholesalerId, userId),
         eq(teamMembers.status, 'active')
       ));
-    const invitedCount = result[0]?.value ?? 0;
-    return 1 + invitedCount; // 1 = owner (in users table) + invited active members
+    // Returns count of active invited rows in the teamMembers table (excludes the owner)
+    return result[0]?.value ?? 0;
   } catch (error) {
     console.error('❌ Error getting team member count:', error);
-    return 1;
+    return 0;
   }
 }
 
@@ -272,7 +272,7 @@ function getDefaultLimits() {
   return {
     products: 10,
     broadcasts: 5,
-    teamMembers: 1, // Free plan: 1 team member (user themselves)
+    teamMembers: 0, // Free plan: 0 invited members (owner only, not in teamMembers table)
     customGroups: 2
   };
 }
