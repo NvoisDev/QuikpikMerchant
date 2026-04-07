@@ -314,7 +314,7 @@ export default function Integrations() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500">Accept card payments and route funds directly to your bank account.</p>
-                    <p className="text-xs text-gray-400 mt-2">Payments · UK & Europe</p>
+                    <p className="text-xs text-gray-400 mt-2">Payments · UK, Europe, US & Canada</p>
                   </div>
                 </button>
 
@@ -474,7 +474,7 @@ export default function Integrations() {
                 <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 text-center">
                   <div><p className="text-sm font-semibold text-gray-800">3.3%</p><p className="text-xs text-gray-500 mt-0.5">Platform fee</p></div>
                   <div><p className="text-sm font-semibold text-gray-800">Payments</p><p className="text-xs text-gray-500 mt-0.5">Category</p></div>
-                  <div><p className="text-sm font-semibold text-gray-800">UK & Europe</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
+                  <div><p className="text-sm font-semibold text-gray-800">UK, Europe, US & Canada</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
