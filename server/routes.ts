@@ -17480,7 +17480,7 @@ https://quikpik.app`;
               firstName: downgradedUser.firstName || '',
               email: downgradedUser.email,
               businessName: downgradedUser.businessName || downgradedUser.name || 'Quikpik',
-              currentPlan: downgradedUser.currentPlan || currentSubscription.currentPlan || 'standard',
+              currentPlan: currentSubscription.currentPlan || 'standard', // captured before proratedFreeDowngrade mutated the DB
               effectiveDate: new Date(), // immediate cancellation — effective today
             });
             await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
