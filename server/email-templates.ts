@@ -370,3 +370,117 @@ export function buildItemisedRefundEmail(options: {
 
   return heading + intro + returnedSection + refundSummary + retainedSection + processingNote + contactBlock;
 }
+
+const QUIKPIK_BRANDING: EmailBranding = { businessName: 'Quikpik Merchant' };
+const QUIKPIK_FROM = 'hello@quikpik.co';
+const UPGRADE_URL = 'https://quikpik.app/subscription-pricing';
+
+const FREE_LIMITS_TABLE = emailTable(
+  ['Feature', 'Free Plan Limit'],
+  [
+    ['Products', '10 maximum'],
+    ['Broadcasts per month', '5 maximum'],
+    ['Team members', '1 only (you)'],
+    ['Customer groups', '2 maximum'],
+  ]
+);
+
+const UPGRADE_PLANS_CARD = emailCard(
+  emailHeading('Upgrade anytime to unlock more', { size: '16px', color: '#1d4ed8' }) +
+  '<table width="100%" cellpadding="0" cellspacing="0" style="margin:0"><tr>' +
+  '<td width="50%" valign="top" style="padding-right:8px"><div style="border:1px solid #dbeafe;border-radius:8px;padding:14px 16px;background:#eff6ff">' +
+  '<div style="font-weight:bold;font-size:15px;color:#1d4ed8;margin-bottom:4px">Standard</div>' +
+  '<div style="font-size:18px;font-weight:bold;color:#1f2937;margin-bottom:8px">\u00A319.99<span style="font-size:13px;color:#6b7280">/mo</span></div>' +
+  '<ul style="margin:0;padding-left:18px;font-size:13px;color:#374151;line-height:1.7">' +
+  '<li>50 products</li><li>25 broadcasts/month</li><li>3 team members</li><li>5 customer groups</li></ul>' +
+  '</div></td>' +
+  '<td width="50%" valign="top" style="padding-left:8px"><div style="border:1px solid #d1fae5;border-radius:8px;padding:14px 16px;background:#ecfdf5">' +
+  '<div style="font-weight:bold;font-size:15px;color:#059669;margin-bottom:4px">Premium</div>' +
+  '<div style="font-size:18px;font-weight:bold;color:#1f2937;margin-bottom:8px">\u00A339.99<span style="font-size:13px;color:#6b7280">/mo</span></div>' +
+  '<ul style="margin:0;padding-left:18px;font-size:13px;color:#374151;line-height:1.7">' +
+  '<li>Unlimited products</li><li>Unlimited broadcasts</li><li>Unlimited team members</li><li>Unlimited groups</li></ul>' +
+  '</div></td>' +
+  '</tr></table>',
+  { borderColor: '#dbeafe', bgColor: '#f8faff' }
+);
+
+export interface DowngradeScheduledEmailData {
+  firstName: string;
+  email: string;
+  businessName: string;
+  currentPlan: 'standard' | 'premium' | string;
+  effectiveDate: Date;
+}
+
+export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailData): { subject: string; html: string; text: string } {
+  const planLabel = data.currentPlan === 'premium' ? 'Premium' : 'Standard';
+  const dateStr = data.effectiveDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const subject = 'Your Quikpik subscription is scheduled to downgrade';
+
+  const body =
+    emailHeading('Downgrade Scheduled', { size: '22px', color: '#b45309' }) +
+    '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    '<p style="margin:0 0 20px">We\'ve received your request to downgrade your <b>' + planLabel + '</b> subscription. ' +
+    'Your account will move to the <b>Free</b> plan at the end of your current billing period.</p>' +
+    emailCard(
+      '<p style="margin:0 0 4px"><b>Downgrade date:</b> ' + dateStr + '</p>' +
+      '<p style="margin:0;font-size:14px;color:#6b7280">All ' + planLabel + ' features remain active until this date.</p>',
+      { borderColor: '#fde68a', bgColor: '#fffbeb' }
+    ) +
+    '<p style="margin:12px 0 8px"><b>On the Free plan, your account will have these limits:</b></p>' +
+    FREE_LIMITS_TABLE +
+    '<p style="margin:16px 0 8px;font-size:14px;color:#6b7280">Changed your mind? You can keep your current plan — just don\'t cancel and everything stays the same.</p>' +
+    emailDivider() +
+    UPGRADE_PLANS_CARD +
+    emailButton('View Plan Options', UPGRADE_URL, '#1d4ed8');
+
+  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your ' + planLabel + ' plan will downgrade to Free on ' + dateStr });
+
+  const text =
+    'Downgrade Scheduled — ' + dateStr + '\n\n' +
+    'Hi ' + (data.firstName || 'there') + ',\n\n' +
+    'Your ' + planLabel + ' subscription will move to the Free plan on ' + dateStr + '.\n\n' +
+    'Free plan limits: 10 products, 5 broadcasts/month, 1 team member, 2 customer groups.\n\n' +
+    'To keep your current plan, simply don\'t cancel before this date.\n\n' +
+    'View plan options: ' + UPGRADE_URL + '\nPowered by Quikpik Merchant';
+
+  return { subject, html, text };
+}
+
+export interface DowngradeEffectiveEmailData {
+  firstName: string;
+  email: string;
+  businessName: string;
+}
+
+export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailData): { subject: string; html: string; text: string } {
+  const subject = 'Your Quikpik plan has changed to Free';
+
+  const body =
+    emailHeading('Your plan is now Free', { size: '22px', color: '#374151' }) +
+    '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    '<p style="margin:0 0 20px">Your Quikpik subscription has ended and your account is now on the <b>Free plan</b>. ' +
+    'You can continue using Quikpik within the following limits:</p>' +
+    FREE_LIMITS_TABLE +
+    '<p style="margin:16px 0 8px;font-size:14px;color:#6b7280">' +
+    'If you have more than 10 products, existing products will remain visible but you won\'t be able to add new ones until you\'re within the limit or upgrade your plan.' +
+    '</p>' +
+    emailDivider() +
+    '<p style="margin:0 0 12px;font-weight:bold">Ready to grow again?</p>' +
+    UPGRADE_PLANS_CARD +
+    emailButton('Upgrade My Plan', UPGRADE_URL, '#1a7a3d');
+
+  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your subscription has ended — you\'re now on the Free plan' });
+
+  const text =
+    'Your Quikpik plan has changed to Free\n\n' +
+    'Hi ' + (data.firstName || 'there') + ',\n\n' +
+    'Your subscription has ended and your account is now on the Free plan.\n\n' +
+    'Free plan limits: 10 products, 5 broadcasts/month, 1 team member, 2 customer groups.\n\n' +
+    'To unlock more, upgrade at: ' + UPGRADE_URL + '\n\n' +
+    'Standard: \u00A319.99/mo — 50 products, 25 broadcasts, 3 team members\n' +
+    'Premium: \u00A339.99/mo — Unlimited everything\n\n' +
+    'Powered by Quikpik Merchant';
+
+  return { subject, html, text };
+}

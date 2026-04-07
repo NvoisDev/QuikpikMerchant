@@ -133,7 +133,7 @@ import { sendSMS } from "./services/smsService";
 import { sendEmail } from "./sendgrid-service";
 import { generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken } from './passwordResetService';
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
-import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, getEmailLogoUrl, buildItemisedRefundEmail, type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem } from "./email-templates";
+import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail, generateDowngradeEffectiveEmail, type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
@@ -1221,6 +1221,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             console.log(`⚠️ No order found for payment intent ${paymentIntentId}`);
+          }
+        }
+
+        return res.json({ received: true, type: event.type });
+      }
+
+      if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as Stripe.Subscription;
+        const stripeSubscriptionId = subscription.id;
+        console.log(`🔴 Subscription deleted: ${stripeSubscriptionId}`);
+
+        const [affectedUser] = await db.select().from(users)
+          .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
+
+        if (!affectedUser) {
+          console.log(`⚠️ No user found for deleted subscription ${stripeSubscriptionId} — may already be cleaned up`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        const wasAlreadyFree = affectedUser.currentPlan === 'free' || affectedUser.subscriptionTier === 'free';
+
+        await db.update(users).set({
+          subscriptionTier: 'free',
+          subscriptionStatus: 'free',
+          currentPlan: 'free',
+          productLimit: 10,
+          stripeSubscriptionId: null,
+          subscriptionPeriodStart: null,
+          subscriptionPeriodEnd: null,
+          updatedAt: new Date()
+        }).where(eq(users.id, affectedUser.id));
+
+        const [existingUserSub] = await db.select().from(userSubscriptions)
+          .where(eq(userSubscriptions.userId, affectedUser.id));
+
+        if (existingUserSub) {
+          await db.update(userSubscriptions).set({
+            planId: 'free',
+            stripeSubscriptionId: null,
+            status: 'canceled',
+            cancelAtPeriodEnd: null,
+            updatedAt: new Date()
+          }).where(eq(userSubscriptions.userId, affectedUser.id));
+        } else {
+          await db.insert(userSubscriptions).values({
+            userId: affectedUser.id,
+            planId: 'free',
+            stripeSubscriptionId: null,
+            status: 'free',
+            currentPeriodStart: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: null
+          });
+        }
+
+        console.log(`✅ DB updated to Free for user ${affectedUser.id} (was already free: ${wasAlreadyFree})`);
+
+        if (!wasAlreadyFree && affectedUser.email) {
+          try {
+            const { subject, html, text } = generateDowngradeEffectiveEmail({
+              firstName: affectedUser.firstName || '',
+              email: affectedUser.email,
+              businessName: affectedUser.businessName || affectedUser.name || 'Quikpik',
+            });
+            await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
+            console.log(`📧 Downgrade effective email sent to ${affectedUser.email}`);
+          } catch (emailErr) {
+            console.error('❌ Failed to send downgrade effective email:', emailErr);
           }
         }
 
@@ -17387,6 +17455,23 @@ https://quikpik.app`;
           currentSubscription.stripeSubscriptionId,
           userId
         );
+
+        // Send downgrade effective email immediately (DB already set to free by proratedFreeDowngrade)
+        // The webhook idempotency guard (wasAlreadyFree) prevents duplicate emails when webhook fires
+        const [downgradedUser] = await db.select().from(users).where(eq(users.id, userId));
+        if (downgradedUser?.email) {
+          try {
+            const { subject, html, text } = generateDowngradeEffectiveEmail({
+              firstName: downgradedUser.firstName || '',
+              email: downgradedUser.email,
+              businessName: downgradedUser.businessName || downgradedUser.name || 'Quikpik',
+            });
+            await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
+            console.log(`📧 Downgrade effective email sent to ${downgradedUser.email}`);
+          } catch (emailErr) {
+            console.error('❌ Failed to send downgrade effective email:', emailErr);
+          }
+        }
         
         res.json({
           success: true,
@@ -17441,6 +17526,24 @@ https://quikpik.app`;
           user.stripeSubscriptionId,
           { cancelAtPeriodEnd: true }
         );
+
+        // Send downgrade scheduled confirmation email
+        if (user.email) {
+          try {
+            const effectiveDate = new Date(subscription.current_period_end * 1000);
+            const { subject, html, text } = generateDowngradeScheduledEmail({
+              firstName: user.firstName || '',
+              email: user.email,
+              businessName: user.businessName || user.name || 'Quikpik',
+              currentPlan: user.currentPlan || 'standard',
+              effectiveDate,
+            });
+            await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
+            console.log(`📧 Downgrade scheduled email sent to ${user.email}`);
+          } catch (emailErr) {
+            console.error('❌ Failed to send downgrade scheduled email:', emailErr);
+          }
+        }
 
         return res.json({ 
           success: true, 
