@@ -1273,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.update(userSubscriptions).set({
             planId: 'free',
             stripeSubscriptionId: null,
-            status: 'canceled',
+            status: 'free',
             cancelAtPeriodEnd: null,
             currentPeriodStart: null,
             currentPeriodEnd: null,

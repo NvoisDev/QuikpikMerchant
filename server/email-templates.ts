@@ -372,7 +372,6 @@ export function buildItemisedRefundEmail(options: {
 }
 
 const QUIKPIK_BRANDING: EmailBranding = { businessName: 'Quikpik Merchant' };
-const QUIKPIK_FROM = 'hello@quikpik.co';
 const UPGRADE_URL = 'https://quikpik.app/subscription-pricing';
 
 const FREE_LIMITS_TABLE = emailTable(
