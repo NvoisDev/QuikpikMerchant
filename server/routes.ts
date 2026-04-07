@@ -730,10 +730,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let teamMembersSuspended = 0;
     let groupsArchived = 0;
 
-    try {
-      // --- Products ---
-      if (limits.products !== -1) {
-        // Lock active + inactive products that exceed the tier limit (oldest = most established = stays)
+    // Each section runs independently so a failure in one doesn't skip the others
+    // --- Products ---
+    if (limits.products !== -1) {
+      try {
+        // Lock active + inactive products that exceed the tier limit (oldest first = most established stays)
         const nonLockedProducts = await db
           .select({ id: products.id })
           .from(products)
@@ -752,10 +753,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productsLocked = excess.length;
           console.log(`🔒 Locked ${productsLocked} products for user ${userId} (tier: ${targetTier})`);
         }
+      } catch (err) {
+        console.error(`❌ enforceNewPlanLimits [products] failed for user ${userId}:`, err);
       }
+    }
 
-      // --- Team members ---
-      if (limits.invitedMembersAllowed !== -1) {
+    // --- Team members ---
+    if (limits.invitedMembersAllowed !== -1) {
+      try {
         const activeMembers = await db
           .select({ id: teamMembers.id })
           .from(teamMembers)
@@ -771,9 +776,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamMembersSuspended = membersToSuspend.length;
           console.log(`🔒 Suspended ${teamMembersSuspended} team members for user ${userId} (tier: ${targetTier})`);
         }
+      } catch (err) {
+        console.error(`❌ enforceNewPlanLimits [team members] failed for user ${userId}:`, err);
       }
-      // --- Customer groups ---
-      if (limits.groups !== -1) {
+    }
+
+    // --- Customer groups ---
+    if (limits.groups !== -1) {
+      try {
         const activeGroups = await db
           .select({ id: customerGroups.id })
           .from(customerGroups)
@@ -789,9 +799,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groupsArchived = groupsToArchive.length;
           console.log(`🔒 Archived ${groupsArchived} customer groups for user ${userId} (tier: ${targetTier})`);
         }
+      } catch (err) {
+        console.error(`❌ enforceNewPlanLimits [customer groups] failed for user ${userId}:`, err);
       }
-    } catch (err) {
-      console.error(`❌ enforceNewPlanLimits error for user ${userId}:`, err);
     }
 
     return { productsLocked, teamMembersSuspended, groupsArchived };
