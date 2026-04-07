@@ -414,34 +414,66 @@ export interface DowngradeScheduledEmailData {
 
 export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailData): { subject: string; html: string; text: string } {
   const planLabel = data.currentPlan === 'premium' ? 'Premium' : 'Standard';
-  const dateStr = data.effectiveDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const isImmediate = data.effectiveDate.getTime() - Date.now() < 60_000; // within 1 minute = immediate
+  const dateStr = isImmediate
+    ? 'Today'
+    : data.effectiveDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const subject = 'Your Quikpik subscription is scheduled to downgrade';
+
+  const currentPlanFeaturesRows: string[][] = data.currentPlan === 'premium'
+    ? [
+        ['Products', 'Unlimited'],
+        ['Broadcasts per month', 'Unlimited'],
+        ['Team members', 'Unlimited'],
+        ['Customer groups', 'Unlimited'],
+      ]
+    : [
+        ['Products', '50 maximum'],
+        ['Broadcasts per month', '25 maximum'],
+        ['Team members', '3 maximum'],
+        ['Customer groups', '5 maximum'],
+      ];
+
+  const currentFeaturesTable = emailTable(['Feature', planLabel + ' Plan (until ' + dateStr + ')'], currentPlanFeaturesRows);
+
+  const untilNote = isImmediate
+    ? '<p style="margin:0;font-size:14px;color:#6b7280">Your plan is being downgraded to Free immediately.</p>'
+    : '<p style="margin:0;font-size:14px;color:#6b7280">All ' + planLabel + ' features listed above remain fully active until this date.</p>';
 
   const body =
     emailHeading('Downgrade Scheduled', { size: '22px', color: '#b45309' }) +
     '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
     '<p style="margin:0 0 20px">We\'ve received your request to downgrade your <b>' + planLabel + '</b> subscription. ' +
-    'Your account will move to the <b>Free</b> plan at the end of your current billing period.</p>' +
+    'Your account will move to the <b>Free</b> plan' + (isImmediate ? ' now.' : ' at the end of your current billing period.') + '</p>' +
     emailCard(
       '<p style="margin:0 0 4px"><b>Downgrade date:</b> ' + dateStr + '</p>' +
-      '<p style="margin:0;font-size:14px;color:#6b7280">All ' + planLabel + ' features remain active until this date.</p>',
+      untilNote,
       { borderColor: '#fde68a', bgColor: '#fffbeb' }
     ) +
-    '<p style="margin:12px 0 8px"><b>On the Free plan, your account will have these limits:</b></p>' +
+    '<p style="margin:16px 0 8px"><b>What you have on your current ' + planLabel + ' plan:</b></p>' +
+    currentFeaturesTable +
+    '<p style="margin:16px 0 8px"><b>What changes on the Free plan:</b></p>' +
     FREE_LIMITS_TABLE +
-    '<p style="margin:16px 0 8px;font-size:14px;color:#6b7280">Changed your mind? You can keep your current plan — just don\'t cancel and everything stays the same.</p>' +
+    (isImmediate
+      ? ''
+      : '<p style="margin:16px 0 8px;font-size:14px;color:#6b7280">Changed your mind? Your ' + planLabel + ' plan remains active until ' + dateStr + '. Contact us to reinstate it.</p>') +
     emailDivider() +
     UPGRADE_PLANS_CARD +
     emailButton('View Plan Options', UPGRADE_URL, '#1d4ed8');
 
-  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your ' + planLabel + ' plan will downgrade to Free on ' + dateStr });
+  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your ' + planLabel + ' plan will downgrade to Free' + (isImmediate ? ' now' : ' on ' + dateStr) });
+
+  const currentFeaturesText = data.currentPlan === 'premium'
+    ? 'Current Premium features: Unlimited products, broadcasts, team members, and groups.'
+    : 'Current Standard features: 50 products, 25 broadcasts/month, 3 team members, 5 customer groups.';
 
   const text =
     'Downgrade Scheduled — ' + dateStr + '\n\n' +
     'Hi ' + (data.firstName || 'there') + ',\n\n' +
     'Your ' + planLabel + ' subscription will move to the Free plan on ' + dateStr + '.\n\n' +
+    currentFeaturesText + '\n\n' +
     'Free plan limits: 10 products, 5 broadcasts/month, 1 team member, 2 customer groups.\n\n' +
-    'To keep your current plan, simply don\'t cancel before this date.\n\n' +
+    (isImmediate ? '' : 'Changed your mind? Contact us to reinstate your ' + planLabel + ' plan before ' + dateStr + '.\n\n') +
     'View plan options: ' + UPGRADE_URL + '\nPowered by Quikpik Merchant';
 
   return { subject, html, text };

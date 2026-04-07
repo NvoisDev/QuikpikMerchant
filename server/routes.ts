@@ -1230,10 +1230,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as Stripe.Subscription;
         const stripeSubscriptionId = subscription.id;
-        console.log(`🔴 Subscription deleted: ${stripeSubscriptionId}`);
+        const stripeCustomerId = typeof subscription.customer === 'string'
+          ? subscription.customer
+          : subscription.customer?.id;
+        console.log(`🔴 Subscription deleted: ${stripeSubscriptionId}, customer: ${stripeCustomerId}`);
 
-        const [affectedUser] = await db.select().from(users)
-          .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
+        // Prefer lookup by Stripe customer ID (most reliable); fall back to subscription ID
+        let affectedUser: typeof users.$inferSelect | undefined;
+        if (stripeCustomerId) {
+          const [byCustomer] = await db.select().from(users)
+            .where(eq(users.stripeCustomerId, stripeCustomerId));
+          affectedUser = byCustomer;
+        }
+        if (!affectedUser) {
+          const [bySubscription] = await db.select().from(users)
+            .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
+          affectedUser = bySubscription;
+        }
 
         if (!affectedUser) {
           console.log(`⚠️ No user found for deleted subscription ${stripeSubscriptionId} — may already be cleaned up`);
@@ -1262,6 +1275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stripeSubscriptionId: null,
             status: 'canceled',
             cancelAtPeriodEnd: null,
+            currentPeriodStart: null,
+            currentPeriodEnd: null,
             updatedAt: new Date()
           }).where(eq(userSubscriptions.userId, affectedUser.id));
         } else {
@@ -17456,20 +17471,22 @@ https://quikpik.app`;
           userId
         );
 
-        // Send downgrade effective email immediately (DB already set to free by proratedFreeDowngrade)
-        // The webhook idempotency guard (wasAlreadyFree) prevents duplicate emails when webhook fires
+        // Send downgrade scheduled confirmation email (effective now = today)
+        // The webhook will send the "effective" email when customer.subscription.deleted fires
         const [downgradedUser] = await db.select().from(users).where(eq(users.id, userId));
         if (downgradedUser?.email) {
           try {
-            const { subject, html, text } = generateDowngradeEffectiveEmail({
+            const { subject, html, text } = generateDowngradeScheduledEmail({
               firstName: downgradedUser.firstName || '',
               email: downgradedUser.email,
               businessName: downgradedUser.businessName || downgradedUser.name || 'Quikpik',
+              currentPlan: downgradedUser.currentPlan || currentSubscription.currentPlan || 'standard',
+              effectiveDate: new Date(), // immediate cancellation — effective today
             });
             await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
-            console.log(`📧 Downgrade effective email sent to ${downgradedUser.email}`);
+            console.log(`📧 Downgrade scheduled email sent to ${downgradedUser.email}`);
           } catch (emailErr) {
-            console.error('❌ Failed to send downgrade effective email:', emailErr);
+            console.error('❌ Failed to send downgrade scheduled email:', emailErr);
           }
         }
         
