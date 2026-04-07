@@ -715,19 +715,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Called whenever a subscription downgrades (immediately or via webhook)
   // Locks excess products and suspends excess team members for the new tier
   // ===================================================================
-  const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number }> = {
-    free:     { products: 10, invitedMembersAllowed: 0 },  // owner only, 0 in teamMembers table
-    standard: { products: 50, invitedMembersAllowed: 2 },  // owner + 2 invited = 3 total
-    premium:  { products: -1, invitedMembersAllowed: -1 }, // unlimited
+  const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number; groups: number }> = {
+    free:     { products: 10, invitedMembersAllowed: 0, groups: 2  },  // owner only, 0 in teamMembers table
+    standard: { products: 50, invitedMembersAllowed: 2, groups: 5  },  // owner + 2 invited = 3 total
+    premium:  { products: -1, invitedMembersAllowed: -1, groups: -1 }, // unlimited
   };
 
   async function enforceNewPlanLimits(
     userId: string,
     targetTier: string
-  ): Promise<{ productsLocked: number; teamMembersSuspended: number }> {
+  ): Promise<{ productsLocked: number; teamMembersSuspended: number; groupsArchived: number }> {
     const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
     let productsLocked = 0;
     let teamMembersSuspended = 0;
+    let groupsArchived = 0;
 
     try {
       // --- Products ---
@@ -771,21 +772,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🔒 Suspended ${teamMembersSuspended} team members for user ${userId} (tier: ${targetTier})`);
         }
       }
+      // --- Customer groups ---
+      if (limits.groups !== -1) {
+        const activeGroups = await db
+          .select({ id: customerGroups.id })
+          .from(customerGroups)
+          .where(and(eq(customerGroups.wholesalerId, userId), eq(customerGroups.status, 'active')))
+          .orderBy(asc(customerGroups.createdAt));
+
+        const groupsToArchive = activeGroups.slice(limits.groups);
+        if (groupsToArchive.length > 0) {
+          const archiveIds = groupsToArchive.map(g => g.id);
+          await db.update(customerGroups)
+            .set({ status: 'archived' })
+            .where(inArray(customerGroups.id, archiveIds));
+          groupsArchived = groupsToArchive.length;
+          console.log(`🔒 Archived ${groupsArchived} customer groups for user ${userId} (tier: ${targetTier})`);
+        }
+      }
     } catch (err) {
       console.error(`❌ enforceNewPlanLimits error for user ${userId}:`, err);
     }
 
-    return { productsLocked, teamMembersSuspended };
+    return { productsLocked, teamMembersSuspended, groupsArchived };
   }
 
   // Helper to compute projected impact (does NOT mutate DB) for scheduled emails
   async function getProjectedDowngradeImpact(
     userId: string,
     targetTier: string
-  ): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number }> {
+  ): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number; groupsToArchive: number }> {
     const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
     try {
-      const [nonLockedProductRows, activeMemberRows] = await Promise.all([
+      const [nonLockedProductRows, activeMemberRows, activeGroupRows] = await Promise.all([
         db.select({ id: products.id })
           .from(products)
           .where(and(
@@ -795,12 +814,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({ id: teamMembers.id })
           .from(teamMembers)
           .where(and(eq(teamMembers.wholesalerId, userId), eq(teamMembers.status, 'active'))),
+        db.select({ id: customerGroups.id })
+          .from(customerGroups)
+          .where(and(eq(customerGroups.wholesalerId, userId), eq(customerGroups.status, 'active'))),
       ]);
       const productsToLock = limits.products === -1 ? 0 : Math.max(0, nonLockedProductRows.length - limits.products);
       const teamMembersToSuspend = limits.invitedMembersAllowed === -1 ? 0 : Math.max(0, activeMemberRows.length - limits.invitedMembersAllowed);
-      return { productsToLock, totalProducts: nonLockedProductRows.length, teamMembersToSuspend };
+      const groupsToArchive = limits.groups === -1 ? 0 : Math.max(0, activeGroupRows.length - limits.groups);
+      return { productsToLock, totalProducts: nonLockedProductRows.length, teamMembersToSuspend, groupsToArchive };
     } catch {
-      return { productsToLock: 0, totalProducts: 0, teamMembersToSuspend: 0 };
+      return { productsToLock: 0, totalProducts: 0, teamMembersToSuspend: 0, groupsToArchive: 0 };
     }
   }
 
@@ -1387,8 +1410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log(`✅ DB updated to Free for user ${affectedUser.id} (was already free: ${wasAlreadyFree})`);
 
-        // Enforce Free plan limits — lock excess products, suspend excess team members
-        let enforcementResult = { productsLocked: 0, teamMembersSuspended: 0 };
+        // Enforce Free plan limits — lock excess products, suspend excess team members, archive excess groups
+        let enforcementResult = { productsLocked: 0, teamMembersSuspended: 0, groupsArchived: 0 };
         if (!wasAlreadyFree) {
           enforcementResult = await enforceNewPlanLimits(affectedUser.id, 'free');
         }
@@ -1401,6 +1424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               businessName: affectedUser.businessName || affectedUser.name || 'Quikpik',
               productsLocked: enforcementResult.productsLocked || undefined,
               teamMembersSuspended: enforcementResult.teamMembersSuspended || undefined,
+              groupsArchived: enforcementResult.groupsArchived || undefined,
             });
             await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade effective email sent to ${affectedUser.email}`);
@@ -3924,7 +3948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/products/:id', async (req, res) => {
+  app.get('/api/products/:id', async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3933,6 +3957,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const product = await storage.getProduct(id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
+      }
+      // Locked products are hidden from customer-facing requests.
+      // Authenticated wholesalers/team members may still view them.
+      if ((product as any).status === 'locked') {
+        const isWholesaler = !!(req.session as any)?.userId || !!(req.session as any)?.user?.id;
+        if (!isWholesaler) {
+          return res.status(404).json({ message: "Product not found" });
+        }
       }
       res.json(product);
     } catch (error) {
@@ -17602,6 +17634,7 @@ https://quikpik.app`;
               productsToLock: enforcedNow.productsLocked || undefined,
               totalProducts: projectedImpact.totalProducts || undefined,
               teamMembersToSuspend: enforcedNow.teamMembersSuspended || undefined,
+              groupsToArchive: enforcedNow.groupsArchived || undefined,
             });
             await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade scheduled email sent to ${downgradedUser.email}`);
@@ -17683,6 +17716,7 @@ https://quikpik.app`;
               productsToLock: cancelProjectedImpact.productsToLock || undefined,
               totalProducts: cancelProjectedImpact.totalProducts || undefined,
               teamMembersToSuspend: cancelProjectedImpact.teamMembersToSuspend || undefined,
+              groupsToArchive: cancelProjectedImpact.groupsToArchive || undefined,
             });
             await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade scheduled email sent to ${user.email}`);

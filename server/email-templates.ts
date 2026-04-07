@@ -412,6 +412,7 @@ export interface DowngradeScheduledEmailData {
   productsToLock?: number;
   totalProducts?: number;
   teamMembersToSuspend?: number;
+  groupsToArchive?: number;
 }
 
 export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailData): { subject: string; html: string; text: string } {
@@ -452,6 +453,11 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
   if ((data.teamMembersToSuspend ?? 0) > 0) {
     impactLines.push(
       '<li style="margin-bottom:6px"><b>' + data.teamMembersToSuspend + '</b> team member' + ((data.teamMembersToSuspend ?? 0) > 1 ? 's' : '') + ' will lose access (Free plan: owner only)</li>'
+    );
+  }
+  if ((data.groupsToArchive ?? 0) > 0) {
+    impactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.groupsToArchive + '</b> customer group' + ((data.groupsToArchive ?? 0) > 1 ? 's' : '') + ' will be archived (Free limit: 2)</li>'
     );
   }
   const impactCard = impactLines.length > 0
@@ -498,6 +504,9 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
   if ((data.teamMembersToSuspend ?? 0) > 0) {
     impactTextLines.push('• ' + data.teamMembersToSuspend + ' team member(s) will lose access');
   }
+  if ((data.groupsToArchive ?? 0) > 0) {
+    impactTextLines.push('• ' + data.groupsToArchive + ' customer group(s) will be archived');
+  }
 
   const text =
     'Downgrade Scheduled — ' + dateStr + '\n\n' +
@@ -520,6 +529,7 @@ export interface DowngradeEffectiveEmailData {
   businessName: string;
   productsLocked?: number;
   teamMembersSuspended?: number;
+  groupsArchived?: number;
 }
 
 export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailData): { subject: string; html: string; text: string } {
@@ -534,6 +544,11 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
   if ((data.teamMembersSuspended ?? 0) > 0) {
     effectiveImpactLines.push(
       '<li style="margin-bottom:6px"><b>' + data.teamMembersSuspended + ' team member' + ((data.teamMembersSuspended ?? 0) > 1 ? 's' : '') + ' suspended</b> — they can be reactivated after an upgrade</li>'
+    );
+  }
+  if ((data.groupsArchived ?? 0) > 0) {
+    effectiveImpactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.groupsArchived + ' customer group' + ((data.groupsArchived ?? 0) > 1 ? 's' : '') + ' archived</b> — restore by upgrading your plan</li>'
     );
   }
   const effectiveImpactCard = effectiveImpactLines.length > 0
@@ -564,6 +579,9 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
   }
   if ((data.teamMembersSuspended ?? 0) > 0) {
     effectiveImpactText.push('• ' + data.teamMembersSuspended + ' team member(s) suspended — reactivated after an upgrade');
+  }
+  if ((data.groupsArchived ?? 0) > 0) {
+    effectiveImpactText.push('• ' + data.groupsArchived + ' customer group(s) archived — restore by upgrading');
   }
 
   const text =

@@ -483,6 +483,7 @@ export const customerGroups = pgTable("customer_groups", {
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
