@@ -1784,7 +1784,7 @@ Quikpik operates as a **multi-wholesaler marketplace** where:
 #### Customer Registration Requirements
 
 **Browsing vs Purchasing**:
-- ✅ **Browse freely**: Customers can view any wholesaler's products (prices are blurred until registered)
+- ✅ **Browse freely**: Customers can view any wholesaler's products (prices visible after registration)
 - ❌ **Purchase requires registration**: Customers must be registered with each specific wholesaler
 
 #### Why Per-Wholesaler Registration?
