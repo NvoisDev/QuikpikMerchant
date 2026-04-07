@@ -272,9 +272,18 @@ export async function getUserPlanLimits(userId: string) {
   try {
     const { plan, currentPlan, user } = await SubscriptionService.getUserSubscription(userId);
     
-    // CRITICAL FIX: Determine limits based on subscription tier
+    // Use the most restrictive of subscriptionTier and currentPlan.
+    // This guards against the case where currentPlan has been set to 'free'
+    // (e.g. after cancellation) but subscriptionTier still holds the old tier.
     let limits;
-    const userTier = user?.subscriptionTier || currentPlan || 'free';
+    const tierFromDb = user?.subscriptionTier || 'free';
+    const tierFromPlan = currentPlan || 'free';
+    const planHierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
+    const resolvedTier =
+      (planHierarchy[tierFromPlan] ?? 0) < (planHierarchy[tierFromDb] ?? 0)
+        ? tierFromPlan
+        : tierFromDb;
+    const userTier = resolvedTier;
     
     console.log(`🔍 getUserPlanLimits for user ${userId}: tier=${userTier}, plan=${JSON.stringify(plan?.limits)}`);
     

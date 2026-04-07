@@ -82,7 +82,7 @@ export default function SubscriptionPricing() {
     enabled: !!user,
   });
 
-  // Get plan limits and usage
+  // Get plan limits and usage — always fresh so limits reflect the current plan immediately
   const { data: planLimits, isLoading: limitsLoading } = useQuery<{
     usage: { products: number; broadcasts: number; teamMembers: number };
     limits: { products: number; broadcasts: number; teamMembers: number };
@@ -91,6 +91,8 @@ export default function SubscriptionPricing() {
   }>({
     queryKey: ['/api/subscriptions/plan-limits'],
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Create checkout session mutation
@@ -280,7 +282,7 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
-      {/* Billing Information Section */}
+      {/* Billing Information Section — shown for paid plans, and for free users who recently downgraded */}
       {currentSubscription && currentSubscription.currentPlan !== 'free' && (
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
@@ -289,7 +291,7 @@ export default function SubscriptionPricing() {
             </svg>
             Billing Information
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Next Billing Date */}
             {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancel_at_period_end && (
@@ -298,7 +300,7 @@ export default function SubscriptionPricing() {
                 <div className="text-lg font-semibold text-gray-900">
                   {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
                     weekday: 'long',
-                    year: 'numeric', 
+                    year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                   })}
@@ -314,64 +316,75 @@ export default function SubscriptionPricing() {
               </div>
             )}
 
-            {/* Current Period (for active subscriptions) */}
+            {/* Current Period */}
             {currentSubscription.user?.subscriptionPeriodStart && currentSubscription.user?.subscriptionPeriodEnd && (
               <div className="bg-white p-4 rounded-lg border border-blue-100">
                 <div className="text-sm text-blue-600 font-medium mb-1">Current Billing Period</div>
                 <div className="text-sm text-gray-700">
-                  {new Date(currentSubscription.user.subscriptionPeriodStart).toLocaleDateString('en-GB', { 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })} - {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', { 
-                    month: 'short', 
+                  {new Date(currentSubscription.user.subscriptionPeriodStart).toLocaleDateString('en-GB', {
+                    month: 'short',
+                    day: 'numeric'
+                  })} – {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                    month: 'short',
                     day: 'numeric',
-                    year: 'numeric' 
+                    year: 'numeric'
                   })}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  Monthly subscription
-                </div>
+                <div className="text-sm text-gray-600 mt-1">Monthly subscription</div>
               </div>
             )}
           </div>
 
-          {/* Downgrade/Cancellation Status */}
+          {/* Downgrade pending — subscription ends at period end */}
           {currentSubscription.subscription?.cancel_at_period_end && currentSubscription.user?.subscriptionPeriodEnd && (
             <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
               <div className="flex items-start gap-3">
-                <div className="w-5 h-5 text-orange-600 mt-0.5">
-                  <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
+                <div className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0">
+                  <svg fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-orange-800 mb-1">
-                    Plan Change Scheduled
-                  </div>
+                  <div className="text-sm font-medium text-orange-800 mb-1">Downgrade Scheduled</div>
                   <div className="text-sm text-orange-700">
-                    Your subscription will {currentSubscription.subscription.cancel_at_period_end ? 'end' : 'change'} on{' '}
+                    Your {currentSubscription.currentPlan} plan ends on{' '}
                     <strong>
                       {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long', 
-                        day: 'numeric'
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                       })}
                     </strong>
                     {(() => {
                       const endDate = new Date(currentSubscription.user.subscriptionPeriodEnd);
-                      const today = new Date();
-                      const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                      return daysRemaining > 0 ? ` (${daysRemaining} days remaining)` : '';
+                      const daysRemaining = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      return daysRemaining > 0 ? ` — ${daysRemaining} days remaining` : '';
                     })()}
                   </div>
                   <div className="text-xs text-orange-600 mt-2">
-                    You'll keep all {currentSubscription.currentPlan} features until then, then automatically switch to Free plan.
+                    You keep all {currentSubscription.currentPlan} features until then, then your account automatically switches to the Free plan.
                   </div>
                 </div>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Free plan — show a clear notice if the account was recently downgraded */}
+      {currentSubscription && currentSubscription.currentPlan === 'free' && currentSubscription.user?.subscriptionPeriodEnd && (
+        <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-start gap-3">
+          <div className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0">
+            <svg fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-700">Downgraded to Free</div>
+            <div className="text-sm text-gray-500 mt-0.5">
+              Your paid subscription ended on{' '}
+              <strong>
+                {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                })}
+              </strong>
+              . Upgrade any time to restore full access.
+            </div>
+          </div>
         </div>
       )}
 

@@ -17460,6 +17460,8 @@ https://quikpik.app`;
           await db.update(users).set({
             subscriptionStatus: 'free',
             currentPlan: 'free',
+            subscriptionTier: 'free',
+            productLimit: 10,
             stripeSubscriptionId: null,
             subscriptionPeriodStart: null,
             subscriptionPeriodEnd: null,
