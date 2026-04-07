@@ -689,7 +689,7 @@ export class DatabaseStorage implements IStorage {
           created_at, updated_at
         FROM products 
         WHERE wholesaler_id = ${wholesalerId} 
-          AND status IN ('active', 'inactive')
+          AND status IN ('active', 'inactive', 'locked')
         ORDER BY 
           status = 'active' DESC,
           promo_active DESC,

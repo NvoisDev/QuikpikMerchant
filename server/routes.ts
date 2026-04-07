@@ -8,7 +8,7 @@ import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
 import { validatePassword, hashPassword, verifyPassword } from "./passwordUtils";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships, teamMembers } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -710,6 +710,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WEBHOOK HANDLERS DISABLED - Using standalone webhook server on port 5001 to prevent duplicates
   // registerWebhookRoutes(app);
 
+  // ===================================================================
+  // PLAN LIMIT ENFORCEMENT HELPER
+  // Called whenever a subscription downgrades (immediately or via webhook)
+  // Locks excess products and suspends excess team members for the new tier
+  // ===================================================================
+  const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number }> = {
+    free:     { products: 10, invitedMembersAllowed: 0 },  // owner only, 0 in teamMembers table
+    standard: { products: 50, invitedMembersAllowed: 2 },  // owner + 2 invited = 3 total
+    premium:  { products: -1, invitedMembersAllowed: -1 }, // unlimited
+  };
+
+  async function enforceNewPlanLimits(
+    userId: string,
+    targetTier: string
+  ): Promise<{ productsLocked: number; teamMembersSuspended: number }> {
+    const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+    let productsLocked = 0;
+    let teamMembersSuspended = 0;
+
+    try {
+      // --- Products ---
+      if (limits.products !== -1) {
+        // Lock active + inactive products that exceed the tier limit (oldest = most established = stays)
+        const nonLockedProducts = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(and(
+            eq(products.wholesalerId, userId),
+            inArray(products.status, ['active', 'inactive'])
+          ))
+          .orderBy(asc(products.createdAt));
+
+        const excess = nonLockedProducts.slice(limits.products);
+        if (excess.length > 0) {
+          const excessIds = excess.map(p => p.id);
+          await db.update(products)
+            .set({ status: 'locked' })
+            .where(inArray(products.id, excessIds));
+          productsLocked = excess.length;
+          console.log(`🔒 Locked ${productsLocked} products for user ${userId} (tier: ${targetTier})`);
+        }
+      }
+
+      // --- Team members ---
+      if (limits.invitedMembersAllowed !== -1) {
+        const activeMembers = await db
+          .select({ id: teamMembers.id })
+          .from(teamMembers)
+          .where(and(eq(teamMembers.wholesalerId, userId), eq(teamMembers.status, 'active')))
+          .orderBy(asc(teamMembers.createdAt));
+
+        const membersToSuspend = activeMembers.slice(limits.invitedMembersAllowed);
+        if (membersToSuspend.length > 0) {
+          const suspendIds = membersToSuspend.map(m => m.id);
+          await db.update(teamMembers)
+            .set({ status: 'suspended' })
+            .where(inArray(teamMembers.id, suspendIds));
+          teamMembersSuspended = membersToSuspend.length;
+          console.log(`🔒 Suspended ${teamMembersSuspended} team members for user ${userId} (tier: ${targetTier})`);
+        }
+      }
+    } catch (err) {
+      console.error(`❌ enforceNewPlanLimits error for user ${userId}:`, err);
+    }
+
+    return { productsLocked, teamMembersSuspended };
+  }
+
+  // Helper to compute projected impact (does NOT mutate DB) for scheduled emails
+  async function getProjectedDowngradeImpact(
+    userId: string,
+    targetTier: string
+  ): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number }> {
+    const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+    try {
+      const [nonLockedProductRows, activeMemberRows] = await Promise.all([
+        db.select({ id: products.id })
+          .from(products)
+          .where(and(
+            eq(products.wholesalerId, userId),
+            inArray(products.status, ['active', 'inactive'])
+          )),
+        db.select({ id: teamMembers.id })
+          .from(teamMembers)
+          .where(and(eq(teamMembers.wholesalerId, userId), eq(teamMembers.status, 'active'))),
+      ]);
+      const productsToLock = limits.products === -1 ? 0 : Math.max(0, nonLockedProductRows.length - limits.products);
+      const teamMembersToSuspend = limits.invitedMembersAllowed === -1 ? 0 : Math.max(0, activeMemberRows.length - limits.invitedMembersAllowed);
+      return { productsToLock, totalProducts: nonLockedProductRows.length, teamMembersToSuspend };
+    } catch {
+      return { productsToLock: 0, totalProducts: 0, teamMembersToSuspend: 0 };
+    }
+  }
+
   // STRIPE WEBHOOKS - MUST BE FIRST TO AVOID VITE CATCH-ALL INTERFERENCE
   // TEST ENDPOINT TO VERIFY LOGGING
   app.post('/api/test-webhook', async (req, res) => {
@@ -1293,12 +1387,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log(`✅ DB updated to Free for user ${affectedUser.id} (was already free: ${wasAlreadyFree})`);
 
+        // Enforce Free plan limits — lock excess products, suspend excess team members
+        let enforcementResult = { productsLocked: 0, teamMembersSuspended: 0 };
+        if (!wasAlreadyFree) {
+          enforcementResult = await enforceNewPlanLimits(affectedUser.id, 'free');
+        }
+
         if (!wasAlreadyFree && affectedUser.email) {
           try {
             const { subject, html, text } = generateDowngradeEffectiveEmail({
               firstName: affectedUser.firstName || '',
               email: affectedUser.email,
               businessName: affectedUser.businessName || affectedUser.name || 'Quikpik',
+              productsLocked: enforcementResult.productsLocked || undefined,
+              teamMembersSuspended: enforcementResult.teamMembersSuspended || undefined,
             });
             await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade effective email sent to ${affectedUser.email}`);
@@ -3799,8 +3901,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('Products request - Target user ID:', targetUserId);
-      const productList = await storage.getProducts(targetUserId);
+      let productList = await storage.getProducts(targetUserId);
       console.log('Products found:', productList.length);
+
+      // Customer-facing view: hide locked products
+      // A request is a customer view if the requester is viewing someone else's products
+      // (wholesaler admin views their own, team members use wholesalerId override above)
+      const isCustomerView = req.user.role !== 'team_member' && targetUserId !== req.user.id;
+      if (isCustomerView) {
+        productList = productList.filter(p => p.status !== 'locked');
+      }
+
       res.json(productList);
       // Fire-and-forget: clear stale promo_active flags in DB
       const staleIds = productList.filter(p => !p.promoActive).map(p => p.id);
@@ -17466,13 +17577,19 @@ https://quikpik.app`;
 
       // Handle downgrade to free plan with proper proration
       if (targetPlan === 'free') {
+        // Compute projected impact BEFORE proratedFreeDowngrade mutates the DB
+        const projectedImpact = await getProjectedDowngradeImpact(userId, 'free');
+
         const result = await SubscriptionService.proratedFreeDowngrade(
           currentSubscription.stripeSubscriptionId,
           userId
         );
 
-        // Send downgrade scheduled confirmation email (effective now = today)
-        // The webhook will send the "effective" email when customer.subscription.deleted fires
+        // Enforce limits immediately (immediate downgrade path)
+        const enforcedNow = await enforceNewPlanLimits(userId, 'free');
+
+        // Send downgrade scheduled/immediate confirmation email
+        // The webhook will also send the "effective" email when customer.subscription.deleted fires
         const [downgradedUser] = await db.select().from(users).where(eq(users.id, userId));
         if (downgradedUser?.email) {
           try {
@@ -17482,6 +17599,9 @@ https://quikpik.app`;
               businessName: downgradedUser.businessName || downgradedUser.name || 'Quikpik',
               currentPlan: currentSubscription.currentPlan || 'standard', // captured before proratedFreeDowngrade mutated the DB
               effectiveDate: new Date(), // immediate cancellation — effective today
+              productsToLock: enforcedNow.productsLocked || undefined,
+              totalProducts: projectedImpact.totalProducts || undefined,
+              teamMembersToSuspend: enforcedNow.teamMembersSuspended || undefined,
             });
             await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade scheduled email sent to ${downgradedUser.email}`);
@@ -17510,6 +17630,9 @@ https://quikpik.app`;
         targetPlanData.stripePriceId,
         targetPlan
       );
+
+      // Enforce paid→paid downgrade limits (e.g. Premium→Standard: lock products >50)
+      await enforceNewPlanLimits(userId, targetPlan);
 
       res.json({
         success: true,
@@ -17544,6 +17667,9 @@ https://quikpik.app`;
           { cancelAtPeriodEnd: true }
         );
 
+        // Compute projected impact for the scheduled email (cancel = at period end, nothing locked yet)
+        const cancelProjectedImpact = await getProjectedDowngradeImpact(userId, 'free');
+
         // Send downgrade scheduled confirmation email
         if (user.email) {
           try {
@@ -17554,6 +17680,9 @@ https://quikpik.app`;
               businessName: user.businessName || user.name || 'Quikpik',
               currentPlan: user.currentPlan || 'standard',
               effectiveDate,
+              productsToLock: cancelProjectedImpact.productsToLock || undefined,
+              totalProducts: cancelProjectedImpact.totalProducts || undefined,
+              teamMembersToSuspend: cancelProjectedImpact.teamMembersToSuspend || undefined,
             });
             await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
             console.log(`📧 Downgrade scheduled email sent to ${user.email}`);

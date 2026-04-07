@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import SubscriptionService from '../subscription-service';
+import { db } from '../db';
+import { teamMembers } from '@shared/schema';
+import { eq, and, count as drizzleCount } from 'drizzle-orm';
 
 // Extend Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -202,10 +205,14 @@ async function getCurrentProductCount(userId: string): Promise<number> {
   try {
     const { db } = await import('../db');
     const { products } = await import('../../shared/schema');
-    const { eq } = await import('drizzle-orm');
+    const { eq, and, inArray } = await import('drizzle-orm');
 
+    // Count only active and inactive products (not locked, which are overflow beyond plan limit)
     const result = await db.select({ count: products.id }).from(products)
-      .where(eq(products.wholesalerId, userId));
+      .where(and(
+        eq(products.wholesalerId, userId),
+        inArray(products.status, ['active', 'inactive'])
+      ));
 
     return result.length;
   } catch (error) {
@@ -244,9 +251,14 @@ async function getCurrentBroadcastCount(userId: string): Promise<number> {
  */
 async function getCurrentTeamMemberCount(userId: string): Promise<number> {
   try {
-    // For now, return 1 (the user themselves) as team member functionality isn't fully implemented
-    // This can be expanded when team member tables are added
-    return 1;
+    const result = await db.select({ value: drizzleCount() })
+      .from(teamMembers)
+      .where(and(
+        eq(teamMembers.wholesalerId, userId),
+        eq(teamMembers.status, 'active')
+      ));
+    const invitedCount = result[0]?.value ?? 0;
+    return 1 + invitedCount; // 1 = owner (in users table) + invited active members
   } catch (error) {
     console.error('❌ Error getting team member count:', error);
     return 1;
@@ -270,7 +282,7 @@ function getDefaultLimits() {
  */
 export async function getUserPlanLimits(userId: string) {
   try {
-    const { plan, currentPlan, user } = await SubscriptionService.getUserSubscription(userId);
+    const { plan, currentPlan, user, subscription } = await SubscriptionService.getUserSubscription(userId);
     
     // Use the most restrictive of subscriptionTier and currentPlan.
     // This guards against the case where currentPlan has been set to 'free'
@@ -330,7 +342,9 @@ export async function getUserPlanLimits(userId: string) {
         products: limits.products === -1 ? 0 : Math.round((productCount / limits.products) * 100),
         broadcasts: limits.broadcasts === -1 ? 0 : Math.round((broadcastCount / limits.broadcasts) * 100),
         teamMembers: limits.teamMembers === -1 ? 0 : Math.round((teamMemberCount / limits.teamMembers) * 100)
-      }
+      },
+      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+      subscriptionPeriodEnd: user?.subscriptionPeriodEnd ?? null,
     };
     
     console.log(`✅ Final limits for ${userTier} user:`, result);

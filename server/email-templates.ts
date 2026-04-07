@@ -409,6 +409,9 @@ export interface DowngradeScheduledEmailData {
   businessName: string;
   currentPlan: 'standard' | 'premium' | string;
   effectiveDate: Date;
+  productsToLock?: number;
+  totalProducts?: number;
+  teamMembersToSuspend?: number;
 }
 
 export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailData): { subject: string; html: string; text: string } {
@@ -439,6 +442,27 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
     ? '<p style="margin:0;font-size:14px;color:#6b7280">Your plan is being downgraded to Free immediately.</p>'
     : '<p style="margin:0;font-size:14px;color:#6b7280">All ' + planLabel + ' features listed above remain fully active until this date.</p>';
 
+  const impactLines: string[] = [];
+  if ((data.productsToLock ?? 0) > 0) {
+    const total = data.totalProducts ?? (data.productsToLock ?? 0);
+    impactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.productsToLock + '</b> of your ' + total + ' products will be locked (Free limit: 10)</li>'
+    );
+  }
+  if ((data.teamMembersToSuspend ?? 0) > 0) {
+    impactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.teamMembersToSuspend + '</b> team member' + ((data.teamMembersToSuspend ?? 0) > 1 ? 's' : '') + ' will lose access (Free plan: owner only)</li>'
+    );
+  }
+  const impactCard = impactLines.length > 0
+    ? emailCard(
+        '<p style="margin:0 0 8px;font-weight:bold;color:#92400e">What will be affected ' + (isImmediate ? 'now' : 'on ' + dateStr) + ':</p>' +
+        '<ul style="margin:0;padding-left:20px;color:#374151">' + impactLines.join('') + '</ul>' +
+        '<p style="margin:8px 0 0;font-size:13px;color:#6b7280">Locked products and suspended members are preserved — they\'ll be restored when you upgrade.</p>',
+        { borderColor: '#fcd34d', bgColor: '#fffbeb' }
+      )
+    : '';
+
   const body =
     emailHeading('Downgrade Scheduled', { size: '22px', color: '#b45309' }) +
     '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
@@ -449,6 +473,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
       untilNote,
       { borderColor: '#fde68a', bgColor: '#fffbeb' }
     ) +
+    impactCard +
     '<p style="margin:16px 0 8px"><b>What you have on your current ' + planLabel + ' plan:</b></p>' +
     currentFeaturesTable +
     '<p style="margin:16px 0 8px"><b>What changes on the Free plan:</b></p>' +
@@ -466,12 +491,23 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
     ? 'Current Premium features: Unlimited products, broadcasts, team members, and groups.'
     : 'Current Standard features: 50 products, 25 broadcasts/month, 3 team members, 5 customer groups.';
 
+  const impactTextLines: string[] = [];
+  if ((data.productsToLock ?? 0) > 0) {
+    impactTextLines.push('• ' + data.productsToLock + ' of your products will be locked');
+  }
+  if ((data.teamMembersToSuspend ?? 0) > 0) {
+    impactTextLines.push('• ' + data.teamMembersToSuspend + ' team member(s) will lose access');
+  }
+
   const text =
     'Downgrade Scheduled — ' + dateStr + '\n\n' +
     'Hi ' + (data.firstName || 'there') + ',\n\n' +
     'Your ' + planLabel + ' subscription will move to the Free plan on ' + dateStr + '.\n\n' +
     currentFeaturesText + '\n\n' +
     'Free plan limits: 10 products, 5 broadcasts/month, 1 team member, 2 customer groups.\n\n' +
+    (impactTextLines.length > 0
+      ? 'What will be affected ' + (isImmediate ? 'now' : 'on ' + dateStr) + ':\n' + impactTextLines.join('\n') + '\n\n'
+      : '') +
     (isImmediate ? '' : 'Changed your mind? Contact us to reinstate your ' + planLabel + ' plan before ' + dateStr + '.\n\n') +
     'View plan options: ' + UPGRADE_URL + '\nPowered by Quikpik Merchant';
 
@@ -482,10 +518,31 @@ export interface DowngradeEffectiveEmailData {
   firstName: string;
   email: string;
   businessName: string;
+  productsLocked?: number;
+  teamMembersSuspended?: number;
 }
 
 export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailData): { subject: string; html: string; text: string } {
   const subject = 'Your Quikpik plan has changed to Free';
+
+  const effectiveImpactLines: string[] = [];
+  if ((data.productsLocked ?? 0) > 0) {
+    effectiveImpactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.productsLocked + ' product' + ((data.productsLocked ?? 0) > 1 ? 's' : '') + ' locked</b> — preserved and will unlock when you upgrade</li>'
+    );
+  }
+  if ((data.teamMembersSuspended ?? 0) > 0) {
+    effectiveImpactLines.push(
+      '<li style="margin-bottom:6px"><b>' + data.teamMembersSuspended + ' team member' + ((data.teamMembersSuspended ?? 0) > 1 ? 's' : '') + ' suspended</b> — they can be reactivated after an upgrade</li>'
+    );
+  }
+  const effectiveImpactCard = effectiveImpactLines.length > 0
+    ? emailCard(
+        '<p style="margin:0 0 8px;font-weight:bold;color:#374151">Here\'s what changed on your account:</p>' +
+        '<ul style="margin:0;padding-left:20px;color:#374151">' + effectiveImpactLines.join('') + '</ul>',
+        { borderColor: '#d1d5db', bgColor: '#f9fafb' }
+      )
+    : '';
 
   const body =
     emailHeading('Your plan is now Free', { size: '22px', color: '#374151' }) +
@@ -493,9 +550,7 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
     '<p style="margin:0 0 20px">Your Quikpik subscription has ended and your account is now on the <b>Free plan</b>. ' +
     'You can continue using Quikpik within the following limits:</p>' +
     FREE_LIMITS_TABLE +
-    '<p style="margin:16px 0 8px;font-size:14px;color:#6b7280">' +
-    'If you have more than 10 products, existing products will remain visible but you won\'t be able to add new ones until you\'re within the limit or upgrade your plan.' +
-    '</p>' +
+    effectiveImpactCard +
     emailDivider() +
     '<p style="margin:0 0 12px;font-weight:bold">Ready to grow again?</p>' +
     UPGRADE_PLANS_CARD +
@@ -503,11 +558,22 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
 
   const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your subscription has ended — you\'re now on the Free plan' });
 
+  const effectiveImpactText: string[] = [];
+  if ((data.productsLocked ?? 0) > 0) {
+    effectiveImpactText.push('• ' + data.productsLocked + ' product(s) locked — will unlock when you upgrade');
+  }
+  if ((data.teamMembersSuspended ?? 0) > 0) {
+    effectiveImpactText.push('• ' + data.teamMembersSuspended + ' team member(s) suspended — reactivated after an upgrade');
+  }
+
   const text =
     'Your Quikpik plan has changed to Free\n\n' +
     'Hi ' + (data.firstName || 'there') + ',\n\n' +
     'Your subscription has ended and your account is now on the Free plan.\n\n' +
     'Free plan limits: 10 products, 5 broadcasts/month, 1 team member, 2 customer groups.\n\n' +
+    (effectiveImpactText.length > 0
+      ? 'What changed on your account:\n' + effectiveImpactText.join('\n') + '\n\n'
+      : '') +
     'To unlock more, upgrade at: ' + UPGRADE_URL + '\n\n' +
     'Standard: \u00A319.99/mo — 50 products, 25 broadcasts, 3 team members\n' +
     'Premium: \u00A339.99/mo — Unlimited everything\n\n' +

@@ -25,6 +25,7 @@ import {
   Trash2, 
   Lock,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   Clock,
   Copy,
@@ -118,6 +119,18 @@ export default function TeamManagement() {
     queryKey: ["/api/team-members"],
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch plan limits for downgrade warning banner
+  const { data: planLimits } = useQuery<{
+    plan: string;
+    limits: { products: number; broadcasts: number; teamMembers: number };
+    usage: { products: number; broadcasts: number; teamMembers: number };
+    cancelAtPeriodEnd: boolean;
+    subscriptionPeriodEnd: string | null;
+  }>({
+    queryKey: ['/api/subscriptions/plan-limits'],
+    staleTime: 5 * 60 * 1000,
   });
 
   const inviteMemberMutation = useMutation({
@@ -527,6 +540,22 @@ export default function TeamManagement() {
         )}
       </PageHeader>
       <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+      {/* Downgrade warning banner */}
+      {planLimits?.cancelAtPeriodEnd && (planLimits.usage.teamMembers > 1) && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div className="flex-1 text-sm text-amber-800">
+            <span className="font-semibold">Downgrade scheduled: </span>
+            Your plan will move to Free
+            {planLimits.subscriptionPeriodEnd
+              ? ' on ' + new Date(planLimits.subscriptionPeriodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+              : ''}
+            . The Free plan is owner-only — {planLimits.usage.teamMembers - 1} team member{planLimits.usage.teamMembers - 1 !== 1 ? 's' : ''} will lose access at that time.{' '}
+            <a href="/subscription-pricing" className="font-semibold underline hover:text-amber-900">View billing →</a>
+          </div>
+        </div>
+      )}
 
       {/* Subscription Status */}
       <Card>
