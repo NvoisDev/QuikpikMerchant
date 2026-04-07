@@ -341,7 +341,9 @@ export async function getUserPlanLimits(userId: string) {
       percentUsed: {
         products: limits.products === -1 ? 0 : Math.round((productCount / limits.products) * 100),
         broadcasts: limits.broadcasts === -1 ? 0 : Math.round((broadcastCount / limits.broadcasts) * 100),
-        teamMembers: limits.teamMembers === -1 ? 0 : Math.round((teamMemberCount / limits.teamMembers) * 100)
+        // Guard against zero limit (Free plan: 0 invited members allowed)
+        // If limit is 0, show 100% when there are members, 0% otherwise
+        teamMembers: limits.teamMembers === -1 ? 0 : limits.teamMembers === 0 ? (teamMemberCount > 0 ? 100 : 0) : Math.round((teamMemberCount / limits.teamMembers) * 100)
       },
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
       subscriptionPeriodEnd: user?.subscriptionPeriodEnd ?? null,
