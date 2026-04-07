@@ -125,8 +125,7 @@ const PriceDisplay = ({
 
   if (isGuestMode) {
     return (
-      <div className="relative">
-        {/* Blurred price display */}
+      <div className="flex flex-col gap-1">
         <div className="blur-sm select-none pointer-events-none">
           <span className={`font-bold text-gray-900 ${
             size === 'small' ? 'text-sm' : 
@@ -143,38 +142,9 @@ const PriceDisplay = ({
             </span>
           )}
         </div>
-        
-        {/* Overlay with contact message */}
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded">
-          <div className="text-center">
-            <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
-            <Button 
-              onClick={async () => {
-                // Properly destroy session using POST logout
-                try {
-                  await fetch('/api/auth/logout', { 
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  });
-                  // Small delay to ensure session is destroyed
-                  setTimeout(() => {
-                    window.location.href = '/landing';
-                  }, 100);
-                } catch (error) {
-                  // Fallback - just redirect
-                  window.location.href = '/landing';
-                }
-              }}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
-            >
-              Sign In
-            </Button>
-          </div>
-        </div>
+        <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 w-fit">
+          Sign in to view price
+        </span>
       </div>
     );
   }
@@ -2944,7 +2914,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency="GBP"
-                                    isGuestMode={false}
+                                    isGuestMode={isGuestMode}
                                     size="medium"
                                     showStrikethrough={true}
                                   />
@@ -3569,7 +3539,7 @@ export default function CustomerPortal() {
                                   price={pricing.effectivePrice}
                                   originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                   currency={'GBP'}
-                                  isGuestMode={false}
+                                  isGuestMode={isGuestMode}
                                   size="medium"
                                   showStrikethrough={true}
                                 />
@@ -3890,7 +3860,7 @@ export default function CustomerPortal() {
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                       currency="GBP"
-                                      isGuestMode={false}
+                                      isGuestMode={isGuestMode}
                                       size="medium"
                                     />
 
