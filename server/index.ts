@@ -16,6 +16,17 @@ async function runStartupMigrations() {
     `ALTER TABLE customer_registration_requests ADD COLUMN IF NOT EXISTS customer_type VARCHAR(20)`,
     // Task #19: customer group enforcement status field
     `ALTER TABLE customer_groups ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'`,
+    // Task #23: Performance indexes — idempotent, safe to run on every startup
+    `CREATE INDEX IF NOT EXISTS products_wholesaler_id_idx ON products (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items (order_id)`,
+    `CREATE INDEX IF NOT EXISTS order_items_product_id_idx ON order_items (product_id)`,
+    `CREATE INDEX IF NOT EXISTS team_members_wholesaler_id_idx ON team_members (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS customer_groups_wholesaler_id_idx ON customer_groups (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS customer_group_members_customer_id_idx ON customer_group_members (customer_id)`,
+    `CREATE INDEX IF NOT EXISTS customer_group_members_group_id_idx ON customer_group_members (group_id)`,
+    `CREATE INDEX IF NOT EXISTS broadcasts_wholesaler_id_idx ON broadcasts (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS delivery_addresses_customer_id_idx ON delivery_addresses (customer_id)`,
+    `CREATE INDEX IF NOT EXISTS delivery_addresses_wholesaler_id_idx ON delivery_addresses (wholesaler_id)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

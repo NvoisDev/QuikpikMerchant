@@ -69,7 +69,7 @@ import {
   type InsertWholesalerCustomerRelationship,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 import { InventoryCalculator } from "../shared/inventory-calculator.js";
 
@@ -4135,11 +4135,9 @@ export class DatabaseStorage implements IStorage {
   })[]> {
     console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
     
-    // Get customers directly through wholesaler_customer_relationships
+    // Step 1: Get all active customers for this wholesaler in one query
     const customerRelationships = await db
-      .select({
-        user: users,
-      })
+      .select({ user: users })
       .from(wholesalerCustomerRelationships)
       .innerJoin(users, eq(wholesalerCustomerRelationships.customerId, users.id))
       .where(and(
@@ -4148,53 +4146,61 @@ export class DatabaseStorage implements IStorage {
         eq(users.archived, false)
       ));
 
-    // Calculate wholesaler-specific order statistics for each customer
-    const customersWithStats = await Promise.all(
-      customerRelationships.map(async (row) => {
-        const customerId = row.user.id;
-        
-        // Get order stats specific to this wholesaler (net amount: subtotal - platform fee)
-        const orderStats = await db
-          .select({
-            totalOrders: count(orders.id),
-            totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
-            totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
-            lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
-          })
-          .from(orders)
-          .where(and(
-            eq(orders.retailerId, customerId),
-            eq(orders.wholesalerId, wholesalerId)
-          ));
-        
-        // Get customer group information
-        const groupMemberships = await db
-          .select({
-            groupId: customerGroupMembers.groupId,
-            groupName: customerGroups.name
-          })
-          .from(customerGroupMembers)
-          .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-          .where(and(
-            eq(customerGroupMembers.customerId, customerId),
-            eq(customerGroups.wholesalerId, wholesalerId)
-          ));
+    if (customerRelationships.length === 0) return [];
 
-        const stats = orderStats[0] || { totalOrders: 0, totalSpent: 0, totalUnpaid: 0, lastOrderDate: null };
-        
-        return {
-          ...row.user,
-          groupNames: groupMemberships.map(g => g.groupName),
-          totalOrders: Number(stats.totalOrders),
-          totalSpent: Number(stats.totalSpent),
-          totalUnpaid: Number(stats.totalUnpaid),
-          lastOrderDate: stats.lastOrderDate,
-          groupIds: groupMemberships.map(g => g.groupId)
-        };
+    const customerIds = customerRelationships.map(r => r.user.id);
+
+    // Step 2: Bulk-fetch order stats for ALL customers in a single GROUP BY query
+    const allOrderStats = await db
+      .select({
+        customerId: orders.retailerId,
+        totalOrders: count(orders.id),
+        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
       })
-    );
+      .from(orders)
+      .where(and(
+        inArray(orders.retailerId, customerIds),
+        eq(orders.wholesalerId, wholesalerId)
+      ))
+      .groupBy(orders.retailerId);
 
-    return customersWithStats;
+    // Step 3: Bulk-fetch group memberships for ALL customers in a single JOIN query
+    const allGroupMemberships = await db
+      .select({
+        customerId: customerGroupMembers.customerId,
+        groupId: customerGroupMembers.groupId,
+        groupName: customerGroups.name
+      })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(and(
+        inArray(customerGroupMembers.customerId, customerIds),
+        eq(customerGroups.wholesalerId, wholesalerId)
+      ));
+
+    // Step 4: Build lookup maps and join in JS (no more per-customer queries)
+    const statsMap = new Map(allOrderStats.map(s => [s.customerId, s]));
+    const groupMap = new Map<string, { groupId: number; groupName: string }[]>();
+    for (const gm of allGroupMemberships) {
+      if (!groupMap.has(gm.customerId)) groupMap.set(gm.customerId, []);
+      groupMap.get(gm.customerId)!.push({ groupId: gm.groupId, groupName: gm.groupName });
+    }
+
+    return customerRelationships.map(row => {
+      const stats = statsMap.get(row.user.id);
+      const groups = groupMap.get(row.user.id) || [];
+      return {
+        ...row.user,
+        groupNames: groups.map(g => g.groupName),
+        totalOrders: Number(stats?.totalOrders ?? 0),
+        totalSpent: Number(stats?.totalSpent ?? 0),
+        totalUnpaid: Number(stats?.totalUnpaid ?? 0),
+        lastOrderDate: stats?.lastOrderDate ?? undefined,
+        groupIds: groups.map(g => g.groupId)
+      };
+    });
   }
 
   async getCustomerDetails(customerId: string): Promise<(User & { 

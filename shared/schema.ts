@@ -262,7 +262,9 @@ export const teamMembers = pgTable("team_members", {
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  wholesalerIdIdx: index("team_members_wholesaler_id_idx").on(table.wholesalerId),
+}));
 
 // Tab permissions table for controlling team member access
 export const tabPermissions = pgTable("tab_permissions", {
@@ -476,7 +478,9 @@ export const products = pgTable("products", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  wholesalerIdIdx: index("products_wholesaler_id_idx").on(table.wholesalerId),
+}));
 
 export const customerGroups = pgTable("customer_groups", {
   id: serial("id").primaryKey(),
@@ -485,14 +489,19 @@ export const customerGroups = pgTable("customer_groups", {
   description: text("description"),
   status: varchar("status", { length: 20 }).notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  wholesalerIdIdx: index("customer_groups_wholesaler_id_idx").on(table.wholesalerId),
+}));
 
 export const customerGroupMembers = pgTable("customer_group_members", {
   id: serial("id").primaryKey(),
   groupId: integer("group_id").notNull().references(() => customerGroups.id),
   customerId: varchar("customer_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  customerIdIdx: index("customer_group_members_customer_id_idx").on(table.customerId),
+  groupIdIdx: index("customer_group_members_group_id_idx").on(table.groupId),
+}));
 
 // Stock movements table for tracking inventory changes
 export const stockMovements = pgTable("stock_movements", {
@@ -597,7 +606,10 @@ export const orderItems = pgTable("order_items", {
   sellingType: varchar("selling_type", { length: 10 }).default('units'),
   appliedOfferLabel: varchar("applied_offer_label", { length: 255 }),
   freeItems: integer("free_items").default(0),
-});
+}, (table) => ({
+  orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
+  productIdIdx: index("order_items_product_id_idx").on(table.productId),
+}));
 
 export const negotiations = pgTable("negotiations", {
   id: serial("id").primaryKey(),
@@ -636,7 +648,9 @@ export const broadcasts = pgTable("broadcasts", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  wholesalerIdIdx: index("broadcasts_wholesaler_id_idx").on(table.wholesalerId),
+}));
 
 // Customer registration requests (for wholesaler approval)
 export const customerRegistrationRequests = pgTable("customer_registration_requests", {
@@ -1455,7 +1469,10 @@ export const deliveryAddresses = pgTable("delivery_addresses", {
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  customerIdIdx: index("delivery_addresses_customer_id_idx").on(table.customerId),
+  wholesalerIdIdx: index("delivery_addresses_wholesaler_id_idx").on(table.wholesalerId),
+}));
 
 // Customer-Wholesaler Relationships Table - Support shared customers across multiple wholesalers
 export const customerWholesalerRelationships = pgTable("customer_wholesaler_relationships", {

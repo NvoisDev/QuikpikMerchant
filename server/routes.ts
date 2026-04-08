@@ -16871,15 +16871,21 @@ https://quikpik.app`;
         ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
       );
 
-      // Product performance analysis
+      // Product performance analysis — single batch query instead of N+1 loop
       const productSales = new Map();
-      for (const order of validOrders) {
-        const orderItems = await storage.getOrderItems(order.id);
-        for (const item of orderItems) {
-          const current = productSales.get(item.productId) || { 
-            quantity: 0, 
-            revenue: 0 
-          };
+      if (validOrders.length > 0) {
+        const validOrderIds = validOrders.map(o => o.id);
+        const allOrderItems = await db
+          .select({
+            productId: orderItems.productId,
+            quantity: orderItems.quantity,
+            unitPrice: orderItems.unitPrice,
+          })
+          .from(orderItems)
+          .where(inArray(orderItems.orderId, validOrderIds));
+
+        for (const item of allOrderItems) {
+          const current = productSales.get(item.productId) || { quantity: 0, revenue: 0 };
           current.quantity += item.quantity;
           current.revenue += parseFloat(item.unitPrice || '0') * item.quantity;
           productSales.set(item.productId, current);
