@@ -17,10 +17,7 @@ const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const WholesalerDashboard = lazy(() => import("@/pages/wholesaler-dashboard"));
 const ProductManagement = lazy(() => import("@/pages/product-management"));
-const RetailerInterface = lazy(() => import("@/pages/retailer-interface"));
 const Checkout = lazy(() => import("@/pages/checkout"));
-const Broadcasts = lazy(() => import("@/pages/broadcasts"));
-const CustomerGroups = lazy(() => import("@/pages/customer-groups"));
 const Settings = lazy(() => import("@/pages/settings"));
 const StripeSuccess = lazy(() => import("@/pages/stripe-success"));
 const Marketplace = lazy(() => import("@/pages/marketplace"));
@@ -28,7 +25,6 @@ const PublicProductPage = lazy(() => import("@/pages/public-product"));
 const OrdersFresh = lazy(() => import("@/pages/orders-fresh"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const Help = lazy(() => import("@/pages/help"));
-const MessageTemplates = lazy(() => import("@/pages/message-templates"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
 const Financials = lazy(() => import("@/pages/financials"));
 const FinancialHealth = lazy(() => import("@/pages/financial-health"));
@@ -49,7 +45,6 @@ const Customers = lazy(() => import("@/pages/customers"));
 const CustomerRegistrationRequests = lazy(() => import("@/pages/customer-registration-requests"));
 const AuthSuccess = lazy(() => import("@/pages/auth-success"));
 const SuperAdmin = lazy(() => import("@/pages/super-admin"));
-const LoadingDemo = lazy(() => import("@/pages/loading-demo").then(m => ({ default: m.LoadingDemo })));
 const SubscriptionPricing = lazy(() => import("@/pages/SubscriptionPricing"));
 const QuickQuote = lazy(() => import("@/pages/quick-quote"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
@@ -139,7 +134,6 @@ function AuthenticatedRoutes() {
               <Route path="/quick-quote" component={QuickQuote} />
               <Route path="/team-management" component={TeamManagement} />
               <Route path="/help" component={Help} />
-              <Route path="/loading-demo" component={LoadingDemo} />
               <Route path="/subscription-pricing" component={SubscriptionPricing} />
               <Route path="/preview-store" component={CustomerPortal} />
               <Route path="/preview-store/:id" component={CustomerPortal} />
@@ -148,7 +142,6 @@ function AuthenticatedRoutes() {
             </>
           ) : (
             <>
-              <Route path="/" component={RetailerInterface} />
               <Route path="/checkout" component={Checkout} />
             </>
           )}
