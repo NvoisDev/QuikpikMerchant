@@ -675,7 +675,7 @@ export default function ProductManagement() {
   });
 
   // Fetch plan limits for downgrade warning banner
-  const { data: planLimits } = useQuery<{
+  const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
     plan: string;
     limits: { products: number; broadcasts: number; teamMembers: number };
     usage: { products: number; broadcasts: number; teamMembers: number };
@@ -1460,6 +1460,7 @@ export default function ProductManagement() {
                 size="sm"
                 variant="outline"
                 className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
+                disabled={planLimitsLoading}
                 onClick={() => {
                 const limit = planLimits?.limits?.products;
                 const usage = planLimits?.usage?.products ?? 0;
