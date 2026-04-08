@@ -37,6 +37,7 @@ import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
 import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whimsical-error";
 import PageHeader from "@/components/PageHeader";
 import { FloatingHelp } from "@/components/ui/floating-help";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -133,6 +134,7 @@ export default function ProductManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
@@ -1459,6 +1461,12 @@ export default function ProductManagement() {
                 variant="outline"
                 className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
                 onClick={() => {
+                const limit = planLimits?.limits?.products;
+                const usage = planLimits?.usage?.products ?? 0;
+                if (limit !== undefined && limit !== -1 && usage >= limit) {
+                  setShowUpgradeModal(true);
+                  return;
+                }
                 setEditingProduct(null);
                 form.reset({
                   name: "",
@@ -2749,6 +2757,13 @@ export default function ProductManagement() {
         </DialogContent>
       </Dialog>
     </div>
+
+    <SubscriptionUpgradeModal
+      open={showUpgradeModal}
+      onOpenChange={setShowUpgradeModal}
+      feature="more products"
+      currentPlan={planLimits?.plan ?? "Free"}
+    />
     </>
   );
 }
