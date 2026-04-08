@@ -4197,7 +4197,7 @@ export class DatabaseStorage implements IStorage {
         totalOrders: Number(stats?.totalOrders ?? 0),
         totalSpent: Number(stats?.totalSpent ?? 0),
         totalUnpaid: Number(stats?.totalUnpaid ?? 0),
-        lastOrderDate: stats?.lastOrderDate ?? undefined,
+        lastOrderDate: stats?.lastOrderDate ?? null,
         groupIds: groups.map(g => g.groupId)
       };
     });
