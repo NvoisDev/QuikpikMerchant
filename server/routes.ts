@@ -13527,6 +13527,10 @@ https://quikpik.app`;
         }
       } catch (_) {}
     }
+    // Fallback: use deliveryAddress text field for older orders without deliveryAddressId
+    if (addressLines.length === 0 && order.deliveryAddress) {
+      addressLines = order.deliveryAddress.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
 
     // Payment status badge
     const ps = order.paymentStatus || 'unpaid';
