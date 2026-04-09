@@ -666,20 +666,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Performance metrics endpoint (development only)
-  app.get("/api/performance", (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ error: "Not found" });
-    }
-    
-    res.json({
-      queryStats: queryOptimizer.getQueryStats(),
-      slowQueries: queryOptimizer.getSlowQueries(),
-      cacheStats: queryCache.getStats(),
-      responseCache: performanceMiddleware.getCacheStats()
-    });
-  });
-
   // SECURITY FIX: Disabled debug login endpoint that was causing data leaks
   // Debug endpoints should only be enabled in development and require explicit email
   app.post("/api/debug/login", async (req, res) => {
