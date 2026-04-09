@@ -12947,49 +12947,59 @@ Please contact the customer to confirm this order.
         </div>
       `;
 
+      // Try to generate PDF invoice attachment (non-blocking — email still sends if this fails)
+      let pdfAttachment: { content: string; filename: string; type: string; disposition: string } | null = null;
+      try {
+        // Ensure order.retailer is populated for buildInvoicePdf (falls back to customer param)
+        const orderForPdf = order.retailer ? order : { ...order, retailer: customer };
+        const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
+        const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
+        pdfAttachment = {
+          content: pdfBuffer.toString('base64'),
+          filename: invoiceFilename,
+          type: 'application/pdf',
+          disposition: 'attachment',
+        };
+        console.log(`📎 Invoice PDF generated for attachment: ${invoiceFilename}`);
+      } catch (pdfError) {
+        console.error('⚠️ Could not generate invoice PDF for email attachment (email will still send without it):', pdfError);
+      }
+
       // Import and use SendGrid
       const sgMail = (await import('@sendgrid/mail')).default;
       
       if (process.env.SENDGRID_API_KEY) {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
         
-        const msg = {
+        const orderRef = order.orderNumber || `#${order.id}`;
+        const businessName = wholesaler.businessName || 'Wholesale Store';
+
+        // ── Customer email ───────────────────────────────────────────────────
+        const customerMsg: any = {
           to: customer.email,
-          from: 'hello@quikpik.co', // Use verified sender
-          subject: `Order Confirmation ${order.orderNumber || `#${order.id}`} - ${wholesaler.businessName || 'Wholesale Store'}`,
+          from: 'hello@quikpik.co',
+          subject: `Order Confirmation ${orderRef} - ${businessName}`,
           html: emailHtml,
-          // Add tracking and delivery settings
           tracking_settings: {
-            click_tracking: {
-              enable: true,
-              enable_text: false
-            },
-            open_tracking: {
-              enable: true
-            },
-            subscription_tracking: {
-              enable: false
-            }
+            click_tracking: { enable: true, enable_text: false },
+            open_tracking: { enable: true },
+            subscription_tracking: { enable: false }
           },
-          // Add email headers for better delivery
           headers: {
             'X-Priority': '1',
             'X-MSMail-Priority': 'High',
             'Importance': 'High'
           }
         };
+        if (pdfAttachment) customerMsg.attachments = [pdfAttachment];
 
         try {
-          const response = await sgMail.send(msg);
+          const response = await sgMail.send(customerMsg);
           console.log(`✅ Confirmation email sent to ${customer.email} for order #${order.id}`);
           console.log(`📧 Email delivery status: ${response[0].statusCode}`);
           console.log(`📧 Message ID: ${response[0].headers['x-message-id']}`);
-          
-          // Additional logging for debugging
           if (response[0].statusCode === 202) {
             console.log(`📧 Email accepted by SendGrid for delivery`);
-          } else {
-            console.log(`⚠️ Unexpected status code: ${response[0].statusCode}`);
           }
         } catch (sendGridError: any) {
           console.error('❌ SendGrid error details:', {
@@ -12997,13 +13007,44 @@ Please contact the customer to confirm this order.
             code: sendGridError.code,
             response: sendGridError.response?.body
           });
-          
-          // Log specific error details
           if (sendGridError.response?.body?.errors) {
             console.error('SendGrid validation errors:', sendGridError.response.body.errors);
           }
-          
           throw sendGridError;
+        }
+
+        // ── Wholesaler copy ──────────────────────────────────────────────────
+        if (wholesaler.email) {
+          try {
+            const customerDisplayName = customer.name ||
+              (customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null) ||
+              customer.email || 'a customer';
+            const wholesalerHtml = `
+              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+                <h2 style="color:#1a7a3d">New Order Received — ${orderRef}</h2>
+                <p>A new order has been placed by <strong>${customerDisplayName}</strong>.</p>
+                <div style="background:#f9fafb;padding:16px;border-radius:6px;margin:16px 0">
+                  <p><strong>Order Reference:</strong> ${orderRef}</p>
+                  <p><strong>Customer:</strong> ${customerDisplayName}</p>
+                  <p><strong>Date:</strong> ${new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+                <p>The full invoice is attached to this email as a PDF.</p>
+                <p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p>
+              </div>`;
+            const wholesalerMsg: any = {
+              to: wholesaler.email,
+              from: 'hello@quikpik.co',
+              replyTo: customer.email || undefined,
+              subject: `New Order ${orderRef} — Invoice Attached`,
+              html: wholesalerHtml,
+            };
+            if (pdfAttachment) wholesalerMsg.attachments = [pdfAttachment];
+            await sgMail.send(wholesalerMsg);
+            console.log(`✅ Wholesaler invoice copy sent to ${wholesaler.email} for order ${orderRef}`);
+          } catch (wholesalerEmailError: any) {
+            // Never block on wholesaler email failure
+            console.error('⚠️ Failed to send wholesaler invoice copy (non-fatal):', wholesalerEmailError?.message);
+          }
         }
       } else {
         console.log("SendGrid not configured - Email would have been sent:", {
