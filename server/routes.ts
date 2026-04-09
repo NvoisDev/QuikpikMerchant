@@ -18534,9 +18534,9 @@ https://quikpik.app`;
 
       const thisPayment = parseFloat(amount);
       const previouslyPaid = parseFloat(order.amountPaid || '0');
-      // Cash/bank payments are always compared against subtotal (no customer transaction fee)
-      // Stripe card payments use order.total (customer has already paid including the fee)
-      const orderTotal = parseFloat(order.subtotal || '0');
+      // Cash/bank payments: customer owes products + delivery (no customer transaction fee).
+      // DB stores subtotal = products only, deliveryCost separately — combine both.
+      const orderTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
       const offlineOutstanding = Math.max(0, orderTotal - previouslyPaid);
 
       if (thisPayment > offlineOutstanding + 0.01) {

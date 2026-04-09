@@ -206,13 +206,12 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
   const [loadingLog, setLoadingLog] = useState(false);
 
   const outstanding = parseFloat(order.amountOutstanding || '0');
-  // For Pay Later (offline) orders, the payable amount is subtotal (no customer transaction fee).
+  // Offline orders: Pay Later (depositPercentage === 0) OR any order with no active Stripe payment link.
+  // For offline, the payable amount is subtotal + deliveryCost (no customer transaction fee).
   // For Stripe orders, amountOutstanding already reflects the customer-fee-inclusive total.
-  const isOfflineOrder = order.depositPercentage === 0;
-  const offlineOutstanding = Math.max(
-    0,
-    parseFloat(order.subtotal || '0') - parseFloat(order.amountPaid || '0')
-  );
+  const isOfflineOrder = order.depositPercentage === 0 || !order.stripePaymentLinkUrl;
+  const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+  const offlineOutstanding = Math.max(0, offlineBase - parseFloat(order.amountPaid || '0'));
   const preFillOutstanding = isOfflineOrder ? offlineOutstanding : outstanding;
 
   const fetchLog = async () => {
@@ -2302,9 +2301,10 @@ export default function OrdersFresh() {
               {selectedOrder.isQuote && (() => {
                 const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                 const customerTotal = parseFloat(selectedOrder.total || '0');
-                // Pay Later / offline orders: customer pays subtotal (no transaction fee)
-                // Use raw amountPaid directly — no proportional remapping needed
-                const isOffline = selectedOrder.depositPercentage === 0;
+                // Offline orders: Pay Later OR no active Stripe link (e.g. already expired or never created)
+                // For offline: customer pays products + delivery (no transaction fee) — use rawPaid directly
+                // For Stripe: customer paid total (includes fee) — proportionally map back to wholesaler amount
+                const isOffline = selectedOrder.depositPercentage === 0 || !selectedOrder.stripePaymentLinkUrl;
                 const rawPaid = parseFloat(selectedOrder.amountPaid || '0');
                 const paymentRatio = (!isOffline && customerTotal > 0) ? rawPaid / customerTotal : 0;
                 const wholesalerPaid = isOffline ? rawPaid : productTotal * paymentRatio;
