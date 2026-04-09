@@ -43,13 +43,10 @@ function BankDetailsSection({ user, toast }: { user: BankUser | null; toast: Ret
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await apiRequest('PUT', '/api/user/profile', form);
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: 'Bank details saved', description: 'Customers will see these on Pay Later quotes.' });
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        setEditing(false);
-      }
+      await apiRequest('PATCH', '/api/settings', form);
+      toast({ title: 'Bank details saved', description: 'Customers will see these on Pay Later quotes.' });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setEditing(false);
     } catch {
       toast({ title: 'Save failed', description: 'Please try again.', variant: 'destructive' });
     } finally {

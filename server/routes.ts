@@ -4831,13 +4831,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseFilter = and(...searchConditions);
 
       // Run count, paginated results, and stats all in parallel — no full-table fetch
+      // Revenue is computed method-aware from order_payments:
+      //   stripe_card: amount includes customer fee (5.5%) → back-calculate pre-fee, then deduct platform fee (3.3%)
+      //   cash/bank_transfer: face-value amount → deduct platform fee (3.3%) only
+      //   Fallback: orders with no order_payments entries use subtotal - platformFee from orders table
+      const methodAwareRevenue = sql`(
+        SELECT COALESCE(
+          NULLIF(SUM(
+            CASE op.method
+              WHEN 'stripe_card' THEN op.amount::numeric / 1.055 * 0.967
+              ELSE                    op.amount::numeric * 0.967
+            END
+          ), 0),
+          NULL
+        )
+        FROM order_payments op
+        WHERE op.order_id = ${orders.id}
+      )`;
       const [totalCountResult, ordersResult, tabStatsResult, baseStatsResult] = await Promise.all([
         db.select({ count: count() }).from(orders).where(tabFilter),
         db.select().from(orders).where(tabFilter).orderBy(desc(orders.createdAt)).limit(limit).offset((page - 1) * limit),
         db.select({
           paidOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} IN ('paid', 'completed', 'processing', 'shipped') THEN 1 END)::int`,
           pendingOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)::int`,
-          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (${orders.subtotal}::numeric - ${orders.platformFee}::numeric) ELSE 0 END), 0)::float`,
+          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled'
+            THEN COALESCE(${methodAwareRevenue}, ${orders.subtotal}::numeric - ${orders.platformFee}::numeric)
+            ELSE 0 END), 0)::float`,
         }).from(orders).where(tabFilter),
         db.select({
           activeCount: sql<number>`COUNT(CASE WHEN NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid')) THEN 1 END)::int`,
@@ -4953,12 +4972,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         order.status === 'pending'
       );
 
-      // Calculate net revenue using subtotal for non-cancelled/refunded orders
+      // Calculate net revenue using method-aware accounting from order_payments
+      // stripe_card amounts include customer fee (5.5%), so back-calculate pre-fee then deduct platform fee (3.3%)
+      // cash/bank_transfer amounts are face value, so just deduct platform fee (3.3%)
+      // Fallback: orders with no payment entries use subtotal - platformFee
       const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
-      const totalRevenue = revenueOrders.reduce((sum, order) => {
-        const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
-        return sum + (isNaN(netAmount) ? 0 : netAmount);
-      }, 0);
+      let totalRevenue = 0;
+      if (revenueOrders.length > 0) {
+        const revenueOrderIds = revenueOrders.map(o => o.id);
+        const payments = revenueOrderIds.length > 0
+          ? await db.select({ orderId: orderPayments.orderId, method: orderPayments.method, amount: orderPayments.amount })
+              .from(orderPayments).where(inArray(orderPayments.orderId, revenueOrderIds))
+          : [];
+        // Group payments by orderId
+        const paymentsByOrder = new Map<number, { method: string; amount: string }[]>();
+        for (const p of payments) {
+          if (!paymentsByOrder.has(p.orderId)) paymentsByOrder.set(p.orderId, []);
+          paymentsByOrder.get(p.orderId)!.push({ method: p.method, amount: p.amount });
+        }
+        totalRevenue = revenueOrders.reduce((sum, order) => {
+          const orderPmts = paymentsByOrder.get(order.id);
+          if (orderPmts && orderPmts.length > 0) {
+            // Method-aware: stripe_card back-calculates customer fee; cash/bank is face value
+            const contribution = orderPmts.reduce((s, p) => {
+              const amt = parseFloat(p.amount || '0');
+              return s + (p.method === 'stripe_card' ? (amt / 1.055 * 0.967) : (amt * 0.967));
+            }, 0);
+            return sum + contribution;
+          }
+          // Fallback for orders without payment entries (e.g. pre-existing paid orders)
+          const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+          return sum + (isNaN(netAmount) ? 0 : netAmount);
+        }, 0);
+      }
 
       // Count by tab for badges using the same isArchivedOrder logic
       const activeCount = allOrders.filter(order => !isArchivedOrder(order)).length;
@@ -18278,8 +18324,8 @@ https://quikpik.app`;
         
         const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: £${quoteDeliveryCharge.toFixed(2)}` : '';
         const deliveryNoteText = wholesaler.deliveryNote ? `\n📦 ${wholesaler.deliveryNote}` : '';
-        const bankDetailsText = (wholesaler as any).bankSortCode && (wholesaler as any).bankAccountNumber
-          ? `\n\nBank Transfer Details:\nAccount Name: ${(wholesaler as any).bankAccountName || businessName}\nSort Code: ${(wholesaler as any).bankSortCode}\nAccount No: ${(wholesaler as any).bankAccountNumber}`
+        const bankDetailsText = wholesaler.bankSortCode && wholesaler.bankAccountNumber
+          ? `\n\nBank Transfer Details:\nAccount Name: ${wholesaler.bankAccountName || businessName}\nSort Code: ${wholesaler.bankSortCode}\nAccount No: ${wholesaler.bankAccountNumber}`
           : '';
 
         const message = isPayLater
@@ -18337,8 +18383,8 @@ https://quikpik.app`;
           // Wholesaler sees subtotal (products + delivery) — never the customer transaction fee
           const wholesalerDeposit = isDeposit ? subtotal * (validDepositPercentage / 100) : 0;
           const wholesalerOutstanding = isDeposit ? subtotal - wholesalerDeposit : 0;
-          const bankDetailsSectionHtml = (isPayLater && (wholesaler as any).bankSortCode && (wholesaler as any).bankAccountNumber)
-            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${(wholesaler as any).bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${(wholesaler as any).bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${(wholesaler as any).bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
+          const bankDetailsSectionHtml = (isPayLater && wholesaler.bankSortCode && wholesaler.bankAccountNumber)
+            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${wholesaler.bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${wholesaler.bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${wholesaler.bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
             : '';
           const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${bankDetailsSectionHtml}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${subtotal.toFixed(2)}` });
@@ -18381,8 +18427,8 @@ https://quikpik.app`;
           const custDeliveryNoteHtml = wholesaler.deliveryNote && fulfillmentType === 'delivery' ? `${emailCard(`<p style="margin:0;font-size:13px">📦 ${wholesaler.deliveryNote}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}` : '';
           const custPaymentBadge = isPayLater ? emailBadge('Pay Later — No payment required now', '#3b82f6') : (isDeposit ? emailBadge(`Deposit required: £${depositAmount.toFixed(2)}`, '#f59e0b') : emailBadge(`Payment required: £${total.toFixed(2)}`, '#10b981'));
           // Bank details for customer email — only shown on Pay Later quotes
-          const custBankDetailsHtml = (isPayLater && (wholesaler as any).bankSortCode && (wholesaler as any).bankAccountNumber)
-            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${(wholesaler as any).bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${(wholesaler as any).bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${(wholesaler as any).bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
+          const custBankDetailsHtml = (isPayLater && wholesaler.bankSortCode && wholesaler.bankAccountNumber)
+            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${wholesaler.bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${wholesaler.bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${wholesaler.bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
             : '';
           const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}${custBankDetailsHtml}`;
           const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
@@ -18434,22 +18480,23 @@ https://quikpik.app`;
         .orderBy(orderPayments.recordedAt);
 
       // Enrich entries with recorder display name
-      // recordedBy is varchar — either a numeric user ID as a string, or 'stripe_webhook'
-      const manualIds = log
-        .map(e => e.recordedBy)
-        .filter((r): r is string => typeof r === 'string' && r !== 'stripe_webhook' && !isNaN(Number(r)));
+      // recordedBy is varchar — either the user's varchar ID (e.g. "google_abc123") or 'stripe_webhook'
+      const manualIds = [...new Set(
+        log
+          .map(e => e.recordedBy)
+          .filter((r): r is string => typeof r === 'string' && r !== 'stripe_webhook')
+      )];
       let userMap: Record<string, string> = {};
       if (manualIds.length > 0) {
-        const numericIds = manualIds.map(Number);
         const recorderUsers = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
-          .from(users).where(sql`${users.id} = ANY(ARRAY[${sql.raw(numericIds.join(','))}]::int[])`);
+          .from(users).where(inArray(users.id, manualIds));
         recorderUsers.forEach(u => {
-          userMap[String(u.id)] = [u.firstName, u.lastName].filter(Boolean).join(' ') || `User ${u.id}`;
+          userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Team member';
         });
       }
       const enriched = log.map(e => ({
         ...e,
-        recordedByName: e.recordedBy === 'stripe_webhook' ? 'Stripe' : (e.recordedBy && userMap[String(e.recordedBy)] ? userMap[String(e.recordedBy)] : null),
+        recordedByName: e.recordedBy === 'stripe_webhook' ? 'Stripe' : (e.recordedBy ? (userMap[e.recordedBy] || 'Team member') : null),
       }));
 
       res.json(enriched);
