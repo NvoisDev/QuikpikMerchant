@@ -4833,14 +4833,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Run count, paginated results, and stats all in parallel — no full-table fetch
       // Revenue is computed method-aware from order_payments:
       //   stripe_card: amount includes customer fee (5.5%) → back-calculate pre-fee, then deduct platform fee (3.3%)
-      //   cash/bank_transfer: face-value amount → deduct platform fee (3.3%) only
+      //   cash/bank_transfer: face-value amount, no platform fee (offline — Quikpik cannot collect)
       //   Fallback: orders with no order_payments entries use subtotal - platformFee from orders table
       const methodAwareRevenue = sql`(
         SELECT COALESCE(
           NULLIF(SUM(
             CASE op.method
-              WHEN 'stripe_card' THEN op.amount::numeric / 1.055 * 0.967
-              ELSE                    op.amount::numeric * 0.967
+              WHEN 'stripe_card'    THEN op.amount::numeric / 1.055 * 0.967
+              WHEN 'cash'           THEN op.amount::numeric
+              WHEN 'bank_transfer'  THEN op.amount::numeric
+              ELSE                       op.amount::numeric
             END
           ), 0),
           NULL
@@ -4993,10 +4995,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue = revenueOrders.reduce((sum, order) => {
           const orderPmts = paymentsByOrder.get(order.id);
           if (orderPmts && orderPmts.length > 0) {
-            // Method-aware: stripe_card back-calculates customer fee; cash/bank is face value
+            // Method-aware: stripe_card back-calculates customer fee then deducts platform fee;
+            // cash/bank_transfer are face-value — no platform fee is collected on offline payments.
             const contribution = orderPmts.reduce((s, p) => {
               const amt = parseFloat(p.amount || '0');
-              return s + (p.method === 'stripe_card' ? (amt / 1.055 * 0.967) : (amt * 0.967));
+              return s + (p.method === 'stripe_card' ? (amt / 1.055 * 0.967) : amt);
             }, 0);
             return sum + contribution;
           }
@@ -18037,7 +18040,8 @@ https://quikpik.app`;
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
       const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      const platformFee = subtotal * 0.033; // 3.3% platform fee on products + delivery
+      // Pay Later (depositPercentage === 0) = offline, no Stripe, Quikpik cannot collect platform fee
+      const platformFee = depositPercentage === 0 ? 0 : subtotal * 0.033;
       const total = subtotal + customerTransactionFee;
 
       // Calculate deposit amount

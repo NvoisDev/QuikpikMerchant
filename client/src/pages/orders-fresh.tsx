@@ -1106,10 +1106,12 @@ export default function OrdersFresh() {
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
+    const gross = subtotal + deliveryCost;
+    // Pay Later (offline) orders: no platform fee — Quikpik cannot collect via Stripe
+    if (order.depositPercentage === 0) return gross;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal + delivery
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
-    return (subtotal + deliveryCost) - feeToDeduct;
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : gross * 0.033;
+    return gross - feeToDeduct;
   };
 
   // Helper function to determine if an order should be archived
@@ -2235,9 +2237,14 @@ export default function OrdersFresh() {
                       <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost || '0'))}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-red-600">
+                  <div className={`flex justify-between ${selectedOrder.depositPercentage === 0 ? 'text-gray-400' : 'text-red-600'}`}>
                     <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
+                    <span>
+                      {selectedOrder.depositPercentage === 0
+                        ? formatCurrency(0)
+                        : `-${formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}`
+                      }
+                    </span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
                     const wholesalerTotal = calculateNetAmount(selectedOrder);
