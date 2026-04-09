@@ -18433,21 +18433,23 @@ https://quikpik.app`;
         .where(eq(orderPayments.orderId, orderId))
         .orderBy(orderPayments.recordedAt);
 
-      // Enrich entries with recorder display name where recordedBy is a user ID
-      const userIds = log
+      // Enrich entries with recorder display name
+      // recordedBy is varchar — either a numeric user ID as a string, or 'stripe_webhook'
+      const manualIds = log
         .map(e => e.recordedBy)
-        .filter((r): r is number => typeof r === 'number');
-      let userMap: Record<number, string> = {};
-      if (userIds.length > 0) {
+        .filter((r): r is string => typeof r === 'string' && r !== 'stripe_webhook' && !isNaN(Number(r)));
+      let userMap: Record<string, string> = {};
+      if (manualIds.length > 0) {
+        const numericIds = manualIds.map(Number);
         const recorderUsers = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
-          .from(users).where(sql`${users.id} = ANY(${userIds})`);
+          .from(users).where(sql`${users.id} = ANY(ARRAY[${sql.raw(numericIds.join(','))}]::int[])`);
         recorderUsers.forEach(u => {
-          userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(' ') || `User ${u.id}`;
+          userMap[String(u.id)] = [u.firstName, u.lastName].filter(Boolean).join(' ') || `User ${u.id}`;
         });
       }
       const enriched = log.map(e => ({
         ...e,
-        recordedByName: typeof e.recordedBy === 'number' ? (userMap[e.recordedBy] || `User ${e.recordedBy}`) : (e.recordedBy === 'stripe_webhook' ? 'Stripe' : null),
+        recordedByName: e.recordedBy === 'stripe_webhook' ? 'Stripe' : (e.recordedBy && userMap[String(e.recordedBy)] ? userMap[String(e.recordedBy)] : null),
       }));
 
       res.json(enriched);
@@ -18464,7 +18466,7 @@ https://quikpik.app`;
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
         ? req.user.wholesalerId
         : req.user.id;
-      const recordedBy = req.user.id;
+      const recordedBy = String(req.user.id); // varchar column
 
       const { amount, method, notes } = req.body;
 
@@ -18521,6 +18523,9 @@ https://quikpik.app`;
         const orderRef = order.orderNumber || `#${orderId}`;
         const methodLabel = method === 'cash' ? 'cash' : 'bank transfer';
 
+        const paidBadge = paymentStatus === 'paid' ? emailBadge('Fully Paid', '#10b981') : emailBadge('Part Paid', '#f59e0b');
+        const methodLabelTitle = methodLabel.charAt(0).toUpperCase() + methodLabel.slice(1);
+
         // SMS to customer
         if (order.customerPhone) {
           const smsMsg = paymentStatus === 'paid'
@@ -18529,10 +18534,16 @@ https://quikpik.app`;
           await sendSMS({ to: order.customerPhone, message: smsMsg }).catch(e => console.error('SMS failed (manual payment):', e));
         }
 
-        // Email to wholesaler
+        // Email to customer
+        if (order.customerEmail) {
+          const custPaymentBody = `${emailHeading('Payment Received', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabelTitle}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid to date:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}<p style="margin:16px 0 0;font-size:14px;color:#6b7280">Thank you for your payment. Please contact ${businessName} if you have any questions.</p>`;
+          const custHtml = wrapCustomerEmail(custPaymentBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser.id, wholesalerUser.logoType, wholesalerUser.logoUrl) });
+          await sendEmail({ to: order.customerEmail, from: 'hello@quikpik.co', subject: `Payment received — ${orderRef}`, html: custHtml }).catch(e => console.error('Customer email failed (manual payment):', e));
+        }
+
+        // Email confirmation to wholesaler
         if (wholesalerUser?.email) {
-          const paidBadge = paymentStatus === 'paid' ? emailBadge('Fully Paid', '#10b981') : emailBadge('Part Paid', '#f59e0b');
-          const emailBody = `${emailHeading('Manual Payment Recorded', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Customer:</b> ${order.customerName || 'Unknown'}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabel.charAt(0).toUpperCase() + methodLabel.slice(1)}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
+          const emailBody = `${emailHeading('Manual Payment Recorded', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Customer:</b> ${order.customerName || 'Unknown'}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabelTitle}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const html = wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser.id, wholesalerUser.logoType, wholesalerUser.logoUrl) });
           await sendEmail({ to: wholesalerUser.email, from: 'hello@quikpik.co', subject: `Payment recorded — ${orderRef}`, html }).catch(e => console.error('Wholesaler email failed (manual payment):', e));
         }
