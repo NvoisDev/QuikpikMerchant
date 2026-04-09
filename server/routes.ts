@@ -13719,23 +13719,27 @@ https://quikpik.app`;
       const xTotal   = xPrice + CW_PRICE;
 
       const TH_H = 24;
-      doc.rect(MARGIN, tableY, CONTENT_W, TH_H).fill(THEAD_BG);
-      doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY);
-      doc.text('PRODUCT',    xProduct + 6, tableY + 8, { width: CW_PRODUCT - 8 });
-      doc.text('QTY',        xQty,         tableY + 8, { width: CW_QTY,  align: 'center' });
-      doc.text('UNIT PRICE', xPrice,       tableY + 8, { width: CW_PRICE, align: 'right' });
-      doc.text('TOTAL',      xTotal,       tableY + 8, { width: CW_TOTAL - 4, align: 'right' });
+      // Helper: draw table header row at given y, return y after header
+      const drawTableHeader = (y: number): number => {
+        doc.rect(MARGIN, y, CONTENT_W, TH_H).fill(THEAD_BG);
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY);
+        doc.text('PRODUCT',    xProduct + 6, y + 8, { width: CW_PRODUCT - 8 });
+        doc.text('QTY',        xQty,         y + 8, { width: CW_QTY,  align: 'center' });
+        doc.text('UNIT PRICE', xPrice,       y + 8, { width: CW_PRICE, align: 'right' });
+        doc.text('TOTAL',      xTotal,       y + 8, { width: CW_TOTAL - 4, align: 'right' });
+        doc.moveTo(MARGIN, y + TH_H).lineTo(MARGIN + CONTENT_W, y + TH_H)
+          .strokeColor(BORDER).lineWidth(1).stroke();
+        return y + TH_H;
+      };
 
-      doc.moveTo(MARGIN, tableY + TH_H).lineTo(MARGIN + CONTENT_W, tableY + TH_H)
-        .strokeColor(BORDER).lineWidth(1).stroke();
+      let rowY = drawTableHeader(tableY);
 
-      let rowY = tableY + TH_H;
       for (const item of orderItems) {
         const rowH = item.promo ? 38 : 26;
-        // New page if needed
+        // New page if needed — re-draw table header on continuation pages
         if (rowY + rowH > 810) {
           doc.addPage({ size: 'A4', margin: 0 });
-          rowY = MARGIN;
+          rowY = drawTableHeader(MARGIN);
         }
 
         doc.font('Helvetica').fontSize(10).fillColor(DARK)
@@ -13783,7 +13787,14 @@ https://quikpik.app`;
       drawTotRow('Total', fmt(grandTotal), true);
 
       // ── FOOTER ────────────────────────────────────────────────────────
-      const footerY = Math.max(tY + 36, 795);
+      // Need ~60pt for footer; add a new page if there isn't room
+      const FOOTER_HEIGHT = 60;
+      const PAGE_H = 841.89;
+      if (tY + 36 + FOOTER_HEIGHT > PAGE_H) {
+        doc.addPage({ size: 'A4', margin: 0 });
+        tY = MARGIN;
+      }
+      const footerY = Math.max(tY + 36, PAGE_H - FOOTER_HEIGHT - 10);
       doc.moveTo(MARGIN, footerY).lineTo(MARGIN + CONTENT_W, footerY)
         .strokeColor(BORDER).lineWidth(0.5).stroke();
       doc.font('Helvetica').fontSize(10).fillColor(GRAY)
