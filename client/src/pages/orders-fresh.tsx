@@ -187,6 +187,7 @@ interface PaymentLogEntry {
   notes: string | null;
   stripePaymentIntentId: string | null;
   recordedBy: number | string | null;
+  recordedByName: string | null;
   recordedAt: string;
 }
 
@@ -280,11 +281,8 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
                     {entry.notes && <span className="text-gray-400 ml-1">— {entry.notes}</span>}
                     <div className="text-gray-400 mt-0.5">
                       {new Date(entry.recordedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      {entry.method !== 'stripe_card' && entry.recordedBy && (
-                        <span className="ml-1 text-gray-300">· recorded manually</span>
-                      )}
-                      {entry.method === 'stripe_card' && (
-                        <span className="ml-1 text-gray-300">· via Stripe</span>
+                      {entry.recordedByName && (
+                        <span className="ml-1 text-gray-300">· by {entry.recordedByName}</span>
                       )}
                     </div>
                   </div>
