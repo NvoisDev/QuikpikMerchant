@@ -128,7 +128,6 @@ import { SubscriptionService } from "./subscription-service";
 import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits } from "./middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
 import type { MailDataRequired } from "@sendgrid/mail";
-import type { AttachmentData } from "@sendgrid/helpers/classes/attachment";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
 import { sendSMS } from "./services/smsService";
@@ -417,6 +416,13 @@ async function refundAcrossPaymentIntents(
   };
 }
 // ─────────────────────────────────────────────────────────────────────────────
+/** Minimal attachment shape compatible with SendGrid MailData.attachments */
+interface SendGridAttachment {
+  content: string;
+  filename: string;
+  type: string;
+  disposition: string;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
@@ -12949,34 +12955,34 @@ Please contact the customer to confirm this order.
         </div>
       `;
 
-      // Try to generate PDF invoice attachment (non-blocking — email still sends if this fails)
-      let pdfAttachment: AttachmentData | null = null;
-      try {
-        // Merge items array and customer (retailer) into the order snapshot for the PDF builder,
-        // since order creation returns an Order without embedded items or retailer populated.
-        const orderForPdf = {
-          ...order,
-          items: items && items.length > 0 ? items : (order.items || []),
-          retailer: order.retailer || customer,
-        };
-        const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
-        const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
-        pdfAttachment = {
-          content: pdfBuffer.toString('base64'),
-          filename: invoiceFilename,
-          type: 'application/pdf',
-          disposition: 'attachment',
-        };
-        console.log(`📎 Invoice PDF generated for attachment: ${invoiceFilename}`);
-      } catch (pdfError) {
-        console.error('⚠️ Could not generate invoice PDF for email attachment (email will still send without it):', pdfError);
-      }
-
       if (process.env.SENDGRID_API_KEY) {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-        
+
         const orderRef = order.orderNumber || `#${order.id}`;
         const businessName = wholesaler.businessName || 'Wholesale Store';
+
+        // Try to generate PDF invoice attachment (non-blocking — email still sends if this fails)
+        let pdfAttachment: SendGridAttachment | null = null;
+        try {
+          // Merge items array and customer (retailer) into the order snapshot for the PDF builder,
+          // since order creation returns an Order without embedded items or retailer populated.
+          const orderForPdf = {
+            ...order,
+            items: items && items.length > 0 ? items : (order.items || []),
+            retailer: order.retailer || customer,
+          };
+          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
+          const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
+          pdfAttachment = {
+            content: pdfBuffer.toString('base64'),
+            filename: invoiceFilename,
+            type: 'application/pdf',
+            disposition: 'attachment',
+          };
+          console.log(`📎 Invoice PDF generated for attachment: ${invoiceFilename}`);
+        } catch (pdfError) {
+          console.error('⚠️ Could not generate invoice PDF for email attachment (email will still send without it):', pdfError);
+        }
 
         // ── Customer email ───────────────────────────────────────────────────
         const customerMsg: MailDataRequired = {
