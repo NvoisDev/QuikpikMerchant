@@ -18492,6 +18492,33 @@ https://quikpik.app`;
       console.log(`✅ Manual ${method} payment of £${thisPayment.toFixed(2)} recorded for order ${order.orderNumber || orderId}`);
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+
+      // Notify customer via SMS + email (best effort — failures don't block the response)
+      try {
+        const [wholesalerUser] = await db.select().from(users).where(eq(users.id, wholesalerId)).limit(1);
+        const businessName = wholesalerUser?.businessName || wholesalerUser?.name || 'Your supplier';
+        const orderRef = order.orderNumber || `#${orderId}`;
+        const methodLabel = method === 'cash' ? 'cash' : 'bank transfer';
+
+        // SMS to customer
+        if (order.customerPhone) {
+          const smsMsg = paymentStatus === 'paid'
+            ? `Payment confirmed! £${thisPayment.toFixed(2)} ${methodLabel} received by ${businessName} for order ${orderRef}. Your order is now fully paid.`
+            : `Payment of £${thisPayment.toFixed(2)} ${methodLabel} received by ${businessName} for order ${orderRef}. Remaining balance: £${newOutstanding.toFixed(2)}.`;
+          await sendSMS({ to: order.customerPhone, message: smsMsg }).catch(e => console.error('SMS failed (manual payment):', e));
+        }
+
+        // Email to wholesaler
+        if (wholesalerUser?.email) {
+          const paidBadge = paymentStatus === 'paid' ? emailBadge('Fully Paid', '#10b981') : emailBadge('Part Paid', '#f59e0b');
+          const emailBody = `${emailHeading('Manual Payment Recorded', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Customer:</b> ${order.customerName || 'Unknown'}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabel.charAt(0).toUpperCase() + methodLabel.slice(1)}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
+          const html = wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser.id, wholesalerUser.logoType, wholesalerUser.logoUrl) });
+          await sendEmail({ to: wholesalerUser.email, from: 'hello@quikpik.co', subject: `Payment recorded — ${orderRef}`, html }).catch(e => console.error('Wholesaler email failed (manual payment):', e));
+        }
+      } catch (notifyErr) {
+        console.error('⚠️ Notification error (manual payment) — non-fatal:', notifyErr);
+      }
+
       res.json({ success: true, order: updatedOrder, paymentStatus, amountPaid: cumulativePaid.toFixed(2) });
     } catch (error) {
       console.error('❌ Error recording manual payment:', error);

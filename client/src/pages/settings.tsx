@@ -14,7 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-function BankDetailsSection({ user, toast }: { user: any; toast: any }) {
+interface BankUser {
+  bankAccountName?: string;
+  bankSortCode?: string;
+  bankAccountNumber?: string;
+  businessName?: string;
+}
+
+function BankDetailsSection({ user, toast }: { user: BankUser | null; toast: ReturnType<typeof useToast>['toast'] }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({

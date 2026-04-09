@@ -177,34 +177,54 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
+type PaymentMethod = 'cash' | 'bank_transfer' | 'stripe_card';
+
+interface PaymentLogEntry {
+  id: number;
+  orderId: number;
+  amount: string;
+  method: PaymentMethod;
+  notes: string | null;
+  stripePaymentIntentId: string | null;
+  recordedBy: number | string | null;
+  recordedAt: string;
+}
+
 // Record manual payment (cash / bank transfer) + show full payment log
 function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
   order: Order;
   onPaymentRecorded: (updatedOrder: Partial<Order>) => void;
-  toast: any;
+  toast: ReturnType<typeof useToast>['toast'];
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'cash' | 'bank_transfer'>('cash');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [log, setLog] = useState<any[]>([]);
+  const [log, setLog] = useState<PaymentLogEntry[]>([]);
   const [loadingLog, setLoadingLog] = useState(false);
 
-  const outstanding = parseFloat((order as any).amountOutstanding || '0');
+  const outstanding = parseFloat(order.amountOutstanding || '0');
 
   const fetchLog = async () => {
     setLoadingLog(true);
     try {
       const res = await fetch(`/api/orders/${order.id}/payments`, { credentials: 'include' });
-      if (res.ok) setLog(await res.json());
-    } catch {}
+      if (res.ok) setLog(await res.json() as PaymentLogEntry[]);
+    } catch (_err) { /* silent */ }
     setLoadingLog(false);
   };
 
   useEffect(() => {
     if (open) fetchLog();
   }, [open, order.id]);
+
+  // When accordion opens and there's an outstanding balance, pre-fill with full outstanding
+  useEffect(() => {
+    if (open && outstanding > 0.01) {
+      setAmount(outstanding.toFixed(2));
+    }
+  }, [open]);
 
   const handleRecord = async () => {
     const amt = parseFloat(amount);
@@ -219,20 +239,21 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amt.toFixed(2), method, notes }),
       });
-      const data = await res.json();
+      const data = await res.json() as { order: Partial<Order>; error?: string };
       if (!res.ok) throw new Error(data.error || 'Failed');
       toast({ title: 'Payment recorded', description: `£${amt.toFixed(2)} ${method === 'cash' ? 'cash' : 'bank transfer'} logged.` });
       setAmount('');
       setNotes('');
       onPaymentRecorded(data.order);
       fetchLog();
-    } catch (err: any) {
-      toast({ title: 'Failed', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to record payment';
+      toast({ title: 'Failed', description: message, variant: 'destructive' });
     }
     setSaving(false);
   };
 
-  const methodLabel: Record<string, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', stripe_card: 'Card (Stripe)' };
+  const methodLabel: Record<PaymentMethod, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', stripe_card: 'Card (Stripe)' };
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -252,14 +273,22 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
             <p className="text-xs text-gray-400">No payments recorded yet.</p>
           ) : (
             <div className="space-y-1">
-              {log.map((entry: any) => (
-                <div key={entry.id} className="flex items-center justify-between text-xs text-gray-700 py-1.5 border-b last:border-0">
+              {log.map((entry) => (
+                <div key={entry.id} className="flex items-start justify-between text-xs text-gray-700 py-1.5 border-b last:border-0">
                   <div>
                     <span className="font-medium">{methodLabel[entry.method] || entry.method}</span>
                     {entry.notes && <span className="text-gray-400 ml-1">— {entry.notes}</span>}
-                    <div className="text-gray-400">{new Date(entry.recordedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                    <div className="text-gray-400 mt-0.5">
+                      {new Date(entry.recordedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {entry.method !== 'stripe_card' && entry.recordedBy && (
+                        <span className="ml-1 text-gray-300">· recorded manually</span>
+                      )}
+                      {entry.method === 'stripe_card' && (
+                        <span className="ml-1 text-gray-300">· via Stripe</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-semibold text-green-700">+£{parseFloat(entry.amount).toFixed(2)}</span>
+                  <span className="font-semibold text-green-700 ml-2 shrink-0">+£{parseFloat(entry.amount).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -277,7 +306,6 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
                     min="0.01"
                     step="0.01"
                     max={outstanding}
-                    placeholder={outstanding.toFixed(2)}
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                     className="pl-6 pr-2 py-1.5 text-sm border rounded w-full focus:outline-none focus:border-green-500"
@@ -285,7 +313,7 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
                 </div>
                 <select
                   value={method}
-                  onChange={e => setMethod(e.target.value as any)}
+                  onChange={e => setMethod(e.target.value as 'cash' | 'bank_transfer')}
                   className="text-sm border rounded px-2 py-1.5 focus:outline-none focus:border-green-500"
                 >
                   <option value="cash">Cash</option>
