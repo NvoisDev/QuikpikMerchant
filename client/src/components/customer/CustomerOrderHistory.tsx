@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
@@ -1176,8 +1176,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
   const ordersPerPage = 10;
   const queryClient = useQueryClient();
+
+  const downloadInvoice = async (order: Order) => {
+    setDownloadingInvoiceId(order.id);
+    try {
+      const encodedPhone = encodeURIComponent(customerPhone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}/${order.id}/invoice`);
+      if (!response.ok) throw new Error('Failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${order.orderNumber || order.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Could not generate the invoice. Please try again.');
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone], // Fixed query key
@@ -1511,7 +1534,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex gap-2 w-full sm:w-auto flex-wrap">
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" className="h-8 px-3 flex-1 sm:flex-none">
@@ -1531,6 +1554,20 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         customerPhone={customerPhone} 
                         onSuccess={() => handleRefresh()}
                       />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 flex-1 sm:flex-none"
+                        disabled={downloadingInvoiceId === order.id}
+                        onClick={() => downloadInvoice(order)}
+                      >
+                        {downloadingInvoiceId === order.id ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3 mr-1" />
+                        )}
+                        <span className="text-xs">{downloadingInvoiceId === order.id ? 'Generating...' : 'Invoice'}</span>
+                      </Button>
                     </div>
                   </div>
                 </div>

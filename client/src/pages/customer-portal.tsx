@@ -24,7 +24,7 @@ import {
   Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp,
   Eye, MoreHorizontal, ShieldCheck, ArrowLeft, ArrowRight, Heart,
   HelpCircle, Building, Star, Mail, Phone, MapPin, Filter, FileText,
-  X, Check
+  X, Check, Loader2, Download
 } from "lucide-react";
 
 // Optimized imports and lazy loading
@@ -650,6 +650,30 @@ const PaymentFormContent = ({
 };
 
 function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void }) {
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
+
+  const downloadInvoice = async (order: Order) => {
+    setDownloadingInvoiceId(order.id);
+    try {
+      const encodedPhone = encodeURIComponent(customerPhone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}/${order.id}/invoice`);
+      if (!response.ok) throw new Error('Failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${(order as any).orderNumber || order.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Could not generate the invoice. Please try again.');
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
+
   const { data: recentOrders = [] } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone, 'recent'],
     queryFn: async () => {
@@ -748,6 +772,21 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
                 customerPhone={customerPhone}
                 onSuccess={handleRefresh}
               />
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={downloadingInvoiceId === order.id}
+                onClick={() => downloadInvoice(order)}
+              >
+                {downloadingInvoiceId === order.id ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3 mr-1" />
+                )}
+                {downloadingInvoiceId === order.id ? 'Generating...' : 'Invoice'}
+              </Button>
             </div>
           </div>
         ))}

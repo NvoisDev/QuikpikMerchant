@@ -13492,159 +13492,225 @@ https://quikpik.app`;
     }
   });
 
-  // Generate and download invoice PDF
-  app.get('/api/orders/:id/invoice', requireAuth, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const userId = req.user.id;
+  // ── Shared invoice PDF builder ───────────────────────────────────────────
+  async function buildInvoicePdf(order: any, wholesaler: any): Promise<Buffer> {
+    const currency = wholesaler.preferredCurrency || 'GBP';
+    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+    const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
 
-      const order = await storage.getOrder(id);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
+    const customerName = order.retailer
+      ? `${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || 'Customer'
+      : 'Customer';
+    const businessName = wholesaler.businessName || 'Quikpik Merchant';
+    const invoiceRef = order.orderNumber || `#${order.id}`;
+    const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      // Only wholesaler can generate invoices for their orders
-      if (order.wholesalerId !== userId) {
-        return res.status(403).json({ message: "Not authorized to generate invoice for this order" });
-      }
+    // Logo — http/https only, no base64
+    const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
+    const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2);
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${businessName}" style="max-height:64px;max-width:200px;display:block;margin:0 auto 10px">`
+      : `<div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.25);font-size:26px;font-weight:700;color:#fff;margin:0 auto 10px">${initials}</div>`;
 
-      const wholesaler = await storage.getUser(userId);
-      if (!wholesaler) {
-        return res.status(404).json({ message: "Wholesaler not found" });
-      }
+    // Delivery address
+    let addressLines: string[] = [];
+    if (order.deliveryAddressId) {
+      try {
+        const addr = await storage.getDeliveryAddressById(order.deliveryAddressId);
+        if (addr) {
+          if (addr.addressLine1) addressLines.push(addr.addressLine1);
+          if (addr.addressLine2) addressLines.push(addr.addressLine2);
+          if (addr.city) addressLines.push(addr.city);
+          if (addr.state) addressLines.push(addr.state);
+          if (addr.postalCode) addressLines.push(addr.postalCode);
+          if (addr.country) addressLines.push(addr.country);
+        }
+      } catch (_) {}
+    }
 
-      // Generate invoice HTML (reuse the email template but optimized for PDF)
-      const customerName = `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim();
-      const businessName = wholesaler.businessName || 'Quikpik Merchant';
-      const currency = wholesaler.preferredCurrency || 'GBP';
-      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
-      
-      const itemsList = order.items.map(item => 
-        `<tr style="border-bottom: 1px solid #eee;">
-          <td style="padding: 12px 8px; border-right: 1px solid #eee;">${item.product.name}</td>
-          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: right;">${currencySymbol}${parseFloat(item.unitPrice).toFixed(2)}</td>
-          <td style="padding: 12px 8px; text-align: right; font-weight: bold;">${currencySymbol}${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}</td>
-        </tr>`
-      ).join('');
+    // Payment status badge
+    const ps = order.paymentStatus || 'unpaid';
+    const psBadgeColor = ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626';
+    const psBadgeLabel = ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid';
 
-      const subtotal = order.items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-      const platformFee = subtotal * 0.05;
-      const total = subtotal + platformFee;
+    // Items rows
+    const itemsHtml = (order.items || []).map((item: any) => {
+      const name = item.product?.name || item.productName || 'Product';
+      const qty = item.quantity || 0;
+      const unitPrice = parseFloat(item.unitPrice || '0');
+      const lineTotal = unitPrice * qty;
+      const promo = item.appliedOfferLabel ? `<br><span style="font-size:11px;color:#16a34a">${item.appliedOfferLabel}</span>` : '';
+      return `<tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb">${name}${promo}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center">${qty}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(unitPrice)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt(lineTotal)}</td>
+      </tr>`;
+    }).join('');
 
-      const invoiceHtml = `
-<!DOCTYPE html>
-<html>
+    // Totals — NEVER use order.total (includes customer transaction fee)
+    const subtotal = parseFloat(order.subtotal || '0');
+    const deliveryCost = parseFloat(order.deliveryCost || '0');
+    const grandTotal = subtotal + deliveryCost;
+
+    const deliveryRow = deliveryCost > 0
+      ? `<div style="display:flex;justify-content:space-between;padding:6px 0;color:#374151"><span>Delivery</span><span>${fmt(deliveryCost)}</span></div>`
+      : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Invoice #${order.id} - ${businessName}</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-    .container { max-width: 800px; margin: 0 auto; }
-    .header { background: #22c55e; color: white; padding: 30px; text-align: center; }
-    .content { padding: 30px; }
-    .flex { display: flex; justify-content: space-between; margin-bottom: 30px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    th, td { padding: 12px 8px; border: 1px solid #e5e7eb; }
-    th { background-color: #f9fafb; font-weight: 600; }
-    .totals { border-top: 2px solid #e5e7eb; padding-top: 20px; }
-    .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .final-total { font-size: 18px; font-weight: bold; color: #22c55e; padding: 15px 0; border-top: 1px solid #e5e7eb; }
-  </style>
+<meta charset="utf-8">
+<title>Invoice ${invoiceRef} — ${businessName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#111827;background:#fff}
+  .page{max-width:780px;margin:0 auto;padding:0}
+  .header{background:#1a7a3d;color:#fff;padding:28px 36px;text-align:center}
+  .header h1{font-size:20px;font-weight:700;margin-bottom:4px}
+  .header p{font-size:12px;opacity:.85}
+  .body{padding:28px 36px}
+  .meta{display:flex;justify-content:space-between;gap:24px;margin-bottom:28px}
+  .meta-block{flex:1}
+  .meta-block h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:6px}
+  .meta-block p{font-size:13px;line-height:1.6;color:#111827}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px}
+  thead tr{background:#f3f4f6}
+  th{padding:10px 8px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;border-bottom:2px solid #e5e7eb}
+  th:last-child,td:last-child{text-align:right}
+  th:nth-child(2),td:nth-child(2){text-align:center}
+  td{padding:10px 8px;border-bottom:1px solid #e5e7eb;font-size:13px}
+  .totals{margin-left:auto;width:260px}
+  .total-line{display:flex;justify-content:space-between;padding:5px 0;color:#374151}
+  .grand-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1a7a3d;font-size:16px;font-weight:700;color:#1a7a3d;margin-top:4px}
+  .footer{margin-top:36px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;color:#6b7280;font-size:11px}
+  .footer strong{color:#1a7a3d}
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>${businessName}</h1>
-      <h2>INVOICE #${order.id}</h2>
+<div class="page">
+  <div class="header">
+    ${logoHtml}
+    <h1>${businessName}</h1>
+    <p>Invoice</p>
+  </div>
+  <div class="body">
+    <div class="meta">
+      <div class="meta-block">
+        <h3>Invoice</h3>
+        <p><strong>${invoiceRef}</strong></p>
+        <p style="margin-top:4px;color:#6b7280">${invoiceDate}</p>
+        <p style="margin-top:6px">
+          <span style="display:inline-block;padding:3px 10px;border-radius:9999px;background:${psBadgeColor};color:#fff;font-size:11px;font-weight:600">${psBadgeLabel}</span>
+        </p>
+      </div>
+      <div class="meta-block">
+        <h3>Bill To</h3>
+        <p><strong>${customerName}</strong></p>
+        ${addressLines.length > 0 ? `<p style="margin-top:4px;color:#374151">${addressLines.join('<br>')}</p>` : ''}
+        ${order.customerPhone || order.retailer?.phoneNumber ? `<p style="margin-top:4px;color:#6b7280">${order.customerPhone || order.retailer?.phoneNumber}</p>` : ''}
+        ${order.customerEmail || order.retailer?.email ? `<p style="color:#6b7280">${order.customerEmail || order.retailer?.email}</p>` : ''}
+      </div>
+      <div class="meta-block">
+        <h3>From</h3>
+        <p><strong>${businessName}</strong></p>
+        ${wholesaler.email ? `<p style="margin-top:4px;color:#6b7280">${wholesaler.email}</p>` : ''}
+      </div>
     </div>
-    
-    <div class="content">
-      <div class="flex">
-        <div>
-          <h3>Bill To:</h3>
-          <p>${customerName}<br/>
-          ${order.customerEmail || order.retailer?.email || ''}<br/>
-          ${order.customerPhone || order.retailer?.phoneNumber || ''}</p>
-        </div>
-        <div>
-          <h3>Invoice Details:</h3>
-          <p>Date: ${new Date(order.createdAt).toLocaleDateString()}<br/>
-          Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}<br/>
-          Order #${order.id}</p>
-        </div>
-      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsList}
-        </tbody>
-      </table>
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
 
-      <div class="totals">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>${currencySymbol}${subtotal.toFixed(2)}</span>
-        </div>
-        <div class="total-row">
-          <span>Platform Fee (5%):</span>
-          <span>${currencySymbol}${platformFee.toFixed(2)}</span>
-        </div>
-        <div class="final-total">
-          <div class="total-row">
-            <span>Total:</span>
-            <span>${currencySymbol}${total.toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
+    <div class="totals">
+      <div class="total-line"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+      ${deliveryRow}
+      <div class="grand-total"><span>Total</span><span>${fmt(grandTotal)}</span></div>
+    </div>
 
-      <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-        <p>Thank you for your business!</p>
-        <small>Generated by Quikpik Merchant Platform on ${new Date().toLocaleDateString()}</small>
-      </div>
+    <div class="footer">
+      <p>Thank you for your business!</p>
+      <p style="margin-top:8px">Powered by <strong>Quikpik Merchant</strong></p>
     </div>
   </div>
+</div>
 </body>
 </html>`;
 
-      // Generate PDF using Puppeteer
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      
-      const page = await browser.newPage();
-      await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
-        }
-      });
-      
-      await browser.close();
+    const puppeteer = await import('puppeteer');
+    const browser = await puppeteer.default.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+    await browser.close();
+    return Buffer.from(pdfBuffer);
+  }
 
-      // Set headers for PDF download
+  // Generate and download invoice PDF (wholesaler + team member access)
+  app.get('/api/orders/:id/invoice', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user;
+      const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: "Not authorized" });
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
+
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler);
+      const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
-
     } catch (error) {
       console.error("Error generating invoice:", error);
+      res.status(500).json({ message: "Failed to generate invoice" });
+    }
+  });
+
+  // Customer-facing invoice download (phone-based auth, no Google OAuth needed)
+  app.get('/api/customer-orders/:wholesalerId/:phoneNumber/:orderId/invoice', async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber, orderId } = req.params;
+      const decodedPhone = decodeURIComponent(phoneNumber);
+      const lastFour = decodedPhone.slice(-4);
+
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFour);
+      if (!customer) return res.status(403).json({ message: "Customer not found" });
+
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ message: "Not authorized" });
+
+      // Verify the order belongs to this customer (by phone or retailer ID)
+      const customerPhone = customer.phone || customer.phoneNumber || '';
+      const belongsToCustomer =
+        order.customerPhone === customerPhone ||
+        order.retailerId === customer.id ||
+        (customerPhone && order.customerPhone && order.customerPhone.slice(-4) === customerPhone.slice(-4));
+      if (!belongsToCustomer) return res.status(403).json({ message: "Not authorized" });
+
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
+
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler);
+      const filename = `invoice-${order.orderNumber || order.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating customer invoice:", error);
       res.status(500).json({ message: "Failed to generate invoice" });
     }
   });

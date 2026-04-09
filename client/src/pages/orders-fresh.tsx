@@ -210,6 +210,9 @@ export default function OrdersFresh() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
 
+  // Invoice download state
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
+
   // Mark as Paid (offline) dialog state
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
   const [markAsPaidOrder, setMarkAsPaidOrder] = useState<Order | null>(null);
@@ -805,6 +808,27 @@ export default function OrdersFresh() {
   };
 
   // Open the Mark as Paid dialog
+  const downloadInvoice = async (order: Order) => {
+    setIsDownloadingInvoice(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/invoice`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to generate invoice');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${order.orderNumber || order.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: 'Error', description: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsDownloadingInvoice(false);
+    }
+  };
+
   const openMarkAsPaid = (order: Order) => {
     setMarkAsPaidOrder(order);
     setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
@@ -2223,6 +2247,24 @@ export default function OrdersFresh() {
                   </Button>
                 </div>
               )}
+
+              {/* Download Invoice — available for all orders */}
+              <div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
+                  onClick={() => downloadInvoice(selectedOrder)}
+                  disabled={isDownloadingInvoice}
+                >
+                  {isDownloadingInvoice ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {isDownloadingInvoice ? 'Generating PDF...' : 'Download Invoice'}
+                </Button>
+              </div>
 
               {/* Payment Status Section for Quotes - Shows product values (excludes customer transaction fees) */}
               {selectedOrder.isQuote && (() => {
