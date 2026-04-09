@@ -2209,6 +2209,21 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
+              {/* Mark as Paid — visible for ALL orders that aren't fully paid and not cancelled */}
+              {selectedOrder.paymentStatus !== 'paid' && selectedOrder.status !== 'cancelled' && (
+                <div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-green-600 text-green-700 hover:bg-green-50 text-xs"
+                    onClick={() => openMarkAsPaid(selectedOrder)}
+                  >
+                    <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                    Mark as Paid (offline)
+                  </Button>
+                </div>
+              )}
+
               {/* Payment Status Section for Quotes - Shows product values (excludes customer transaction fees) */}
               {selectedOrder.isQuote && (() => {
                 const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
@@ -2267,18 +2282,9 @@ export default function OrdersFresh() {
                       )}
                     </div>
                     
-                    {/* Send Payment Link / Mark as Paid - only show if there's an outstanding balance */}
+                    {/* Send Payment Link - only show if there's an outstanding balance */}
                     {wholesalerOutstanding > 0.01 && (
                       <div className="pt-2 border-t mt-2 space-y-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full border-green-600 text-green-700 hover:bg-green-50 text-xs"
-                          onClick={() => openMarkAsPaid(selectedOrder)}
-                        >
-                          <DollarSign className="h-3.5 w-3.5 mr-1.5" />
-                          Mark as Paid (offline)
-                        </Button>
                         <Button 
                           size="sm" 
                           className="w-full bg-green-600 hover:bg-green-700 text-xs"
