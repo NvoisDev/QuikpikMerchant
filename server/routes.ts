@@ -13511,6 +13511,45 @@ https://quikpik.app`;
   // ─── Invoice PDF helper ───────────────────────────────────────────────────
   // Generates a branded PDF invoice and returns a Buffer.
   // Used by both the download endpoint and the quote-email attachment flow.
+  // Escape untrusted strings before embedding in HTML to prevent injection
+  function escHtml(str: string | null | undefined): string {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Trusted logo domains for SSRF prevention — extend as needed
+  const TRUSTED_LOGO_HOSTS = new Set([
+    'res.cloudinary.com',
+    's3.amazonaws.com',
+    'storage.googleapis.com',
+    'replit.com',
+    'repl.co',
+    'quikpik.co',
+    'quikpik.app',
+  ]);
+
+  function isTrustedLogoUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      // Must be HTTPS
+      if (parsed.protocol !== 'https:') return false;
+      const host = parsed.hostname.toLowerCase();
+      // Allow exact matches or subdomain matches
+      for (const trusted of TRUSTED_LOGO_HOSTS) {
+        if (host === trusted || host.endsWith(`.${trusted}`)) return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
   async function generateInvoicePdfBuffer(orderData: {
     id: number;
     orderNumber: string;
@@ -13536,8 +13575,8 @@ https://quikpik.app`;
     const businessName = wholesalerData.businessName || 'Quikpik Merchant';
     const currency = wholesalerData.preferredCurrency || 'GBP';
     const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
-    // Only include logo if it's a hosted URL — base64 data URLs bloat the PDF
-    const logoUrl = wholesalerData.logoUrl?.startsWith('http') ? wholesalerData.logoUrl : null;
+    // Only include logo if it's from a trusted HTTPS host — reject data URLs and unknown domains
+    const logoUrl = isTrustedLogoUrl(wholesalerData.logoUrl) ? wholesalerData.logoUrl! : null;
 
     const subtotal = parseFloat(String(orderData.subtotal || 0));
     const deliveryCost = parseFloat(String(orderData.deliveryCost || 0));
@@ -13550,29 +13589,32 @@ https://quikpik.app`;
       const price = parseFloat(String(item.unitPrice));
       const lineTotal = qty * price;
       return `<tr>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0">${item.name}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0">${escHtml(item.name)}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:center">${qty}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right">${sym}${price.toFixed(2)}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${sym}${lineTotal.toFixed(2)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right">${escHtml(sym)}${price.toFixed(2)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${escHtml(sym)}${lineTotal.toFixed(2)}</td>
       </tr>`;
     }).join('');
 
-    const logoHtml = logoUrl
-      ? `<img src="${logoUrl}" alt="${businessName}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:8px;display:block">`
-      : `<div style="width:48px;height:48px;background:#1a7a3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:700;margin-bottom:8px">${businessName.charAt(0).toUpperCase()}</div>`;
+    const safeBusinessName = escHtml(businessName);
+    const safeLogoUrl = logoUrl ? encodeURI(logoUrl) : null;
+    const logoHtml = safeLogoUrl
+      ? `<img src="${safeLogoUrl}" alt="${safeBusinessName}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:8px;display:block">`
+      : `<div style="width:48px;height:48px;background:#1a7a3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:700;margin-bottom:8px">${escHtml(businessName.charAt(0).toUpperCase())}</div>`;
 
+    const safeSym = escHtml(sym);
     const totalsHtml = `
-      <tr><td style="padding:8px 0;color:#6b7280">Products:</td><td style="padding:8px 0;text-align:right">${sym}${subtotal.toFixed(2)}</td></tr>
-      ${deliveryCost > 0 ? `<tr><td style="padding:8px 0;color:#6b7280">Delivery:</td><td style="padding:8px 0;text-align:right">${sym}${deliveryCost.toFixed(2)}</td></tr>` : ''}
-      ${!isOffline && customerTransactionFee > 0 ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Transaction Fee (5.5% + £0.50):</td><td style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280">${sym}${customerTransactionFee.toFixed(2)}</td></tr>` : ''}
-      <tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:18px;font-weight:700">Total:</td><td style="padding:12px 0 4px;text-align:right;font-size:18px;font-weight:700;color:#1a7a3d">${sym}${grandTotal.toFixed(2)}</td></tr>
+      <tr><td style="padding:8px 0;color:#6b7280">Products:</td><td style="padding:8px 0;text-align:right">${safeSym}${subtotal.toFixed(2)}</td></tr>
+      ${deliveryCost > 0 ? `<tr><td style="padding:8px 0;color:#6b7280">Delivery:</td><td style="padding:8px 0;text-align:right">${safeSym}${deliveryCost.toFixed(2)}</td></tr>` : ''}
+      ${!isOffline && customerTransactionFee > 0 ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Transaction Fee (5.5% + £0.50):</td><td style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280">${safeSym}${customerTransactionFee.toFixed(2)}</td></tr>` : ''}
+      <tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:18px;font-weight:700">Total:</td><td style="padding:12px 0 4px;text-align:right;font-size:18px;font-weight:700;color:#1a7a3d">${safeSym}${grandTotal.toFixed(2)}</td></tr>
     `;
 
     const invoiceHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Invoice ${orderData.orderNumber} - ${businessName}</title>
+  <title>Invoice ${escHtml(orderData.orderNumber)} - ${safeBusinessName}</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #111827; background: white; }
@@ -13604,12 +13646,12 @@ https://quikpik.app`;
   <div class="header">
     <div class="header-left">
       ${logoHtml}
-      <p class="business-name">${businessName}</p>
+      <p class="business-name">${safeBusinessName}</p>
       <span class="invoice-badge">Invoice</span>
     </div>
     <div class="header-right">
-      <p class="order-number">${orderData.orderNumber}</p>
-      <p class="order-date">${new Date(orderData.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      <p class="order-number">${escHtml(orderData.orderNumber)}</p>
+      <p class="order-date">${escHtml(new Date(orderData.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}</p>
       ${isOffline ? '<p style="margin:4px 0 0;font-size:12px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;display:inline-block">Pay Later</p>' : ''}
     </div>
   </div>
@@ -13617,13 +13659,13 @@ https://quikpik.app`;
   <div class="meta">
     <div class="meta-block">
       <p class="meta-label">Bill To</p>
-      <p class="meta-value" style="font-weight:600">${orderData.customerName}</p>
-      ${orderData.customerEmail ? `<p class="meta-value" style="color:#6b7280">${orderData.customerEmail}</p>` : ''}
-      ${orderData.customerPhone ? `<p class="meta-value" style="color:#6b7280">${orderData.customerPhone}</p>` : ''}
+      <p class="meta-value" style="font-weight:600">${escHtml(orderData.customerName)}</p>
+      ${orderData.customerEmail ? `<p class="meta-value" style="color:#6b7280">${escHtml(orderData.customerEmail)}</p>` : ''}
+      ${orderData.customerPhone ? `<p class="meta-value" style="color:#6b7280">${escHtml(orderData.customerPhone)}</p>` : ''}
     </div>
     <div class="meta-block" style="text-align:right">
       <p class="meta-label">Status</p>
-      <p class="meta-value" style="font-weight:600;text-transform:capitalize">${orderData.status}</p>
+      <p class="meta-value" style="font-weight:600;text-transform:capitalize">${escHtml(orderData.status)}</p>
     </div>
   </div>
 
@@ -13657,7 +13699,7 @@ https://quikpik.app`;
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     const page = await browser.newPage();
-    await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
+    await page.setContent(invoiceHtml, { waitUntil: 'domcontentloaded' });
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
