@@ -127,6 +127,8 @@ import nodemailer from "nodemailer";
 import { SubscriptionService } from "./subscription-service";
 import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits } from "./middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
+import type { MailDataRequired } from "@sendgrid/mail";
+import type { AttachmentData } from "@sendgrid/helpers/classes/attachment";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
 import { sendSMS } from "./services/smsService";
@@ -12948,10 +12950,15 @@ Please contact the customer to confirm this order.
       `;
 
       // Try to generate PDF invoice attachment (non-blocking — email still sends if this fails)
-      let pdfAttachment: { content: string; filename: string; type: string; disposition: string } | null = null;
+      let pdfAttachment: AttachmentData | null = null;
       try {
-        // Ensure order.retailer is populated for buildInvoicePdf (falls back to customer param)
-        const orderForPdf = order.retailer ? order : { ...order, retailer: customer };
+        // Merge items array and customer (retailer) into the order snapshot for the PDF builder,
+        // since order creation returns an Order without embedded items or retailer populated.
+        const orderForPdf = {
+          ...order,
+          items: items && items.length > 0 ? items : (order.items || []),
+          retailer: order.retailer || customer,
+        };
         const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
         const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
         pdfAttachment = {
@@ -12965,9 +12972,6 @@ Please contact the customer to confirm this order.
         console.error('⚠️ Could not generate invoice PDF for email attachment (email will still send without it):', pdfError);
       }
 
-      // Import and use SendGrid
-      const sgMail = (await import('@sendgrid/mail')).default;
-      
       if (process.env.SENDGRID_API_KEY) {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
         
@@ -12975,23 +12979,23 @@ Please contact the customer to confirm this order.
         const businessName = wholesaler.businessName || 'Wholesale Store';
 
         // ── Customer email ───────────────────────────────────────────────────
-        const customerMsg: any = {
+        const customerMsg: MailDataRequired = {
           to: customer.email,
           from: 'hello@quikpik.co',
           subject: `Order Confirmation ${orderRef} - ${businessName}`,
           html: emailHtml,
-          tracking_settings: {
-            click_tracking: { enable: true, enable_text: false },
-            open_tracking: { enable: true },
-            subscription_tracking: { enable: false }
+          trackingSettings: {
+            clickTracking: { enable: true, enableText: false },
+            openTracking: { enable: true },
+            subscriptionTracking: { enable: false }
           },
           headers: {
             'X-Priority': '1',
             'X-MSMail-Priority': 'High',
             'Importance': 'High'
-          }
+          },
+          ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}),
         };
-        if (pdfAttachment) customerMsg.attachments = [pdfAttachment];
 
         try {
           const response = await sgMail.send(customerMsg);
@@ -13031,14 +13035,14 @@ Please contact the customer to confirm this order.
                 <p>The full invoice is attached to this email as a PDF.</p>
                 <p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p>
               </div>`;
-            const wholesalerMsg: any = {
+            const wholesalerMsg: MailDataRequired = {
               to: wholesaler.email,
               from: 'hello@quikpik.co',
-              replyTo: customer.email || undefined,
+              ...(customer.email ? { replyTo: customer.email } : {}),
               subject: `New Order ${orderRef} — Invoice Attached`,
               html: wholesalerHtml,
+              ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}),
             };
-            if (pdfAttachment) wholesalerMsg.attachments = [pdfAttachment];
             await sgMail.send(wholesalerMsg);
             console.log(`✅ Wholesaler invoice copy sent to ${wholesaler.email} for order ${orderRef}`);
           } catch (wholesalerEmailError: any) {
