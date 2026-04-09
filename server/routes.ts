@@ -13508,6 +13508,165 @@ https://quikpik.app`;
     }
   });
 
+  // ─── Invoice PDF helper ───────────────────────────────────────────────────
+  // Generates a branded PDF invoice and returns a Buffer.
+  // Used by both the download endpoint and the quote-email attachment flow.
+  async function generateInvoicePdfBuffer(orderData: {
+    id: number;
+    orderNumber: string;
+    createdAt: Date | string;
+    status: string;
+    customerName: string;
+    customerEmail?: string | null;
+    customerPhone?: string | null;
+    subtotal: string | number;
+    deliveryCost?: string | number | null;
+    customerTransactionFee?: string | number | null;
+    depositPercentage?: number | null;
+    items: Array<{
+      name: string;
+      quantity: number;
+      unitPrice: string | number;
+    }>;
+  }, wholesalerData: {
+    businessName?: string | null;
+    logoUrl?: string | null;
+    preferredCurrency?: string | null;
+  }): Promise<Buffer> {
+    const businessName = wholesalerData.businessName || 'Quikpik Merchant';
+    const currency = wholesalerData.preferredCurrency || 'GBP';
+    const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+    // Only include logo if it's a hosted URL — base64 data URLs bloat the PDF
+    const logoUrl = wholesalerData.logoUrl?.startsWith('http') ? wholesalerData.logoUrl : null;
+
+    const subtotal = parseFloat(String(orderData.subtotal || 0));
+    const deliveryCost = parseFloat(String(orderData.deliveryCost || 0));
+    const isOffline = orderData.depositPercentage === 0;
+    const customerTransactionFee = isOffline ? 0 : parseFloat(String(orderData.customerTransactionFee || 0));
+    const grandTotal = subtotal + deliveryCost + customerTransactionFee;
+
+    const itemRows = orderData.items.map(item => {
+      const qty = item.quantity;
+      const price = parseFloat(String(item.unitPrice));
+      const lineTotal = qty * price;
+      return `<tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0">${item.name}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:center">${qty}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right">${sym}${price.toFixed(2)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${sym}${lineTotal.toFixed(2)}</td>
+      </tr>`;
+    }).join('');
+
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${businessName}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:8px;display:block">`
+      : `<div style="width:48px;height:48px;background:#1a7a3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:700;margin-bottom:8px">${businessName.charAt(0).toUpperCase()}</div>`;
+
+    const totalsHtml = `
+      <tr><td style="padding:8px 0;color:#6b7280">Products:</td><td style="padding:8px 0;text-align:right">${sym}${subtotal.toFixed(2)}</td></tr>
+      ${deliveryCost > 0 ? `<tr><td style="padding:8px 0;color:#6b7280">Delivery:</td><td style="padding:8px 0;text-align:right">${sym}${deliveryCost.toFixed(2)}</td></tr>` : ''}
+      ${!isOffline && customerTransactionFee > 0 ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Transaction Fee (5.5% + £0.50):</td><td style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280">${sym}${customerTransactionFee.toFixed(2)}</td></tr>` : ''}
+      <tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:18px;font-weight:700">Total:</td><td style="padding:12px 0 4px;text-align:right;font-size:18px;font-weight:700;color:#1a7a3d">${sym}${grandTotal.toFixed(2)}</td></tr>
+    `;
+
+    const invoiceHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Invoice ${orderData.orderNumber} - ${businessName}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #111827; background: white; }
+    .page { max-width: 800px; margin: 0 auto; padding: 40px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #1a7a3d; }
+    .header-left { display: flex; flex-direction: column; }
+    .business-name { font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+    .invoice-badge { display: inline-block; background: #1a7a3d; color: white; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-top: 4px; }
+    .header-right { text-align: right; }
+    .order-number { font-size: 22px; font-weight: 800; color: #1a7a3d; margin: 0 0 4px; }
+    .order-date { font-size: 13px; color: #6b7280; margin: 0; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 32px; }
+    .meta-block { }
+    .meta-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #9ca3af; margin: 0 0 6px; }
+    .meta-value { font-size: 14px; color: #111827; margin: 0 0 3px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead th { background: #f9fafb; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; padding: 10px 8px; border-bottom: 2px solid #e5e7eb; text-align: left; }
+    thead th:not(:first-child) { text-align: right; }
+    thead th:nth-child(2) { text-align: center; }
+    .totals-table { width: 300px; margin-left: auto; margin-bottom: 0; }
+    .totals-table td { border: none; }
+    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+    .footer-thanks { font-size: 14px; font-weight: 600; color: #1a7a3d; }
+    .footer-powered { font-size: 11px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      ${logoHtml}
+      <p class="business-name">${businessName}</p>
+      <span class="invoice-badge">Invoice</span>
+    </div>
+    <div class="header-right">
+      <p class="order-number">${orderData.orderNumber}</p>
+      <p class="order-date">${new Date(orderData.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      ${isOffline ? '<p style="margin:4px 0 0;font-size:12px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;display:inline-block">Pay Later</p>' : ''}
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="meta-block">
+      <p class="meta-label">Bill To</p>
+      <p class="meta-value" style="font-weight:600">${orderData.customerName}</p>
+      ${orderData.customerEmail ? `<p class="meta-value" style="color:#6b7280">${orderData.customerEmail}</p>` : ''}
+      ${orderData.customerPhone ? `<p class="meta-value" style="color:#6b7280">${orderData.customerPhone}</p>` : ''}
+    </div>
+    <div class="meta-block" style="text-align:right">
+      <p class="meta-label">Status</p>
+      <p class="meta-value" style="font-weight:600;text-transform:capitalize">${orderData.status}</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th style="text-align:center">Qty</th>
+        <th style="text-align:right">Unit Price</th>
+        <th style="text-align:right">Total</th>
+      </tr>
+    </thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+
+  <table class="totals-table">
+    <tbody>${totalsHtml}</tbody>
+  </table>
+
+  <div class="footer">
+    <span class="footer-thanks">Thank you for your business!</span>
+    <span class="footer-powered">Powered by Quikpik Merchant</span>
+  </div>
+</div>
+</body>
+</html>`;
+
+    const puppeteer = await import('puppeteer');
+    const browser = await puppeteer.default.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
+    });
+    await browser.close();
+    return Buffer.from(pdfBuffer);
+  }
+
   // Generate and download invoice PDF
   app.get('/api/orders/:id/invoice', requireAuth, async (req: any, res) => {
     try {
@@ -13519,7 +13678,6 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // Only wholesaler can generate invoices for their orders
       if (order.wholesalerId !== userId) {
         return res.status(403).json({ message: "Not authorized to generate invoice for this order" });
       }
@@ -13529,134 +13687,33 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Wholesaler not found" });
       }
 
-      // Generate invoice HTML (reuse the email template but optimized for PDF)
       const customerName = `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim();
-      const businessName = wholesaler.businessName || 'Quikpik Merchant';
-      const currency = wholesaler.preferredCurrency || 'GBP';
-      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
-      
-      const itemsList = order.items.map(item => 
-        `<tr style="border-bottom: 1px solid #eee;">
-          <td style="padding: 12px 8px; border-right: 1px solid #eee;">${item.product.name}</td>
-          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: right;">${currencySymbol}${parseFloat(item.unitPrice).toFixed(2)}</td>
-          <td style="padding: 12px 8px; text-align: right; font-weight: bold;">${currencySymbol}${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}</td>
-        </tr>`
-      ).join('');
 
-      const subtotal = order.items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-      const platformFee = subtotal * 0.05;
-      const total = subtotal + platformFee;
-
-      const invoiceHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Invoice #${order.id} - ${businessName}</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-    .container { max-width: 800px; margin: 0 auto; }
-    .header { background: #22c55e; color: white; padding: 30px; text-align: center; }
-    .content { padding: 30px; }
-    .flex { display: flex; justify-content: space-between; margin-bottom: 30px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    th, td { padding: 12px 8px; border: 1px solid #e5e7eb; }
-    th { background-color: #f9fafb; font-weight: 600; }
-    .totals { border-top: 2px solid #e5e7eb; padding-top: 20px; }
-    .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .final-total { font-size: 18px; font-weight: bold; color: #22c55e; padding: 15px 0; border-top: 1px solid #e5e7eb; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>${businessName}</h1>
-      <h2>INVOICE #${order.id}</h2>
-    </div>
-    
-    <div class="content">
-      <div class="flex">
-        <div>
-          <h3>Bill To:</h3>
-          <p>${customerName}<br/>
-          ${order.customerEmail || order.retailer?.email || ''}<br/>
-          ${order.customerPhone || order.retailer?.phoneNumber || ''}</p>
-        </div>
-        <div>
-          <h3>Invoice Details:</h3>
-          <p>Date: ${new Date(order.createdAt).toLocaleDateString()}<br/>
-          Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}<br/>
-          Order #${order.id}</p>
-        </div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsList}
-        </tbody>
-      </table>
-
-      <div class="totals">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>${currencySymbol}${subtotal.toFixed(2)}</span>
-        </div>
-        <div class="total-row">
-          <span>Platform Fee (5%):</span>
-          <span>${currencySymbol}${platformFee.toFixed(2)}</span>
-        </div>
-        <div class="final-total">
-          <div class="total-row">
-            <span>Total:</span>
-            <span>${currencySymbol}${total.toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-        <p>Thank you for your business!</p>
-        <small>Generated by Quikpik Merchant Platform on ${new Date().toLocaleDateString()}</small>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-
-      // Generate PDF using Puppeteer
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      const pdfBuffer = await generateInvoicePdfBuffer({
+        id: order.id,
+        orderNumber: order.orderNumber || `#${order.id}`,
+        createdAt: order.createdAt,
+        status: order.status,
+        customerName,
+        customerEmail: order.customerEmail || order.retailer?.email,
+        customerPhone: order.customerPhone || order.retailer?.phoneNumber,
+        subtotal: order.subtotal,
+        deliveryCost: order.deliveryCost,
+        customerTransactionFee: order.customerTransactionFee,
+        depositPercentage: order.depositPercentage,
+        items: order.items.map((item: any) => ({
+          name: item.product?.name || item.productName || `Product #${item.productId}`,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      }, {
+        businessName: wholesaler.businessName,
+        logoUrl: wholesaler.logoUrl,
+        preferredCurrency: wholesaler.preferredCurrency,
       });
-      
-      const page = await browser.newPage();
-      await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
-        }
-      });
-      
-      await browser.close();
 
-      // Set headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.orderNumber || order.id}.pdf"`);
       res.send(pdfBuffer);
 
     } catch (error) {
@@ -18358,6 +18415,46 @@ https://quikpik.app`;
 
       console.log(`✅ Quote ${orderNumber} created successfully`);
 
+      // Generate PDF invoice for email attachments (best-effort — emails still send if PDF fails)
+      let invoiceAttachment: import('./sendgrid-service').EmailAttachment | null = null;
+      try {
+        const resolvedItemsForPdf = await Promise.all(items.map(async (item: any) => {
+          const [product] = await db.select({ name: products.name }).from(products).where(eq(products.id, item.productId));
+          return {
+            name: product?.name || `Product #${item.productId}`,
+            quantity: item.quantity,
+            unitPrice: item.customPrice,
+          };
+        }));
+        const pdfBuffer = await generateInvoicePdfBuffer({
+          id: quoteOrder.id,
+          orderNumber,
+          createdAt: new Date(),
+          status: 'pending',
+          customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+          customerEmail: customer.email,
+          customerPhone: customer.phoneNumber,
+          subtotal: productSubtotal.toFixed(2),
+          deliveryCost: quoteDeliveryCharge.toFixed(2),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
+          depositPercentage: validDepositPercentage,
+          items: resolvedItemsForPdf,
+        }, {
+          businessName: wholesaler.businessName,
+          logoUrl: wholesaler.logoUrl,
+          preferredCurrency: wholesaler.preferredCurrency,
+        });
+        invoiceAttachment = {
+          content: pdfBuffer.toString('base64'),
+          filename: `invoice-${orderNumber}.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment',
+        };
+        console.log(`📎 Invoice PDF generated for ${orderNumber} (${pdfBuffer.length} bytes)`);
+      } catch (pdfErr) {
+        console.error('⚠️ Invoice PDF generation failed — emails will send without attachment:', pdfErr);
+      }
+
       // Send confirmation email to wholesaler
       try {
         if (wholesaler.email) {
@@ -18399,9 +18496,10 @@ https://quikpik.app`;
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Quote ${orderNumber} Sent to ${customer.firstName} ${customer.lastName}`,
-            html: quoteHtml
+            html: quoteHtml,
+            ...(invoiceAttachment ? { attachments: [invoiceAttachment] } : {}),
           });
-          console.log(`📧 Quote confirmation email sent to ${wholesaler.email}`);
+          console.log(`📧 Quote confirmation email sent to ${wholesaler.email} (invoice attached: ${!!invoiceAttachment})`);
         }
       } catch (quoteEmailError) {
         console.error('Failed to send quote confirmation email:', quoteEmailError);
@@ -18442,9 +18540,10 @@ https://quikpik.app`;
             to: customer.email,
             from: 'hello@quikpik.co',
             subject: `Your quote ${orderNumber} from ${businessName}`,
-            html: custHtml
+            html: custHtml,
+            ...(invoiceAttachment ? { attachments: [invoiceAttachment] } : {}),
           });
-          console.log(`📧 Quote email sent to customer: ${customer.email}`);
+          console.log(`📧 Quote email sent to customer: ${customer.email} (invoice attached: ${!!invoiceAttachment})`);
         }
       } catch (custEmailError) {
         console.error('Failed to send customer quote email:', custEmailError);
