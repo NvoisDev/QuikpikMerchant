@@ -206,14 +206,13 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
   const [loadingLog, setLoadingLog] = useState(false);
 
   const outstanding = parseFloat(order.amountOutstanding || '0');
-  // Offline order detection:
-  //   depositPercentage === 0 → Pay Later (always offline, never had Stripe session)
-  //   !stripePaymentIntentId && !stripePaymentLinkUrl → no Stripe payment ever made AND no live link
-  //   NOTE: stripePaymentLinkUrl is cleared by webhook after card payment, but stripePaymentIntentId
-  //   remains set — so this safely avoids misclassifying Stripe-paid orders as offline.
-  const isOfflineOrder =
-    order.depositPercentage === 0 ||
-    (!order.stripePaymentIntentId && !order.stripePaymentLinkUrl);
+  // Offline order detection for prefill:
+  //   depositPercentage === 0 → Pay Later (always offline)
+  //   !stripePaymentIntentId → no Stripe payment has ever been made on this order
+  //     This covers: Stripe link exists but unpaid, no Stripe link at all, and manually-offline orders.
+  //     After a Stripe card payment, stripePaymentIntentId is set by the webhook even though
+  //     stripePaymentLinkUrl is cleared — so Stripe-paid orders correctly remain online (no misclassification).
+  const isOfflineOrder = order.depositPercentage === 0 || !order.stripePaymentIntentId;
   const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
   const offlineOutstanding = Math.max(0, offlineBase - parseFloat(order.amountPaid || '0'));
   const preFillOutstanding = isOfflineOrder ? offlineOutstanding : outstanding;
@@ -2305,12 +2304,11 @@ export default function OrdersFresh() {
               {selectedOrder.isQuote && (() => {
                 const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                 const customerTotal = parseFloat(selectedOrder.total || '0');
-                // Offline orders: Pay Later OR (no Stripe payment intent AND no live Stripe link)
-                // stripePaymentLinkUrl is cleared by webhook after card payment, but stripePaymentIntentId
-                // remains — using both avoids misclassifying Stripe-paid orders with cleared links as offline.
+                // Offline order: Pay Later OR no Stripe payment ever made (stripePaymentIntentId not set).
+                // Covers: link exists but unpaid, no link at all, manually-offline orders.
+                // Stripe-paid orders always have stripePaymentIntentId set (by webhook) → isOffline = false ✓
                 const isOffline =
-                  selectedOrder.depositPercentage === 0 ||
-                  (!selectedOrder.stripePaymentIntentId && !selectedOrder.stripePaymentLinkUrl);
+                  selectedOrder.depositPercentage === 0 || !selectedOrder.stripePaymentIntentId;
                 const rawPaid = parseFloat(selectedOrder.amountPaid || '0');
                 const paymentRatio = (!isOffline && customerTotal > 0) ? rawPaid / customerTotal : 0;
                 const wholesalerPaid = isOffline ? rawPaid : productTotal * paymentRatio;
