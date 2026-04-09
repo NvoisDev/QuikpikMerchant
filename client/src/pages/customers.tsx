@@ -273,6 +273,16 @@ export default function Customers() {
     defaultValues: { customerId: "" },
   });
 
+  // Plan limits — used for group limit pre-check before opening Create Group dialog
+  const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
+    plan: string;
+    limits: { products: number; broadcasts: number; teamMembers: number; customGroups: number };
+    usage: { products: number; broadcasts: number; teamMembers: number };
+  }>({
+    queryKey: ['/api/subscriptions/plan-limits'],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Optimized Queries - Customer Groups (longer cache, conditional loading)
   const { data: customerGroups = [], isLoading: isLoadingGroups } = useQuery<CustomerGroup[]>({
     queryKey: ['/api/customer-groups'],
@@ -1056,14 +1066,24 @@ export default function Customers() {
                 title="Managing Customer Groups"
                 steps={helpContent.customerDirectory.steps}
               />
+              <Button
+                className="w-full sm:w-auto"
+                disabled={planLimitsLoading}
+                onClick={() => {
+                  const limit = planLimits?.limits?.customGroups;
+                  const usage = customerGroups.length;
+                  if (limit !== undefined && limit !== -1 && usage >= limit) {
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+                  setIsCreateDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden xs:inline">Create Group</span>
+                <span className="xs:hidden">Create</span>
+              </Button>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full sm:w-auto">
-                    <Plus className="mr-2 h-4 w-4" />
-                    <span className="hidden xs:inline">Create Group</span>
-                    <span className="xs:hidden">Create</span>
-                  </Button>
-                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create Customer Group</DialogTitle>
@@ -2487,9 +2507,9 @@ export default function Customers() {
       {/* Upgrade Modal */}
       <SubscriptionUpgradeModal 
         open={showUpgradeModal} 
-        onOpenChange={() => setShowUpgradeModal(false)}
-        reason="customer_group_limit"
-        currentPlan="free"
+        onOpenChange={setShowUpgradeModal}
+        feature="more customer groups"
+        currentPlan={planLimits?.plan ?? "Free"}
       />
       
       {/* Customer Invitation Modal */}
