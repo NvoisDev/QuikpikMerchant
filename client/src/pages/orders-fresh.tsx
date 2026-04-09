@@ -209,6 +209,14 @@ export default function OrdersFresh() {
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
+
+  // Mark as Paid (offline) dialog state
+  const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
+  const [markAsPaidOrder, setMarkAsPaidOrder] = useState<Order | null>(null);
+  const [markAsPaidAmount, setMarkAsPaidAmount] = useState('');
+  const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
+  const [markAsPaidNote, setMarkAsPaidNote] = useState('');
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [processRefund, setProcessRefund] = useState(true);
   const [refundType, setRefundType] = useState<'card' | 'credit' | 'later'>('card');
   const [restockInventory, setRestockInventory] = useState(true);
@@ -793,6 +801,58 @@ export default function OrdersFresh() {
       });
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  // Open the Mark as Paid dialog
+  const openMarkAsPaid = (order: Order) => {
+    setMarkAsPaidOrder(order);
+    setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
+    setMarkAsPaidMethod('cash');
+    setMarkAsPaidNote('');
+    setIsMarkAsPaidOpen(true);
+  };
+
+  // Submit offline payment record
+  const handleMarkAsPaid = async () => {
+    if (!markAsPaidOrder) return;
+    const parsed = parseFloat(markAsPaidAmount);
+    if (isNaN(parsed) || parsed <= 0) {
+      toast({ title: 'Invalid amount', description: 'Please enter an amount greater than 0', variant: 'destructive' });
+      return;
+    }
+    setIsMarkingPaid(true);
+    try {
+      const response = await fetch(`/api/orders/${markAsPaidOrder.id}/mark-as-paid`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parsed, method: markAsPaidMethod, note: markAsPaidNote }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const updatedFields = {
+          amountPaid: data.order.amountPaid,
+          amountOutstanding: data.order.amountOutstanding,
+          paymentStatus: data.order.paymentStatus,
+          status: data.order.status,
+        };
+        setOrders(orders.map(o => o.id === markAsPaidOrder.id ? { ...o, ...updatedFields } : o));
+        if (selectedOrder?.id === markAsPaidOrder.id) {
+          setSelectedOrder({ ...selectedOrder, ...updatedFields });
+        }
+        setIsMarkAsPaidOpen(false);
+        toast({
+          title: 'Payment recorded',
+          description: `£${parsed.toFixed(2)} via ${markAsPaidMethod.replace('_', ' ')} has been recorded.`,
+        });
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to record payment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
+    } finally {
+      setIsMarkingPaid(false);
     }
   };
 
@@ -1512,6 +1572,15 @@ export default function OrdersFresh() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
+                              {order.paymentStatus !== 'paid' && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}
+                                  className="text-green-600 focus:text-green-700 cursor-pointer"
+                                >
+                                  <DollarSign className="h-3.5 w-3.5 mr-2" />
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                              )}
                               {order.status !== 'ready_for_collection' && (
                                 <DropdownMenuItem
                                   onClick={(e) => { e.stopPropagation(); markReadyForCollection(order.id); }}
@@ -1649,6 +1718,15 @@ export default function OrdersFresh() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            {order.paymentStatus !== 'paid' && (
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}
+                                className="text-green-600 focus:text-green-700 cursor-pointer"
+                              >
+                                <DollarSign className="h-3.5 w-3.5 mr-2" />
+                                Mark as Paid
+                              </DropdownMenuItem>
+                            )}
                             {order.status !== 'ready_for_collection' && (
                               <DropdownMenuItem
                                 onClick={(e) => { e.stopPropagation(); markReadyForCollection(order.id); }}
@@ -2189,9 +2267,18 @@ export default function OrdersFresh() {
                       )}
                     </div>
                     
-                    {/* Send Payment Link Buttons - only show if there's an outstanding balance (using wholesaler-perspective value) */}
+                    {/* Send Payment Link / Mark as Paid - only show if there's an outstanding balance */}
                     {wholesalerOutstanding > 0.01 && (
                       <div className="pt-2 border-t mt-2 space-y-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-green-600 text-green-700 hover:bg-green-50 text-xs"
+                          onClick={() => openMarkAsPaid(selectedOrder)}
+                        >
+                          <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                          Mark as Paid (offline)
+                        </Button>
                         <Button 
                           size="sm" 
                           className="w-full bg-green-600 hover:bg-green-700 text-xs"
@@ -2661,6 +2748,79 @@ export default function OrdersFresh() {
             </div>
             )
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Paid (offline) Dialog */}
+      <Dialog open={isMarkAsPaidOpen} onOpenChange={setIsMarkAsPaidOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              Record Offline Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            {markAsPaidOrder && (
+              <p className="text-sm text-gray-500">
+                Order {markAsPaidOrder.orderNumber || `#${markAsPaidOrder.id}`} — outstanding{' '}
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(parseFloat(markAsPaidOrder.amountOutstanding || '0'))}
+                </span>
+              </p>
+            )}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Amount received (£)</label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={markAsPaidAmount}
+                onChange={(e) => setMarkAsPaidAmount(e.target.value)}
+                placeholder="0.00"
+                className="text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Payment method</label>
+              <select
+                value={markAsPaidMethod}
+                onChange={(e) => setMarkAsPaidMethod(e.target.value)}
+                className="w-full p-2 border rounded-md text-sm bg-white"
+              >
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Internal note (optional)</label>
+              <textarea
+                value={markAsPaidNote}
+                onChange={(e) => setMarkAsPaidNote(e.target.value)}
+                placeholder="e.g. Paid in full at delivery"
+                className="w-full p-2 border rounded-md text-sm min-h-[60px] resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsMarkAsPaidOpen(false)}
+                disabled={isMarkingPaid}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleMarkAsPaid}
+                disabled={isMarkingPaid || !markAsPaidAmount}
+              >
+                {isMarkingPaid ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

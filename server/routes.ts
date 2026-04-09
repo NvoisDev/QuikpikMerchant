@@ -4549,6 +4549,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark order as paid offline (cash, bank transfer, cheque, etc.)
+  app.post('/api/orders/:id/mark-as-paid', requireAuth, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+
+      const { amount, method, note } = req.body;
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than 0' });
+      }
+
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
+      if (order.paymentStatus === 'paid') return res.status(400).json({ error: 'Order is already fully paid' });
+
+      const currentOutstanding = parseFloat(order.amountOutstanding || '0');
+      if (parsedAmount > currentOutstanding + 0.01) {
+        return res.status(400).json({ error: `Amount (£${parsedAmount.toFixed(2)}) exceeds outstanding balance (£${currentOutstanding.toFixed(2)})` });
+      }
+
+      const newAmountPaid = parseFloat(order.amountPaid || '0') + parsedAmount;
+      const newAmountOutstanding = Math.max(0, currentOutstanding - parsedAmount);
+      const newPaymentStatus = newAmountOutstanding <= 0.01 ? 'paid' : 'part_paid';
+
+      const updateData: Record<string, any> = {
+        amountPaid: newAmountPaid.toFixed(2),
+        amountOutstanding: newAmountOutstanding.toFixed(2),
+        paymentStatus: newPaymentStatus,
+      };
+
+      if (newPaymentStatus === 'paid' && order.status === 'confirmed') {
+        updateData.status = 'paid';
+      }
+
+      await db.update(orders).set(updateData).where(eq(orders.id, orderId));
+
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+
+      console.log(`✅ Order ${order.orderNumber} marked as ${newPaymentStatus} offline — £${parsedAmount.toFixed(2)} via ${method || 'unspecified'}${note ? ` (${note})` : ''}`);
+      return res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('❌ mark-as-paid error:', error);
+      return res.status(500).json({ error: 'Failed to record payment' });
+    }
+  });
+
   // Mark order items as prepared
   app.put("/api/orders/:id/items-prepared", requireAuth, async (req, res) => {
     try {
