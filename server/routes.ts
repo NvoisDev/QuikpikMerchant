@@ -18540,24 +18540,24 @@ https://quikpik.app`;
 
       const { cumulativePaid, newOutstanding, paymentStatus } = applyPaymentToOrder(previouslyPaid, orderTotal, thisPayment);
 
-      // Insert into payment log
-      await db.insert(orderPayments).values({
-        orderId,
-        amount: thisPayment.toFixed(2),
-        method,
-        notes: notes || null,
-        recordedBy,
+      // Wrap payment log insert + order update in a transaction to ensure consistency
+      await db.transaction(async (trx) => {
+        await trx.insert(orderPayments).values({
+          orderId,
+          amount: thisPayment.toFixed(2),
+          method,
+          notes: notes || null,
+          recordedBy,
+        });
+        await trx.update(orders)
+          .set({
+            amountPaid: cumulativePaid.toFixed(2),
+            amountOutstanding: newOutstanding.toFixed(2),
+            paymentStatus,
+            status: paymentStatus === 'paid' ? 'confirmed' : order.status,
+          })
+          .where(eq(orders.id, orderId));
       });
-
-      // Update order totals
-      await db.update(orders)
-        .set({
-          amountPaid: cumulativePaid.toFixed(2),
-          amountOutstanding: newOutstanding.toFixed(2),
-          paymentStatus,
-          status: paymentStatus === 'paid' ? 'confirmed' : order.status,
-        })
-        .where(eq(orders.id, orderId));
 
       console.log(`✅ Manual ${method} payment of £${thisPayment.toFixed(2)} recorded for order ${order.orderNumber || orderId}`);
 
