@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { performanceMiddleware } from "./middleware/performance";
-import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
