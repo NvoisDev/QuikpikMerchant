@@ -4976,7 +4976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate net revenue using method-aware accounting from order_payments
       // stripe_card amounts include customer fee (5.5%), so back-calculate pre-fee then deduct platform fee (3.3%)
-      // cash/bank_transfer amounts are face value, so just deduct platform fee (3.3%)
+      // cash/bank_transfer amounts are face value — offline payments, no platform fee collected
       // Fallback: orders with no payment entries use subtotal - platformFee
       const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
       let totalRevenue = 0;
