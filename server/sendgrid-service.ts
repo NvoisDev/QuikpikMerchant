@@ -7,25 +7,17 @@ if (!process.env.SENDGRID_API_KEY) {
 const mailService = new MailService();
 mailService.setApiKey(process.env.SENDGRID_API_KEY);
 
-export interface EmailAttachment {
-  content: string;
-  filename: string;
-  type: string;
-  disposition: 'attachment';
-}
-
 interface EmailParams {
   to: string;
   from: string;
   subject: string;
   text?: string;
   html?: string;
-  attachments?: EmailAttachment[];
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    console.log('📧 Sending email via SendGrid:', { to: params.to, subject: params.subject, attachments: params.attachments?.length ?? 0 });
+    console.log('📧 Sending email via SendGrid:', { to: params.to, subject: params.subject });
     
     const content: Array<{type: string; value: string}> = [];
     if (params.text) {
@@ -42,7 +34,6 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       from: params.from || 'hello@quikpik.co',
       subject: params.subject,
       content,
-      ...(params.attachments && params.attachments.length > 0 ? { attachments: params.attachments } : {}),
     } as any);
     
     console.log('✅ Email sent successfully via SendGrid');

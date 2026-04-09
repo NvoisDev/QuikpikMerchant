@@ -3,11 +3,12 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { performanceMiddleware } from "./middleware/performance";
+import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
 import { validatePassword, hashPassword, verifyPassword } from "./passwordUtils";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, orderPayments, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships, teamMembers } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships, teamMembers } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 
 // CRITICAL FIX: Copy exact address parsing logic from UI order detail page
@@ -415,24 +416,6 @@ async function refundAcrossPaymentIntents(
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Shared helper: recalculate order payment status from cumulative paid vs. total
-// Used by both the Stripe webhook and the manual payment endpoint
-function applyPaymentToOrder(
-  currentPaid: number,
-  orderTotal: number,
-  thisPayment: number
-): { cumulativePaid: number; newOutstanding: number; paymentStatus: string } {
-  const cumulativePaid = currentPaid + thisPayment;
-  const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
-  let paymentStatus = 'unpaid';
-  if (newOutstanding <= 0.01) {
-    paymentStatus = 'paid';
-  } else if (cumulativePaid > 0) {
-    paymentStatus = 'part_paid';
-  }
-  return { cumulativePaid, newOutstanding, paymentStatus };
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
   // CRITICAL FIX: Setup session middleware FIRST before any routes
@@ -663,6 +646,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('🧹 Error clearing logo:', error);
       res.status(500).json({ error: 'Failed to clear logo' });
     }
+  });
+
+  // Performance metrics endpoint (development only)
+  app.get("/api/performance", (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    res.json({
+      queryStats: queryOptimizer.getQueryStats(),
+      slowQueries: queryOptimizer.getSlowQueries(),
+      cacheStats: queryCache.getStats(),
+      responseCache: performanceMiddleware.getCacheStats()
+    });
   });
 
   // SECURITY FIX: Disabled debug login endpoint that was causing data leaks
@@ -1187,41 +1184,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
           const orderTotal = parseFloat(existingOrder.total || '0');
           
-          // Use shared helper — same logic used by manual payment endpoint
-          const { cumulativePaid, newOutstanding, paymentStatus } = applyPaymentToOrder(previouslyPaid, orderTotal, thisPayment);
+          // Calculate cumulative paid and new outstanding
+          const cumulativePaid = previouslyPaid + thisPayment;
+          const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
+          
+          // Determine payment status
+          let paymentStatus = 'unpaid';
+          if (newOutstanding <= 0.01) { // Allow for rounding
+            paymentStatus = 'paid';
+          } else if (cumulativePaid > 0) {
+            paymentStatus = 'part_paid';
+          }
           
           console.log(`📊 Payment update: This payment £${thisPayment.toFixed(2)}, Previously paid £${previouslyPaid.toFixed(2)}, Total paid £${cumulativePaid.toFixed(2)}, Outstanding £${newOutstanding.toFixed(2)}, Status: ${paymentStatus}`);
           
-          const newPaymentIntentId = (() => {
-            const newPi = session.payment_intent as string | null;
-            if (!newPi) return existingOrder.stripePaymentIntentId;
-            const existing = existingOrder.stripePaymentIntentId || '';
-            if (existing.split(',').map((s: string) => s.trim()).includes(newPi)) return existing;
-            return existing ? `${existing},${newPi}` : newPi;
-          })();
-
-          // Update order with payment details and clear old payment link
+          // Update order with payment details
+          // Clear old payment link - user will generate a fresh balance link if needed
           await db.update(orders)
             .set({
               amountPaid: cumulativePaid.toFixed(2),
               amountOutstanding: newOutstanding.toFixed(2),
               paymentStatus: paymentStatus,
               status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
-              stripePaymentIntentId: newPaymentIntentId,
-              stripePaymentLinkUrl: null,
+              stripePaymentIntentId: (() => {
+                // Append the new PI to existing ones (comma-separated) so multi-PI refunds work
+                const newPi = session.payment_intent as string | null;
+                if (!newPi) return existingOrder.stripePaymentIntentId;
+                const existing = existingOrder.stripePaymentIntentId || '';
+                if (existing.split(',').map((s: string) => s.trim()).includes(newPi)) return existing;
+                return existing ? `${existing},${newPi}` : newPi;
+              })(),
+              stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
               stripePaymentLinkId: null,
             })
             .where(eq(orders.id, parseInt(orderId)));
-
-          // Log into order_payments so the full payment history is available
-          const stripePaymentIntentForLog = session.payment_intent as string | null;
-          await db.insert(orderPayments).values({
-            orderId: parseInt(orderId),
-            amount: thisPayment.toFixed(2),
-            method: 'stripe_card',
-            stripePaymentIntentId: stripePaymentIntentForLog || null,
-            recordedBy: 'stripe_webhook',
-          });
           
           console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}, old payment link cleared`);
           
@@ -4816,34 +4812,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseFilter = and(...searchConditions);
 
       // Run count, paginated results, and stats all in parallel — no full-table fetch
-      // Revenue is computed method-aware from order_payments:
-      //   stripe_card: amount includes customer fee (5.5%) → back-calculate pre-fee, then deduct platform fee (3.3%)
-      //   cash/bank_transfer: face-value amount, no platform fee (offline — Quikpik cannot collect)
-      //   Fallback: orders with no order_payments entries use subtotal - platformFee from orders table
-      const methodAwareRevenue = sql`(
-        SELECT COALESCE(
-          NULLIF(SUM(
-            CASE op.method
-              WHEN 'stripe_card'    THEN op.amount::numeric / 1.055 * 0.967
-              WHEN 'cash'           THEN op.amount::numeric
-              WHEN 'bank_transfer'  THEN op.amount::numeric
-              ELSE                       op.amount::numeric
-            END
-          ), 0),
-          NULL
-        )
-        FROM order_payments op
-        WHERE op.order_id = ${orders.id}
-      )`;
       const [totalCountResult, ordersResult, tabStatsResult, baseStatsResult] = await Promise.all([
         db.select({ count: count() }).from(orders).where(tabFilter),
         db.select().from(orders).where(tabFilter).orderBy(desc(orders.createdAt)).limit(limit).offset((page - 1) * limit),
         db.select({
           paidOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} IN ('paid', 'completed', 'processing', 'shipped') THEN 1 END)::int`,
           pendingOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)::int`,
-          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled'
-            THEN COALESCE(${methodAwareRevenue}, ${orders.subtotal}::numeric - ${orders.platformFee}::numeric)
-            ELSE 0 END), 0)::float`,
+          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (${orders.total}::numeric - ${orders.platformFee}::numeric) ELSE 0 END), 0)::float`,
         }).from(orders).where(tabFilter),
         db.select({
           activeCount: sql<number>`COUNT(CASE WHEN NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid')) THEN 1 END)::int`,
@@ -4959,40 +4934,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         order.status === 'pending'
       );
 
-      // Calculate net revenue using method-aware accounting from order_payments
-      // stripe_card amounts include customer fee (5.5%), so back-calculate pre-fee then deduct platform fee (3.3%)
-      // cash/bank_transfer amounts are face value — offline payments, no platform fee collected
-      // Fallback: orders with no payment entries use subtotal - platformFee
+      // Calculate net revenue using subtotal for non-cancelled/refunded orders
       const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
-      let totalRevenue = 0;
-      if (revenueOrders.length > 0) {
-        const revenueOrderIds = revenueOrders.map(o => o.id);
-        const payments = revenueOrderIds.length > 0
-          ? await db.select({ orderId: orderPayments.orderId, method: orderPayments.method, amount: orderPayments.amount })
-              .from(orderPayments).where(inArray(orderPayments.orderId, revenueOrderIds))
-          : [];
-        // Group payments by orderId
-        const paymentsByOrder = new Map<number, { method: string; amount: string }[]>();
-        for (const p of payments) {
-          if (!paymentsByOrder.has(p.orderId)) paymentsByOrder.set(p.orderId, []);
-          paymentsByOrder.get(p.orderId)!.push({ method: p.method, amount: p.amount });
-        }
-        totalRevenue = revenueOrders.reduce((sum, order) => {
-          const orderPmts = paymentsByOrder.get(order.id);
-          if (orderPmts && orderPmts.length > 0) {
-            // Method-aware: stripe_card back-calculates customer fee then deducts platform fee;
-            // cash/bank_transfer are face-value — no platform fee is collected on offline payments.
-            const contribution = orderPmts.reduce((s, p) => {
-              const amt = parseFloat(p.amount || '0');
-              return s + (p.method === 'stripe_card' ? (amt / 1.055 * 0.967) : amt);
-            }, 0);
-            return sum + contribution;
-          }
-          // Fallback for orders without payment entries (e.g. pre-existing paid orders)
-          const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
-          return sum + (isNaN(netAmount) ? 0 : netAmount);
-        }, 0);
-      }
+      const totalRevenue = revenueOrders.reduce((sum, order) => {
+        const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+        return sum + (isNaN(netAmount) ? 0 : netAmount);
+      }, 0);
 
       // Count by tab for badges using the same isArchivedOrder logic
       const activeCount = allOrders.filter(order => !isArchivedOrder(order)).length;
@@ -13493,207 +13440,6 @@ https://quikpik.app`;
     }
   });
 
-  // ─── Invoice PDF helper ───────────────────────────────────────────────────
-  // Generates a branded PDF invoice and returns a Buffer.
-  // Used by both the download endpoint and the quote-email attachment flow.
-  // Escape untrusted strings before embedding in HTML to prevent injection
-  function escHtml(str: string | null | undefined): string {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  // Trusted logo domains for SSRF prevention — extend as needed
-  const TRUSTED_LOGO_HOSTS = new Set([
-    'res.cloudinary.com',
-    's3.amazonaws.com',
-    'storage.googleapis.com',
-    'replit.com',
-    'repl.co',
-    'quikpik.co',
-    'quikpik.app',
-  ]);
-
-  function isTrustedLogoUrl(url: string | null | undefined): boolean {
-    if (!url) return false;
-    try {
-      const parsed = new URL(url);
-      // Must be HTTPS
-      if (parsed.protocol !== 'https:') return false;
-      const host = parsed.hostname.toLowerCase();
-      // Allow exact matches or subdomain matches
-      for (const trusted of TRUSTED_LOGO_HOSTS) {
-        if (host === trusted || host.endsWith(`.${trusted}`)) return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  }
-
-  async function generateInvoicePdfBuffer(orderData: {
-    id: number;
-    orderNumber: string;
-    createdAt: Date | string;
-    status: string;
-    customerName: string;
-    customerEmail?: string | null;
-    customerPhone?: string | null;
-    subtotal: string | number;
-    deliveryCost?: string | number | null;
-    customerTransactionFee?: string | number | null;
-    depositPercentage?: number | null;
-    items: Array<{
-      name: string;
-      quantity: number;
-      unitPrice: string | number;
-    }>;
-  }, wholesalerData: {
-    businessName?: string | null;
-    logoUrl?: string | null;
-    preferredCurrency?: string | null;
-  }): Promise<Buffer> {
-    const businessName = wholesalerData.businessName || 'Quikpik Merchant';
-    const currency = wholesalerData.preferredCurrency || 'GBP';
-    const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
-    // Only include logo if it's from a trusted HTTPS host — reject data URLs and unknown domains
-    const logoUrl = isTrustedLogoUrl(wholesalerData.logoUrl) ? wholesalerData.logoUrl! : null;
-
-    const subtotal = parseFloat(String(orderData.subtotal || 0));
-    const deliveryCost = parseFloat(String(orderData.deliveryCost || 0));
-    const isOffline = orderData.depositPercentage === 0;
-    const customerTransactionFee = isOffline ? 0 : parseFloat(String(orderData.customerTransactionFee || 0));
-    const grandTotal = subtotal + deliveryCost + customerTransactionFee;
-
-    const itemRows = orderData.items.map(item => {
-      const qty = item.quantity;
-      const price = parseFloat(String(item.unitPrice));
-      const lineTotal = qty * price;
-      return `<tr>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0">${escHtml(item.name)}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:center">${qty}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right">${escHtml(sym)}${price.toFixed(2)}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${escHtml(sym)}${lineTotal.toFixed(2)}</td>
-      </tr>`;
-    }).join('');
-
-    const safeBusinessName = escHtml(businessName);
-    const safeLogoUrl = logoUrl ? encodeURI(logoUrl) : null;
-    const logoHtml = safeLogoUrl
-      ? `<img src="${safeLogoUrl}" alt="${safeBusinessName}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:8px;display:block">`
-      : `<div style="width:48px;height:48px;background:#1a7a3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:700;margin-bottom:8px">${escHtml(businessName.charAt(0).toUpperCase())}</div>`;
-
-    const safeSym = escHtml(sym);
-    const totalsHtml = `
-      <tr><td style="padding:8px 0;color:#6b7280">Products:</td><td style="padding:8px 0;text-align:right">${safeSym}${subtotal.toFixed(2)}</td></tr>
-      ${deliveryCost > 0 ? `<tr><td style="padding:8px 0;color:#6b7280">Delivery:</td><td style="padding:8px 0;text-align:right">${safeSym}${deliveryCost.toFixed(2)}</td></tr>` : ''}
-      ${!isOffline && customerTransactionFee > 0 ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Transaction Fee (5.5% + £0.50):</td><td style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280">${safeSym}${customerTransactionFee.toFixed(2)}</td></tr>` : ''}
-      <tr style="border-top:2px solid #e5e7eb"><td style="padding:12px 0 4px;font-size:18px;font-weight:700">Total:</td><td style="padding:12px 0 4px;text-align:right;font-size:18px;font-weight:700;color:#1a7a3d">${safeSym}${grandTotal.toFixed(2)}</td></tr>
-    `;
-
-    const invoiceHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Invoice ${escHtml(orderData.orderNumber)} - ${safeBusinessName}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #111827; background: white; }
-    .page { max-width: 800px; margin: 0 auto; padding: 40px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #1a7a3d; }
-    .header-left { display: flex; flex-direction: column; }
-    .business-name { font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 2px; }
-    .invoice-badge { display: inline-block; background: #1a7a3d; color: white; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-top: 4px; }
-    .header-right { text-align: right; }
-    .order-number { font-size: 22px; font-weight: 800; color: #1a7a3d; margin: 0 0 4px; }
-    .order-date { font-size: 13px; color: #6b7280; margin: 0; }
-    .meta { display: flex; justify-content: space-between; margin-bottom: 32px; }
-    .meta-block { }
-    .meta-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #9ca3af; margin: 0 0 6px; }
-    .meta-value { font-size: 14px; color: #111827; margin: 0 0 3px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    thead th { background: #f9fafb; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; padding: 10px 8px; border-bottom: 2px solid #e5e7eb; text-align: left; }
-    thead th:not(:first-child) { text-align: right; }
-    thead th:nth-child(2) { text-align: center; }
-    .totals-table { width: 300px; margin-left: auto; margin-bottom: 0; }
-    .totals-table td { border: none; }
-    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-    .footer-thanks { font-size: 14px; font-weight: 600; color: #1a7a3d; }
-    .footer-powered { font-size: 11px; color: #9ca3af; }
-  </style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    <div class="header-left">
-      ${logoHtml}
-      <p class="business-name">${safeBusinessName}</p>
-      <span class="invoice-badge">Invoice</span>
-    </div>
-    <div class="header-right">
-      <p class="order-number">${escHtml(orderData.orderNumber)}</p>
-      <p class="order-date">${escHtml(new Date(orderData.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      ${isOffline ? '<p style="margin:4px 0 0;font-size:12px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;display:inline-block">Pay Later</p>' : ''}
-    </div>
-  </div>
-
-  <div class="meta">
-    <div class="meta-block">
-      <p class="meta-label">Bill To</p>
-      <p class="meta-value" style="font-weight:600">${escHtml(orderData.customerName)}</p>
-      ${orderData.customerEmail ? `<p class="meta-value" style="color:#6b7280">${escHtml(orderData.customerEmail)}</p>` : ''}
-      ${orderData.customerPhone ? `<p class="meta-value" style="color:#6b7280">${escHtml(orderData.customerPhone)}</p>` : ''}
-    </div>
-    <div class="meta-block" style="text-align:right">
-      <p class="meta-label">Status</p>
-      <p class="meta-value" style="font-weight:600;text-transform:capitalize">${escHtml(orderData.status)}</p>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Product</th>
-        <th style="text-align:center">Qty</th>
-        <th style="text-align:right">Unit Price</th>
-        <th style="text-align:right">Total</th>
-      </tr>
-    </thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-
-  <table class="totals-table">
-    <tbody>${totalsHtml}</tbody>
-  </table>
-
-  <div class="footer">
-    <span class="footer-thanks">Thank you for your business!</span>
-    <span class="footer-powered">Powered by Quikpik Merchant</span>
-  </div>
-</div>
-</body>
-</html>`;
-
-    const puppeteer = await import('puppeteer');
-    const browser = await puppeteer.default.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
-    await page.setContent(invoiceHtml, { waitUntil: 'domcontentloaded' });
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
-    });
-    await browser.close();
-    return Buffer.from(pdfBuffer);
-  }
-
   // Generate and download invoice PDF
   app.get('/api/orders/:id/invoice', requireAuth, async (req: any, res) => {
     try {
@@ -13705,6 +13451,7 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Order not found" });
       }
 
+      // Only wholesaler can generate invoices for their orders
       if (order.wholesalerId !== userId) {
         return res.status(403).json({ message: "Not authorized to generate invoice for this order" });
       }
@@ -13714,33 +13461,134 @@ https://quikpik.app`;
         return res.status(404).json({ message: "Wholesaler not found" });
       }
 
+      // Generate invoice HTML (reuse the email template but optimized for PDF)
       const customerName = `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim();
+      const businessName = wholesaler.businessName || 'Quikpik Merchant';
+      const currency = wholesaler.preferredCurrency || 'GBP';
+      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+      
+      const itemsList = order.items.map(item => 
+        `<tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 12px 8px; border-right: 1px solid #eee;">${item.product.name}</td>
+          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: right;">${currencySymbol}${parseFloat(item.unitPrice).toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; font-weight: bold;">${currencySymbol}${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}</td>
+        </tr>`
+      ).join('');
 
-      const pdfBuffer = await generateInvoicePdfBuffer({
-        id: order.id,
-        orderNumber: order.orderNumber || `#${order.id}`,
-        createdAt: order.createdAt,
-        status: order.status,
-        customerName,
-        customerEmail: order.customerEmail || order.retailer?.email,
-        customerPhone: order.customerPhone || order.retailer?.phoneNumber,
-        subtotal: order.subtotal,
-        deliveryCost: order.deliveryCost,
-        customerTransactionFee: order.customerTransactionFee,
-        depositPercentage: order.depositPercentage,
-        items: order.items.map((item: any) => ({
-          name: item.product?.name || item.productName || `Product #${item.productId}`,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-      }, {
-        businessName: wholesaler.businessName,
-        logoUrl: wholesaler.logoUrl,
-        preferredCurrency: wholesaler.preferredCurrency,
+      const subtotal = order.items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+      const platformFee = subtotal * 0.05;
+      const total = subtotal + platformFee;
+
+      const invoiceHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Invoice #${order.id} - ${businessName}</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { background: #22c55e; color: white; padding: 30px; text-align: center; }
+    .content { padding: 30px; }
+    .flex { display: flex; justify-content: space-between; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    th, td { padding: 12px 8px; border: 1px solid #e5e7eb; }
+    th { background-color: #f9fafb; font-weight: 600; }
+    .totals { border-top: 2px solid #e5e7eb; padding-top: 20px; }
+    .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .final-total { font-size: 18px; font-weight: bold; color: #22c55e; padding: 15px 0; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${businessName}</h1>
+      <h2>INVOICE #${order.id}</h2>
+    </div>
+    
+    <div class="content">
+      <div class="flex">
+        <div>
+          <h3>Bill To:</h3>
+          <p>${customerName}<br/>
+          ${order.customerEmail || order.retailer?.email || ''}<br/>
+          ${order.customerPhone || order.retailer?.phoneNumber || ''}</p>
+        </div>
+        <div>
+          <h3>Invoice Details:</h3>
+          <p>Date: ${new Date(order.createdAt).toLocaleDateString()}<br/>
+          Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}<br/>
+          Order #${order.id}</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsList}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span>${currencySymbol}${subtotal.toFixed(2)}</span>
+        </div>
+        <div class="total-row">
+          <span>Platform Fee (5%):</span>
+          <span>${currencySymbol}${platformFee.toFixed(2)}</span>
+        </div>
+        <div class="final-total">
+          <div class="total-row">
+            <span>Total:</span>
+            <span>${currencySymbol}${total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <p>Thank you for your business!</p>
+        <small>Generated by Quikpik Merchant Platform on ${new Date().toLocaleDateString()}</small>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      // Generate PDF using Puppeteer
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
+      
+      const page = await browser.newPage();
+      await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20mm',
+          right: '20mm',
+          bottom: '20mm',
+          left: '20mm'
+        }
+      });
+      
+      await browser.close();
 
+      // Set headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.orderNumber || order.id}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.pdf"`);
       res.send(pdfBuffer);
 
     } catch (error) {
@@ -18124,8 +17972,7 @@ https://quikpik.app`;
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
       const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      // Pay Later (depositPercentage === 0) = offline, no Stripe, Quikpik cannot collect platform fee
-      const platformFee = depositPercentage === 0 ? 0 : subtotal * 0.033;
+      const platformFee = subtotal * 0.033; // 3.3% platform fee on products + delivery
       const total = subtotal + customerTransactionFee;
 
       // Calculate deposit amount
@@ -18186,9 +18033,7 @@ https://quikpik.app`;
         depositPercentage: validDepositPercentage,
         balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
         amountPaid: '0.00',
-        // Pay Later (0%) = offline payment, no customer transaction fee — outstanding = subtotal
-        // All other payment types = Stripe, outstanding = total (includes transaction fee)
-        amountOutstanding: validDepositPercentage === 0 ? subtotal.toFixed(2) : total.toFixed(2),
+        amountOutstanding: total.toFixed(2),
         paymentStatus: 'unpaid',
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
@@ -18414,12 +18259,8 @@ https://quikpik.app`;
         
         const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: £${quoteDeliveryCharge.toFixed(2)}` : '';
         const deliveryNoteText = wholesaler.deliveryNote ? `\n📦 ${wholesaler.deliveryNote}` : '';
-        const bankDetailsText = wholesaler.bankSortCode && wholesaler.bankAccountNumber
-          ? `\n\nBank Transfer Details:\nAccount Name: ${wholesaler.bankAccountName || businessName}\nSort Code: ${wholesaler.bankSortCode}\nAccount No: ${wholesaler.bankAccountNumber}`
-          : '';
-
         const message = isPayLater
-          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}${bankDetailsText}\n\nPlease arrange payment with ${businessName} directly.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
           : isDeposit 
           ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
           : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you a quote.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
@@ -18441,46 +18282,6 @@ https://quikpik.app`;
       }
 
       console.log(`✅ Quote ${orderNumber} created successfully`);
-
-      // Generate PDF invoice for email attachments (best-effort — emails still send if PDF fails)
-      let invoiceAttachment: import('./sendgrid-service').EmailAttachment | null = null;
-      try {
-        const resolvedItemsForPdf = await Promise.all(items.map(async (item: any) => {
-          const [product] = await db.select({ name: products.name }).from(products).where(eq(products.id, item.productId));
-          return {
-            name: product?.name || `Product #${item.productId}`,
-            quantity: item.quantity,
-            unitPrice: item.customPrice,
-          };
-        }));
-        const pdfBuffer = await generateInvoicePdfBuffer({
-          id: quoteOrder.id,
-          orderNumber,
-          createdAt: new Date(),
-          status: 'pending',
-          customerName: `${customer.firstName} ${customer.lastName}`.trim(),
-          customerEmail: customer.email,
-          customerPhone: customer.phoneNumber,
-          subtotal: productSubtotal.toFixed(2),
-          deliveryCost: quoteDeliveryCharge.toFixed(2),
-          customerTransactionFee: customerTransactionFee.toFixed(2),
-          depositPercentage: validDepositPercentage,
-          items: resolvedItemsForPdf,
-        }, {
-          businessName: wholesaler.businessName,
-          logoUrl: wholesaler.logoUrl,
-          preferredCurrency: wholesaler.preferredCurrency,
-        });
-        invoiceAttachment = {
-          content: pdfBuffer.toString('base64'),
-          filename: `invoice-${orderNumber}.pdf`,
-          type: 'application/pdf',
-          disposition: 'attachment',
-        };
-        console.log(`📎 Invoice PDF generated for ${orderNumber} (${pdfBuffer.length} bytes)`);
-      } catch (pdfErr) {
-        console.error('⚠️ Invoice PDF generation failed — emails will send without attachment:', pdfErr);
-      }
 
       // Send confirmation email to wholesaler
       try {
@@ -18513,20 +18314,16 @@ https://quikpik.app`;
           // Wholesaler sees subtotal (products + delivery) — never the customer transaction fee
           const wholesalerDeposit = isDeposit ? subtotal * (validDepositPercentage / 100) : 0;
           const wholesalerOutstanding = isDeposit ? subtotal - wholesalerDeposit : 0;
-          const bankDetailsSectionHtml = (isPayLater && wholesaler.bankSortCode && wholesaler.bankAccountNumber)
-            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${wholesaler.bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${wholesaler.bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${wholesaler.bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
-            : '';
-          const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${bankDetailsSectionHtml}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
+          const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${subtotal.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Quote ${orderNumber} Sent to ${customer.firstName} ${customer.lastName}`,
-            html: quoteHtml,
-            ...(invoiceAttachment ? { attachments: [invoiceAttachment] } : {}),
+            html: quoteHtml
           });
-          console.log(`📧 Quote confirmation email sent to ${wholesaler.email} (invoice attached: ${!!invoiceAttachment})`);
+          console.log(`📧 Quote confirmation email sent to ${wholesaler.email}`);
         }
       } catch (quoteEmailError) {
         console.error('Failed to send quote confirmation email:', quoteEmailError);
@@ -18557,20 +18354,15 @@ https://quikpik.app`;
           }
           const custDeliveryNoteHtml = wholesaler.deliveryNote && fulfillmentType === 'delivery' ? `${emailCard(`<p style="margin:0;font-size:13px">📦 ${wholesaler.deliveryNote}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}` : '';
           const custPaymentBadge = isPayLater ? emailBadge('Pay Later — No payment required now', '#3b82f6') : (isDeposit ? emailBadge(`Deposit required: £${depositAmount.toFixed(2)}`, '#f59e0b') : emailBadge(`Payment required: £${total.toFixed(2)}`, '#10b981'));
-          // Bank details for customer email — only shown on Pay Later quotes
-          const custBankDetailsHtml = (isPayLater && wholesaler.bankSortCode && wholesaler.bankAccountNumber)
-            ? emailCard(`${emailHeading('Bank Transfer Details', { size: '15px' })}<p style="margin:0 0 4px"><b>Account Name:</b> ${wholesaler.bankAccountName || wholesaler.businessName || 'N/A'}</p><p style="margin:0 0 4px"><b>Sort Code:</b> ${wholesaler.bankSortCode}</p><p style="margin:0"><b>Account Number:</b> ${wholesaler.bankAccountNumber}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })
-            : '';
-          const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}${custBankDetailsHtml}`;
+          const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}`;
           const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
           await sendEmail({
             to: customer.email,
             from: 'hello@quikpik.co',
             subject: `Your quote ${orderNumber} from ${businessName}`,
-            html: custHtml,
-            ...(invoiceAttachment ? { attachments: [invoiceAttachment] } : {}),
+            html: custHtml
           });
-          console.log(`📧 Quote email sent to customer: ${customer.email} (invoice attached: ${!!invoiceAttachment})`);
+          console.log(`📧 Quote email sent to customer: ${customer.email}`);
         }
       } catch (custEmailError) {
         console.error('Failed to send customer quote email:', custEmailError);
@@ -18593,168 +18385,6 @@ https://quikpik.app`;
   // =====================================================
   // GENERATE REMAINING BALANCE PAYMENT LINK
   // =====================================================
-  // GET /api/orders/:orderId/payments — return the full payment log for an order
-  app.get('/api/orders/:orderId/payments', requireAuth, async (req: any, res) => {
-    try {
-      const orderId = parseInt(req.params.orderId);
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
-
-      const [order] = await db.select({ id: orders.id, wholesalerId: orders.wholesalerId })
-        .from(orders).where(eq(orders.id, orderId)).limit(1);
-      if (!order || order.wholesalerId !== wholesalerId) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      const log = await db.select().from(orderPayments)
-        .where(eq(orderPayments.orderId, orderId))
-        .orderBy(orderPayments.recordedAt);
-
-      // Enrich entries with recorder display name
-      // recordedBy is varchar — either the user's varchar ID (e.g. "google_abc123") or 'stripe_webhook'
-      const manualIds = [...new Set(
-        log
-          .map(e => e.recordedBy)
-          .filter((r): r is string => typeof r === 'string' && r !== 'stripe_webhook')
-      )];
-      let userMap: Record<string, string> = {};
-      if (manualIds.length > 0) {
-        const recorderUsers = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
-          .from(users).where(inArray(users.id, manualIds));
-        recorderUsers.forEach(u => {
-          userMap[u.id] = [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Team member';
-        });
-      }
-      const enriched = log.map(e => ({
-        ...e,
-        recordedByName: e.recordedBy === 'stripe_webhook' ? 'Stripe' : (e.recordedBy ? (userMap[e.recordedBy] || 'Team member') : null),
-      }));
-
-      res.json(enriched);
-    } catch (error) {
-      console.error('❌ Error fetching order payments:', error);
-      res.status(500).json({ error: 'Failed to fetch payment log' });
-    }
-  });
-
-  // POST /api/orders/:orderId/payments — manually record a cash or bank transfer payment
-  app.post('/api/orders/:orderId/payments', requireAuth, async (req: any, res) => {
-    try {
-      const orderId = parseInt(req.params.orderId);
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
-      const recordedBy = String(req.user.id); // varchar column
-
-      const { amount, method, notes } = req.body;
-
-      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-        return res.status(400).json({ error: 'A positive amount is required' });
-      }
-      if (!['bank_transfer', 'cash'].includes(method)) {
-        return res.status(400).json({ error: 'Method must be bank_transfer or cash' });
-      }
-
-      const [order] = await db.select().from(orders)
-        .where(eq(orders.id, orderId)).limit(1);
-      if (!order || order.wholesalerId !== wholesalerId) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      const thisPayment = parseFloat(amount);
-      const previouslyPaid = parseFloat(order.amountPaid || '0');
-      // Cash/bank payments: customer owes products + delivery (no customer transaction fee).
-      // DB stores subtotal = products only, deliveryCost separately — combine both.
-      const orderTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-      const offlineOutstanding = Math.max(0, orderTotal - previouslyPaid);
-
-      if (thisPayment > offlineOutstanding + 0.01) {
-        return res.status(400).json({ error: 'Payment exceeds outstanding balance' });
-      }
-
-      const { cumulativePaid, newOutstanding, paymentStatus } = applyPaymentToOrder(previouslyPaid, orderTotal, thisPayment);
-
-      // Wrap payment log insert + order update in a transaction to ensure consistency
-      await db.transaction(async (trx) => {
-        await trx.insert(orderPayments).values({
-          orderId,
-          amount: thisPayment.toFixed(2),
-          method,
-          notes: notes || null,
-          recordedBy,
-        });
-        await trx.update(orders)
-          .set({
-            amountPaid: cumulativePaid.toFixed(2),
-            amountOutstanding: newOutstanding.toFixed(2),
-            paymentStatus,
-            status: paymentStatus === 'paid' ? 'confirmed' : order.status,
-          })
-          .where(eq(orders.id, orderId));
-      });
-
-      console.log(`✅ Manual ${method} payment of £${thisPayment.toFixed(2)} recorded for order ${order.orderNumber || orderId}`);
-
-      // If now fully paid and there's an open Stripe Checkout session, expire it (best-effort)
-      // This prevents the customer from paying again via the old Stripe link
-      if (paymentStatus === 'paid' && order.stripePaymentLinkId) {
-        try {
-          await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
-          await db.update(orders)
-            .set({ stripePaymentLinkUrl: null, stripePaymentLinkId: null })
-            .where(eq(orders.id, orderId));
-          console.log(`🔒 Expired Stripe checkout session ${order.stripePaymentLinkId} for order ${order.orderNumber || orderId}`);
-        } catch (stripeErr) {
-          // Best-effort: session may already be used/expired — do not block the payment recording
-          console.warn(`⚠️ Could not expire Stripe session ${order.stripePaymentLinkId}:`, stripeErr);
-        }
-      }
-
-      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
-
-      // Notify customer via SMS + email (best effort — failures don't block the response)
-      try {
-        const [wholesalerUser] = await db.select().from(users).where(eq(users.id, wholesalerId)).limit(1);
-        const businessName = wholesalerUser?.businessName || wholesalerUser?.name || 'Your supplier';
-        const orderRef = order.orderNumber || `#${orderId}`;
-        const methodLabel = method === 'cash' ? 'cash' : 'bank transfer';
-
-        const paidBadge = paymentStatus === 'paid' ? emailBadge('Fully Paid', '#10b981') : emailBadge('Part Paid', '#f59e0b');
-        const methodLabelTitle = methodLabel.charAt(0).toUpperCase() + methodLabel.slice(1);
-
-        // SMS to customer
-        if (order.customerPhone) {
-          const smsMsg = paymentStatus === 'paid'
-            ? `Payment confirmed! £${thisPayment.toFixed(2)} ${methodLabel} received by ${businessName} for order ${orderRef}. Your order is now fully paid.`
-            : `Payment of £${thisPayment.toFixed(2)} ${methodLabel} received by ${businessName} for order ${orderRef}. Remaining balance: £${newOutstanding.toFixed(2)}.`;
-          await sendSMS({ to: order.customerPhone, message: smsMsg }).catch(e => console.error('SMS failed (manual payment):', e));
-        }
-
-        // Email to customer
-        if (order.customerEmail) {
-          const custPaymentBody = `${emailHeading('Payment Received', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabelTitle}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid to date:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}<p style="margin:16px 0 0;font-size:14px;color:#6b7280">Thank you for your payment. Please contact ${businessName} if you have any questions.</p>`;
-          const custHtml = wrapCustomerEmail(custPaymentBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser.id, wholesalerUser.logoType, wholesalerUser.logoUrl) });
-          await sendEmail({ to: order.customerEmail, from: 'hello@quikpik.co', subject: `Payment received — ${orderRef}`, html: custHtml }).catch(e => console.error('Customer email failed (manual payment):', e));
-        }
-
-        // Email confirmation to wholesaler
-        if (wholesalerUser?.email) {
-          const emailBody = `${emailHeading('Manual Payment Recorded', { size: '22px', color: '#10b981' })}${emailCard(`<p style="margin:0 0 6px"><b>Order:</b> ${orderRef}</p><p style="margin:0 0 6px"><b>Customer:</b> ${order.customerName || 'Unknown'}</p><p style="margin:0 0 6px"><b>Method:</b> ${methodLabelTitle}</p><p style="margin:0 0 6px"><b>Amount received:</b> £${thisPayment.toFixed(2)}</p><p style="margin:0 0 6px"><b>Total paid:</b> £${cumulativePaid.toFixed(2)}</p><p style="margin:0 0 6px"><b>Outstanding balance:</b> £${newOutstanding.toFixed(2)}</p><p style="margin:0">${paidBadge}</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('View Order', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
-          const html = wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser.id, wholesalerUser.logoType, wholesalerUser.logoUrl) });
-          await sendEmail({ to: wholesalerUser.email, from: 'hello@quikpik.co', subject: `Payment recorded — ${orderRef}`, html }).catch(e => console.error('Wholesaler email failed (manual payment):', e));
-        }
-      } catch (notifyErr) {
-        console.error('⚠️ Notification error (manual payment) — non-fatal:', notifyErr);
-      }
-
-      res.json({ success: true, order: updatedOrder, paymentStatus, amountPaid: cumulativePaid.toFixed(2) });
-    } catch (error) {
-      console.error('❌ Error recording manual payment:', error);
-      res.status(500).json({ error: 'Failed to record payment' });
-    }
-  });
-
   app.post('/api/orders/:orderId/generate-balance-link', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);

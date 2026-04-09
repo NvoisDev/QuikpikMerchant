@@ -39,6 +39,8 @@ const Signup = lazy(() => import("@/pages/signup"));
 const SignupComplete = lazy(() => import("@/pages/signup-complete"));
 const WholesalerSelection = lazy(() => import("@/pages/WholesalerSelection"));
 const AcceptInvitation = lazy(() => import("@/pages/AcceptInvitation"));
+const ShippingSettings = lazy(() => import("@/pages/shipping-settings"));
+const ShippingTracking = lazy(() => import("@/pages/shipping-tracking"));
 const Customers = lazy(() => import("@/pages/customers"));
 const CustomerRegistrationRequests = lazy(() => import("@/pages/customer-registration-requests"));
 const AuthSuccess = lazy(() => import("@/pages/auth-success"));
@@ -168,7 +170,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/admin', '/super-admin'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/forgot-password', '/reset-password', '/admin', '/super-admin'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 

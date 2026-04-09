@@ -177,175 +177,6 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
-type PaymentMethod = 'cash' | 'bank_transfer' | 'stripe_card';
-
-interface PaymentLogEntry {
-  id: number;
-  orderId: number;
-  amount: string;
-  method: PaymentMethod;
-  notes: string | null;
-  stripePaymentIntentId: string | null;
-  recordedBy: number | string | null;
-  recordedByName: string | null;
-  recordedAt: string;
-}
-
-// Record manual payment (cash / bank transfer) + show full payment log
-function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
-  order: Order;
-  onPaymentRecorded: (updatedOrder: Partial<Order>) => void;
-  toast: ReturnType<typeof useToast>['toast'];
-}) {
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<'cash' | 'bank_transfer'>('cash');
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [log, setLog] = useState<PaymentLogEntry[]>([]);
-  const [loadingLog, setLoadingLog] = useState(false);
-
-  const outstanding = parseFloat(order.amountOutstanding || '0');
-  // Offline order detection for prefill:
-  //   depositPercentage === 0 → Pay Later (always offline)
-  //   !stripePaymentIntentId → no Stripe payment has ever been made on this order
-  //     This covers: Stripe link exists but unpaid, no Stripe link at all, and manually-offline orders.
-  //     After a Stripe card payment, stripePaymentIntentId is set by the webhook even though
-  //     stripePaymentLinkUrl is cleared — so Stripe-paid orders correctly remain online (no misclassification).
-  const isOfflineOrder = order.depositPercentage === 0 || !order.stripePaymentIntentId;
-  const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-  const offlineOutstanding = Math.max(0, offlineBase - parseFloat(order.amountPaid || '0'));
-  const preFillOutstanding = isOfflineOrder ? offlineOutstanding : outstanding;
-
-  const fetchLog = async () => {
-    setLoadingLog(true);
-    try {
-      const res = await fetch(`/api/orders/${order.id}/payments`, { credentials: 'include' });
-      if (res.ok) setLog(await res.json() as PaymentLogEntry[]);
-    } catch (_err) { /* silent */ }
-    setLoadingLog(false);
-  };
-
-  useEffect(() => {
-    if (open) fetchLog();
-  }, [open, order.id]);
-
-  // When accordion opens and there's an outstanding balance, pre-fill with correct offline amount
-  useEffect(() => {
-    if (open && preFillOutstanding > 0.01) {
-      setAmount(preFillOutstanding.toFixed(2));
-    }
-  }, [open]);
-
-  const handleRecord = async () => {
-    const amt = parseFloat(amount);
-    if (!amount || isNaN(amt) || amt <= 0) {
-      toast({ title: 'Enter a valid amount', variant: 'destructive' }); return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/orders/${order.id}/payments`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amt.toFixed(2), method, notes }),
-      });
-      const data = await res.json() as { order: Partial<Order>; error?: string };
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      toast({ title: 'Payment recorded', description: `£${amt.toFixed(2)} ${method === 'cash' ? 'cash' : 'bank transfer'} logged.` });
-      setAmount('');
-      setNotes('');
-      onPaymentRecorded(data.order);
-      fetchLog();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to record payment';
-      toast({ title: 'Failed', description: message, variant: 'destructive' });
-    }
-    setSaving(false);
-  };
-
-  const methodLabel: Record<PaymentMethod, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', stripe_card: 'Card (Stripe)' };
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700"
-        onClick={() => setOpen(o => !o)}
-      >
-        <span>Payment History</span>
-        <span className="text-xs text-gray-400">{open ? '▲' : '▼'}</span>
-      </button>
-      {open && (
-        <div className="p-4 space-y-4">
-          {/* Log */}
-          {loadingLog ? (
-            <p className="text-xs text-gray-400">Loading...</p>
-          ) : log.length === 0 ? (
-            <p className="text-xs text-gray-400">No payments recorded yet.</p>
-          ) : (
-            <div className="space-y-1">
-              {log.map((entry) => (
-                <div key={entry.id} className="flex items-start justify-between text-xs text-gray-700 py-1.5 border-b last:border-0">
-                  <div>
-                    <span className="font-medium">{methodLabel[entry.method] || entry.method}</span>
-                    {entry.notes && <span className="text-gray-400 ml-1">— {entry.notes}</span>}
-                    <div className="text-gray-400 mt-0.5">
-                      {new Date(entry.recordedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      {entry.recordedByName && (
-                        <span className="ml-1 text-gray-300">· by {entry.recordedByName}</span>
-                      )}
-                    </div>
-                  </div>
-                  <span className="font-semibold text-green-700 ml-2 shrink-0">+£{parseFloat(entry.amount).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Record Form — only show if there's an outstanding balance */}
-          {outstanding > 0.01 && (
-            <div className="pt-2 border-t space-y-3">
-              <p className="text-xs font-semibold text-gray-600">Record a cash or bank transfer payment</p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">£</span>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    max={outstanding}
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    className="pl-6 pr-2 py-1.5 text-sm border rounded w-full focus:outline-none focus:border-green-500"
-                  />
-                </div>
-                <select
-                  value={method}
-                  onChange={e => setMethod(e.target.value as 'cash' | 'bank_transfer')}
-                  className="text-sm border rounded px-2 py-1.5 focus:outline-none focus:border-green-500"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                </select>
-              </div>
-              <input
-                type="text"
-                placeholder="Notes (optional)"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                className="w-full text-sm border rounded px-2 py-1.5 focus:outline-none focus:border-green-500"
-              />
-              <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={handleRecord} disabled={saving}>
-                {saving ? 'Saving...' : 'Record Payment'}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1106,12 +937,10 @@ export default function OrdersFresh() {
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
-    const gross = subtotal + deliveryCost;
-    // Pay Later (offline) orders: no platform fee — Quikpik cannot collect via Stripe
-    if (order.depositPercentage === 0) return gross;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : gross * 0.033;
-    return gross - feeToDeduct;
+    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal + delivery
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
+    return (subtotal + deliveryCost) - feeToDeduct;
   };
 
   // Helper function to determine if an order should be archived
@@ -2237,14 +2066,9 @@ export default function OrdersFresh() {
                       <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost || '0'))}</span>
                     </div>
                   )}
-                  <div className={`flex justify-between ${selectedOrder.depositPercentage === 0 ? 'text-gray-400' : 'text-red-600'}`}>
+                  <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
-                    <span>
-                      {selectedOrder.depositPercentage === 0
-                        ? formatCurrency(0)
-                        : `-${formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}`
-                      }
-                    </span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
                     const wholesalerTotal = calculateNetAmount(selectedOrder);
@@ -2311,16 +2135,10 @@ export default function OrdersFresh() {
               {selectedOrder.isQuote && (() => {
                 const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                 const customerTotal = parseFloat(selectedOrder.total || '0');
-                // Offline order: Pay Later OR no Stripe payment ever made (stripePaymentIntentId not set).
-                // Covers: link exists but unpaid, no link at all, manually-offline orders.
-                // Stripe-paid orders always have stripePaymentIntentId set (by webhook) → isOffline = false ✓
-                const isOffline =
-                  selectedOrder.depositPercentage === 0 || !selectedOrder.stripePaymentIntentId;
-                const rawPaid = parseFloat(selectedOrder.amountPaid || '0');
-                const paymentRatio = (!isOffline && customerTotal > 0) ? rawPaid / customerTotal : 0;
-                const wholesalerPaid = isOffline ? rawPaid : productTotal * paymentRatio;
+                const paymentRatio = customerTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / customerTotal : 0;
+                const wholesalerPaid = productTotal * paymentRatio;
                 // For cancelled orders, outstanding balance should be £0.00
-                const wholesalerOutstanding = selectedOrder.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
+                const wholesalerOutstanding = selectedOrder.status === 'cancelled' ? 0 : productTotal - wholesalerPaid;
                 
                 return (
                 <div>
@@ -2465,16 +2283,6 @@ export default function OrdersFresh() {
                 </div>
               );
               })()}
-
-              {/* Record Manual Payment + Payment Log */}
-              <RecordPaymentPanel
-                order={selectedOrder}
-                onPaymentRecorded={(updatedOrder) => {
-                  setSelectedOrder({ ...selectedOrder, ...updatedOrder });
-                  loadOrders(currentPage, statusFilter || searchQuery);
-                }}
-                toast={toast}
-              />
 
               {/* Order Photos Section */}
               <div>

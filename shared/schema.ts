@@ -198,11 +198,6 @@ export const users = pgTable("users", {
   // Payment terms settings
   defaultDepositPercentage: integer("default_deposit_percentage").default(100), // 25, 50, 75, or 100 - percentage required upfront
   balanceDueDays: integer("balance_due_days").default(0), // 0=immediate, 7, 14, 30, 60 days for remaining balance
-
-  // Bank details for wire transfer payments
-  bankAccountName: varchar("bank_account_name"),
-  bankSortCode: varchar("bank_sort_code"),
-  bankAccountNumber: varchar("bank_account_number"),
   
   // New signup fields
   businessDescription: text("business_description"),
@@ -615,24 +610,6 @@ export const orderItems = pgTable("order_items", {
   orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
   productIdIdx: index("order_items_product_id_idx").on(table.productId),
 }));
-
-// Order payment log — one row per payment event (Stripe card, bank transfer, cash)
-export const orderPayments = pgTable("order_payments", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  method: varchar("method").notNull(), // 'stripe_card' | 'bank_transfer' | 'cash'
-  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // populated for stripe_card payments
-  notes: text("notes"),
-  recordedBy: varchar("recorded_by"), // userId or 'stripe_webhook'
-  recordedAt: timestamp("recorded_at").defaultNow().notNull(),
-}, (table) => ({
-  orderIdIdx: index("order_payments_order_id_idx").on(table.orderId),
-}));
-
-export const insertOrderPaymentSchema = createInsertSchema(orderPayments).omit({ id: true, recordedAt: true });
-export type InsertOrderPayment = z.infer<typeof insertOrderPaymentSchema>;
-export type OrderPayment = typeof orderPayments.$inferSelect;
 
 export const negotiations = pgTable("negotiations", {
   id: serial("id").primaryKey(),

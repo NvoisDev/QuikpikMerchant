@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Landmark } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -13,99 +13,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-
-interface BankUser {
-  bankAccountName?: string;
-  bankSortCode?: string;
-  bankAccountNumber?: string;
-  businessName?: string;
-}
-
-function BankDetailsSection({ user, toast }: { user: BankUser | null; toast: ReturnType<typeof useToast>['toast'] }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    bankAccountName: user?.bankAccountName || '',
-    bankSortCode: user?.bankSortCode || '',
-    bankAccountNumber: user?.bankAccountNumber || '',
-  });
-
-  useEffect(() => {
-    if (user) {
-      setForm({
-        bankAccountName: user.bankAccountName || '',
-        bankSortCode: user.bankSortCode || '',
-        bankAccountNumber: user.bankAccountNumber || '',
-      });
-    }
-  }, [user]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await apiRequest('PATCH', '/api/settings', form);
-      toast({ title: 'Bank details saved', description: 'Customers will see these on Pay Later quotes.' });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      setEditing(false);
-    } catch {
-      toast({ title: 'Save failed', description: 'Please try again.', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="mt-8 pt-6 border-t border-gray-200">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <Landmark className="h-5 w-5 text-gray-600" />
-          <h3 className="text-base sm:text-lg font-medium text-gray-900">Bank Transfer Details</h3>
-        </div>
-        {!editing && (
-          <button onClick={() => setEditing(true)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
-        )}
-      </div>
-      <p className="text-sm text-gray-500 mb-4">These details are shown to customers on Pay Later quotes so they can send you a bank transfer.</p>
-      {editing ? (
-        <div className="space-y-3 max-w-sm">
-          <div>
-            <Label className="text-sm text-gray-600">Account Name</Label>
-            <Input value={form.bankAccountName} onChange={e => setForm({ ...form, bankAccountName: e.target.value })} placeholder="e.g. Acme Wholesale Ltd" className="mt-1" />
-          </div>
-          <div>
-            <Label className="text-sm text-gray-600">Sort Code</Label>
-            <Input value={form.bankSortCode} onChange={e => setForm({ ...form, bankSortCode: e.target.value })} placeholder="e.g. 20-30-40" className="mt-1" />
-          </div>
-          <div>
-            <Label className="text-sm text-gray-600">Account Number</Label>
-            <Input value={form.bankAccountNumber} onChange={e => setForm({ ...form, bankAccountNumber: e.target.value })} placeholder="e.g. 12345678" className="mt-1" />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">
-              <Save className="h-3.5 w-3.5 mr-1" />{saving ? 'Saving...' : 'Save'}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-          </div>
-        </div>
-      ) : (
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
-          <div>
-            <dt className="text-gray-500">Account Name</dt>
-            <dd className="text-gray-900 font-medium">{user?.bankAccountName || <span className="text-gray-400 italic">Not set</span>}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Sort Code</dt>
-            <dd className="text-gray-900 font-medium">{user?.bankSortCode || <span className="text-gray-400 italic">Not set</span>}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Account Number</dt>
-            <dd className="text-gray-900 font-medium">{user?.bankAccountNumber || <span className="text-gray-400 italic">Not set</span>}</dd>
-          </div>
-        </dl>
-      )}
-    </div>
-  );
-}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -951,9 +858,6 @@ export default function Settings() {
                       </Button>
                     </div>
                   </div>
-
-                  {/* Bank Details Section */}
-                  <BankDetailsSection user={user} toast={toast} />
 
                   {/* Store QR Code Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
