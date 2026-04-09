@@ -13543,10 +13543,12 @@ https://quikpik.app`;
     }
   });
 
-  // ── Shared invoice PDF builder ───────────────────────────────────────────
+  // ── Shared invoice PDF builder (PDFKit — no browser dependency) ──────────
   async function buildInvoicePdf(order: any, wholesaler: any): Promise<Buffer> {
+    const PDFDocument = (await import('pdfkit')).default;
+
     const currency = wholesaler.preferredCurrency || 'GBP';
-    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '\u20ac' : '\u00a3';
     const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
 
     const customerName = order.retailer
@@ -13556,157 +13558,243 @@ https://quikpik.app`;
     const invoiceRef = order.orderNumber || `#${order.id}`;
     const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Logo — http/https only, no base64
-    const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
-    const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2);
-    const logoHtml = logoUrl
-      ? `<img src="${logoUrl}" alt="${businessName}" style="max-height:64px;max-width:200px;display:block;margin:0 auto 10px">`
-      : `<div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.25);font-size:26px;font-weight:700;color:#fff;margin:0 auto 10px">${initials}</div>`;
-
     // Delivery address
     let addressLines: string[] = [];
     if (order.deliveryAddressId) {
       try {
         const addr = await storage.getDeliveryAddressById(order.deliveryAddressId);
         if (addr) {
-          if (addr.addressLine1) addressLines.push(addr.addressLine1);
-          if (addr.addressLine2) addressLines.push(addr.addressLine2);
-          if (addr.city) addressLines.push(addr.city);
-          if (addr.state) addressLines.push(addr.state);
-          if (addr.postalCode) addressLines.push(addr.postalCode);
-          if (addr.country) addressLines.push(addr.country);
+          [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country]
+            .filter(Boolean)
+            .forEach(l => addressLines.push(l!));
         }
       } catch (_) {}
     }
-    // Fallback: use deliveryAddress text field for older orders without deliveryAddressId
     if (addressLines.length === 0 && order.deliveryAddress) {
       addressLines = order.deliveryAddress.split(',').map((s: string) => s.trim()).filter(Boolean);
     }
 
-    // Payment status badge
+    // Payment status
     const ps = order.paymentStatus || 'unpaid';
-    const psBadgeColor = ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626';
-    const psBadgeLabel = ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid';
+    const psLabel = ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid';
+    const psColor = ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626';
 
-    // Items rows
-    const itemsHtml = (order.items || []).map((item: any) => {
-      const name = item.product?.name || item.productName || 'Product';
-      const qty = item.quantity || 0;
-      const unitPrice = parseFloat(item.unitPrice || '0');
-      const lineTotal = unitPrice * qty;
-      const promo = item.appliedOfferLabel ? `<br><span style="font-size:11px;color:#16a34a">${item.appliedOfferLabel}</span>` : '';
-      return `<tr>
-        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb">${name}${promo}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center">${qty}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(unitPrice)}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt(lineTotal)}</td>
-      </tr>`;
-    }).join('');
-
-    // Totals — NEVER use order.total (includes customer transaction fee)
+    // Items — NEVER use order.total (includes customer transaction fee)
+    const orderItems = (order.items || []).map((item: any) => ({
+      name: item.product?.name || item.productName || 'Product',
+      qty: Number(item.quantity) || 0,
+      unitPrice: parseFloat(item.unitPrice || '0'),
+      lineTotal: parseFloat(item.unitPrice || '0') * (Number(item.quantity) || 0),
+      promo: item.appliedOfferLabel || '',
+    }));
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
     const grandTotal = subtotal + deliveryCost;
 
-    const deliveryRow = deliveryCost > 0
-      ? `<div style="display:flex;justify-content:space-between;padding:6px 0;color:#374151"><span>Delivery</span><span>${fmt(deliveryCost)}</span></div>`
-      : '';
+    // Logo — http/https only, no base64
+    const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
+    const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
+    let logoBuffer: Buffer | null = null;
+    if (logoUrl) {
+      try {
+        const resp = await fetch(logoUrl);
+        if (resp.ok) logoBuffer = Buffer.from(await resp.arrayBuffer());
+      } catch (_) {}
+    }
 
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Invoice ${invoiceRef} — ${businessName}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#111827;background:#fff}
-  .page{max-width:780px;margin:0 auto;padding:0}
-  .header{background:#1a7a3d;color:#fff;padding:28px 36px;text-align:center}
-  .header h1{font-size:20px;font-weight:700;margin-bottom:4px}
-  .header p{font-size:12px;opacity:.85}
-  .body{padding:28px 36px}
-  .meta{display:flex;justify-content:space-between;gap:24px;margin-bottom:28px}
-  .meta-block{flex:1}
-  .meta-block h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:6px}
-  .meta-block p{font-size:13px;line-height:1.6;color:#111827}
-  table{width:100%;border-collapse:collapse;margin-bottom:24px}
-  thead tr{background:#f3f4f6}
-  th{padding:10px 8px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;border-bottom:2px solid #e5e7eb}
-  th:last-child,td:last-child{text-align:right}
-  th:nth-child(2),td:nth-child(2){text-align:center}
-  td{padding:10px 8px;border-bottom:1px solid #e5e7eb;font-size:13px}
-  .totals{margin-left:auto;width:260px}
-  .total-line{display:flex;justify-content:space-between;padding:5px 0;color:#374151}
-  .grand-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1a7a3d;font-size:16px;font-weight:700;color:#1a7a3d;margin-top:4px}
-  .footer{margin-top:36px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;color:#6b7280;font-size:11px}
-  .footer strong{color:#1a7a3d}
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    ${logoHtml}
-    <h1>${businessName}</h1>
-    <p>Invoice</p>
-  </div>
-  <div class="body">
-    <div class="meta">
-      <div class="meta-block">
-        <h3>Invoice</h3>
-        <p><strong>${invoiceRef}</strong></p>
-        <p style="margin-top:4px;color:#6b7280">${invoiceDate}</p>
-        <p style="margin-top:6px">
-          <span style="display:inline-block;padding:3px 10px;border-radius:9999px;background:${psBadgeColor};color:#fff;font-size:11px;font-weight:600">${psBadgeLabel}</span>
-        </p>
-      </div>
-      <div class="meta-block">
-        <h3>Bill To</h3>
-        <p><strong>${customerName}</strong></p>
-        ${addressLines.length > 0 ? `<p style="margin-top:4px;color:#374151">${addressLines.join('<br>')}</p>` : ''}
-        ${order.customerPhone || order.retailer?.phoneNumber ? `<p style="margin-top:4px;color:#6b7280">${order.customerPhone || order.retailer?.phoneNumber}</p>` : ''}
-        ${order.customerEmail || order.retailer?.email ? `<p style="color:#6b7280">${order.customerEmail || order.retailer?.email}</p>` : ''}
-      </div>
-      <div class="meta-block">
-        <h3>From</h3>
-        <p><strong>${businessName}</strong></p>
-        ${wholesaler.email ? `<p style="margin-top:4px;color:#6b7280">${wholesaler.email}</p>` : ''}
-      </div>
-    </div>
+    // ── Build PDF ─────────────────────────────────────────────────────────
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
-    <table>
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>Qty</th>
-          <th>Unit Price</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>${itemsHtml}</tbody>
-    </table>
+    return new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
 
-    <div class="totals">
-      <div class="total-line"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
-      ${deliveryRow}
-      <div class="grand-total"><span>Total</span><span>${fmt(grandTotal)}</span></div>
-    </div>
+      const PAGE_W = 595.28;
+      const MARGIN = 40;
+      const CONTENT_W = PAGE_W - MARGIN * 2;
+      const GREEN = '#1a7a3d';
+      const GRAY = '#6b7280';
+      const DARK = '#111827';
+      const BORDER = '#e5e7eb';
+      const THEAD_BG = '#f3f4f6';
 
-    <div class="footer">
-      <p>Thank you for your business!</p>
-      <p style="margin-top:8px">Powered by <strong>Quikpik Merchant</strong></p>
-    </div>
-  </div>
-</div>
-</body>
-</html>`;
+      // ── HEADER ────────────────────────────────────────────────────────
+      const LOGO_SIZE = 52;
+      const HEADER_H = 100;
+      doc.rect(0, 0, PAGE_W, HEADER_H).fill(GREEN);
 
-    const puppeteer = await import('puppeteer');
-    const browser = await puppeteer.default.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
-    await browser.close();
-    return Buffer.from(pdfBuffer);
+      let nameY = 18;
+      if (logoBuffer) {
+        try {
+          const lx = (PAGE_W - LOGO_SIZE) / 2;
+          doc.image(logoBuffer, lx, 12, { fit: [LOGO_SIZE, LOGO_SIZE] });
+          nameY = 12 + LOGO_SIZE + 4;
+        } catch (_) {
+          logoBuffer = null;
+        }
+      }
+      if (!logoBuffer) {
+        // Initials circle — blend rgba(255,255,255,0.25) over green → #529b6e
+        const cx = PAGE_W / 2;
+        const cy = 34;
+        doc.circle(cx, cy, 22).fill('#529b6e');
+        doc.font('Helvetica-Bold').fontSize(16).fillColor('#ffffff')
+          .text(initials, cx - 22, cy - 9, { width: 44, align: 'center' });
+        nameY = cy + 24;
+      }
+
+      const nameFontSize = businessName.length > 30 ? 11 : 14;
+      doc.font('Helvetica-Bold').fontSize(nameFontSize).fillColor('#ffffff')
+        .text(businessName, MARGIN, nameY, { width: CONTENT_W, align: 'center', lineBreak: false });
+      doc.font('Helvetica').fontSize(9).fillColor('#c7dfd0')
+        .text('INVOICE', MARGIN, nameY + nameFontSize + 3, { width: CONTENT_W, align: 'center' });
+
+      // ── META SECTION ──────────────────────────────────────────────────
+      const metaY = HEADER_H + 22;
+      const COL_W = CONTENT_W / 3;
+      const c1 = MARGIN;
+      const c2 = MARGIN + COL_W;
+      const c3 = MARGIN + COL_W * 2;
+
+      // Col 1 — Invoice info
+      doc.font('Helvetica').fontSize(8).fillColor(GRAY)
+        .text('INVOICE', c1, metaY, { width: COL_W - 8 });
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK)
+        .text(invoiceRef, c1, metaY + 12, { width: COL_W - 8 });
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+        .text(invoiceDate, c1, metaY + 26, { width: COL_W - 8 });
+      // Status badge
+      const badgeW = Math.min(psLabel.length * 7 + 16, 70);
+      const badgeY = metaY + 42;
+      doc.roundedRect(c1, badgeY, badgeW, 15, 7).fill(psColor);
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#ffffff')
+        .text(psLabel, c1, badgeY + 3, { width: badgeW, align: 'center' });
+
+      // Col 2 — Bill To
+      doc.font('Helvetica').fontSize(8).fillColor(GRAY)
+        .text('BILL TO', c2, metaY, { width: COL_W - 8 });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+        .text(customerName, c2, metaY + 12, { width: COL_W - 8 });
+      let btY = metaY + 26;
+      for (const line of addressLines) {
+        doc.font('Helvetica').fontSize(9).fillColor(DARK)
+          .text(line, c2, btY, { width: COL_W - 8, lineBreak: false });
+        btY += 12;
+      }
+      const cPhone = order.customerPhone || order.retailer?.phoneNumber;
+      if (cPhone) {
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+          .text(String(cPhone), c2, btY, { width: COL_W - 8, lineBreak: false });
+        btY += 12;
+      }
+      const cEmail = order.customerEmail || order.retailer?.email;
+      if (cEmail) {
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+          .text(String(cEmail), c2, btY, { width: COL_W - 8, lineBreak: false });
+      }
+
+      // Col 3 — From
+      doc.font('Helvetica').fontSize(8).fillColor(GRAY)
+        .text('FROM', c3, metaY, { width: COL_W - 8 });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+        .text(businessName, c3, metaY + 12, { width: COL_W - 8 });
+      if (wholesaler.email) {
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+          .text(wholesaler.email, c3, metaY + 26, { width: COL_W - 8 });
+      }
+
+      // ── ITEMS TABLE ───────────────────────────────────────────────────
+      const tableY = metaY + 90;
+      // Column widths (must sum to CONTENT_W = 515.28)
+      const CW_PRODUCT = Math.round(CONTENT_W * 0.50); // 258
+      const CW_QTY     = Math.round(CONTENT_W * 0.11); //  57
+      const CW_PRICE   = Math.round(CONTENT_W * 0.20); // 103
+      const CW_TOTAL   = CONTENT_W - CW_PRODUCT - CW_QTY - CW_PRICE; // remainder
+
+      const xProduct = MARGIN;
+      const xQty     = xProduct + CW_PRODUCT;
+      const xPrice   = xQty + CW_QTY;
+      const xTotal   = xPrice + CW_PRICE;
+
+      const TH_H = 24;
+      doc.rect(MARGIN, tableY, CONTENT_W, TH_H).fill(THEAD_BG);
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY);
+      doc.text('PRODUCT',    xProduct + 6, tableY + 8, { width: CW_PRODUCT - 8 });
+      doc.text('QTY',        xQty,         tableY + 8, { width: CW_QTY,  align: 'center' });
+      doc.text('UNIT PRICE', xPrice,       tableY + 8, { width: CW_PRICE, align: 'right' });
+      doc.text('TOTAL',      xTotal,       tableY + 8, { width: CW_TOTAL - 4, align: 'right' });
+
+      doc.moveTo(MARGIN, tableY + TH_H).lineTo(MARGIN + CONTENT_W, tableY + TH_H)
+        .strokeColor(BORDER).lineWidth(1).stroke();
+
+      let rowY = tableY + TH_H;
+      for (const item of orderItems) {
+        const rowH = item.promo ? 38 : 26;
+        // New page if needed
+        if (rowY + rowH > 810) {
+          doc.addPage({ size: 'A4', margin: 0 });
+          rowY = MARGIN;
+        }
+
+        doc.font('Helvetica').fontSize(10).fillColor(DARK)
+          .text(item.name, xProduct + 6, rowY + 7, { width: CW_PRODUCT - 12, ellipsis: true, lineBreak: false });
+        if (item.promo) {
+          doc.font('Helvetica').fontSize(8).fillColor('#16a34a')
+            .text(item.promo, xProduct + 6, rowY + 21, { width: CW_PRODUCT - 12, lineBreak: false });
+        }
+        doc.font('Helvetica').fontSize(10).fillColor(DARK)
+          .text(String(item.qty), xQty, rowY + 7, { width: CW_QTY, align: 'center' });
+        doc.font('Helvetica').fontSize(10).fillColor(DARK)
+          .text(fmt(item.unitPrice), xPrice, rowY + 7, { width: CW_PRICE, align: 'right' });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+          .text(fmt(item.lineTotal), xTotal, rowY + 7, { width: CW_TOTAL - 4, align: 'right' });
+
+        rowY += rowH;
+        doc.moveTo(MARGIN, rowY).lineTo(MARGIN + CONTENT_W, rowY)
+          .strokeColor(BORDER).lineWidth(0.5).stroke();
+      }
+
+      // ── TOTALS ────────────────────────────────────────────────────────
+      const TOTALS_W = 220;
+      const tX = MARGIN + CONTENT_W - TOTALS_W;
+      let tY = rowY + 18;
+
+      const drawTotRow = (label: string, value: string, bold = false) => {
+        const font = bold ? 'Helvetica-Bold' : 'Helvetica';
+        const color = bold ? GREEN : DARK;
+        const labelColor = bold ? GREEN : GRAY;
+        const size = bold ? 12 : 10;
+        doc.font(font).fontSize(size).fillColor(labelColor)
+          .text(label, tX, tY, { width: TOTALS_W / 2 });
+        doc.font(font).fontSize(size).fillColor(color)
+          .text(value, tX + TOTALS_W / 2, tY, { width: TOTALS_W / 2, align: 'right' });
+        tY += bold ? 20 : 17;
+      };
+
+      drawTotRow('Subtotal', fmt(subtotal));
+      if (deliveryCost > 0) drawTotRow('Delivery', fmt(deliveryCost));
+
+      // Grand total divider
+      doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4)
+        .strokeColor(GREEN).lineWidth(1.5).stroke();
+      tY += 4;
+      drawTotRow('Total', fmt(grandTotal), true);
+
+      // ── FOOTER ────────────────────────────────────────────────────────
+      const footerY = Math.max(tY + 36, 795);
+      doc.moveTo(MARGIN, footerY).lineTo(MARGIN + CONTENT_W, footerY)
+        .strokeColor(BORDER).lineWidth(0.5).stroke();
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY)
+        .text('Thank you for your business!', MARGIN, footerY + 12, { width: CONTENT_W, align: 'center' });
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+        .text('Powered by ', MARGIN, footerY + 26, { width: CONTENT_W, align: 'center', continued: true });
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN)
+        .text('Quikpik Merchant');
+
+      doc.end();
+    });
   }
 
   // Generate and download invoice PDF (wholesaler + team member access)
