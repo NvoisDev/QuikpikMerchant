@@ -18098,7 +18098,9 @@ https://quikpik.app`;
         depositPercentage: validDepositPercentage,
         balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
         amountPaid: '0.00',
-        amountOutstanding: total.toFixed(2),
+        // Pay Later (0%) = offline payment, no customer transaction fee — outstanding = subtotal
+        // All other payment types = Stripe, outstanding = total (includes transaction fee)
+        amountOutstanding: validDepositPercentage === 0 ? subtotal.toFixed(2) : total.toFixed(2),
         paymentStatus: 'unpaid',
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
@@ -18532,9 +18534,12 @@ https://quikpik.app`;
 
       const thisPayment = parseFloat(amount);
       const previouslyPaid = parseFloat(order.amountPaid || '0');
-      const orderTotal = parseFloat(order.total || '0');
+      // Cash/bank payments are always compared against subtotal (no customer transaction fee)
+      // Stripe card payments use order.total (customer has already paid including the fee)
+      const orderTotal = parseFloat(order.subtotal || '0');
+      const offlineOutstanding = Math.max(0, orderTotal - previouslyPaid);
 
-      if (thisPayment > parseFloat(order.amountOutstanding || '0') + 0.01) {
+      if (thisPayment > offlineOutstanding + 0.01) {
         return res.status(400).json({ error: 'Payment exceeds outstanding balance' });
       }
 
@@ -18560,6 +18565,21 @@ https://quikpik.app`;
       });
 
       console.log(`✅ Manual ${method} payment of £${thisPayment.toFixed(2)} recorded for order ${order.orderNumber || orderId}`);
+
+      // If now fully paid and there's an open Stripe Checkout session, expire it (best-effort)
+      // This prevents the customer from paying again via the old Stripe link
+      if (paymentStatus === 'paid' && order.stripePaymentLinkId) {
+        try {
+          await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
+          await db.update(orders)
+            .set({ stripePaymentLinkUrl: null, stripePaymentLinkId: null })
+            .where(eq(orders.id, orderId));
+          console.log(`🔒 Expired Stripe checkout session ${order.stripePaymentLinkId} for order ${order.orderNumber || orderId}`);
+        } catch (stripeErr) {
+          // Best-effort: session may already be used/expired — do not block the payment recording
+          console.warn(`⚠️ Could not expire Stripe session ${order.stripePaymentLinkId}:`, stripeErr);
+        }
+      }
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
 

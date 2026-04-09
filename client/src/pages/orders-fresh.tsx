@@ -206,6 +206,14 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
   const [loadingLog, setLoadingLog] = useState(false);
 
   const outstanding = parseFloat(order.amountOutstanding || '0');
+  // For Pay Later (offline) orders, the payable amount is subtotal (no customer transaction fee).
+  // For Stripe orders, amountOutstanding already reflects the customer-fee-inclusive total.
+  const isOfflineOrder = order.depositPercentage === 0;
+  const offlineOutstanding = Math.max(
+    0,
+    parseFloat(order.subtotal || '0') - parseFloat(order.amountPaid || '0')
+  );
+  const preFillOutstanding = isOfflineOrder ? offlineOutstanding : outstanding;
 
   const fetchLog = async () => {
     setLoadingLog(true);
@@ -220,10 +228,10 @@ function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
     if (open) fetchLog();
   }, [open, order.id]);
 
-  // When accordion opens and there's an outstanding balance, pre-fill with full outstanding
+  // When accordion opens and there's an outstanding balance, pre-fill with correct offline amount
   useEffect(() => {
-    if (open && outstanding > 0.01) {
-      setAmount(outstanding.toFixed(2));
+    if (open && preFillOutstanding > 0.01) {
+      setAmount(preFillOutstanding.toFixed(2));
     }
   }, [open]);
 
@@ -2294,10 +2302,14 @@ export default function OrdersFresh() {
               {selectedOrder.isQuote && (() => {
                 const productTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                 const customerTotal = parseFloat(selectedOrder.total || '0');
-                const paymentRatio = customerTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / customerTotal : 0;
-                const wholesalerPaid = productTotal * paymentRatio;
+                // Pay Later / offline orders: customer pays subtotal (no transaction fee)
+                // Use raw amountPaid directly — no proportional remapping needed
+                const isOffline = selectedOrder.depositPercentage === 0;
+                const rawPaid = parseFloat(selectedOrder.amountPaid || '0');
+                const paymentRatio = (!isOffline && customerTotal > 0) ? rawPaid / customerTotal : 0;
+                const wholesalerPaid = isOffline ? rawPaid : productTotal * paymentRatio;
                 // For cancelled orders, outstanding balance should be £0.00
-                const wholesalerOutstanding = selectedOrder.status === 'cancelled' ? 0 : productTotal - wholesalerPaid;
+                const wholesalerOutstanding = selectedOrder.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
                 
                 return (
                 <div>
