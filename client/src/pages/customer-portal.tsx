@@ -662,7 +662,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice-${(order as any).orderNumber || order.id}.pdf`;
+      a.download = `invoice-${order.orderNumber || order.id}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
