@@ -27,6 +27,22 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS broadcasts_wholesaler_id_idx ON broadcasts (wholesaler_id)`,
     `CREATE INDEX IF NOT EXISTS delivery_addresses_customer_id_idx ON delivery_addresses (customer_id)`,
     `CREATE INDEX IF NOT EXISTS delivery_addresses_wholesaler_id_idx ON delivery_addresses (wholesaler_id)`,
+    // Task #28: Bank details for wire transfer payments
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_sort_code VARCHAR`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR`,
+    // Task #28: Order payments log table
+    `CREATE TABLE IF NOT EXISTS order_payments (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      amount DECIMAL(10,2) NOT NULL,
+      method VARCHAR NOT NULL,
+      stripe_payment_intent_id VARCHAR,
+      notes TEXT,
+      recorded_by VARCHAR,
+      recorded_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS order_payments_order_id_idx ON order_payments (order_id)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

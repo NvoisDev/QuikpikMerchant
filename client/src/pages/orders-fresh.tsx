@@ -177,6 +177,139 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
+// Record manual payment (cash / bank transfer) + show full payment log
+function RecordPaymentPanel({ order, onPaymentRecorded, toast }: {
+  order: Order;
+  onPaymentRecorded: (updatedOrder: Partial<Order>) => void;
+  toast: any;
+}) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<'cash' | 'bank_transfer'>('cash');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [log, setLog] = useState<any[]>([]);
+  const [loadingLog, setLoadingLog] = useState(false);
+
+  const outstanding = parseFloat((order as any).amountOutstanding || '0');
+
+  const fetchLog = async () => {
+    setLoadingLog(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}/payments`, { credentials: 'include' });
+      if (res.ok) setLog(await res.json());
+    } catch {}
+    setLoadingLog(false);
+  };
+
+  useEffect(() => {
+    if (open) fetchLog();
+  }, [open, order.id]);
+
+  const handleRecord = async () => {
+    const amt = parseFloat(amount);
+    if (!amount || isNaN(amt) || amt <= 0) {
+      toast({ title: 'Enter a valid amount', variant: 'destructive' }); return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}/payments`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amt.toFixed(2), method, notes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast({ title: 'Payment recorded', description: `£${amt.toFixed(2)} ${method === 'cash' ? 'cash' : 'bank transfer'} logged.` });
+      setAmount('');
+      setNotes('');
+      onPaymentRecorded(data.order);
+      fetchLog();
+    } catch (err: any) {
+      toast({ title: 'Failed', description: err.message, variant: 'destructive' });
+    }
+    setSaving(false);
+  };
+
+  const methodLabel: Record<string, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', stripe_card: 'Card (Stripe)' };
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span>Payment History</span>
+        <span className="text-xs text-gray-400">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="p-4 space-y-4">
+          {/* Log */}
+          {loadingLog ? (
+            <p className="text-xs text-gray-400">Loading...</p>
+          ) : log.length === 0 ? (
+            <p className="text-xs text-gray-400">No payments recorded yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {log.map((entry: any) => (
+                <div key={entry.id} className="flex items-center justify-between text-xs text-gray-700 py-1.5 border-b last:border-0">
+                  <div>
+                    <span className="font-medium">{methodLabel[entry.method] || entry.method}</span>
+                    {entry.notes && <span className="text-gray-400 ml-1">— {entry.notes}</span>}
+                    <div className="text-gray-400">{new Date(entry.recordedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                  </div>
+                  <span className="font-semibold text-green-700">+£{parseFloat(entry.amount).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Record Form — only show if there's an outstanding balance */}
+          {outstanding > 0.01 && (
+            <div className="pt-2 border-t space-y-3">
+              <p className="text-xs font-semibold text-gray-600">Record a cash or bank transfer payment</p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">£</span>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={outstanding}
+                    placeholder={outstanding.toFixed(2)}
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    className="pl-6 pr-2 py-1.5 text-sm border rounded w-full focus:outline-none focus:border-green-500"
+                  />
+                </div>
+                <select
+                  value={method}
+                  onChange={e => setMethod(e.target.value as any)}
+                  className="text-sm border rounded px-2 py-1.5 focus:outline-none focus:border-green-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                placeholder="Notes (optional)"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                className="w-full text-sm border rounded px-2 py-1.5 focus:outline-none focus:border-green-500"
+              />
+              <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={handleRecord} disabled={saving}>
+                {saving ? 'Saving...' : 'Record Payment'}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -2283,6 +2416,16 @@ export default function OrdersFresh() {
                 </div>
               );
               })()}
+
+              {/* Record Manual Payment + Payment Log */}
+              <RecordPaymentPanel
+                order={selectedOrder}
+                onPaymentRecorded={(updatedOrder) => {
+                  setSelectedOrder({ ...selectedOrder, ...updatedOrder });
+                  loadOrders(currentPage, statusFilter || searchQuery);
+                }}
+                toast={toast}
+              />
 
               {/* Order Photos Section */}
               <div>
