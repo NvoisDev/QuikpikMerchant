@@ -106,21 +106,23 @@ export default function SubscriptionPricing() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        // Redirect to Stripe checkout — keep processingPlanId set so button stays in
-        // "Processing..." state while the page navigates away
         window.location.href = data.url;
       } else {
         setProcessingPlanId(null);
       }
     },
     onError: (error) => {
-      setProcessingPlanId(null);
       console.error('Checkout error:', error);
       toast({
         title: "Payment Error",
         description: "Failed to start checkout process. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always clear after a short delay — handles the case where navigation fails
+      // after a successful redirect URL response so the button never stays stuck
+      setTimeout(() => setProcessingPlanId(null), 3000);
     }
   });
 
