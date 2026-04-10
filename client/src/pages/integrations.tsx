@@ -14,6 +14,7 @@ import {
   CreditCard,
   ChevronRight,
   ExternalLink,
+  Calculator,
 } from "lucide-react";
 
 export default function Integrations() {
@@ -249,6 +250,18 @@ export default function Integrations() {
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </div>
               </button>
+
+              {/* Accounting — Coming Soon */}
+              <div className="text-left border border-gray-200 rounded-xl p-5 bg-white opacity-75">
+                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-4">
+                  <Calculator className="w-6 h-6 text-teal-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">Accounting</h4>
+                <p className="text-sm text-gray-500">Xero · Sync invoices and financial data</p>
+                <div className="mt-3">
+                  <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium">Coming soon</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
