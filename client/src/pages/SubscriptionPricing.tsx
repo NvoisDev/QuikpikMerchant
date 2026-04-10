@@ -43,6 +43,7 @@ export default function SubscriptionPricing() {
   const queryClient = useQueryClient();
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [targetDowngradePlan, setTargetDowngradePlan] = useState<string>('free');
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   // Handle success/cancel URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -105,11 +106,15 @@ export default function SubscriptionPricing() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        // Redirect to Stripe checkout
+        // Redirect to Stripe checkout — keep processingPlanId set so button stays in
+        // "Processing..." state while the page navigates away
         window.location.href = data.url;
+      } else {
+        setProcessingPlanId(null);
       }
     },
     onError: (error) => {
+      setProcessingPlanId(null);
       console.error('Checkout error:', error);
       toast({
         title: "Payment Error",
@@ -225,6 +230,7 @@ export default function SubscriptionPricing() {
     
     // Handle upgrades - proceed with checkout/subscription update
     if (plan.stripePriceId) {
+      setProcessingPlanId(plan.planId);
       createCheckoutMutation.mutate(plan.stripePriceId);
     }
   };
@@ -518,7 +524,7 @@ export default function SubscriptionPricing() {
               <div className="space-y-2">
                 <Button
                   onClick={() => handlePlanSelection(plan)}
-                  disabled={createCheckoutMutation.isPending || isCurrentPlan(plan.planId)}
+                  disabled={processingPlanId === plan.planId || isCurrentPlan(plan.planId)}
                   className={`w-full ${
                     plan.planId === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
                     plan.planId === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
@@ -528,7 +534,7 @@ export default function SubscriptionPricing() {
                 >
                   {isCurrentPlan(plan.planId) ? (
                     'Current Plan'
-                  ) : createCheckoutMutation.isPending ? (
+                  ) : processingPlanId === plan.planId ? (
                     'Processing...'
                   ) : plan.planId === 'free' ? (
                     'Get Started Free'
