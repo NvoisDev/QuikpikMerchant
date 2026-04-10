@@ -7714,7 +7714,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/orders/:orderId/upload-photo', requireAuth, orderPhotoUpload.single('photo'), async (req: any, res) => {
+  app.post('/api/orders/:orderId/upload-photo', requireAuth, (req: any, res: any, next: any) => {
+    // Run multer middleware so its errors (LIMIT_FILE_SIZE, bad mimetype) can be
+    // converted to JSON responses before reaching the async handler below.
+    orderPhotoUpload.single('photo')(req, res, (multerErr: any) => {
+      if (multerErr) {
+        if (multerErr.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: "File too large (max 10MB)" });
+        }
+        return res.status(400).json({ error: multerErr.message || "Invalid file" });
+      }
+      next();
+    });
+  }, async (req: any, res: any) => {
     try {
       const { orderId } = req.params;
 
@@ -7781,10 +7793,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ success: true, image: imageEntry });
     } catch (error: any) {
-      // Multer LIMIT_FILE_SIZE error
-      if (error?.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: "File too large (max 10MB)" });
-      }
       console.error("❌ Error uploading order photo:", error);
       res.status(500).json({ error: "Failed to upload photo" });
     }

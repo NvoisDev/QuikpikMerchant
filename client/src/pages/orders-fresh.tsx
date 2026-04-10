@@ -904,11 +904,11 @@ export default function OrdersFresh() {
     const data = await response.json();
 
     if (data.image) {
-      const updatedOrder = {
-        ...selectedOrder,
-        orderImages: [...(selectedOrder.orderImages || []), data.image]
-      };
-      setSelectedOrder(updatedOrder);
+      // Use functional update so concurrent multi-file uploads don't overwrite each other
+      setSelectedOrder(prev => prev
+        ? { ...prev, orderImages: [...(prev.orderImages || []), data.image] }
+        : prev
+      );
       toast({ title: "Photo Added", description: "Order photo uploaded successfully" });
     }
   };
