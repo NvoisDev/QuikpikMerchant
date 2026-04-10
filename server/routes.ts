@@ -18462,9 +18462,12 @@ https://quikpik.app`;
     try {
       if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
 
-      const { stripeSubscriptionId } = req.body;
+      const { stripeSubscriptionId, planId: overridePlanId } = req.body;
       if (!stripeSubscriptionId) {
         return res.status(400).json({ error: 'stripeSubscriptionId is required' });
+      }
+      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
+        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
       }
 
       // Fetch subscription from Stripe
@@ -18492,19 +18495,27 @@ https://quikpik.app`;
         return res.status(404).json({ error: `No user found with Stripe customer ID ${recoverCustId}` });
       }
 
-      const [recoverPlan] = await db.select().from(subscriptionPlans)
-        .where(eq(subscriptionPlans.stripePriceId, recoverPriceId));
-      if (!recoverPlan || !recoverPlan.planId || recoverPlan.planId === 'free') {
-        return res.status(400).json({ error: `No paid plan found for price ${recoverPriceId}` });
+      // Resolve the plan: use override if provided, otherwise look up by price ID
+      let resolvedPlanId: string;
+      if (overridePlanId) {
+        resolvedPlanId = overridePlanId;
+        console.log(`🔧 Admin using planId override "${resolvedPlanId}" (price ${recoverPriceId} may be archived)`);
+      } else {
+        const [recoverPlan] = await db.select().from(subscriptionPlans)
+          .where(eq(subscriptionPlans.stripePriceId, recoverPriceId));
+        if (!recoverPlan || !recoverPlan.planId || recoverPlan.planId === 'free') {
+          return res.status(400).json({ error: `No paid plan found for price ${recoverPriceId} — pass planId to override` });
+        }
+        resolvedPlanId = recoverPlan.planId;
       }
 
-      const recoverProductLimit = recoverPlan.planId === 'premium' ? -1 : (recoverPlan.planId === 'standard' ? 50 : 10);
+      const recoverProductLimit = resolvedPlanId === 'premium' ? -1 : (resolvedPlanId === 'standard' ? 50 : 10);
       const recoverPeriodEnd = new Date(stripeSub.current_period_end * 1000);
       const recoverPeriodStart = new Date(stripeSub.current_period_start * 1000);
 
       await storage.updateUser(recoverUser.id, {
-        currentPlan: recoverPlan.planId,
-        subscriptionTier: recoverPlan.planId,
+        currentPlan: resolvedPlanId,
+        subscriptionTier: resolvedPlanId,
         subscriptionStatus: 'active',
         productLimit: recoverProductLimit,
         stripeSubscriptionId: stripeSub.id,
@@ -18515,7 +18526,7 @@ https://quikpik.app`;
         .where(eq(userSubscriptions.userId, recoverUser.id));
       if (existingRecoverSub) {
         await db.update(userSubscriptions).set({
-          planId: recoverPlan.planId,
+          planId: resolvedPlanId,
           stripeSubscriptionId: stripeSub.id,
           status: 'active',
           currentPeriodStart: recoverPeriodStart,
@@ -18526,7 +18537,7 @@ https://quikpik.app`;
       } else {
         await db.insert(userSubscriptions).values({
           userId: recoverUser.id,
-          planId: recoverPlan.planId,
+          planId: resolvedPlanId,
           stripeSubscriptionId: stripeSub.id,
           status: 'active',
           currentPeriodStart: recoverPeriodStart,
@@ -18535,12 +18546,12 @@ https://quikpik.app`;
         });
       }
 
-      console.log(`🔧 Admin activated ${recoverPlan.planId} for user ${recoverUser.id} (${recoverUser.email}) via sub ${stripeSub.id}`);
+      console.log(`🔧 Admin activated ${resolvedPlanId} for user ${recoverUser.id} (${recoverUser.email}) via sub ${stripeSub.id}`);
       return res.json({
         success: true,
         userId: recoverUser.id,
         userEmail: recoverUser.email,
-        planId: recoverPlan.planId,
+        planId: resolvedPlanId,
         stripeSubscriptionId: stripeSub.id,
         periodEnd: recoverPeriodEnd.toISOString(),
       });
