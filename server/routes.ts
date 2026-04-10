@@ -13564,6 +13564,17 @@ https://quikpik.app`;
     if (addressLines.length === 0 && order.deliveryAddress) {
       addressLines = order.deliveryAddress.split(',').map((s: string) => s.trim()).filter(Boolean);
     }
+    if (addressLines.length === 0 && order.retailerId && order.wholesalerId) {
+      try {
+        const addrs = await storage.getDeliveryAddresses(order.retailerId, order.wholesalerId);
+        if (addrs.length > 0) {
+          const addr = addrs[0];
+          [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country]
+            .filter(Boolean)
+            .forEach(l => addressLines.push(l!));
+        }
+      } catch (_) {}
+    }
 
     // Payment status
     const ps = order.paymentStatus || 'unpaid';
