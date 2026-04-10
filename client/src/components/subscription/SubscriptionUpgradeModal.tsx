@@ -43,7 +43,7 @@ export function SubscriptionUpgradeModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Standard Plan */}
-            <Card className="relative border-primary">
+            <Card className="relative border-primary mt-4 sm:mt-0">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground text-xs">
                   <Zap className="h-3 w-3 mr-1" />
@@ -87,7 +87,7 @@ export function SubscriptionUpgradeModal({
             </Card>
 
             {/* Premium Plan */}
-            <Card className="relative mt-4 sm:mt-0">
+            <Card className="relative">
               <CardHeader className="pb-2 pt-4 px-4">
                 <CardTitle className="flex items-center justify-between text-base">
                   Premium
