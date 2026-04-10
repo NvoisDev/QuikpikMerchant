@@ -5,7 +5,9 @@ import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
 import cron from 'node-cron';
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, inArray } from "drizzle-orm";
+import { subscriptionPlans } from "@shared/schema";
+import Stripe from "stripe";
 
 async function runStartupMigrations() {
   const migrations = [
@@ -38,6 +40,62 @@ async function runStartupMigrations() {
     await db.execute(sql.raw(stmt));
   }
   console.log("✅ Startup DB migrations applied (customer map columns)");
+}
+
+// Idempotent fix: ensures the Stripe Price objects for Standard and Premium match the
+// monthly_price stored in the subscription_plans table. Stripe prices are immutable —
+// if the unit_amount is wrong a new price is created and the old one is archived.
+async function fixStripePricesIfNeeded() {
+  if (!process.env.STRIPE_SECRET_KEY) return;
+  const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
+
+  const EXPECTED: Record<string, { unitAmount: number; productId: string }> = {
+    standard: { unitAmount: 1999, productId: 'prod_U7iIITiYIFwLA2' },
+    premium:  { unitAmount: 3999, productId: 'prod_U7iHoOyKGNk4CG' },
+  };
+
+  const plans = await db.select({
+    planId: subscriptionPlans.planId,
+    stripePriceId: subscriptionPlans.stripePriceId,
+  }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium']));
+
+  for (const plan of plans) {
+    const expected = EXPECTED[plan.planId];
+    if (!expected || !plan.stripePriceId) continue;
+
+    try {
+      const price = await stripeClient.prices.retrieve(plan.stripePriceId);
+      if (price.active && price.unit_amount === expected.unitAmount) {
+        console.log(`✅ Stripe price for ${plan.planId} is correct (${expected.unitAmount}p)`);
+        continue;
+      }
+
+      console.log(`🔧 Stripe price for ${plan.planId} has wrong amount (${price.unit_amount}p, expected ${expected.unitAmount}p) — creating correct price`);
+      const newPrice = await stripeClient.prices.create({
+        unit_amount: expected.unitAmount,
+        currency: 'gbp',
+        recurring: { interval: 'month' },
+        product: expected.productId,
+      });
+
+      // Archive the old incorrect price
+      try {
+        await stripeClient.prices.update(plan.stripePriceId, { active: false });
+        console.log(`🗄️ Archived old price ${plan.stripePriceId}`);
+      } catch (archiveErr) {
+        console.error(`⚠️ Could not archive old price ${plan.stripePriceId}:`, archiveErr);
+      }
+
+      // Update DB to point to the new correct price
+      await db.update(subscriptionPlans)
+        .set({ stripePriceId: newPrice.id })
+        .where(eq(subscriptionPlans.planId, plan.planId));
+
+      console.log(`✅ Fixed ${plan.planId} Stripe price: ${plan.stripePriceId} → ${newPrice.id}`);
+    } catch (err) {
+      console.error(`❌ Failed to check/fix Stripe price for ${plan.planId}:`, err);
+    }
+  }
 }
 
 // Set OAuth redirect URI for production deployment
@@ -98,8 +156,9 @@ app.use((req, res, next) => {
 
     // Apply idempotent schema migrations (ADD COLUMN IF NOT EXISTS)
     await runStartupMigrations();
-    
-    // Stripe subscription system removed
+
+    // Ensure Stripe prices for Standard/Premium match the correct monthly_price amounts
+    await fixStripePricesIfNeeded();
 
     // Lazy load heavy modules
     const { registerRoutes } = await import("./routes");
