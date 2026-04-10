@@ -13736,7 +13736,7 @@ https://quikpik.app`;
       if (wholesaler.email) fromLines.push(wholesaler.email);
       for (const line of fromLines) {
         doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-          .text(line, c3, fromY, { width: COL_W - 8, lineBreak: false });
+          .text(line, c3, fromY, { width: COL_W - 8 });
         fromY += 12;
       }
 
