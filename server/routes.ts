@@ -1463,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({ received: true, type: event.type });
         }
         const subCustId = typeof subscription.customer === 'string'
-          ? subscription.customer : (subscription.customer as any)?.id;
+          ? subscription.customer : subscription.customer.id;
         const subPriceId = subscription.items?.data?.[0]?.price?.id;
         console.log(`🔔 ${event.type}: customer=${subCustId}, price=${subPriceId}`);
         if (!subCustId || !subPriceId) return res.json({ received: true, type: event.type });
@@ -1529,15 +1529,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ── Invoice paid (second fallback — covers subscription_create and renewals) ──
       if (event.type === 'invoice.payment_succeeded') {
         const invoice = event.data.object as Stripe.Invoice;
-        const billingReason = (invoice as any).billing_reason as string | null;
+        const billingReason = invoice.billing_reason;
         if (billingReason !== 'subscription_create' && billingReason !== 'subscription_cycle') {
           return res.json({ received: true, type: event.type });
         }
 
         const invCustId = typeof invoice.customer === 'string'
-          ? invoice.customer : (invoice.customer as any)?.id;
+          ? invoice.customer
+          : typeof invoice.customer === 'object' && invoice.customer !== null
+            ? invoice.customer.id
+            : null;
         const invSubId = typeof invoice.subscription === 'string'
-          ? invoice.subscription : (invoice.subscription as any)?.id;
+          ? invoice.subscription
+          : typeof invoice.subscription === 'object' && invoice.subscription !== null
+            ? invoice.subscription.id
+            : null;
         if (!invCustId || !invSubId) return res.json({ received: true, type: event.type });
 
         console.log(`💸 invoice.payment_succeeded: customer=${invCustId}, sub=${invSubId}, reason=${billingReason}`);
@@ -18471,7 +18477,7 @@ https://quikpik.app`;
       }
 
       const recoverCustId = typeof stripeSub.customer === 'string'
-        ? stripeSub.customer : (stripeSub.customer as any)?.id;
+        ? stripeSub.customer : stripeSub.customer.id;
       const recoverPriceId = stripeSub.items?.data?.[0]?.price?.id;
 
       if (!recoverCustId || !recoverPriceId) {
@@ -18530,7 +18536,7 @@ https://quikpik.app`;
       return res.json({
         success: true,
         userId: recoverUser.id,
-        email: recoverUser.email,
+        userEmail: recoverUser.email,
         planId: recoverPlan.planId,
         stripeSubscriptionId: stripeSub.id,
         periodEnd: recoverPeriodEnd.toISOString(),
