@@ -143,6 +143,29 @@ export class ObjectStorageService {
     });
   }
 
+  // Directly uploads a buffer to object storage and returns the normalized path.
+  // Use this from the server side to avoid browser CORS issues with signed URLs.
+  async uploadFileBuffer(
+    buffer: Buffer,
+    contentType: string,
+    filename: string,
+    folder: string = "order-photos"
+  ): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const objectId = randomUUID();
+    const ext = (filename.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const objectName_relative = `${folder}/${objectId}.${ext}`;
+    const fullPath = `${privateObjectDir}/${objectName_relative}`;
+
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+
+    await file.save(buffer, { contentType, resumable: false });
+
+    return `/objects/${objectName_relative}`;
+  }
+
   // Gets the object entity file from the object path.
   async getObjectEntityFile(objectPath: string): Promise<File> {
     if (!objectPath.startsWith("/objects/")) {

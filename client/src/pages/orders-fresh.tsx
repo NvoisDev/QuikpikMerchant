@@ -880,77 +880,48 @@ export default function OrdersFresh() {
     }
   };
 
-  // Upload photo function
-  const handlePhotoUpload = async (): Promise<{ method: "PUT"; url: string }> => {
-    if (!selectedOrder) {
-      throw new Error('No order selected for photo upload');
-    }
-    
-    try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get upload URL');
-      }
-      
-      const data = await response.json();
-      return { method: "PUT" as const, url: data.uploadURL };
-    } catch (error) {
-      toast({
-        title: "Upload Failed",
-        description: "Failed to prepare photo upload",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
+  // Upload a photo by sending it through our own server (avoids CORS issues with direct GCS uploads)
+  const uploadOrderPhoto = async (file: File): Promise<void> => {
+    if (!selectedOrder) throw new Error('No order selected');
 
-  // Save uploaded photo
-  const handlePhotoComplete = async (result: { successful: Array<{ url: string; name: string }> }) => {
-    if (!selectedOrder || !result.successful.length) return;
-    
-    try {
-      const uploadedImage = result.successful[0];
-      const response = await fetch(`/api/orders/${selectedOrder.id}/save-image`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl: uploadedImage.url,
-          filename: uploadedImage.name,
-          description: 'Order photo'
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save photo');
-      }
-      
-      const data = await response.json();
-      
-      // Update selected order with new image
-      if (data.image) {
-        const updatedOrder = {
-          ...selectedOrder,
-          orderImages: [...(selectedOrder.orderImages || []), data.image]
-        };
-        setSelectedOrder(updatedOrder);
-        
-        toast({
-          title: "Photo Added",
-          description: "Order photo uploaded successfully",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save photo to order",
-        variant: "destructive"
-      });
+    // Read file as base64
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        // Strip the data URL prefix (e.g. "data:image/jpeg;base64,")
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+    const response = await fetch(`/api/orders/${selectedOrder.id}/upload-photo`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileData: base64,
+        contentType: file.type,
+        filename: file.name,
+        description: 'Order photo'
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Upload failed (${response.status})`);
+    }
+
+    const data = await response.json();
+
+    if (data.image) {
+      const updatedOrder = {
+        ...selectedOrder,
+        orderImages: [...(selectedOrder.orderImages || []), data.image]
+      };
+      setSelectedOrder(updatedOrder);
+      toast({ title: "Photo Added", description: "Order photo uploaded successfully" });
     }
   };
 
@@ -2444,19 +2415,10 @@ export default function OrdersFresh() {
                             continue;
                           }
                           try {
-                            const { url } = await handlePhotoUpload();
-                            const uploadResponse = await fetch(url, {
-                              method: 'PUT',
-                              body: file,
-                              headers: { 'Content-Type': file.type },
-                            });
-                            if (uploadResponse.ok) {
-                              await handlePhotoComplete({ successful: [{ url: url.split('?')[0], name: file.name }] });
-                            } else {
-                              toast({ title: "Upload Failed", description: `Failed to upload ${file.name}`, variant: "destructive" });
-                            }
+                            await uploadOrderPhoto(file);
                           } catch (err) {
-                            // error toast already shown by handlePhotoUpload
+                            const message = err instanceof Error ? err.message : 'Please try again.';
+                            toast({ title: "Upload Failed", description: message, variant: "destructive" });
                           }
                         }
                         e.target.value = '';

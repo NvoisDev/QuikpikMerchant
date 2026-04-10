@@ -7700,6 +7700,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload photo directly through server (avoids browser CORS with signed GCS URLs)
+  app.post('/api/orders/:orderId/upload-photo', requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { fileData, contentType, filename, description } = req.body;
+
+      if (!fileData || !contentType || !filename) {
+        return res.status(400).json({ error: "fileData, contentType, and filename are required" });
+      }
+
+      // Validate file size (10MB limit in base64 = ~13.3MB base64 string)
+      if (fileData.length > 14_000_000) {
+        return res.status(400).json({ error: "File too large (max 10MB)" });
+      }
+
+      // Only allow image types
+      if (!contentType.startsWith('image/')) {
+        return res.status(400).json({ error: "Only image files are allowed" });
+      }
+
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order || order.wholesalerId !== wholesalerId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // Decode base64 and upload directly from server — no browser CORS needed
+      const buffer = Buffer.from(fileData, 'base64');
+
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const normalizedPath = await objectStorageService.uploadFileBuffer(buffer, contentType, filename);
+
+      console.log(`📸 Server-side upload complete: ${filename} → ${normalizedPath}`);
+
+      const imageEntry = {
+        id: crypto.randomUUID(),
+        url: normalizedPath,
+        filename: filename || 'order-image.jpg',
+        uploadedAt: new Date().toISOString(),
+        description: description || 'Order photo'
+      };
+
+      const currentImages = order.orderImages || [];
+      const updatedImages = [...currentImages, imageEntry];
+      await storage.updateOrderImages(parseInt(orderId), updatedImages);
+
+      console.log(`✅ Photo saved to order ${orderId}: ${filename}`);
+
+      // Send email notification to customer (best-effort)
+      try {
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        if (customer?.email && wholesaler) {
+          const { sendOrderPhotoNotificationEmail } = await import('./sendgrid-service.js');
+          const customerName = customer.firstName && customer.lastName
+            ? `${customer.firstName} ${customer.lastName}`
+            : customer.firstName || customer.businessName || 'Customer';
+          const wholesalerName = wholesaler.businessName || wholesaler.firstName || 'Your Wholesaler';
+          await sendOrderPhotoNotificationEmail({
+            customerEmail: customer.email,
+            customerName,
+            orderNumber: order.orderNumber || `#${order.id}`,
+            wholesalerName,
+            photoCount: 1,
+            orderPortalUrl: `https://quikpik.app/customer/${order.wholesalerId}`
+          });
+        }
+      } catch (emailError) {
+        console.error('📧 Photo notification email failed (non-fatal):', emailError);
+      }
+
+      res.json({ success: true, image: imageEntry });
+    } catch (error) {
+      console.error("❌ Error uploading order photo:", error);
+      res.status(500).json({ error: "Failed to upload photo" });
+    }
+  });
+
   // Delete uploaded image from order
   app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, async (req: any, res) => {
     try {
