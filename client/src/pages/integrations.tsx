@@ -24,8 +24,15 @@ export default function Integrations() {
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
-  const [integrationView, setIntegrationView] = useState<'categories' | 'list' | 'detail'>('categories');
-  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | 'accounting' | null>(null);
+  // Read ?category= query param on mount so deep links like /integrations?category=payment work
+  const [integrationView, setIntegrationView] = useState<'categories' | 'list' | 'detail'>(() => {
+    const cat = new URLSearchParams(window.location.search).get('category');
+    return cat ? 'list' : 'categories';
+  });
+  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | 'accounting' | null>(() => {
+    const cat = new URLSearchParams(window.location.search).get('category');
+    return (['communication', 'payment', 'accounting'].includes(cat ?? '') ? cat : null) as 'communication' | 'payment' | 'accounting' | null;
+  });
   const [selectedIntegration, setSelectedIntegration] = useState<'whatsapp' | 'stripe' | 'paystack' | null>(null);
 
   const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{

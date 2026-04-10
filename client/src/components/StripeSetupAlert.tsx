@@ -58,7 +58,7 @@ export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
               }
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/settings?tab=integrations">
+              <Link href="/integrations?category=payment">
                 <Button 
                   size="sm" 
                   className="bg-blue-600 hover:bg-blue-700 text-white"
