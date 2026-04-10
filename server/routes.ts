@@ -3952,49 +3952,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check edit limit based on subscription tier
-      const currentEditCount = existingProduct.editCount || 0;
-      const user = await storage.getUser(targetUserId);
-      const subscriptionTier = user?.subscriptionTier || "premium"; // Default to premium for testing
-      
-      console.log('🔍 Backend edit permission check:', {
-        productId: id,
-        currentEditCount,
-        userSubscriptionTier: subscriptionTier,
-        targetUserId
-      });
-      
-      // Check edit limits based on subscription tier
-      if (subscriptionTier === "free") {
-        let editLimit = 3;
-        if (currentEditCount >= editLimit) {
-          console.log('❌ Backend: Edit limit reached for', subscriptionTier);
-          return res.status(403).json({ 
-            message: `Product edit limit reached! You've used all ${editLimit} product edits for the ${subscriptionTier} plan. Upgrade your plan to edit more products.`,
-            editCount: currentEditCount,
-            maxEdits: editLimit,
-            tier: subscriptionTier
-          });
-        }
-      } else {
-        console.log('✅ Backend: Standard/Premium user - unlimited edits allowed');
-      }
-
-      // Debug: Log the incoming request body
-      console.log('🔍 Product update request body:', JSON.stringify(req.body, null, 2));
-      
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
-      
-      // Debug: Log the parsed product data
-      console.log('✅ Parsed product data:', JSON.stringify(productData, null, 2));
-      
-      // Increment edit count and update the product
-      const productDataWithEditCount = {
-        ...productData,
-        editCount: currentEditCount + 1
-      };
-      const product = await storage.updateProduct(id, productDataWithEditCount);
+      const product = await storage.updateProduct(id, productData);
       
       res.json(product);
     } catch (error) {
@@ -14285,15 +14245,6 @@ https://quikpik.app`;
       case 'standard': return 50;
       case 'premium': return -1; // Unlimited
       default: return 10;
-    }
-  }
-
-  function getEditLimit(tier: string): number {
-    switch (tier) {
-      case 'free': return 3;
-      case 'standard': return 10; // 10 edits for standard
-      case 'premium': return -1; // Unlimited for premium only
-      default: return 3;
     }
   }
 
