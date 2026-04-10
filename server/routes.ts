@@ -3834,23 +3834,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/products', requireAuth, async (req: any, res) => {
     try {
-      const { wholesalerId } = req.query;
-      
-      // Debug logging
-      console.log('Products request - Query wholesalerId:', wholesalerId);
-      console.log('Products request - User data:', {
-        id: req.user.id,
-        role: req.user.role,
-        wholesalerId: req.user.wholesalerId,
-        isTeamMember: req.user.isTeamMember
-      });
-      
-      // Always use parent company data for team members, ignore query param
-      let targetUserId;
+      // SECURITY: Always derive the target user from the authenticated session.
+      // Team members see their employer's products; all other authenticated users
+      // see only their own. The wholesalerId query param is intentionally ignored
+      // for authenticated users — customers use /api/customer-products/:wholesalerId.
+      let targetUserId: string;
       if (req.user.role === 'team_member' && req.user.wholesalerId) {
         targetUserId = req.user.wholesalerId;
-      } else if (wholesalerId) {
-        targetUserId = wholesalerId as string;
       } else {
         targetUserId = req.user.id;
       }

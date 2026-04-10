@@ -98,8 +98,30 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
     let user = await storage.getUserByGoogleId(googleUser.id);
 
     if (user) {
-      // Returning user already linked to this Google account — update profile and sign in
-      console.log(`✅ Found existing user by googleId: ${user.email} (role: ${user.role})`);
+      // SECURITY: If the matched record is a team_member or non-wholesaler, do NOT sign
+      // them in as that role — create a fresh wholesaler account instead. A team_member's
+      // googleId can end up set on their record from a previous sign-in attempt, but they
+      // should always get their own separate business account via Google OAuth.
+      const SIGNABLE_ROLES = ['wholesaler', 'admin'];
+      if (!SIGNABLE_ROLES.includes(user.role)) {
+        console.log(`⚠️  googleId match found a ${user.role} record (id: ${user.id}) — creating fresh wholesaler account to prevent data collision`);
+        const newUser = await storage.createUser({
+          id: googleUser.id,
+          email: googleUser.email,
+          firstName: googleUser.given_name || googleUser.name.split(' ')[0],
+          lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
+          profileImageUrl: googleUser.picture,
+          googleId: googleUser.id,
+          role: 'wholesaler',
+          businessName: `${googleUser.name}'s Business`,
+          defaultCurrency: 'GBP',
+          isFirstLogin: true
+        });
+        return newUser;
+      }
+
+      // Returning wholesaler/admin already linked to this Google account — update profile and sign in
+      console.log(`✅ Found existing ${user.role} by googleId: ${user.email}`);
       user = await storage.updateUser(user.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),

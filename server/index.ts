@@ -27,6 +27,9 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS broadcasts_wholesaler_id_idx ON broadcasts (wholesaler_id)`,
     `CREATE INDEX IF NOT EXISTS delivery_addresses_customer_id_idx ON delivery_addresses (customer_id)`,
     `CREATE INDEX IF NOT EXISTS delivery_addresses_wholesaler_id_idx ON delivery_addresses (wholesaler_id)`,
+    // Task #46: Security — clear stale google_id from team_member records so they cannot
+    // match in the googleId-first lookup and leak another wholesaler's data.
+    `UPDATE users SET google_id = NULL WHERE role = 'team_member' AND google_id IS NOT NULL`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
