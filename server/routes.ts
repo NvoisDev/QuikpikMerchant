@@ -4024,7 +4024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if deleting this product creates space to unlock other products
       try {
         const user = await storage.getUser(targetUserId);
-        const productLimit = user?.productLimit || 3;
+        const productLimit = user?.productLimit || 10;
         
         if (productLimit !== -1) { // Only if not unlimited
           const remainingProducts = await storage.getProducts(targetUserId);
@@ -14183,10 +14183,10 @@ https://quikpik.app`;
 
   function getProductLimit(tier: string): number {
     switch (tier) {
-      case 'free': return 3;
-      case 'standard': return 10;
+      case 'free': return 10;
+      case 'standard': return 50;
       case 'premium': return -1; // Unlimited
-      default: return 3;
+      default: return 10;
     }
   }
 

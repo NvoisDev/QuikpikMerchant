@@ -30,6 +30,9 @@ async function runStartupMigrations() {
     // Task #46: Security — clear stale google_id from team_member records so they cannot
     // match in the googleId-first lookup and leak another wholesaler's data.
     `UPDATE users SET google_id = NULL WHERE role = 'team_member' AND google_id IS NOT NULL`,
+    // Task #49 fix: Correct free-tier users whose product_limit was set to 3 (old default).
+    // Free plan allows 10 products; any free wholesaler with limit < 10 gets corrected here.
+    `UPDATE users SET product_limit = 10 WHERE subscription_tier = 'free' AND product_limit IS NOT NULL AND product_limit < 10`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

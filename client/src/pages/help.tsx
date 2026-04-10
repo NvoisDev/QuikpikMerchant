@@ -69,8 +69,8 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 ### Subscription Plans
 
-- **Free Plan**: Up to 3 products, limited editing (3 edits per product)
-- **Standard Plan**: Up to 10 products, unlimited editing (£19.99/month)
+- **Free Plan**: Up to 10 products (£0/month)
+- **Standard Plan**: Up to 50 products, unlimited editing (£19.99/month)
 - **Premium Plan**: Unlimited products, unlimited editing (£39.99/month)
 
 All plans include a 3.3% platform fee on successful orders with automatic revenue collection.
@@ -1286,8 +1286,8 @@ The Analytics dashboard provides insights into your business performance.
 ### Choosing the Right Plan
 
 #### Free Plan
-- **Cost**: $0/month
-- **Products**: Up to 3 products
+- **Cost**: £0/month
+- **Products**: Up to 10 products
 - **Features**: 
   - Basic WhatsApp broadcasts
   - Order management
@@ -1296,7 +1296,7 @@ The Analytics dashboard provides insights into your business performance.
 
 #### Standard Plan
 - **Cost**: £19.99/month
-- **Products**: Up to 10 products
+- **Products**: Up to 50 products
 - **Features**:
   - Advanced WhatsApp broadcasts
   - Customer groups
@@ -1664,7 +1664,7 @@ If a Stripe refund fails (shown in red in the order timeline), use the **Retry R
 #### Product Management Issues
 
 **Q: Why can't I add more products?**
-A: Check your subscription plan's product limit. Free plan allows 3 products, Standard allows 10, Premium is unlimited.
+A: Check your subscription plan's product limit. Free plan allows 10 products, Standard allows 50, Premium is unlimited.
 
 **Q: My product images won't upload**
 A: Ensure images are under 500KB and max 800x600px. Supported formats: JPG, PNG, GIF.
