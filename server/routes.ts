@@ -1499,6 +1499,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionEndsAt: subPeriodEnd,
         });
 
+        // Propagate Stripe's cancel_at_period_end so update events don't desync cancellation state
+        const subCancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
+
         const [existingSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, subUser.id));
         if (existingSubRow) {
           await db.update(userSubscriptions).set({
@@ -1507,7 +1510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'active',
             currentPeriodStart: subPeriodStart,
             currentPeriodEnd: subPeriodEnd,
-            cancelAtPeriodEnd: false,
+            cancelAtPeriodEnd: subCancelAtPeriodEnd,
             updatedAt: new Date(),
           }).where(eq(userSubscriptions.userId, subUser.id));
         } else {
@@ -1518,7 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'active',
             currentPeriodStart: subPeriodStart,
             currentPeriodEnd: subPeriodEnd,
-            cancelAtPeriodEnd: false,
+            cancelAtPeriodEnd: subCancelAtPeriodEnd,
           });
         }
 
