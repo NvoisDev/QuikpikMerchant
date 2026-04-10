@@ -44,14 +44,20 @@ async function runStartupMigrations() {
 
 // Idempotent fix: ensures the Stripe Price objects for Standard and Premium match the
 // monthly_price stored in the subscription_plans table. Stripe prices are immutable —
-// if the unit_amount is wrong a new price is created and the old one is archived.
+// if the unit_amount, currency, interval, or product is wrong a new price is created
+// and the old one is archived.
+// Set env var STRIPE_PRICE_FIX_SKIP=true to disable after a successful production run.
 async function fixStripePricesIfNeeded() {
   if (!process.env.STRIPE_SECRET_KEY) return;
+  if (process.env.STRIPE_PRICE_FIX_SKIP === 'true') {
+    console.log('ℹ️ Stripe price fix skipped (STRIPE_PRICE_FIX_SKIP=true)');
+    return;
+  }
   const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
 
-  const EXPECTED: Record<string, { unitAmount: number; productId: string }> = {
-    standard: { unitAmount: 1999, productId: 'prod_U7iIITiYIFwLA2' },
-    premium:  { unitAmount: 3999, productId: 'prod_U7iHoOyKGNk4CG' },
+  const EXPECTED: Record<string, { unitAmount: number; currency: string; interval: string; productId: string }> = {
+    standard: { unitAmount: 1999, currency: 'gbp', interval: 'month', productId: 'prod_U7iIITiYIFwLA2' },
+    premium:  { unitAmount: 3999, currency: 'gbp', interval: 'month', productId: 'prod_U7iHoOyKGNk4CG' },
   };
 
   const plans = await db.select({
@@ -59,21 +65,31 @@ async function fixStripePricesIfNeeded() {
     stripePriceId: subscriptionPlans.stripePriceId,
   }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium']));
 
+  let checked = 0, fixed = 0;
   for (const plan of plans) {
     const expected = EXPECTED[plan.planId];
     if (!expected || !plan.stripePriceId) continue;
+    checked++;
 
     try {
       const price = await stripeClient.prices.retrieve(plan.stripePriceId);
-      if (price.active && price.unit_amount === expected.unitAmount) {
-        console.log(`✅ Stripe price for ${plan.planId} is correct (${expected.unitAmount}p)`);
+      const productId = typeof price.product === 'string' ? price.product : price.product?.id;
+      const isCorrect =
+        price.active &&
+        price.unit_amount === expected.unitAmount &&
+        price.currency === expected.currency &&
+        price.recurring?.interval === expected.interval &&
+        productId === expected.productId;
+
+      if (isCorrect) {
+        console.log(`✅ Stripe price for ${plan.planId} is correct (${expected.unitAmount}p GBP/month)`);
         continue;
       }
 
-      console.log(`🔧 Stripe price for ${plan.planId} has wrong amount (${price.unit_amount}p, expected ${expected.unitAmount}p) — creating correct price`);
+      console.log(`🔧 Stripe price for ${plan.planId} is incorrect — creating correct price (amount=${price.unit_amount}, currency=${price.currency}, interval=${price.recurring?.interval}, product=${productId})`);
       const newPrice = await stripeClient.prices.create({
         unit_amount: expected.unitAmount,
-        currency: 'gbp',
+        currency: expected.currency,
         recurring: { interval: 'month' },
         product: expected.productId,
       });
@@ -92,10 +108,12 @@ async function fixStripePricesIfNeeded() {
         .where(eq(subscriptionPlans.planId, plan.planId));
 
       console.log(`✅ Fixed ${plan.planId} Stripe price: ${plan.stripePriceId} → ${newPrice.id}`);
+      fixed++;
     } catch (err) {
       console.error(`❌ Failed to check/fix Stripe price for ${plan.planId}:`, err);
     }
   }
+  console.log(`✅ Stripe price check complete: ${checked} checked, ${fixed} fixed`);
 }
 
 // Set OAuth redirect URI for production deployment
