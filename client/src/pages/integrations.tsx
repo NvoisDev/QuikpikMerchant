@@ -25,13 +25,15 @@ export default function Integrations() {
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   // Read ?category= query param on mount so deep links like /integrations?category=payment work
+  const VALID_CATEGORIES = ['communication', 'payment', 'accounting'] as const;
+  type ValidCategory = typeof VALID_CATEGORIES[number];
+  const [selectedCategory, setSelectedCategory] = useState<ValidCategory | null>(() => {
+    const cat = new URLSearchParams(window.location.search).get('category');
+    return (VALID_CATEGORIES as readonly string[]).includes(cat ?? '') ? (cat as ValidCategory) : null;
+  });
   const [integrationView, setIntegrationView] = useState<'categories' | 'list' | 'detail'>(() => {
     const cat = new URLSearchParams(window.location.search).get('category');
-    return cat ? 'list' : 'categories';
-  });
-  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | 'accounting' | null>(() => {
-    const cat = new URLSearchParams(window.location.search).get('category');
-    return (['communication', 'payment', 'accounting'].includes(cat ?? '') ? cat : null) as 'communication' | 'payment' | 'accounting' | null;
+    return (VALID_CATEGORIES as readonly string[]).includes(cat ?? '') ? 'list' : 'categories';
   });
   const [selectedIntegration, setSelectedIntegration] = useState<'whatsapp' | 'stripe' | 'paystack' | null>(null);
 
