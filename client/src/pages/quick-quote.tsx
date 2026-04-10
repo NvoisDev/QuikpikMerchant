@@ -190,6 +190,10 @@ export default function QuickQuote() {
       customAddressFields?: { addressLine1: string; city: string; postalCode: string; state: string; label: string };
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Failed to create quote' }));
+        throw new Error(err.error || 'Failed to create quote');
+      }
       return response.json();
     },
     onSuccess: (data) => {
@@ -215,6 +219,17 @@ export default function QuickQuote() {
   });
 
   const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
+    const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0);
+    if (availableStock <= 0) {
+      toast({
+        title: "Out of Stock",
+        description: `"${product.name}" is out of stock and cannot be added to this quote.`,
+        variant: "destructive",
+      });
+      setProductDialogOpen(false);
+      return;
+    }
+
     const price = sellingType === 'pallets' && product.palletPrice 
       ? parseFloat(product.palletPrice) 
       : parseFloat(product.price);
@@ -661,25 +676,32 @@ export default function QuickQuote() {
                             ))}
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <div
-                              className="flex-1 min-w-[140px] p-2 border rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
-                              onClick={() => addProduct(product, 'units')}
-                            >
-                              <div className="text-xs text-gray-500">Per Unit</div>
-                              <div className="mt-1">
-                                <div className="text-green-600 font-semibold">
-                                  {promoUnitPrice !== null ? (
-                                    <>
-                                      <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.price).toFixed(2)}</span>
-                                      £{promoUnitPrice.toFixed(2)}
-                                    </>
-                                  ) : (
-                                    <>£{parseFloat(product.price).toFixed(2)}</>
-                                  )}
+                            {(() => {
+                              const unitInStock = (product.stock || 0) > 0;
+                              return (
+                              <div
+                                className={`flex-1 min-w-[140px] p-2 border rounded-lg transition-colors ${unitInStock ? 'cursor-pointer hover:border-green-500 hover:bg-green-50' : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'}`}
+                                onClick={() => addProduct(product, 'units')}
+                              >
+                                <div className={`text-xs font-medium ${unitInStock ? 'text-gray-500' : 'text-gray-400'}`}>Per Unit</div>
+                                <div className="mt-1">
+                                  <div className={`font-semibold ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
+                                    {promoUnitPrice !== null ? (
+                                      <>
+                                        <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.price).toFixed(2)}</span>
+                                        £{promoUnitPrice.toFixed(2)}
+                                      </>
+                                    ) : (
+                                      <>£{parseFloat(product.price).toFixed(2)}</>
+                                    )}
+                                  </div>
+                                  <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
+                                    {unitInStock ? `${product.stock} units` : 'Out of stock'}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">{product.stock || 0} units</div>
                               </div>
-                            </div>
+                              );
+                            })()}
                             {product.palletPrice && parseFloat(product.palletPrice) > 0 && (() => {
                               const palletInStock = (product.palletStock || 0) > 0;
                               let promoPalletPrice: number | null = null;

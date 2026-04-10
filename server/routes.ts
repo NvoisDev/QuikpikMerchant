@@ -18327,6 +18327,40 @@ https://quikpik.app`;
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
 
+      // PRE-VALIDATE STOCK for all items before creating any DB records
+      // This prevents orphaned order rows when stock is insufficient
+      for (const item of items) {
+        const sellingType = item.sellingType || 'units';
+        const [productForCheck] = await db.select().from(products)
+          .where(and(eq(products.id, item.productId), eq(products.wholesalerId, wholesalerId)));
+        if (!productForCheck) {
+          return res.status(400).json({ error: 'One or more products not found', errorType: 'PRODUCT_NOT_FOUND' });
+        }
+        if (sellingType === 'units') {
+          const available = productForCheck.stock || 0;
+          if (available < item.quantity) {
+            return res.status(400).json({
+              error: `"${productForCheck.name}" is out of stock. ${available} units available, ${item.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK',
+              productName: productForCheck.name,
+              available,
+              requested: item.quantity,
+            });
+          }
+        } else if (sellingType === 'pallets') {
+          const available = productForCheck.palletStock || 0;
+          if (available < item.quantity) {
+            return res.status(400).json({
+              error: `"${productForCheck.name}" has insufficient pallet stock. ${available} pallets available, ${item.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK',
+              productName: productForCheck.name,
+              available,
+              requested: item.quantity,
+            });
+          }
+        }
+      }
+
       // Calculate totals
       // Customer pays: productSubtotal + deliveryCharge + transaction fee (5.5% + £0.50)
       // Wholesaler pays: platform fee (3.3% of productSubtotal only) - internal
