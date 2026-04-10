@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import sharp from "sharp";
 import { storage } from "./storage";
 import { performanceMiddleware } from "./middleware/performance";
 import { queryOptimizer, queryCache } from "./utils/connectionPool";
@@ -13597,15 +13598,33 @@ https://quikpik.app`;
     let logoBuffer: Buffer | null = null;
     // Prefer decoding base64 data URL directly — avoids self-referential HTTP
     // requests in production that fail silently and fall back to initials.
+    // PDFKit only supports JPEG and PNG; use sharp to convert other formats.
     if (wholesaler.logoUrl && wholesaler.logoUrl.startsWith('data:')) {
       try {
-        const base64Data = wholesaler.logoUrl.split(',')[1];
-        if (base64Data) logoBuffer = Buffer.from(base64Data, 'base64');
+        const [header, base64Data] = wholesaler.logoUrl.split(',');
+        if (base64Data) {
+          const mimeType = header.split(';')[0].split(':')[1] || '';
+          const rawBuffer = Buffer.from(base64Data, 'base64');
+          if (mimeType === 'image/jpeg' || mimeType === 'image/png') {
+            logoBuffer = rawBuffer;
+          } else {
+            // Convert WebP / HEIC / AVIF / GIF / etc. → PNG for PDFKit
+            logoBuffer = await sharp(rawBuffer).png().toBuffer();
+          }
+        }
       } catch (_) {}
     } else if (logoUrl) {
       try {
         const resp = await fetch(logoUrl);
-        if (resp.ok) logoBuffer = Buffer.from(await resp.arrayBuffer());
+        if (resp.ok) {
+          const raw = Buffer.from(await resp.arrayBuffer());
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('jpeg') || ct.includes('png')) {
+            logoBuffer = raw;
+          } else {
+            logoBuffer = await sharp(raw).png().toBuffer();
+          }
+        }
       } catch (_) {}
     }
 
@@ -13707,9 +13726,18 @@ https://quikpik.app`;
         .text('FROM', c3, metaY, { width: COL_W - 8 });
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
         .text(businessName, c3, metaY + 12, { width: COL_W - 8 });
-      if (wholesaler.email) {
+      let fromY = metaY + 26;
+      const fromLines: string[] = [];
+      if (wholesaler.businessPhone) fromLines.push(wholesaler.businessPhone);
+      if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
+      const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
+      if (cityPostal) fromLines.push(cityPostal);
+      if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
+      if (wholesaler.email) fromLines.push(wholesaler.email);
+      for (const line of fromLines) {
         doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-          .text(wholesaler.email, c3, metaY + 26, { width: COL_W - 8 });
+          .text(line, c3, fromY, { width: COL_W - 8, lineBreak: false });
+        fromY += 12;
       }
 
       // ── ITEMS TABLE ───────────────────────────────────────────────────
