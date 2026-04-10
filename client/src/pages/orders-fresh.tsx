@@ -2286,7 +2286,7 @@ export default function OrdersFresh() {
                       <span>Order Total:</span>
                       <span className="font-medium">{formatCurrency(productTotal)}</span>
                     </div>
-                    {selectedOrder.depositPercentage && selectedOrder.depositPercentage < 100 && (
+                    {selectedOrder.depositPercentage > 0 && selectedOrder.depositPercentage < 100 && (
                       <div className="flex justify-between text-amber-700">
                         <span>Deposit ({selectedOrder.depositPercentage}%):</span>
                         <span>{formatCurrency(productTotal * (selectedOrder.depositPercentage / 100))}</span>
@@ -2507,7 +2507,7 @@ export default function OrdersFresh() {
               </div>
 
               {/* Order Timeline - Payment-aware flow */}
-              <div>
+              <div className="bg-transparent">
                 <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
                 <div className="space-y-2">
                   {/* Step 1: Initial Payment - Shows deposit details if partial payment */}
@@ -2543,7 +2543,7 @@ export default function OrdersFresh() {
                   })()}
 
                   {/* Step 2: Balance Payment - Only show if there was a deposit and order is NOT cancelled */}
-                  {(selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (() => {
+                  {(selectedOrder as any).depositPercentage > 0 && (selectedOrder as any).depositPercentage < 100 && selectedOrder.status !== 'cancelled' && (() => {
                     const prodTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                     const custTotal = parseFloat(selectedOrder.total || '0');
                     const paidRatio = custTotal > 0 ? parseFloat(selectedOrder.amountPaid || '0') / custTotal : 0;
