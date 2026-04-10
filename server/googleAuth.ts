@@ -110,38 +110,48 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       return user;
     }
 
-    // Step 2: No Google-ID match — check by email
-    const emailUser = await storage.getUserByEmail(googleUser.email);
+    // Step 2: No Google-ID match — fetch ALL records with this email and pick
+    // deterministically using role-priority: wholesaler > admin > team_member > others
+    const emailUsers = await storage.getAllUsersByEmail(googleUser.email);
 
-    if (emailUser) {
-      // SECURITY: If the email matches a team_member or non-wholesaler record that has
-      // never been Google-linked, do NOT let this Google sign-in hijack that record.
-      // Create a fresh wholesaler account instead so they get their own business.
-      if (emailUser.role === 'team_member' || (emailUser.role !== 'wholesaler' && !emailUser.googleId)) {
-        console.log(`⚠️  Email ${googleUser.email} matched a ${emailUser.role} record (id: ${emailUser.id}) — creating a fresh wholesaler account to prevent data collision`);
-        user = await storage.createUser({
-          id: googleUser.id,
-          email: googleUser.email,
+    if (emailUsers.length > 0) {
+      // Priority order for existing records that can be linked via Google sign-in
+      const LINKABLE_ROLES = ['wholesaler', 'admin'];
+
+      // Pick the best linkable candidate (wholesaler/admin without a different googleId)
+      const linkable = emailUsers.find(
+        u => LINKABLE_ROLES.includes(u.role) && (!u.googleId || u.googleId === googleUser.id)
+      );
+
+      if (linkable) {
+        // Existing wholesaler/admin — link Google account and sign in
+        console.log(`🔗 Linking Google account to existing ${linkable.role}: ${linkable.email} (id: ${linkable.id})`);
+        user = await storage.updateUser(linkable.id, {
           firstName: googleUser.given_name || googleUser.name.split(' ')[0],
           lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
           profileImageUrl: googleUser.picture,
           googleId: googleUser.id,
-          role: 'wholesaler',
-          businessName: `${googleUser.name}'s Business`,
-          defaultCurrency: 'GBP',
-          isFirstLogin: true
+          isFirstLogin: false
         });
         return user;
       }
 
-      // Existing wholesaler/admin without Google linked yet — link and sign in
-      console.log(`🔗 Linking Google account to existing user: ${emailUser.email} (role: ${emailUser.role})`);
-      user = await storage.updateUser(emailUser.id, {
+      // SECURITY: All email matches are non-wholesaler records (e.g. team_member, retailer,
+      // customer) that have never been Google-linked. Do NOT bind this sign-in to any of
+      // those records — create a fresh wholesaler account instead.
+      const roles = emailUsers.map(u => u.role).join(', ');
+      console.log(`⚠️  Email ${googleUser.email} matched only [${roles}] records — creating a fresh wholesaler account to prevent data collision`);
+      user = await storage.createUser({
+        id: googleUser.id,
+        email: googleUser.email,
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
         profileImageUrl: googleUser.picture,
         googleId: googleUser.id,
-        isFirstLogin: false
+        role: 'wholesaler',
+        businessName: `${googleUser.name}'s Business`,
+        defaultCurrency: 'GBP',
+        isFirstLogin: true
       });
       return user;
     }

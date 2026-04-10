@@ -80,6 +80,7 @@ export interface IStorage {
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   getUserByEmail(email: string, role?: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getAllUsersByEmail(email: string): Promise<User[]>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]>;
   createUser(user: Partial<UpsertUser>): Promise<User>;
@@ -498,6 +499,10 @@ export class DatabaseStorage implements IStorage {
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
     return user;
+  }
+
+  async getAllUsersByEmail(email: string): Promise<User[]> {
+    return db.select().from(users).where(eq(users.email, email));
   }
 
   async createUser(userData: Partial<UpsertUser>): Promise<User> {
