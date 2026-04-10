@@ -2491,7 +2491,7 @@ export default function ProductManagement() {
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => !product.status === 'locked' && handleDuplicate(product)}
+                                  onClick={() => product.status !== 'locked' && handleDuplicate(product)}
                                   disabled={product.status === 'locked'}
                                   className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
