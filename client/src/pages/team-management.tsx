@@ -148,7 +148,8 @@ export default function TeamManagement() {
       form.reset();
     },
     onError: (error: any) => {
-      if (error.message.includes("subscription limit")) {
+      if (error.message.includes("403") && error.message.toLowerCase().includes("team member")) {
+        setIsInviteDialogOpen(false);
         setShowUpgradeModal(true);
       } else {
         toast({
