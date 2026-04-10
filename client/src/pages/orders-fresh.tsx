@@ -2513,7 +2513,7 @@ export default function OrdersFresh() {
                   {/* Step 1: Initial Payment - Shows deposit details if partial payment */}
                   {(() => {
                     const hasPaid = parseFloat(selectedOrder.amountPaid || '0') > 0;
-                    const hasDeposit = (selectedOrder as any).depositPercentage && (selectedOrder as any).depositPercentage < 100;
+                    const hasDeposit = (selectedOrder as any).depositPercentage > 0 && (selectedOrder as any).depositPercentage < 100;
                     const pTotal = parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0');
                     return (
                     <div className="flex items-start gap-2">
