@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import multer from "multer";
 import sharp from "sharp";
 import { storage } from "./storage";
 import { performanceMiddleware } from "./middleware/performance";
@@ -7700,24 +7701,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload photo directly through server (avoids browser CORS with signed GCS URLs)
-  app.post('/api/orders/:orderId/upload-photo', requireAuth, async (req: any, res) => {
+  // Upload photo directly through server using multipart/form-data (avoids browser CORS with signed GCS URLs).
+  // 10 MB binary limit — consistent with the frontend validation and UI messaging.
+  const orderPhotoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: (_req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed'));
+      }
+      cb(null, true);
+    }
+  });
+
+  app.post('/api/orders/:orderId/upload-photo', requireAuth, orderPhotoUpload.single('photo'), async (req: any, res) => {
     try {
       const { orderId } = req.params;
-      const { fileData, contentType, filename, description } = req.body;
 
-      if (!fileData || !contentType || !filename) {
-        return res.status(400).json({ error: "fileData, contentType, and filename are required" });
-      }
-
-      // Validate file size (10MB limit in base64 = ~13.3MB base64 string)
-      if (fileData.length > 14_000_000) {
-        return res.status(400).json({ error: "File too large (max 10MB)" });
-      }
-
-      // Only allow image types
-      if (!contentType.startsWith('image/')) {
-        return res.status(400).json({ error: "Only image files are allowed" });
+      if (!req.file) {
+        return res.status(400).json({ error: "No photo file provided" });
       }
 
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
@@ -7729,28 +7731,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Order not found" });
       }
 
-      // Decode base64 and upload directly from server — no browser CORS needed
-      const buffer = Buffer.from(fileData, 'base64');
-
+      // Upload binary buffer directly from server — no browser CORS needed
       const { ObjectStorageService } = await import('./objectStorage.js');
       const objectStorageService = new ObjectStorageService();
-      const normalizedPath = await objectStorageService.uploadFileBuffer(buffer, contentType, filename);
+      const normalizedPath = await objectStorageService.uploadFileBuffer(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname
+      );
 
-      console.log(`📸 Server-side upload complete: ${filename} → ${normalizedPath}`);
+      console.log(`📸 Server-side upload complete: ${req.file.originalname} → ${normalizedPath}`);
 
       const imageEntry = {
         id: crypto.randomUUID(),
         url: normalizedPath,
-        filename: filename || 'order-image.jpg',
+        filename: req.file.originalname || 'order-image.jpg',
         uploadedAt: new Date().toISOString(),
-        description: description || 'Order photo'
+        description: 'Order photo'
       };
 
       const currentImages = order.orderImages || [];
       const updatedImages = [...currentImages, imageEntry];
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
 
-      console.log(`✅ Photo saved to order ${orderId}: ${filename}`);
+      console.log(`✅ Photo saved to order ${orderId}: ${req.file.originalname}`);
 
       // Send email notification to customer (best-effort)
       try {
@@ -7776,7 +7780,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ success: true, image: imageEntry });
-    } catch (error) {
+    } catch (error: any) {
+      // Multer LIMIT_FILE_SIZE error
+      if (error?.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: "File too large (max 10MB)" });
+      }
       console.error("❌ Error uploading order photo:", error);
       res.status(500).json({ error: "Failed to upload photo" });
     }

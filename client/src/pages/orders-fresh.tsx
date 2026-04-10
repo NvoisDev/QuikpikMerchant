@@ -880,32 +880,20 @@ export default function OrdersFresh() {
     }
   };
 
-  // Upload a photo by sending it through our own server (avoids CORS issues with direct GCS uploads)
+  // Upload a photo by sending it through our own server as multipart/form-data.
+  // This avoids CORS issues with direct browser PUT to GCS signed URLs, and
+  // uses true binary transfer (no base64 overhead) so the full 10 MB limit is honoured.
   const uploadOrderPhoto = async (file: File): Promise<void> => {
     if (!selectedOrder) throw new Error('No order selected');
 
-    // Read file as base64
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        // Strip the data URL prefix (e.g. "data:image/jpeg;base64,")
-        resolve(result.split(',')[1]);
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
+    const formData = new FormData();
+    formData.append('photo', file);
 
     const response = await fetch(`/api/orders/${selectedOrder.id}/upload-photo`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileData: base64,
-        contentType: file.type,
-        filename: file.name,
-        description: 'Order photo'
-      })
+      // Do NOT set Content-Type header — browser sets it automatically with the correct boundary
+      body: formData
     });
 
     if (!response.ok) {
