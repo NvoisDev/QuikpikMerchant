@@ -782,15 +782,11 @@ export default function ProductManagement() {
       });
     },
     onError: (error: any) => {
-      if (error.message.includes("403") && error.message.toLowerCase().includes("product")) {
-        setShowUpgradeModal(true);
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to update product",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product",
+        variant: "destructive",
+      });
     },
   });
 
