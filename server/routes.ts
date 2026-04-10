@@ -1456,6 +1456,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ received: true, type: event.type });
       }
 
+      // ── Subscription activated / updated (fallback for checkout.session.completed) ──
+      if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.status !== 'active') {
+          return res.json({ received: true, type: event.type });
+        }
+        const subCustId = typeof subscription.customer === 'string'
+          ? subscription.customer : (subscription.customer as any)?.id;
+        const subPriceId = subscription.items?.data?.[0]?.price?.id;
+        console.log(`🔔 ${event.type}: customer=${subCustId}, price=${subPriceId}`);
+        if (!subCustId || !subPriceId) return res.json({ received: true, type: event.type });
+
+        const [subUser] = await db.select().from(users).where(eq(users.stripeCustomerId, subCustId));
+        if (!subUser) {
+          console.log(`⚠️ No user found for Stripe customer ${subCustId} (${event.type})`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        const [subPlan] = await db.select().from(subscriptionPlans)
+          .where(eq(subscriptionPlans.stripePriceId, subPriceId));
+        if (!subPlan || !subPlan.planId || subPlan.planId === 'free') {
+          console.log(`⚠️ No paid plan found for price ${subPriceId}`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        if (subUser.currentPlan === subPlan.planId && subUser.subscriptionStatus === 'active') {
+          console.log(`ℹ️ User ${subUser.id} already on ${subPlan.planId} — skipping`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        const subProductLimit = subPlan.planId === 'premium' ? -1 : (subPlan.planId === 'standard' ? 50 : 10);
+        const subPeriodEnd = new Date(subscription.current_period_end * 1000);
+        const subPeriodStart = new Date(subscription.current_period_start * 1000);
+
+        await storage.updateUser(subUser.id, {
+          currentPlan: subPlan.planId,
+          subscriptionTier: subPlan.planId,
+          subscriptionStatus: 'active',
+          productLimit: subProductLimit,
+          stripeSubscriptionId: subscription.id,
+          subscriptionEndsAt: subPeriodEnd,
+        });
+
+        const [existingSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, subUser.id));
+        if (existingSubRow) {
+          await db.update(userSubscriptions).set({
+            planId: subPlan.planId,
+            stripeSubscriptionId: subscription.id,
+            status: 'active',
+            currentPeriodStart: subPeriodStart,
+            currentPeriodEnd: subPeriodEnd,
+            cancelAtPeriodEnd: false,
+            updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, subUser.id));
+        } else {
+          await db.insert(userSubscriptions).values({
+            userId: subUser.id,
+            planId: subPlan.planId,
+            stripeSubscriptionId: subscription.id,
+            status: 'active',
+            currentPeriodStart: subPeriodStart,
+            currentPeriodEnd: subPeriodEnd,
+            cancelAtPeriodEnd: false,
+          });
+        }
+
+        console.log(`✅ ${event.type}: Activated ${subPlan.planId} for user ${subUser.id} (${subUser.email})`);
+        return res.json({ received: true, type: event.type, userId: subUser.id, planId: subPlan.planId });
+      }
+
+      // ── Invoice paid (second fallback — covers subscription_create and renewals) ──
+      if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object as Stripe.Invoice;
+        const billingReason = (invoice as any).billing_reason as string | null;
+        if (billingReason !== 'subscription_create' && billingReason !== 'subscription_cycle') {
+          return res.json({ received: true, type: event.type });
+        }
+
+        const invCustId = typeof invoice.customer === 'string'
+          ? invoice.customer : (invoice.customer as any)?.id;
+        const invSubId = typeof invoice.subscription === 'string'
+          ? invoice.subscription : (invoice.subscription as any)?.id;
+        if (!invCustId || !invSubId) return res.json({ received: true, type: event.type });
+
+        console.log(`💸 invoice.payment_succeeded: customer=${invCustId}, sub=${invSubId}, reason=${billingReason}`);
+
+        const [invUser] = await db.select().from(users).where(eq(users.stripeCustomerId, invCustId));
+        if (!invUser) {
+          console.log(`⚠️ No user for Stripe customer ${invCustId}`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        let invSub: Stripe.Subscription;
+        try {
+          invSub = await stripe.subscriptions.retrieve(invSubId);
+        } catch (e) {
+          console.error(`❌ Failed to retrieve subscription ${invSubId}:`, e);
+          return res.json({ received: true, type: event.type });
+        }
+
+        const invPriceId = invSub.items?.data?.[0]?.price?.id;
+        if (!invPriceId) return res.json({ received: true, type: event.type });
+
+        const [invPlan] = await db.select().from(subscriptionPlans)
+          .where(eq(subscriptionPlans.stripePriceId, invPriceId));
+        if (!invPlan || !invPlan.planId || invPlan.planId === 'free') {
+          return res.json({ received: true, type: event.type });
+        }
+
+        if (invUser.currentPlan === invPlan.planId && invUser.subscriptionStatus === 'active') {
+          console.log(`ℹ️ User ${invUser.id} already on ${invPlan.planId} — skipping`);
+          return res.json({ received: true, type: event.type });
+        }
+
+        const invProductLimit = invPlan.planId === 'premium' ? -1 : (invPlan.planId === 'standard' ? 50 : 10);
+        const invPeriodEnd = new Date(invSub.current_period_end * 1000);
+        const invPeriodStart = new Date(invSub.current_period_start * 1000);
+
+        await storage.updateUser(invUser.id, {
+          currentPlan: invPlan.planId,
+          subscriptionTier: invPlan.planId,
+          subscriptionStatus: 'active',
+          productLimit: invProductLimit,
+          stripeSubscriptionId: invSub.id,
+          subscriptionEndsAt: invPeriodEnd,
+        });
+
+        const [existingInvSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, invUser.id));
+        if (existingInvSubRow) {
+          await db.update(userSubscriptions).set({
+            planId: invPlan.planId,
+            stripeSubscriptionId: invSub.id,
+            status: 'active',
+            currentPeriodStart: invPeriodStart,
+            currentPeriodEnd: invPeriodEnd,
+            cancelAtPeriodEnd: false,
+            updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, invUser.id));
+        } else {
+          await db.insert(userSubscriptions).values({
+            userId: invUser.id,
+            planId: invPlan.planId,
+            stripeSubscriptionId: invSub.id,
+            status: 'active',
+            currentPeriodStart: invPeriodStart,
+            currentPeriodEnd: invPeriodEnd,
+            cancelAtPeriodEnd: false,
+          });
+        }
+
+        console.log(`✅ invoice.payment_succeeded: Activated ${invPlan.planId} for user ${invUser.id} (${invUser.email})`);
+        return res.json({ received: true, type: event.type, userId: invUser.id, planId: invPlan.planId });
+      }
+
       // Acknowledge all other events
       res.json({ received: true, type: event.type });
       
@@ -18292,6 +18446,101 @@ https://quikpik.app`;
       res.status(500).json({ error: 'Failed to geocode customers' });
     }
   });
+
+  // Admin: manually activate a subscription from a Stripe subscription ID
+  // Use this to recover users who paid but whose account was not upgraded
+  app.post('/api/admin/subscriptions/activate', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+
+      const { stripeSubscriptionId } = req.body;
+      if (!stripeSubscriptionId) {
+        return res.status(400).json({ error: 'stripeSubscriptionId is required' });
+      }
+
+      // Fetch subscription from Stripe
+      let stripeSub: Stripe.Subscription;
+      try {
+        stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+      } catch (e) {
+        return res.status(400).json({ error: `Stripe subscription not found: ${stripeSubscriptionId}` });
+      }
+
+      if (stripeSub.status !== 'active') {
+        return res.status(400).json({ error: `Subscription is not active (status: ${stripeSub.status})` });
+      }
+
+      const recoverCustId = typeof stripeSub.customer === 'string'
+        ? stripeSub.customer : (stripeSub.customer as any)?.id;
+      const recoverPriceId = stripeSub.items?.data?.[0]?.price?.id;
+
+      if (!recoverCustId || !recoverPriceId) {
+        return res.status(400).json({ error: 'Could not extract customer or price from subscription' });
+      }
+
+      const [recoverUser] = await db.select().from(users).where(eq(users.stripeCustomerId, recoverCustId));
+      if (!recoverUser) {
+        return res.status(404).json({ error: `No user found with Stripe customer ID ${recoverCustId}` });
+      }
+
+      const [recoverPlan] = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.stripePriceId, recoverPriceId));
+      if (!recoverPlan || !recoverPlan.planId || recoverPlan.planId === 'free') {
+        return res.status(400).json({ error: `No paid plan found for price ${recoverPriceId}` });
+      }
+
+      const recoverProductLimit = recoverPlan.planId === 'premium' ? -1 : (recoverPlan.planId === 'standard' ? 50 : 10);
+      const recoverPeriodEnd = new Date(stripeSub.current_period_end * 1000);
+      const recoverPeriodStart = new Date(stripeSub.current_period_start * 1000);
+
+      await storage.updateUser(recoverUser.id, {
+        currentPlan: recoverPlan.planId,
+        subscriptionTier: recoverPlan.planId,
+        subscriptionStatus: 'active',
+        productLimit: recoverProductLimit,
+        stripeSubscriptionId: stripeSub.id,
+        subscriptionEndsAt: recoverPeriodEnd,
+      });
+
+      const [existingRecoverSub] = await db.select().from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, recoverUser.id));
+      if (existingRecoverSub) {
+        await db.update(userSubscriptions).set({
+          planId: recoverPlan.planId,
+          stripeSubscriptionId: stripeSub.id,
+          status: 'active',
+          currentPeriodStart: recoverPeriodStart,
+          currentPeriodEnd: recoverPeriodEnd,
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date(),
+        }).where(eq(userSubscriptions.userId, recoverUser.id));
+      } else {
+        await db.insert(userSubscriptions).values({
+          userId: recoverUser.id,
+          planId: recoverPlan.planId,
+          stripeSubscriptionId: stripeSub.id,
+          status: 'active',
+          currentPeriodStart: recoverPeriodStart,
+          currentPeriodEnd: recoverPeriodEnd,
+          cancelAtPeriodEnd: false,
+        });
+      }
+
+      console.log(`🔧 Admin activated ${recoverPlan.planId} for user ${recoverUser.id} (${recoverUser.email}) via sub ${stripeSub.id}`);
+      return res.json({
+        success: true,
+        userId: recoverUser.id,
+        email: recoverUser.email,
+        planId: recoverPlan.planId,
+        stripeSubscriptionId: stripeSub.id,
+        periodEnd: recoverPeriodEnd.toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Admin subscription activate error:', error);
+      res.status(500).json({ error: 'Failed to activate subscription' });
+    }
+  });
+
   // ────────────────────────────────────────────────────────────────────────────
 
   // =====================================================
