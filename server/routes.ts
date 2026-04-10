@@ -13595,7 +13595,14 @@ https://quikpik.app`;
     const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
     const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
     let logoBuffer: Buffer | null = null;
-    if (logoUrl) {
+    // Prefer decoding base64 data URL directly — avoids self-referential HTTP
+    // requests in production that fail silently and fall back to initials.
+    if (wholesaler.logoUrl && wholesaler.logoUrl.startsWith('data:')) {
+      try {
+        const base64Data = wholesaler.logoUrl.split(',')[1];
+        if (base64Data) logoBuffer = Buffer.from(base64Data, 'base64');
+      } catch (_) {}
+    } else if (logoUrl) {
       try {
         const resp = await fetch(logoUrl);
         if (resp.ok) logoBuffer = Buffer.from(await resp.arrayBuffer());
@@ -13799,10 +13806,8 @@ https://quikpik.app`;
         .strokeColor(BORDER).lineWidth(0.5).stroke();
       doc.font('Helvetica').fontSize(10).fillColor(GRAY)
         .text('Thank you for your business!', MARGIN, footerY + 12, { width: CONTENT_W, align: 'center' });
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-        .text('Powered by ', MARGIN, footerY + 26, { width: CONTENT_W, align: 'center', continued: true });
       doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN)
-        .text('Quikpik Merchant');
+        .text('Powered by Quikpik Merchant', MARGIN, footerY + 26, { width: CONTENT_W, align: 'center' });
 
       doc.end();
     });
