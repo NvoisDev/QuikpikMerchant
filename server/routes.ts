@@ -13606,26 +13606,32 @@ https://quikpik.app`;
     const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
 
     const customerName = order.retailer
-      ? `${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || 'Customer'
-      : 'Customer';
+      ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()
+          || order.retailer.name
+          || order.customerName
+          || 'Customer')
+      : (order.customerName || 'Customer');
     const businessName = wholesaler.businessName || 'Quikpik Merchant';
     const invoiceRef = order.orderNumber || `#${order.id}`;
     const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
     // Delivery address
+    // cleanAddr removes leading/trailing whitespace and strips strings that are only quote characters (e.g. '""')
+    const cleanAddr = (s: string) => s.trim().replace(/^["']+$/, '');
+    const isValidAddrLine = (s: string | null | undefined): s is string => !!s && !!cleanAddr(s);
     let addressLines: string[] = [];
     if (order.deliveryAddressId) {
       try {
         const addr = await storage.getDeliveryAddressById(order.deliveryAddressId);
         if (addr) {
           [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country]
-            .filter(Boolean)
-            .forEach(l => addressLines.push(l!));
+            .filter(isValidAddrLine)
+            .forEach(l => addressLines.push(cleanAddr(l)));
         }
       } catch (_) {}
     }
-    if (addressLines.length === 0 && order.deliveryAddress) {
-      addressLines = order.deliveryAddress.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (addressLines.length === 0 && order.deliveryAddress && order.deliveryAddress !== '""' && order.deliveryAddress !== "''") {
+      addressLines = order.deliveryAddress.split(',').map(cleanAddr).filter(Boolean);
     }
     if (addressLines.length === 0 && order.retailerId && order.wholesalerId) {
       try {
@@ -13633,8 +13639,8 @@ https://quikpik.app`;
         if (addrs.length > 0) {
           const addr = addrs[0];
           [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country]
-            .filter(Boolean)
-            .forEach(l => addressLines.push(l!));
+            .filter(isValidAddrLine)
+            .forEach(l => addressLines.push(cleanAddr(l)));
         }
       } catch (_) {}
     }
@@ -13881,7 +13887,7 @@ https://quikpik.app`;
 
       drawTotRow('Subtotal', fmt(subtotal));
       if (deliveryCost > 0) drawTotRow('Delivery', fmt(deliveryCost));
-      if (showTransactionFee && txFee > 0) drawTotRow('Transaction Fee (5.5% + £0.50)', fmt(txFee));
+      if (showTransactionFee && txFee > 0) drawTotRow('Transaction Fee', fmt(txFee));
 
       // Grand total divider
       doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4)
