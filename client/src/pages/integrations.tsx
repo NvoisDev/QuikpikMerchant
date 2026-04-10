@@ -261,9 +261,9 @@ export default function Integrations() {
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-1">Accounting</h4>
                 <p className="text-sm text-gray-500">Xero · Sync invoices and financial data</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium">Coming soon</span>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                <div className="mt-3 flex items-center text-teal-600 text-sm font-medium">
+                  <span>1 integration</span>
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </div>
               </button>
             </div>
