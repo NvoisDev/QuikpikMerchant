@@ -244,15 +244,9 @@ export default function Campaigns() {
       });
     },
     onError: async (error: any, variables) => {
-      // Handle broadcast limit exceeded error
-      if (error.message && error.message.includes("broadcast limit")) {
+      if (error.message && error.message.toLowerCase().includes("broadcast limit")) {
         setIsSendOpen(false);
         setIsUpgradeModalOpen(true);
-        toast({
-          title: "Broadcast Limit Reached",
-          description: error.message,
-          variant: "destructive",
-        });
       } else {
         toast({
           title: "Campaign Failed",

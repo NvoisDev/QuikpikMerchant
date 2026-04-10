@@ -724,12 +724,17 @@ export default function ProductManagement() {
         description: "Product created successfully",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.message.includes("403") && error.message.toLowerCase().includes("product limit")) {
+        setIsDialogOpen(false);
+        setShowUpgradeModal(true);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -777,13 +782,8 @@ export default function ProductManagement() {
       });
     },
     onError: (error: any) => {
-      // Check if this is an edit limit error
-      if (error.status === 403 && error.message.includes("Product limit reached")) {
-        toast({
-          title: "Product Edit Limit Reached",
-          description: "You've used all 3 product edits. Upgrade your plan to edit more products.",
-          variant: "destructive",
-        });
+      if (error.message.includes("403") && error.message.toLowerCase().includes("product")) {
+        setShowUpgradeModal(true);
       } else {
         toast({
           title: "Error",

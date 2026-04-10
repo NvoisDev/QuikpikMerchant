@@ -358,7 +358,8 @@ export default function Customers() {
       createGroupForm.reset();
     },
     onError: (error: any) => {
-      if (error.message?.includes('upgrade')) {
+      if (error.message?.includes("403") && error.message?.toLowerCase().includes("group")) {
+        setIsCreateDialogOpen(false);
         setShowUpgradeModal(true);
       } else {
         toast({
