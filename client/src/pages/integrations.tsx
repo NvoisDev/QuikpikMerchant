@@ -25,7 +25,7 @@ export default function Integrations() {
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   const [integrationView, setIntegrationView] = useState<'categories' | 'list' | 'detail'>('categories');
-  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'communication' | 'payment' | 'accounting' | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState<'whatsapp' | 'stripe' | 'paystack' | null>(null);
 
   const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
@@ -251,17 +251,21 @@ export default function Integrations() {
                 </div>
               </button>
 
-              {/* Accounting — Coming Soon */}
-              <div className="text-left border border-gray-200 rounded-xl p-5 bg-white opacity-75">
-                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-4">
+              {/* Accounting */}
+              <button
+                onClick={() => { setSelectedCategory('accounting'); setIntegrationView('list'); }}
+                className="text-left border border-gray-200 rounded-xl p-5 hover:border-teal-400 hover:shadow-md transition-all group bg-white"
+              >
+                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-teal-200 transition-colors">
                   <Calculator className="w-6 h-6 text-teal-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-1">Accounting</h4>
                 <p className="text-sm text-gray-500">Xero · Sync invoices and financial data</p>
-                <div className="mt-3">
+                <div className="mt-3 flex items-center gap-2">
                   <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium">Coming soon</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         )}
@@ -272,7 +276,7 @@ export default function Integrations() {
             <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
               <button onClick={() => { setIntegrationView('categories'); setSelectedCategory(null); }} className="hover:text-gray-800 transition-colors">Integrations</button>
               <ChevronRight className="h-3.5 w-3.5" />
-              <span className="text-gray-900 font-medium">{selectedCategory === 'communication' ? 'Communication' : 'Payments'}</span>
+              <span className="text-gray-900 font-medium">{selectedCategory === 'communication' ? 'Communication' : selectedCategory === 'accounting' ? 'Accounting' : 'Payments'}</span>
             </div>
 
             {selectedCategory === 'communication' && (
@@ -346,6 +350,24 @@ export default function Integrations() {
                 </div>
               </div>
             )}
+
+            {selectedCategory === 'accounting' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="text-left border border-gray-200 rounded-xl overflow-hidden bg-white opacity-75">
+                  <div className="bg-[#13B5EA] h-28 flex items-center justify-center">
+                    <span className="text-white font-bold text-3xl tracking-tight" style={{ fontFamily: 'serif' }}>xero</span>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="font-semibold text-gray-900 text-sm">Xero</span>
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">Coming Soon</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Automatically sync invoices, payments and financial data with your Xero account.</p>
+                    <p className="text-xs text-gray-400 mt-2">Accounting · UK, Global</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -355,7 +377,7 @@ export default function Integrations() {
             <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
               <button onClick={() => { setIntegrationView('categories'); setSelectedCategory(null); setSelectedIntegration(null); }} className="hover:text-gray-800 transition-colors">Integrations</button>
               <ChevronRight className="h-3.5 w-3.5" />
-              <button onClick={() => { setIntegrationView('list'); setSelectedIntegration(null); }} className="hover:text-gray-800 transition-colors">{selectedCategory === 'communication' ? 'Communication' : 'Payments'}</button>
+              <button onClick={() => { setIntegrationView('list'); setSelectedIntegration(null); }} className="hover:text-gray-800 transition-colors">{selectedCategory === 'communication' ? 'Communication' : selectedCategory === 'accounting' ? 'Accounting' : 'Payments'}</button>
               <ChevronRight className="h-3.5 w-3.5" />
               <span className="text-gray-900 font-medium">
                 {selectedIntegration === 'whatsapp' ? 'WhatsApp Messaging' : selectedIntegration === 'stripe' ? 'Stripe' : 'Paystack'}
