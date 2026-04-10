@@ -12976,6 +12976,11 @@ Please contact the customer to confirm this order.
               <span>Shipping:</span>
               <span>${currencySymbol}${order.deliveryCost}</span>
             </div>` : ''}
+            ${parseFloat(order.customerTransactionFee || '0') > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; color: #6b7280; font-size: 14px;">
+              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span>${currencySymbol}${parseFloat(order.customerTransactionFee).toFixed(2)}</span>
+            </div>` : ''}
 
             <hr style="margin: 12px 0; border: none; border-top: 1px solid #e5e7eb;">
             <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
@@ -13020,7 +13025,7 @@ Please contact the customer to confirm this order.
             items: items && items.length > 0 ? items : (order.items || []),
             retailer: order.retailer || customer,
           };
-          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
+          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, true);
           const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
           pdfAttachment = {
             content: pdfBuffer.toString('base64'),
@@ -13593,7 +13598,7 @@ https://quikpik.app`;
   });
 
   // ── Shared invoice PDF builder (PDFKit — no browser dependency) ──────────
-  async function buildInvoicePdf(order: any, wholesaler: any): Promise<Buffer> {
+  async function buildInvoicePdf(order: any, wholesaler: any, showTransactionFee = false): Promise<Buffer> {
     const PDFDocument = (await import('pdfkit')).default;
 
     const currency = wholesaler.preferredCurrency || 'GBP';
@@ -13649,7 +13654,10 @@ https://quikpik.app`;
     }));
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
-    const grandTotal = subtotal + deliveryCost;
+    const txFee = showTransactionFee ? parseFloat(order.customerTransactionFee || '0') : 0;
+    const grandTotal = showTransactionFee
+      ? parseFloat(order.total || '0') || (subtotal + deliveryCost + txFee)
+      : subtotal + deliveryCost;
 
     // Logo — http/https only, no base64
     const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
@@ -13873,6 +13881,7 @@ https://quikpik.app`;
 
       drawTotRow('Subtotal', fmt(subtotal));
       if (deliveryCost > 0) drawTotRow('Delivery', fmt(deliveryCost));
+      if (showTransactionFee && txFee > 0) drawTotRow('Transaction Fee (5.5% + £0.50)', fmt(txFee));
 
       // Grand total divider
       doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4)
@@ -13914,7 +13923,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, false);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -13950,7 +13959,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -18711,14 +18720,15 @@ https://quikpik.app`;
           }
           const custDeliveryNoteHtml = wholesaler.deliveryNote && fulfillmentType === 'delivery' ? `${emailCard(`<p style="margin:0;font-size:13px">📦 ${wholesaler.deliveryNote}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}` : '';
           const custPaymentBadge = isPayLater ? emailBadge('Pay Later — No payment required now', '#3b82f6') : (isDeposit ? emailBadge(`Deposit required: £${depositAmount.toFixed(2)}`, '#f59e0b') : emailBadge(`Payment required: £${total.toFixed(2)}`, '#10b981'));
-          const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}`;
+          const quoteTxFee = !isPayLater ? Math.max(0, total - productSubtotal - quoteDeliveryCharge) : 0;
+          const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${!isPayLater && quoteTxFee > 0 ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:14px">Transaction Fee (5.5% + £0.50):</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:14px">£${quoteTxFee.toFixed(2)}</td></tr>` : ''}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}`;
           const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
 
           // Generate PDF invoice attachment (non-blocking — email still sends without it if PDF fails)
           let quoteAttachment: SendGridAttachment | null = null;
           try {
             const orderForPdf = { ...quoteOrder, items: pdfItems, retailer: customer };
-            const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler);
+            const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, true);
             quoteAttachment = {
               content: pdfBuffer.toString('base64'),
               filename: `invoice-${orderNumber}.pdf`,
