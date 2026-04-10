@@ -94,11 +94,12 @@ export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
 
 export async function createOrUpdateUser(googleUser: GoogleUser) {
   try {
-    // Check if user exists
-    let user = await storage.getUserByEmail(googleUser.email);
-    
+    // Step 1: Look up by Google ID first — most precise match, handles returning users
+    let user = await storage.getUserByGoogleId(googleUser.id);
+
     if (user) {
-      // Update existing user with Google info and mark as not first login
+      // Returning user already linked to this Google account — update profile and sign in
+      console.log(`✅ Found existing user by googleId: ${user.email} (role: ${user.role})`);
       user = await storage.updateUser(user.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
@@ -106,23 +107,61 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         googleId: googleUser.id,
         isFirstLogin: false
       });
-    } else {
-      // Create new user with first login flag
-      // SECURITY: All Google OAuth users are wholesalers by default
-      // Customers use separate SMS-based authentication system
-      user = await storage.createUser({
-        id: googleUser.id,
-        email: googleUser.email,
+      return user;
+    }
+
+    // Step 2: No Google-ID match — check by email
+    const emailUser = await storage.getUserByEmail(googleUser.email);
+
+    if (emailUser) {
+      // SECURITY: If the email matches a team_member or non-wholesaler record that has
+      // never been Google-linked, do NOT let this Google sign-in hijack that record.
+      // Create a fresh wholesaler account instead so they get their own business.
+      if (emailUser.role === 'team_member' || (emailUser.role !== 'wholesaler' && !emailUser.googleId)) {
+        console.log(`⚠️  Email ${googleUser.email} matched a ${emailUser.role} record (id: ${emailUser.id}) — creating a fresh wholesaler account to prevent data collision`);
+        user = await storage.createUser({
+          id: googleUser.id,
+          email: googleUser.email,
+          firstName: googleUser.given_name || googleUser.name.split(' ')[0],
+          lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
+          profileImageUrl: googleUser.picture,
+          googleId: googleUser.id,
+          role: 'wholesaler',
+          businessName: `${googleUser.name}'s Business`,
+          defaultCurrency: 'GBP',
+          isFirstLogin: true
+        });
+        return user;
+      }
+
+      // Existing wholesaler/admin without Google linked yet — link and sign in
+      console.log(`🔗 Linking Google account to existing user: ${emailUser.email} (role: ${emailUser.role})`);
+      user = await storage.updateUser(emailUser.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
         profileImageUrl: googleUser.picture,
         googleId: googleUser.id,
-        role: 'wholesaler', // Default role - customers use separate auth
-        businessName: `${googleUser.name}'s Business`,
-        defaultCurrency: 'GBP',
-        isFirstLogin: true
+        isFirstLogin: false
       });
+      return user;
     }
+
+    // Step 3: Completely new user — create fresh wholesaler account
+    // SECURITY: All Google OAuth users are wholesalers by default
+    // Customers use separate SMS-based authentication system
+    console.log(`🆕 Creating new wholesaler account for ${googleUser.email}`);
+    user = await storage.createUser({
+      id: googleUser.id,
+      email: googleUser.email,
+      firstName: googleUser.given_name || googleUser.name.split(' ')[0],
+      lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
+      profileImageUrl: googleUser.picture,
+      googleId: googleUser.id,
+      role: 'wholesaler',
+      businessName: `${googleUser.name}'s Business`,
+      defaultCurrency: 'GBP',
+      isFirstLogin: true
+    });
 
     return user;
   } catch (error) {
