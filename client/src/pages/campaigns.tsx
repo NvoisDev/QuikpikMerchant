@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -103,6 +103,7 @@ interface Campaign {
 
 export default function Campaigns() {
   const { user } = useAuth();
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { toast } = useToast();
   
   // Fetch user's subscription plan limits
@@ -590,6 +591,7 @@ export default function Campaigns() {
         </div>
         <div className="flex items-center gap-3">
           {/* AI components removed as requested by user */}
+          {!isViewer && (
           <Button 
             className="flex items-center space-x-2"
             disabled={!(whatsappStatus as any)?.isConfigured}
@@ -636,6 +638,7 @@ export default function Campaigns() {
               }
             </span>
           </Button>
+          )}
         </div>
       </div>
 
@@ -1077,6 +1080,7 @@ export default function Campaigns() {
                   >
                     <span className="truncate">Preview</span>
                   </Button>
+                  {!isViewer && (
                   <Button 
                     size="sm" 
                     variant="outline"
@@ -1086,6 +1090,8 @@ export default function Campaigns() {
                     <Edit3 className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Edit</span>
                   </Button>
+                  )}
+                  {!isViewer && (
                   <Button 
                     size="sm" 
                     onClick={() => {
@@ -1097,6 +1103,8 @@ export default function Campaigns() {
                     <Send className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Send</span>
                   </Button>
+                  )}
+                  {!isViewer && (
                   <Button 
                     size="sm" 
                     variant="outline"
@@ -1110,6 +1118,7 @@ export default function Campaigns() {
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
+                  )}
                 </div>
 
               </div>
@@ -1126,10 +1135,12 @@ export default function Campaigns() {
             <p className="text-gray-600 mb-4">
               Create your first WhatsApp broadcast to promote products and boost sales.
             </p>
+            {!isViewer && (
             <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Broadcast
             </Button>
+            )}
           </CardContent>
         </Card>
       )}
