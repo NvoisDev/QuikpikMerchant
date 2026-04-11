@@ -13482,7 +13482,7 @@ Please contact the customer to confirm this order.
                 ${addressComponents.country ? `${addressComponents.country}` : ''}
               </div>
             ` : order.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed - customer will be contacted</p>` : ''}
-            ${order.fulfillmentType === 'pickup' ? `<p><strong>Collection Address:</strong> ${wholesaler.businessAddress || 'Please contact store for address'}</p>` : ''}
+            ${order.fulfillmentType === 'pickup' ? `<p><strong>Collection Address:</strong> ${wholesaler.pickupAddress || wholesaler.businessAddress || 'Please contact store for address'}</p>` : ''}
             ${order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? `<p><strong>Delivery Service:</strong> ${order.shippingServiceName || 'Standard Delivery'}</p>` : ''}
           </div>
 
