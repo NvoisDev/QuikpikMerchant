@@ -1974,24 +1974,44 @@ export default function ProductManagement() {
                           <FormField
                             control={form.control}
                             name="palletPrice"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Pallet Price ({form.watch("currency")})</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="e.g., 240.00"
-                                    {...field}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                                <div className="text-xs text-muted-foreground">
-                                  Total price for full pallet
-                                </div>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const watchedPalletPrice = form.watch("palletPrice");
+                              const watchedUnitsPerPallet = form.watch("unitsPerPallet");
+                              const palletPriceNum = parseFloat(watchedPalletPrice);
+                              const unitsPerPalletNum = parseInt(watchedUnitsPerPallet);
+                              const unitPrice =
+                                palletPriceNum > 0 && unitsPerPalletNum > 0
+                                  ? palletPriceNum / unitsPerPalletNum
+                                  : null;
+                              const currency = form.watch("currency") || "GBP";
+                              return (
+                                <FormItem>
+                                  <FormLabel>Pallet Price ({currency})</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="e.g., 240.00"
+                                      {...field}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    {unitPrice !== null ? (
+                                      <>
+                                        Total price for full pallet &mdash;{" "}
+                                        <span className="font-medium text-orange-700">
+                                          {formatCurrency(unitPrice, currency)} per unit
+                                        </span>
+                                      </>
+                                    ) : (
+                                      "Total price for full pallet"
+                                    )}
+                                  </div>
+                                </FormItem>
+                              );
+                            }}
                           />
 
                           <FormField
