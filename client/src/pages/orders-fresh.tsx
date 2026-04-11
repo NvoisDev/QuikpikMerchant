@@ -2075,14 +2075,17 @@ export default function OrdersFresh() {
                           {selectedOrder.wholesalerBusinessName || 'Business Location'}
                         </div>
                         {(() => {
-                          const pickupAddr = (user as any)?.pickupAddress?.trim();
-                          const bizAddr = (user as any)?.businessAddress?.trim();
+                          const pickupAddr = user?.pickupAddress?.trim();
+                          const bizAddr = user?.businessAddress?.trim();
                           const resolvedAddr = pickupAddr || bizAddr;
-                          if (resolvedAddr) {
-                            const city = (user as any)?.city?.trim();
-                            const postalCode = (user as any)?.postalCode?.trim();
+                          const city = user?.city?.trim();
+                          const postalCode = user?.postalCode?.trim();
+                          if (resolvedAddr || city || postalCode) {
+                            const base = resolvedAddr || [city, postalCode].filter(Boolean).join(', ');
                             const suffix = [city, postalCode].filter(Boolean).join(', ');
-                            const fullAddr = suffix && !resolvedAddr.includes(suffix) ? `${resolvedAddr}, ${suffix}` : resolvedAddr;
+                            const fullAddr = resolvedAddr && suffix && !resolvedAddr.includes(suffix)
+                              ? `${resolvedAddr}, ${suffix}`
+                              : base;
                             return (
                               <div className="flex items-start mt-2 gap-1">
                                 <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
@@ -2096,9 +2099,9 @@ export default function OrdersFresh() {
                             </div>
                           );
                         })()}
-                        {(user as any)?.businessPhone && (
+                        {user?.businessPhone && (
                           <div className="text-orange-600 text-xs mt-1">
-                            Phone: {(user as any).businessPhone}
+                            Phone: {user.businessPhone}
                           </div>
                         )}
                       </div>

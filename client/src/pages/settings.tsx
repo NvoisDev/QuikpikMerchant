@@ -105,6 +105,7 @@ export default function Settings() {
 
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+  const [useCustomCollectionAddress, setUseCustomCollectionAddress] = useState(!!user?.pickupAddress);
   const [deliveryEnabled, setDeliveryEnabled] = useState((user as any)?.enableDelivery ?? true);
   const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
   const [deliveryNote, setDeliveryNote] = useState((user as any)?.deliveryNote || '');
@@ -159,7 +160,7 @@ export default function Settings() {
     timezone: user?.timezone || 'UTC',
     logoType: user?.logoType || 'business',
     logoUrl: user?.logoUrl || '',
-    pickupAddress: (user as any)?.pickupAddress || ''
+    pickupAddress: user?.pickupAddress || ''
   });
 
   // Sync form state with user data when user loads
@@ -182,8 +183,9 @@ export default function Settings() {
         timezone: user.timezone || 'UTC',
         logoType: user.logoType || 'business',
         logoUrl: user.logoUrl || '',
-        pickupAddress: (user as any).pickupAddress || ''
+        pickupAddress: user.pickupAddress || ''
       });
+      setUseCustomCollectionAddress(!!user.pickupAddress);
       setDeliveryEnabled((user as any).enableDelivery ?? true);
       setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
       setDeliveryNote((user as any).deliveryNote || '');
@@ -574,8 +576,9 @@ export default function Settings() {
                               timezone: user?.timezone || 'UTC',
                               logoType: user?.logoType || 'business',
                               logoUrl: user?.logoUrl || '',
-                              pickupAddress: (user as any)?.pickupAddress || ''
+                              pickupAddress: user?.pickupAddress || ''
                             });
+                            setUseCustomCollectionAddress(!!user?.pickupAddress);
                           }}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                         >
@@ -617,8 +620,8 @@ export default function Settings() {
                         <div className="sm:col-span-2">
                           <dt className="text-sm font-medium text-gray-500">Collection Address</dt>
                           <dd className="mt-1 text-sm text-gray-900">
-                            {(user as any).pickupAddress ? (
-                              (user as any).pickupAddress
+                            {user.pickupAddress ? (
+                              user.pickupAddress
                             ) : (
                               <span className="text-gray-400 italic">Same as registered address</span>
                             )}
@@ -729,20 +732,19 @@ export default function Settings() {
                             <input
                               type="checkbox"
                               className="mt-0.5 rounded border-gray-300 text-green-600"
-                              checked={businessForm.pickupAddress !== ''}
+                              checked={useCustomCollectionAddress}
                               onChange={(e) => {
+                                setUseCustomCollectionAddress(e.target.checked);
                                 if (!e.target.checked) {
                                   setBusinessForm({ ...businessForm, pickupAddress: '' });
-                                } else {
-                                  setBusinessForm({ ...businessForm, pickupAddress: ' ' });
                                 }
                               }}
                             />
                             <span className="text-sm text-gray-600">Use a different address for customer collections</span>
                           </label>
-                          {businessForm.pickupAddress !== '' ? (
+                          {useCustomCollectionAddress ? (
                             <textarea
-                              value={businessForm.pickupAddress.trim() === '' ? '' : businessForm.pickupAddress}
+                              value={businessForm.pickupAddress}
                               onChange={(e) => setBusinessForm({ ...businessForm, pickupAddress: e.target.value })}
                               className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                               rows={3}
