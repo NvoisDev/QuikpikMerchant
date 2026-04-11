@@ -101,6 +101,7 @@ export interface IStorage {
   
   // Product operations
   getProducts(wholesalerId?: string): Promise<Product[]>;
+  getExpiringProducts(wholesalerId: string): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
@@ -691,7 +692,7 @@ export class DatabaseStorage implements IStorage {
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
           base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
           unit, unit_format, pallet_weight, unit_weight,
-          promotional_offers,
+          promotional_offers, expiry_date,
           created_at, updated_at
         FROM products 
         WHERE wholesaler_id = ${wholesalerId} 
@@ -766,6 +767,7 @@ export class DatabaseStorage implements IStorage {
         specialHandling: {},
         shelfLife: null,
         contentCategory: null,
+        expiryDate: row.expiry_date ? String(row.expiry_date) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       });
@@ -855,6 +857,92 @@ export class DatabaseStorage implements IStorage {
       createdAt: row.created_at ? new Date(String(row.created_at)) : null,
       updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
     });
+    });
+  }
+
+  async getExpiringProducts(wholesalerId: string): Promise<Product[]> {
+    const result = await db.execute(sql`
+      SELECT
+        id, name, description, price, stock, moq,
+        wholesaler_id, image_url, images, status, category,
+        promo_active, promo_price, low_stock_threshold,
+        price_visible, negotiation_enabled, minimum_bid_price,
+        pack_quantity, unit_of_measure, size_per_unit, currency,
+        selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+        base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
+        unit, unit_format, pallet_weight, unit_weight,
+        promotional_offers, expiry_date,
+        created_at, updated_at
+      FROM products
+      WHERE wholesaler_id = ${wholesalerId}
+        AND expiry_date IS NOT NULL
+        AND status IN ('active', 'inactive', 'locked')
+      ORDER BY expiry_date ASC
+    `);
+    return result.rows.map(row => {
+      let parsedOffers: any[] = [];
+      try {
+        if (!row.promotional_offers) parsedOffers = [];
+        else if (Array.isArray(row.promotional_offers)) parsedOffers = row.promotional_offers;
+        else if (typeof row.promotional_offers === 'string') {
+          const trimmed = row.promotional_offers.trim();
+          if (trimmed && trimmed !== '[]' && trimmed !== 'null') parsedOffers = JSON.parse(trimmed);
+        }
+      } catch { parsedOffers = []; }
+      const livePromo = resolveLivePromo(parsedOffers, String(row.price));
+      return {
+        id: Number(row.id),
+        name: String(row.name),
+        wholesalerId: String(row.wholesaler_id),
+        description: row.description ? String(row.description) : null,
+        price: String(row.price),
+        promoPrice: livePromo.promoPrice,
+        promoActive: livePromo.promoActive,
+        promotionalOffers: parsedOffers,
+        currency: String(row.currency || 'GBP'),
+        moq: Number(row.moq || 1),
+        stock: Number(row.stock || 0),
+        imageUrl: row.image_url ? String(row.image_url) : null,
+        images: Array.isArray(row.images) ? row.images : [],
+        category: row.category ? String(row.category) : null,
+        status: String(row.status) as any,
+        priceVisible: Boolean(row.price_visible !== false),
+        negotiationEnabled: Boolean(row.negotiation_enabled),
+        minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
+        editCount: Number(row.edit_count || 0),
+        sellingFormat: String(row.selling_format || 'units') as any,
+        palletPrice: row.pallet_price ? String(row.pallet_price) : null,
+        palletMoq: row.pallet_moq ? Number(row.pallet_moq) : null,
+        palletStock: row.pallet_stock ? Number(row.pallet_stock) : null,
+        unitsPerPallet: row.units_per_pallet ? Number(row.units_per_pallet) : null,
+        palletWeight: row.pallet_weight ? String(row.pallet_weight) : null,
+        unitWeight: row.unit_weight ? String(row.unit_weight) : null,
+        unit_weight: null,
+        pallet_weight: null,
+        deliveryExcluded: Boolean(row.delivery_excluded),
+        lowStockThreshold: Number(row.low_stock_threshold || 50),
+        lastStockAlertSentAt: null,
+        unit: String(row.unit || 'units'),
+        unitFormat: row.unit_format ? String(row.unit_format) : null,
+        packQuantity: row.pack_quantity ? Number(row.pack_quantity) : null,
+        unitOfMeasure: row.unit_of_measure ? String(row.unit_of_measure) : null,
+        sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
+        baseUnitStock: Number(row.base_unit_stock || 0),
+        quantityInPack: Number(row.quantity_in_pack || 1),
+        totalPackageWeight: null,
+        individualUnitWeight: null,
+        packageDimensions: {},
+        unitConfiguration: {},
+        unitSize: row.size_per_unit ? String(row.size_per_unit) : null,
+        unitWeightKg: null,
+        temperatureRequirement: 'ambient' as any,
+        specialHandling: {},
+        shelfLife: null,
+        contentCategory: null,
+        expiryDate: row.expiry_date ? String(row.expiry_date) : null,
+        createdAt: row.created_at ? new Date(String(row.created_at)) : null,
+        updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null,
+      } as any;
     });
   }
 

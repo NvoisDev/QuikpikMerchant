@@ -4048,15 +4048,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Returns all products with an expiry_date set, sorted by nearest expiry first.
+  // Returns all products with an expiry_date set, sorted by nearest expiry first (DB-level query).
   app.get('/api/products/expiring', requireAuth, async (req: any, res) => {
     try {
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
         ? req.user.wholesalerId : req.user.id;
-      const allProducts = await storage.getProducts(targetUserId);
-      const expiring = allProducts
-        .filter((p: any) => !!p.expiryDate)
-        .sort((a: any, b: any) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+      const expiring = await storage.getExpiringProducts(targetUserId);
       res.json(expiring);
     } catch (error) {
       console.error("Error fetching expiring products:", error);
