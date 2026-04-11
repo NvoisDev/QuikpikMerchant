@@ -99,12 +99,11 @@ function buildStartEmailHtml(
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
     const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
-    const originalPrice = formatPrice(p.price);
-    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : "—";
-    return [p.name, badge, originalPrice, salePrice];
+    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
+    return [p.name, badge, salePrice];
   });
 
-  const table = emailTable(["Product", "Offer", "Was", "Now"], rows);
+  const table = emailTable(["Product", "Promo", "Price"], rows);
 
   const endDateLine = (() => {
     const earliest = products
@@ -147,12 +146,11 @@ function buildEndEmailHtml(
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
     const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
-    const originalPrice = formatPrice(p.price);
-    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : "—";
-    return [p.name, badge, originalPrice, salePrice];
+    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
+    return [p.name, badge, salePrice];
   });
 
-  const table = emailTable(["Product", "Offer", "Was", "Now"], rows);
+  const table = emailTable(["Product", "Promo", "Price"], rows);
 
   const body =
     heading +
@@ -168,7 +166,7 @@ function buildEndEmailHtml(
 
 function buildStartSMS(products: PromoProduct[], wholesaler: WholesalerInfo, storeUrl: string): string {
   if (products.length === 1) {
-    return `${wholesaler.businessName}: ${products[0].name} is now on sale! Shop here: ${storeUrl}`;
+    return `${wholesaler.businessName}: ${products[0].name} is now on sale! Shop now: ${storeUrl}`;
   }
   return `${wholesaler.businessName}: ${products.length} products just went on sale! Shop now: ${storeUrl}`;
 }
