@@ -15017,12 +15017,21 @@ https://quikpik.app`;
 
   app.patch('/api/team-members/:id/phone', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId
+      const ownerId = req.user.role === 'team_member' && req.user.wholesalerId
         ? req.user.wholesalerId : req.user.id;
       const { id } = req.params;
       const { phoneNumber } = req.body;
 
-      const allMembers = await storage.getTeamMembers(userId);
+      const allMembers = await storage.getTeamMembers(ownerId);
+
+      // Only the account owner or admin team members may update phone numbers.
+      if (req.user.role === 'team_member') {
+        const requestingMember = allMembers.find(m => m.email === req.user.email);
+        if (!requestingMember || requestingMember.role !== 'admin') {
+          return res.status(403).json({ message: "Only admins can update team member phone numbers" });
+        }
+      }
+
       const target = allMembers.find(m => m.id === parseInt(id));
       if (!target) {
         return res.status(404).json({ message: "Team member not found" });
