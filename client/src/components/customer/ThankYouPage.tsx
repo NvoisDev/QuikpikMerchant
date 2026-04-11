@@ -55,6 +55,7 @@ interface ThankYouPageProps {
   };
   onContinueShopping: () => void;
   onViewOrders?: () => void;
+  payLater?: boolean;
 }
 
 export const ThankYouPage = ({ 
@@ -67,7 +68,8 @@ export const ThankYouPage = ({
   shippingCost = 0,
   wholesaler,
   onContinueShopping, 
-  onViewOrders 
+  onViewOrders,
+  payLater = false
 }: ThankYouPageProps) => {
   // Animation states
   const [showConfetti, setShowConfetti] = useState(true);
@@ -197,14 +199,23 @@ export const ThankYouPage = ({
             animationStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           }`}>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🎉 Thank you for your order!
+              {payLater ? '✅ Order Placed – Pay Later' : '🎉 Thank you for your order!'}
             </h1>
             <p className="text-lg text-gray-600">
-              Your order has been successfully placed and is being processed by our team.
+              {payLater
+                ? 'Your order has been confirmed. Payment is due before or upon delivery/collection.'
+                : 'Your order has been successfully placed and is being processed by our team.'}
             </p>
-            <p className="text-sm text-gray-500 mt-2">
-              We appreciate your business and look forward to serving you again.
-            </p>
+            {payLater && (
+              <div className="mt-3 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-sm px-4 py-2 rounded-full font-medium">
+                <span>💳</span> You can pay when your order is ready
+              </div>
+            )}
+            {!payLater && (
+              <p className="text-sm text-gray-500 mt-2">
+                We appreciate your business and look forward to serving you again.
+              </p>
+            )}
             
             {/* Interactive celebration button */}
             <div className="mt-4">

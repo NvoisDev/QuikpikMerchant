@@ -1144,6 +1144,7 @@ export default function CustomerPortal() {
     subtotal: number;
     transactionFee: number;
     shippingCost: number;
+    payLater?: boolean;
   } | null>(null);
   // Shipping handled directly by supplier - no API integration needed
   const [customerData, setCustomerData] = useState<CustomerData>({
@@ -2296,6 +2297,7 @@ export default function CustomerPortal() {
       subtotal={completedOrder.subtotal}
       transactionFee={completedOrder.transactionFee}
       shippingCost={completedOrder.shippingCost}
+      payLater={completedOrder.payLater}
       wholesaler={{
         businessName: wholesaler?.businessName || 'Business',
         email: wholesaler?.email || 'hello@business.com',
@@ -4955,16 +4957,23 @@ export default function CustomerPortal() {
                         </p>
                       </div>
                       <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
                         disabled={isPlacingPayLaterOrder || !customerData.shippingOption || (customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress)}
                         onClick={async () => {
                           if (!wholesaler?.id) return;
                           setIsPlacingPayLaterOrder(true);
                           try {
                             const cartItems = cart.map(cartItem => {
+                              let computedUnitPrice: number;
+                              let computedLineTotal: number;
                               let promoLabel: string | undefined;
-                              if (cartItem.sellingType !== 'pallets') {
+                              if (cartItem.sellingType === 'pallets') {
+                                computedUnitPrice = parseFloat((cartItem.product as any).palletPrice || '0');
+                                computedLineTotal = computedUnitPrice * cartItem.quantity;
+                              } else {
                                 const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
+                                computedUnitPrice = pricing.effectivePrice;
+                                computedLineTotal = pricing.totalCost;
                                 promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
                               }
                               return {
@@ -4978,6 +4987,8 @@ export default function CustomerPortal() {
                                 },
                                 quantity: cartItem.quantity,
                                 sellingType: cartItem.sellingType,
+                                computedUnitPrice,
+                                computedLineTotal,
                                 promoLabel,
                               };
                             });
@@ -5041,6 +5052,7 @@ export default function CustomerPortal() {
                               transactionFee: computedTransactionFee,
                               shippingCost: computedShipping,
                               totalAmount: computedTotal,
+                              payLater: true,
                             } as any);
                             setCart([]);
                             setPayLaterMode(false);

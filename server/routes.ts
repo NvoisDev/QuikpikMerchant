@@ -6597,7 +6597,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : 0;
 
       // --- Calculate totals ---
+      // Use frontend-computed line totals when available (they include full promotional pricing logic
+      // such as quantity-based promos, buy-X-get-Y-free, etc.). Fall back to simple price derivation
+      // only for items that did not include a pre-computed total.
       const subtotal = (cart as any[]).reduce((sum: number, item: any) => {
+        if (typeof item.computedLineTotal === 'number') {
+          return sum + item.computedLineTotal;
+        }
         if (item.sellingType === 'pallets') {
           return sum + parseFloat(item.product.palletPrice || '0') * item.quantity;
         }
@@ -6627,17 +6633,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // --- Build order items ---
       const orderItemsData = (cart as any[]).map((item: any) => {
-        const unitPrice = item.sellingType === 'pallets'
-          ? parseFloat(item.product.palletPrice || '0')
-          : (item.product.promoActive && item.product.promoPrice
-              ? parseFloat(item.product.promoPrice)
-              : parseFloat(item.product.price || '0'));
+        let unitPrice: number;
+        let lineTotal: number;
+        if (typeof item.computedUnitPrice === 'number' && typeof item.computedLineTotal === 'number') {
+          unitPrice = item.computedUnitPrice;
+          lineTotal = item.computedLineTotal;
+        } else if (item.sellingType === 'pallets') {
+          unitPrice = parseFloat(item.product.palletPrice || '0');
+          lineTotal = unitPrice * item.quantity;
+        } else {
+          unitPrice = item.product.promoActive && item.product.promoPrice
+            ? parseFloat(item.product.promoPrice)
+            : parseFloat(item.product.price || '0');
+          lineTotal = unitPrice * item.quantity;
+        }
         return {
           orderId: 0,
           productId: item.product.id,
           quantity: item.quantity,
           unitPrice: unitPrice.toFixed(2),
-          total: (unitPrice * item.quantity).toFixed(2),
+          total: lineTotal.toFixed(2),
           sellingType: item.sellingType || 'units',
           appliedOfferLabel: item.promoLabel || null,
           freeItems: item.freeItems || 0,
