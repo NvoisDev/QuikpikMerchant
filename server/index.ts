@@ -35,6 +35,8 @@ async function runStartupMigrations() {
     // Task #49 fix: Correct free-tier users whose product_limit was set to 3 (old default).
     // Free plan allows 10 products; any free wholesaler with limit < 10 gets corrected here.
     `UPDATE users SET product_limit = 10 WHERE subscription_tier = 'free' AND product_limit IS NOT NULL AND product_limit < 10`,
+    // Task #72: Add phone number to team members for SMS stock alerts
+    `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

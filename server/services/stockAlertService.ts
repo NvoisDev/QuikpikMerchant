@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { products, users } from "../../shared/schema";
+import { products, users, teamMembers } from "../../shared/schema";
 import { eq, lt, and, or, isNull, lte, inArray } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { ReliableSMSService } from "../sms-service";
@@ -131,7 +131,7 @@ export class StockAlertService {
   }
 
   /**
-   * Send stock alerts to a wholesaler via multiple channels
+   * Send stock alerts to a wholesaler via multiple channels, and to all active team members
    */
   private async sendStockAlerts(alerts: StockAlert[]): Promise<void> {
     if (alerts.length === 0) return;
@@ -142,12 +142,41 @@ export class StockAlertService {
     // Generate alert messages
     const messages = this.generateAlertMessages(alerts);
 
-    // Send via all available channels
+    // Send to account owner via all available channels
     await Promise.allSettled([
       this.sendEmailAlert(wholesaler, messages.email),
       this.sendSMSAlert(wholesaler, alerts),
       this.sendWhatsAppAlert(wholesaler, messages.whatsapp)
     ]);
+
+    // Send to active team members (email always; SMS if they have a phone number)
+    try {
+      const members = await db
+        .select({
+          email: teamMembers.email,
+          phoneNumber: teamMembers.phoneNumber,
+          firstName: teamMembers.firstName,
+        })
+        .from(teamMembers)
+        .where(and(
+          eq(teamMembers.wholesalerId, wholesaler.wholesalerId),
+          eq(teamMembers.status, 'active')
+        ));
+
+      for (const member of members) {
+        const memberAlertOverride = { ...wholesaler, wholesalerEmail: member.email };
+        await this.sendEmailAlert(memberAlertOverride, messages.email);
+        if (member.phoneNumber) {
+          await this.sendSMSAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, alerts);
+        }
+      }
+
+      if (members.length > 0) {
+        console.log(`📢 Stock alerts also sent to ${members.length} team member(s) for ${wholesaler.wholesalerName}`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to send stock alerts to team members for ${wholesaler.wholesalerName}:`, error);
+    }
 
     console.log(`📢 Stock alerts sent to ${wholesaler.wholesalerName} for ${productCount} products`);
   }

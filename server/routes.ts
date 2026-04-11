@@ -14942,7 +14942,7 @@ https://quikpik.app`;
   app.post('/api/team-members', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { email, firstName, lastName, role, permissions } = req.body;
+      const { email, firstName, lastName, phoneNumber, role, permissions } = req.body;
       
       // Check subscription limits
       const currentCount = await storage.getTeamMembersCount(userId);
@@ -14966,6 +14966,7 @@ https://quikpik.app`;
         email,
         firstName,
         lastName,
+        phoneNumber: phoneNumber?.trim() || null,
         role: role || 'member',
         permissions: permissions || ['products', 'orders', 'customers'],
       });
@@ -15011,6 +15012,27 @@ https://quikpik.app`;
     } catch (error) {
       console.error("Error updating team member role:", error);
       res.status(500).json({ message: "Failed to update team member role" });
+    }
+  });
+
+  app.patch('/api/team-members/:id/phone', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId : req.user.id;
+      const { id } = req.params;
+      const { phoneNumber } = req.body;
+
+      const allMembers = await storage.getTeamMembers(userId);
+      const target = allMembers.find(m => m.id === parseInt(id));
+      if (!target) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      await storage.updateTeamMember(parseInt(id), { phoneNumber: phoneNumber?.trim() || null });
+      res.json({ message: "Phone number updated successfully" });
+    } catch (error) {
+      console.error("Error updating team member phone:", error);
+      res.status(500).json({ message: "Failed to update phone number" });
     }
   });
 

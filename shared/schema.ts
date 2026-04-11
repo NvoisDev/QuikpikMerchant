@@ -255,6 +255,7 @@ export const teamMembers = pgTable("team_members", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   email: varchar("email").notNull(),
+  phoneNumber: varchar("phone_number", { length: 50 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   role: varchar("role").notNull().default("member"), // owner, admin, member

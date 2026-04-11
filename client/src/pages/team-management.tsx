@@ -36,7 +36,8 @@ import {
   PauseCircle,
   PlayCircle,
   MoreVertical,
-  KeyRound
+  KeyRound,
+  Phone
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,6 +52,7 @@ const teamMemberSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional(),
+  phoneNumber: z.string().optional(),
   role: z.enum(["admin", "member"]),
   permissions: z.array(z.string()).default(["products", "orders", "customers"]),
 });
@@ -103,6 +105,7 @@ export default function TeamManagement() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedMemberForRoleEdit, setSelectedMemberForRoleEdit] = useState<TeamMember | null>(null);
   const [isRoleEditOpen, setIsRoleEditOpen] = useState(false);
+  const [phoneEditValue, setPhoneEditValue] = useState("");
 
   const form = useForm<TeamMemberFormData>({
     resolver: zodResolver(teamMemberSchema),
@@ -110,6 +113,7 @@ export default function TeamManagement() {
       email: "",
       firstName: "",
       lastName: "",
+      phoneNumber: "",
       role: "member",
       permissions: ["products", "orders", "customers"],
     },
@@ -198,6 +202,23 @@ export default function TeamManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePhoneMutation = useMutation({
+    mutationFn: async ({ memberId, phoneNumber }: { memberId: number; phoneNumber: string }) => {
+      await apiRequest("PATCH", `/api/team-members/${memberId}/phone`, { phoneNumber });
+    },
+    onSuccess: () => {
+      toast({ title: "Phone number saved", description: "SMS alerts will now be sent to this number." });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save phone number",
         variant: "destructive",
       });
     },
@@ -311,6 +332,7 @@ export default function TeamManagement() {
 
   const handleEditRole = (member: TeamMember) => {
     setSelectedMemberForRoleEdit(member);
+    setPhoneEditValue(member.phoneNumber || "");
     setIsRoleEditOpen(true);
   };
 
@@ -475,6 +497,19 @@ export default function TeamManagement() {
                     )}
                   />
                 </div>
+                <FormField
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number <span className="text-gray-400 font-normal">(optional — for SMS stock alerts)</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="+44XXXXXXXXXX" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="role"
@@ -653,6 +688,12 @@ export default function TeamManagement() {
                         <Mail className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>
                       </p>
+                      {member.phoneNumber && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                          <Phone className="h-3 w-3 flex-shrink-0" />
+                          <span>{member.phoneNumber}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -858,6 +899,37 @@ export default function TeamManagement() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="border-t pt-4 space-y-2">
+                  <p className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Phone className="h-4 w-4" />
+                    Mobile number for SMS stock alerts
+                  </p>
+                  <p className="text-xs text-gray-400">Optional. If set, this team member will receive SMS notifications when products go low in stock.</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="+44XXXXXXXXXX"
+                      value={phoneEditValue}
+                      onChange={(e) => setPhoneEditValue(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={updatePhoneMutation.isPending}
+                      onClick={() => {
+                        if (selectedMemberForRoleEdit) {
+                          updatePhoneMutation.mutate({
+                            memberId: selectedMemberForRoleEdit.id,
+                            phoneNumber: phoneEditValue,
+                          });
+                        }
+                      }}
+                    >
+                      {updatePhoneMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
