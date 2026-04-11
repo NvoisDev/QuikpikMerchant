@@ -4048,6 +4048,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Returns all products with an expiry_date set, sorted by nearest expiry first.
+  app.get('/api/products/expiring', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId : req.user.id;
+      const allProducts = await storage.getProducts(targetUserId);
+      const expiring = allProducts
+        .filter((p: any) => !!p.expiryDate)
+        .sort((a: any, b: any) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+      res.json(expiring);
+    } catch (error) {
+      console.error("Error fetching expiring products:", error);
+      res.status(500).json({ message: "Failed to fetch expiring products" });
+    }
+  });
+
   // Protected route: only authenticated wholesalers/team members can fetch a product by ID.
   // The customer portal uses /api/customer-products/:wholesalerId for product listing.
   app.get('/api/products/:id', requireAuth, async (req: any, res) => {
