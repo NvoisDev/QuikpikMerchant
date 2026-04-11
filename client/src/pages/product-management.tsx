@@ -1978,7 +1978,7 @@ export default function ProductManagement() {
                               const watchedPalletPrice = form.watch("palletPrice");
                               const watchedUnitsPerPallet = form.watch("unitsPerPallet");
                               const palletPriceNum = parseFloat(watchedPalletPrice);
-                              const unitsPerPalletNum = parseInt(watchedUnitsPerPallet);
+                              const unitsPerPalletNum = parseFloat(watchedUnitsPerPallet);
                               const unitPrice =
                                 palletPriceNum > 0 && unitsPerPalletNum > 0
                                   ? palletPriceNum / unitsPerPalletNum
