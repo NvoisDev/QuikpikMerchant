@@ -3657,11 +3657,16 @@ export class DatabaseStorage implements IStorage {
     if (!product) return 0;
     const threshold = Math.max(product.lowStockThreshold || 50, product.moq || 1);
     if (newStock <= threshold) return 0;
-    const result = await db
+    const openAlerts = await db
+      .select({ id: stockAlerts.id })
+      .from(stockAlerts)
+      .where(and(eq(stockAlerts.productId, productId), eq(stockAlerts.isResolved, false)));
+    if (openAlerts.length === 0) return 0;
+    await db
       .update(stockAlerts)
       .set({ isResolved: true, resolvedAt: new Date() })
       .where(and(eq(stockAlerts.productId, productId), eq(stockAlerts.isResolved, false)));
-    return (result as any).rowCount ?? 0;
+    return openAlerts.length;
   }
 
   async updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void> {
