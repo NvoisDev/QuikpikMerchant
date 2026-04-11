@@ -650,12 +650,12 @@ export default function TeamManagement() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" className="space-y-6">
+        <TabsContent value="members" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Team Members</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Team Members</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
           {!Array.isArray(teamMembers) || teamMembers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -677,24 +677,24 @@ export default function TeamManagement() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {Array.isArray(teamMembers) && teamMembers.map((member: TeamMember) => (
                 <div
                   key={member.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-3 sm:gap-2"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-2"
                 >
                   {/* Identity: Avatar + Name + Email */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-emerald-700 font-semibold text-sm">
+                    <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-emerald-700 font-semibold text-xs">
                         {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-gray-900 truncate">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
                         {member.firstName} {member.lastName}
                       </h3>
-                      <p className="text-sm text-gray-600 flex items-center gap-1 min-w-0">
+                      <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
                         <Mail className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>
                       </p>
