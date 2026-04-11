@@ -745,7 +745,13 @@ export default function Settings() {
                           {useCustomCollectionAddress ? (
                             <textarea
                               value={businessForm.pickupAddress}
-                              onChange={(e) => setBusinessForm({ ...businessForm, pickupAddress: e.target.value })}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBusinessForm({ ...businessForm, pickupAddress: val });
+                                if (val.trim().length === 0) {
+                                  setUseCustomCollectionAddress(false);
+                                }
+                              }}
                               className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                               rows={3}
                               placeholder="e.g. Unit 4, Trade Estate, London, E1 2AB"
