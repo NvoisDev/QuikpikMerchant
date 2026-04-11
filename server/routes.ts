@@ -4426,7 +4426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset all promotional pricing for wholesaler's products
-  app.post('/api/products/reset-promotions', requireAuth, async (req: any, res) => {
+  app.post('/api/products/reset-promotions', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       
@@ -4663,7 +4663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resend ready for collection notification
-  app.post("/api/orders/:id/resend-ready-notification", requireAuth, async (req, res) => {
+  app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireNotViewer, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8807,7 +8807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp Business API configuration endpoint
-  app.post('/api/whatsapp/configure', requireAuth, async (req: any, res) => {
+  app.post('/api/whatsapp/configure', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { 
@@ -11192,7 +11192,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.post('/api/message-templates', requireAuth, async (req: any, res) => {
+  app.post('/api/message-templates', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { products, ...templateData } = req.body;
@@ -11220,7 +11220,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.patch('/api/message-templates/:id', requireAuth, async (req: any, res) => {
+  app.patch('/api/message-templates/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const updates = req.body;
@@ -11233,7 +11233,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.delete('/api/message-templates/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/message-templates/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const templateId = parseInt(req.params.id);
@@ -11251,7 +11251,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.post('/api/message-templates/send-campaign', requireAuth, async (req: any, res) => {
+  app.post('/api/message-templates/send-campaign', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { templateId, customerGroupId } = req.body;
@@ -14909,7 +14909,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/stock-alerts/:alertId/read', requireAuth, async (req: any, res) => {
+  app.patch('/api/stock-alerts/:alertId/read', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { alertId } = req.params;
@@ -14921,7 +14921,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/stock-alerts/:alertId/resolve', requireAuth, async (req: any, res) => {
+  app.patch('/api/stock-alerts/:alertId/resolve', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { alertId } = req.params;
@@ -14951,7 +14951,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/settings/default-low-stock-threshold', requireAuth, async (req: any, res) => {
+  app.patch('/api/settings/default-low-stock-threshold', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { threshold } = req.body;
@@ -16688,7 +16688,7 @@ https://quikpik.app`;
   });
 
   // Create shipping for a specific order
-  app.post('/api/orders/:orderId/shipping', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:orderId/shipping', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { orderId } = req.params;

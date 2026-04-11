@@ -39,6 +39,9 @@ async function runStartupMigrations() {
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
     // Task #73: Add expiry date to products
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE`,
+    // Task #74: Drop any check constraint on team_members.role so 'viewer' is always valid.
+    // The column is varchar with no enum — this is a no-op if no constraint exists.
+    `DO $$ DECLARE con record; BEGIN FOR con IN SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='team_members' AND constraint_type='CHECK' AND constraint_name LIKE '%role%' LOOP EXECUTE 'ALTER TABLE team_members DROP CONSTRAINT IF EXISTS ' || quote_ident(con.constraint_name); END LOOP; END $$`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
