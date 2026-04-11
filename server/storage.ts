@@ -280,6 +280,7 @@ export interface IStorage {
   syncStockAlerts(wholesalerId: string): Promise<void>;
   markStockAlertAsRead(alertId: number, wholesalerId: string): Promise<void>;
   resolveStockAlert(alertId: number, wholesalerId: string): Promise<void>;
+  autoResolveStockAlertsIfRestocked(productId: number, newStock: number): Promise<number>;
   updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void>;
   updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void>;
   getAllRegistrationRequests(wholesalerId: string): Promise<any[]>;
@@ -3645,6 +3646,22 @@ export class DatabaseStorage implements IStorage {
           eq(stockAlerts.wholesalerId, wholesalerId)
         )
       );
+  }
+
+  async autoResolveStockAlertsIfRestocked(productId: number, newStock: number): Promise<number> {
+    const [product] = await db
+      .select({ lowStockThreshold: products.lowStockThreshold, moq: products.moq })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+    if (!product) return 0;
+    const threshold = Math.max(product.lowStockThreshold || 50, product.moq || 1);
+    if (newStock <= threshold) return 0;
+    const result = await db
+      .update(stockAlerts)
+      .set({ isResolved: true, resolvedAt: new Date() })
+      .where(and(eq(stockAlerts.productId, productId), eq(stockAlerts.isResolved, false)));
+    return (result as any).rowCount ?? 0;
   }
 
   async updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void> {

@@ -8181,11 +8181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stockAfter,
         reason,
       });
+
+      const alertsAutoResolved = await storage.autoResolveStockAlertsIfRestocked(productId, stockAfter);
+      if (alertsAutoResolved > 0) {
+        console.log(`✅ Auto-resolved ${alertsAutoResolved} stock alert(s) for product ${productId} (stock now ${stockAfter})`);
+      }
       
       res.json({ 
         success: true, 
         stockBefore, 
         stockAfter, 
+        alertsAutoResolved,
         message: `Stock ${adjustmentType}d by ${quantity} units` 
       });
     } catch (error) {

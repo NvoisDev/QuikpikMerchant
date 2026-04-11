@@ -942,6 +942,9 @@ export default function ProductManagement() {
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
+      // Sync stock alerts — auto-resolve clears alert cards if stock is now above threshold
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
       const qty = variables.quantity;
       const newStock = variables.adjustmentType === 'increase'
         ? stockProduct.stock + qty

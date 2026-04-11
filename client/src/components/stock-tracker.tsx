@@ -96,6 +96,9 @@ export default function StockTracker({ product }: StockTrackerProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/products/${product.id}/stock-movements`] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${product.id}/stock-summary`] });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      // Sync stock alerts — if stock went above threshold, auto-resolve clears the card
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
     },
     onError: (error: any) => {
       toast({

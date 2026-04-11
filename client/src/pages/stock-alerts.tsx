@@ -73,6 +73,7 @@ export default function StockAlerts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts/count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
       toast({
         title: "Alert Resolved",
         description: "Stock alert has been marked as resolved.",
