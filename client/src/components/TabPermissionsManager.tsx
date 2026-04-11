@@ -245,6 +245,10 @@ export default function TabPermissionsManager() {
               <Shield className="w-3 h-3" />
               <span><strong>Member:</strong> Access to allowed areas only</span>
             </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="w-3 h-3" />
+              <span><strong>Viewer:</strong> View-only access, no actions</span>
+            </div>
           </div>
         </div>
       </div>
