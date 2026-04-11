@@ -2074,9 +2074,33 @@ export default function OrdersFresh() {
                         <div className="text-orange-700 font-medium mt-1">
                           {selectedOrder.wholesalerBusinessName || 'Business Location'}
                         </div>
-                        <div className="text-orange-600 text-xs mt-2">
-                          Please contact the business to arrange collection time and get the exact address.
-                        </div>
+                        {(() => {
+                          const pickupAddr = (user as any)?.pickupAddress?.trim();
+                          const bizAddr = (user as any)?.businessAddress?.trim();
+                          const resolvedAddr = pickupAddr || bizAddr;
+                          if (resolvedAddr) {
+                            const city = (user as any)?.city?.trim();
+                            const postalCode = (user as any)?.postalCode?.trim();
+                            const suffix = [city, postalCode].filter(Boolean).join(', ');
+                            const fullAddr = suffix && !resolvedAddr.includes(suffix) ? `${resolvedAddr}, ${suffix}` : resolvedAddr;
+                            return (
+                              <div className="flex items-start mt-2 gap-1">
+                                <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-orange-700 text-xs">{fullAddr}</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="text-orange-600 text-xs mt-2">
+                              Please contact the business to arrange collection time and get the exact address.
+                            </div>
+                          );
+                        })()}
+                        {(user as any)?.businessPhone && (
+                          <div className="text-orange-600 text-xs mt-1">
+                            Phone: {(user as any).businessPhone}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

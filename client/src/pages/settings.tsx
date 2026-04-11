@@ -158,7 +158,8 @@ export default function Settings() {
     country: user?.country || 'United Kingdom',
     timezone: user?.timezone || 'UTC',
     logoType: user?.logoType || 'business',
-    logoUrl: user?.logoUrl || ''
+    logoUrl: user?.logoUrl || '',
+    pickupAddress: (user as any)?.pickupAddress || ''
   });
 
   // Sync form state with user data when user loads
@@ -180,7 +181,8 @@ export default function Settings() {
         country: user.country || 'United Kingdom',
         timezone: user.timezone || 'UTC',
         logoType: user.logoType || 'business',
-        logoUrl: user.logoUrl || ''
+        logoUrl: user.logoUrl || '',
+        pickupAddress: (user as any).pickupAddress || ''
       });
       setDeliveryEnabled((user as any).enableDelivery ?? true);
       setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
@@ -244,7 +246,8 @@ export default function Settings() {
 
   const handleSaveBusiness = async () => {
     try {
-      const response = await apiRequest('PUT', '/api/user/profile', businessForm);
+      const payload = { ...businessForm, pickupAddress: businessForm.pickupAddress.trim() || null };
+      const response = await apiRequest('PUT', '/api/user/profile', payload);
       const data = await response.json();
       
       if (data.success) {
@@ -570,7 +573,8 @@ export default function Settings() {
                               country: user?.country || 'United Kingdom',
                               timezone: user?.timezone || 'UTC',
                               logoType: user?.logoType || 'business',
-                              logoUrl: user?.logoUrl || ''
+                              logoUrl: user?.logoUrl || '',
+                              pickupAddress: (user as any)?.pickupAddress || ''
                             });
                           }}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
@@ -593,7 +597,7 @@ export default function Settings() {
                           <dd className="mt-1 text-sm text-gray-900">{user.businessPhone || 'Not set'}</dd>
                         </div>
                         <div className="sm:col-span-2">
-                          <dt className="text-sm font-medium text-gray-500">Business Address</dt>
+                          <dt className="text-sm font-medium text-gray-500">Registered Address</dt>
                           <dd className="mt-1 text-sm text-gray-900">
                             {user.businessAddress || 'Not set'}
                           </dd>
@@ -609,6 +613,16 @@ export default function Settings() {
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Country</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.country || 'United Kingdom'}</dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-sm font-medium text-gray-500">Collection Address</dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {(user as any).pickupAddress ? (
+                              (user as any).pickupAddress
+                            ) : (
+                              <span className="text-gray-400 italic">Same as registered address</span>
+                            )}
+                          </dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Timezone</dt>
@@ -654,7 +668,7 @@ export default function Settings() {
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="text-sm font-medium text-gray-500">Business Address</label>
+                          <label className="text-sm font-medium text-gray-500">Registered Address</label>
                           <textarea
                             value={businessForm.businessAddress}
                             onChange={(e) => setBusinessForm({...businessForm, businessAddress: e.target.value})}
@@ -707,6 +721,38 @@ export default function Settings() {
                             <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
                             <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
                           </select>
+                        </div>
+
+                        <div className="sm:col-span-2 border-t pt-4">
+                          <label className="text-sm font-medium text-gray-700 block mb-2">Collection Address</label>
+                          <label className="flex items-start gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 rounded border-gray-300 text-green-600"
+                              checked={businessForm.pickupAddress !== ''}
+                              onChange={(e) => {
+                                if (!e.target.checked) {
+                                  setBusinessForm({ ...businessForm, pickupAddress: '' });
+                                } else {
+                                  setBusinessForm({ ...businessForm, pickupAddress: ' ' });
+                                }
+                              }}
+                            />
+                            <span className="text-sm text-gray-600">Use a different address for customer collections</span>
+                          </label>
+                          {businessForm.pickupAddress !== '' ? (
+                            <textarea
+                              value={businessForm.pickupAddress.trim() === '' ? '' : businessForm.pickupAddress}
+                              onChange={(e) => setBusinessForm({ ...businessForm, pickupAddress: e.target.value })}
+                              className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              rows={3}
+                              placeholder="e.g. Unit 4, Trade Estate, London, E1 2AB"
+                            />
+                          ) : (
+                            <p className="mt-2 text-xs text-gray-400">
+                              Customers collecting orders will be directed to your registered business address.
+                            </p>
+                          )}
                         </div>
                         
                         <div className="sm:col-span-2">
