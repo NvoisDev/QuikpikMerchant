@@ -433,6 +433,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   console.log('✅ Session middleware configured successfully');
 
+  // ─── Viewer-role guard middleware ───────────────────────────────────────────
+  // Resolves the team member's sub-role (admin/member/viewer) from the
+  // teamMembers table and blocks write requests when the role is 'viewer'.
+  // Usage: app.post('/api/foo', requireAuth, requireNotViewer, handler)
+  const requireNotViewer = async (req: any, res: any, next: any) => {
+    if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
+      try {
+        const members = await storage.getTeamMembers(req.user.wholesalerId);
+        const member = members.find((m: any) => m.email === req.user.email);
+        if (!member) {
+          return res.status(403).json({ message: 'Team member record not found. Access denied.' });
+        }
+        if (member.role === 'viewer') {
+          return res.status(403).json({ message: 'Viewers can only view data. This action requires a higher permission level.' });
+        }
+      } catch (err) {
+        console.error('requireNotViewer: failed to resolve team member role', err);
+        return res.status(403).json({ message: 'Unable to verify permissions. Access denied.' });
+      }
+    }
+    next();
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // Apply lightweight performance middleware
   app.use(compression());
   app.use(performanceMiddleware.securityHeadersMiddleware());
@@ -2608,7 +2632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve or reject registration request
-  app.post('/api/registration-requests/:requestId/respond', requireAuth, async (req, res) => {
+  app.post('/api/registration-requests/:requestId/respond', requireAuth, requireNotViewer, async (req, res) => {
     try {
       const { requestId } = req.params;
       const { action, responseMessage, customerGroupId } = req.body;
@@ -2939,7 +2963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wholesaler endpoint: Add delivery address for a customer
-  app.post('/api/wholesaler/customers/:customerId/addresses', requireAuth, async (req: any, res) => {
+  app.post('/api/wholesaler/customers/:customerId/addresses', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const { customerId } = req.params;
@@ -2972,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wholesaler endpoint: Update a customer's delivery address
-  app.put('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, async (req: any, res) => {
+  app.put('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const { customerId, addressId } = req.params;
@@ -2996,7 +3020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wholesaler endpoint: Delete a customer's delivery address
-  app.delete('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, async (req: any, res) => {
+  app.delete('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const { customerId, addressId } = req.params;
@@ -3838,30 +3862,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Recovery failed' });
     }
   });
-
-  // ─── Viewer-role guard middleware ───────────────────────────────────────────
-  // Resolves the team member's sub-role (admin/member/viewer) from the
-  // teamMembers table and blocks write requests when the role is 'viewer'.
-  // Usage: app.post('/api/foo', requireAuth, requireNotViewer, handler)
-  const requireNotViewer = async (req: any, res: any, next: any) => {
-    if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
-      try {
-        const members = await storage.getTeamMembers(req.user.wholesalerId);
-        const member = members.find((m: any) => m.email === req.user.email);
-        if (!member) {
-          return res.status(403).json({ message: 'Team member record not found. Access denied.' });
-        }
-        if (member.role === 'viewer') {
-          return res.status(403).json({ message: 'Viewers can only view data. This action requires a higher permission level.' });
-        }
-      } catch (err) {
-        console.error('requireNotViewer: failed to resolve team member role', err);
-        return res.status(403).json({ message: 'Unable to verify permissions. Access denied.' });
-      }
-    }
-    next();
-  };
-  // ─────────────────────────────────────────────────────────────────────────────
 
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
@@ -8109,7 +8109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload image to order (wholesaler only)
-  app.post('/api/orders/:orderId/upload-image', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:orderId/upload-image', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const { orderId } = req.params;
       
@@ -8153,7 +8153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save uploaded image to order
-  app.post('/api/orders/:orderId/save-image', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:orderId/save-image', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const { orderId } = req.params;
       const { imageUrl, filename, description } = req.body;
@@ -8244,7 +8244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/orders/:orderId/upload-photo', requireAuth, (req: any, res: any, next: any) => {
+  app.post('/api/orders/:orderId/upload-photo', requireAuth, requireNotViewer, (req: any, res: any, next: any) => {
     // Run multer middleware so its errors (LIMIT_FILE_SIZE, bad mimetype) can be
     // converted to JSON responses before reaching the async handler below.
     orderPhotoUpload.single('photo')(req, res, (multerErr: any) => {
@@ -8329,7 +8329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete uploaded image from order
-  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, async (req: any, res) => {
+  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const { orderId, imageId } = req.params;
       
@@ -8360,7 +8360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resend order confirmation email
-  app.post('/api/orders/:id/resend-confirmation', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/resend-confirmation', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -8445,7 +8445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/inventory/alerts/:id/mark-read', requireAuth, async (req: any, res) => {
+  app.post('/api/inventory/alerts/:id/mark-read', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alertId = parseInt(req.params.id);
@@ -8458,7 +8458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/inventory/alerts/:id/resolve', requireAuth, async (req: any, res) => {
+  app.post('/api/inventory/alerts/:id/resolve', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alertId = parseInt(req.params.id);
@@ -10556,7 +10556,7 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Create advertising campaign
-  app.post("/api/advertising/campaigns", requireAuth, async (req: any, res) => {
+  app.post("/api/advertising/campaigns", requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -14553,7 +14553,7 @@ https://quikpik.app`;
   });
 
   // Send simple receipt email for existing order
-  app.post('/api/orders/:id/send-receipt', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/send-receipt', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -17369,7 +17369,7 @@ https://quikpik.app`;
   });
 
   // Send welcome message manually
-  app.post('/api/customers/:id/send-welcome', requireAuth, async (req: any, res) => {
+  app.post('/api/customers/:id/send-welcome', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const customerId = req.params.id;
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
@@ -17630,7 +17630,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/customers/bulk', requireAuth, async (req: any, res) => {
+  app.patch('/api/customers/bulk', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const { customerUpdates } = req.body;
       
@@ -17996,7 +17996,7 @@ https://quikpik.app`;
   });
 
   // Invite a customer to the wholesaler's platform
-  app.post('/api/wholesaler/invite-customer', requireAuth, async (req: any, res) => {
+  app.post('/api/wholesaler/invite-customer', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       const { email, phoneNumber, firstName, lastName, customMessage } = req.body;
@@ -18072,7 +18072,7 @@ https://quikpik.app`;
   });
 
   // Remove customer relationship
-  app.delete('/api/wholesaler/customer/:customerId', requireAuth, async (req: any, res) => {
+  app.delete('/api/wholesaler/customer/:customerId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       const { customerId } = req.params;
@@ -19529,7 +19529,7 @@ https://quikpik.app`;
   // =====================================================
   // GENERATE REMAINING BALANCE PAYMENT LINK
   // =====================================================
-  app.post('/api/orders/:orderId/generate-balance-link', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:orderId/generate-balance-link', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
