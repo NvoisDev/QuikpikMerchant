@@ -14,7 +14,7 @@ import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPi
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
@@ -179,7 +179,7 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 
 export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
-  const isViewer = (user as any)?.teamMemberRole === 'viewer';
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 
 import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
@@ -125,7 +125,7 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 
 export default function ProductManagement() {
   const { user } = useAuth();
-  const isViewer = (user as any)?.teamMemberRole === 'viewer';
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [, navigate] = useLocation();
   
   // SECURITY FIX: Removed hardcoded mock user to prevent data isolation bugs

@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
@@ -176,7 +176,7 @@ interface CustomerStats {
 
 export default function Customers() {
   const { user } = useAuth();
-  const isViewer = (user as any)?.teamMemberRole === 'viewer';
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();

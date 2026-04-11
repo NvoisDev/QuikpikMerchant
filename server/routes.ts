@@ -3848,11 +3848,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const members = await storage.getTeamMembers(req.user.wholesalerId);
         const member = members.find((m: any) => m.email === req.user.email);
-        if (member?.role === 'viewer') {
+        if (!member) {
+          return res.status(403).json({ message: 'Team member record not found. Access denied.' });
+        }
+        if (member.role === 'viewer') {
           return res.status(403).json({ message: 'Viewers can only view data. This action requires a higher permission level.' });
         }
-      } catch {
-        // If lookup fails, allow the request through (fail open for this guard)
+      } catch (err) {
+        console.error('requireNotViewer: failed to resolve team member role', err);
+        return res.status(403).json({ message: 'Unable to verify permissions. Access denied.' });
       }
     }
     next();
@@ -4777,7 +4781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark order items as prepared
-  app.put("/api/orders/:id/items-prepared", requireAuth, async (req, res) => {
+  app.put("/api/orders/:id/items-prepared", requireAuth, requireNotViewer, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -7408,7 +7412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Retry a pending Stripe refund for an order
-  app.post('/api/orders/:id/retry-refund', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/retry-refund', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
@@ -7734,7 +7738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wholesaler responds to cancellation request
-  app.post('/api/cancellation-requests/:id/respond', requireAuth, async (req: any, res) => {
+  app.post('/api/cancellation-requests/:id/respond', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const requestId = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -11715,7 +11719,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.post('/api/campaigns', requireAuth, async (req: any, res) => {
+  app.post('/api/campaigns', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       // Use parent company data for team members
@@ -11779,7 +11783,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
   });
 
   // Update campaign endpoint
-  app.put('/api/campaigns/:id', requireAuth, async (req: any, res) => {
+  app.put('/api/campaigns/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const campaignId = req.params.id;
@@ -11880,7 +11884,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
   });
 
   // Delete campaign endpoint
-  app.delete('/api/campaigns/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/campaigns/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const campaignId = req.params.id;
@@ -11919,7 +11923,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
-  app.post('/api/campaigns/send', requireAuth, async (req: any, res) => {
+  app.post('/api/campaigns/send', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       // Use parent company data for team members
@@ -12172,7 +12176,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
   });
 
   // Stock update refresh endpoint - resend campaign with current stock information
-  app.post('/api/campaigns/:id/refresh-stock', requireAuth, async (req: any, res) => {
+  app.post('/api/campaigns/:id/refresh-stock', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const campaignId = req.params.id;
       const user = req.user;
@@ -13180,7 +13184,7 @@ Please contact the customer to confirm this order.
   });
 
   // Bulk delete orders endpoint for wholesalers
-  app.delete("/api/orders/bulk-delete", requireAuth, async (req: any, res) => {
+  app.delete("/api/orders/bulk-delete", requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { 
@@ -14929,7 +14933,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/products/:productId/low-stock-threshold', requireAuth, async (req: any, res) => {
+  app.patch('/api/products/:productId/low-stock-threshold', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { productId } = req.params;
@@ -15030,8 +15034,8 @@ https://quikpik.app`;
       const { id } = req.params;
       const { role } = req.body;
       
-      if (!role || !['admin', 'member'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role. Must be 'admin' or 'member'" });
+      if (!role || !['admin', 'member', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role. Must be 'admin', 'member', or 'viewer'" });
       }
       
       // Get team member and verify ownership
@@ -19006,7 +19010,7 @@ https://quikpik.app`;
   // =====================================================
   // QUICK QUOTE - Create quote with custom prices and payment link
   // =====================================================
-  app.post('/api/quotes', requireAuth, async (req: any, res) => {
+  app.post('/api/quotes', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 

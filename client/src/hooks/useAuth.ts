@@ -2,10 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
 
+export type AuthUser = User & {
+  isTeamMember?: boolean;
+  teamMemberRole?: 'admin' | 'member' | 'viewer';
+};
+
 export function useAuth() {
   const queryClient = useQueryClient();
   
-  const { data: user, isLoading, error } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<AuthUser>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       try {
