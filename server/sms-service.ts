@@ -182,6 +182,31 @@ export class ReliableSMSService {
     }
   }
 
+  // Send a marketing/notification SMS to a customer
+  static async sendMarketingSMS(phoneNumber: string, message: string): Promise<{
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    this.initialize();
+
+    if (!this.twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
+      return { success: false, error: 'SMS service not configured' };
+    }
+
+    try {
+      const twilioMessage = await this.twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phoneNumber,
+        riskCheck: 'disable'
+      });
+      return { success: true, messageId: twilioMessage.sid };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'SMS sending failed' };
+    }
+  }
+
   // Check if SMS service is properly configured
   static isConfigured(): boolean {
     this.initialize();

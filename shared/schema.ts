@@ -68,6 +68,10 @@ export interface PromotionalOffer {
   description?: string;         // Display description for customers
   termsAndConditions?: string;  // Fine print
   
+  // Notification tracking (set after cron sends start/end alerts to customers)
+  startNotificationSentAt?: string;  // ISO datetime
+  endNotificationSentAt?: string;    // ISO datetime
+
   createdAt: string;
   updatedAt: string;
 }

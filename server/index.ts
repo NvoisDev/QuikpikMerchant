@@ -241,6 +241,18 @@ app.use((req, res, next) => {
       }
     });
     console.log(`📧 Payment reminder system enabled (daily at 9 AM)`);
+
+    // Start promotion start/end notifications (runs daily at 10 AM)
+    const { promotionNotificationService } = await import("./services/promotionNotificationService");
+    cron.schedule('0 10 * * *', async () => {
+      console.log('🎯 Running promotion notification check...');
+      try {
+        await promotionNotificationService.checkAndSendPromotionNotifications();
+      } catch (error) {
+        console.error('❌ Promotion notification check failed:', error);
+      }
+    });
+    console.log(`🎯 Promotion notification system enabled (daily at 10 AM)`);
     
     log(`serving on port ${port}`);
   });
