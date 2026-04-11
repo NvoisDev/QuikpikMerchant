@@ -1249,11 +1249,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get subscription details from Stripe if available
           let subscriptionEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          let periodStart: Date = new Date();
           if (session.subscription) {
             try {
               const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
               if (subscription.current_period_end) {
                 subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+              }
+              if (subscription.current_period_start) {
+                periodStart = new Date(subscription.current_period_start * 1000);
               }
               
               // Update user's Stripe subscription ID
@@ -1267,9 +1271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           await storage.updateUser(userId, {
             currentPlan: tier,
+            subscriptionTier: tier,
             subscriptionStatus: 'active',
             productLimit: productLimit,
-            subscriptionEndsAt: subscriptionEndsAt
+            subscriptionEndsAt: subscriptionEndsAt,
+            subscriptionPeriodEnd: subscriptionEndsAt,
+            subscriptionPeriodStart: periodStart,
           });
           
           console.log(`✅ ${subscriptionType || 'New'} subscription processed: ${userId} to ${tier}`);
@@ -1503,6 +1510,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productLimit: subProductLimit,
           stripeSubscriptionId: subscription.id,
           subscriptionEndsAt: subPeriodEnd,
+          subscriptionPeriodEnd: subPeriodEnd,
+          subscriptionPeriodStart: subPeriodStart,
         });
 
         // Propagate Stripe's cancel_at_period_end so update events don't desync cancellation state
