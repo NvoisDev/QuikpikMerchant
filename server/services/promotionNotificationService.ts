@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { products, users } from "../../shared/schema";
 import type { PromotionalOffer } from "../../shared/schema";
-import { eq, and, isNotNull, ne, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { ReliableSMSService } from "../sms-service";
 import {
@@ -233,10 +233,7 @@ async function markPromotionNotified(
     o.id === promoId ? { ...o, [field]: new Date().toISOString() } : o
   );
 
-  await db
-    .update(products)
-    .set({ promotionalOffers: updated as any })
-    .where(eq(products.id, productId));
+  await storage.updateProduct(productId, { promotionalOffers: updated });
 }
 
 export class PromotionNotificationService {
@@ -274,8 +271,6 @@ export class PromotionNotificationService {
         const offers = (product.promotionalOffers as PromotionalOffer[]) || [];
 
         for (const promo of offers) {
-          if (!promo.isActive) continue;
-
           if (
             promo.startDate &&
             promo.startDate.slice(0, 10) === today &&
@@ -356,14 +351,11 @@ export class PromotionNotificationService {
           ? buildStartSMS(promoProducts, wholesaler, storeUrl)
           : buildEndSMS(promoProducts, wholesaler, storeUrl);
 
+      const n = promoProducts.length;
       const subject =
         eventType === "start"
-          ? promoProducts.length === 1
-            ? `New deal at ${wholesaler.businessName}!`
-            : `${promoProducts.length} new deals at ${wholesaler.businessName}!`
-          : promoProducts.length === 1
-          ? `Last chance — deal ends today at ${wholesaler.businessName}`
-          : `Last chance — ${promoProducts.length} deals end today at ${wholesaler.businessName}`;
+          ? `New deals just launched — ${n} product${n === 1 ? "" : "s"} on sale now`
+          : `Last chance — ${n} deal${n === 1 ? "" : "s"} end today`;
 
       let emailsSent = 0;
       let smsSent = 0;
@@ -386,16 +378,20 @@ export class PromotionNotificationService {
         }
       }
 
+      const atLeastOneDelivered = emailsSent > 0 || smsSent > 0;
+
       console.log(
-        `📢 ${eventType === "start" ? "Start" : "End"} notifications sent for ${wholesaler.businessName}: ${emailsSent} emails, ${smsSent} SMS across ${promoProducts.length} promoted product(s)`
+        `📢 ${eventType === "start" ? "Start" : "End"} notifications for ${wholesaler.businessName}: ${emailsSent} emails, ${smsSent} SMS — ${atLeastOneDelivered ? "marking sent" : "no delivery, NOT marking sent"}`
       );
 
-      for (const pp of promoProducts) {
-        await markPromotionNotified(
-          pp.id,
-          pp.matchedPromo.id,
-          eventType === "start" ? "startNotificationSentAt" : "endNotificationSentAt"
-        );
+      if (atLeastOneDelivered) {
+        for (const pp of promoProducts) {
+          await markPromotionNotified(
+            pp.id,
+            pp.matchedPromo.id,
+            eventType === "start" ? "startNotificationSentAt" : "endNotificationSentAt"
+          );
+        }
       }
 
     } catch (error) {
