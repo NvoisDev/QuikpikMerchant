@@ -773,8 +773,7 @@ export default function TeamManagement() {
                             onClick={() => handleEditRole(member)}
                             className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
                           >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit Role
+                            <Edit className="h-3 w-3" />
                           </Button>
                         )}
                         <DropdownMenu>
