@@ -314,7 +314,7 @@ export const ThankYouPage = ({
                     </div>
                   )}
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                    <span>Total Paid:</span>
+                    <span>{payLater ? 'Total Due:' : 'Total Paid:'}</span>
                     <span>{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
