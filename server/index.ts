@@ -37,6 +37,8 @@ async function runStartupMigrations() {
     `UPDATE users SET product_limit = 10 WHERE subscription_tier = 'free' AND product_limit IS NOT NULL AND product_limit < 10`,
     // Task #72: Add phone number to team members for SMS stock alerts
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
+    // Task #73: Add expiry date to products
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

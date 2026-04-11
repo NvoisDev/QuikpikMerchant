@@ -66,6 +66,7 @@ interface Product {
   palletMoq?: number;
   palletStock?: number;
   palletWeight?: number;
+  expiryDate?: string | null;
 }
 
 interface ProductCardProps {
@@ -134,6 +135,20 @@ export default function ProductCard({
 
   // Check if product is locked
   const isLocked = product.status === 'locked';
+
+  const getExpiryInfo = (expiryDate?: string | null) => {
+    if (!expiryDate) return null;
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const formatted = expiry.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    if (diffDays < 0) return { label: "Expired", className: "bg-red-100 text-red-700 border-red-200", formatted };
+    if (diffDays <= 30) return { label: `Expiring soon · ${formatted}`, className: "bg-amber-100 text-amber-700 border-amber-200", formatted };
+    return { label: `Exp: ${formatted}`, className: "bg-gray-100 text-gray-600 border-gray-200", formatted };
+  };
+
+  const expiryInfo = getExpiryInfo(product.expiryDate);
 
   // Premium access - unlimited edits
   const getEditLimitInfo = () => {
@@ -443,6 +458,14 @@ export default function ProductCard({
               {formatNumber(product.stock)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
             </span>
           </div>
+          {expiryInfo && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Expiry:</span>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${expiryInfo.className}`}>
+                {expiryInfo.label}
+              </span>
+            </div>
+          )}
           {product.sellingFormat === 'both' && (
             <>
               <div className="flex justify-between items-center border-t pt-2 mt-2">

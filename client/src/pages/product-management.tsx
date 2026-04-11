@@ -104,6 +104,7 @@ const productFormSchema = z.object({
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   lowStockThreshold: z.string().optional(),
   shelfLife: z.string().optional(),
+  expiryDate: z.string().optional(),
   unit: z.string().optional(),
   
   // Delivery exclusion
@@ -241,6 +242,7 @@ export default function ProductManagement() {
       palletWeight: "",
       lowStockThreshold: String(user?.defaultLowStockThreshold || 50),
       shelfLife: "",
+      expiryDate: "",
       unit: "units",
       sellingFormat: "units" as "units" | "pallets" | "both",
       deliveryExcluded: false,
@@ -288,6 +290,7 @@ export default function ProductManagement() {
             palletWeight: String(editingProduct.palletWeight || ""),
             lowStockThreshold: String(editingProduct.lowStockThreshold || ""),
             shelfLife: String(editingProduct.shelfLife || ""),
+            expiryDate: editingProduct.expiryDate ? String(editingProduct.expiryDate).substring(0, 10) : "",
             unit: editingProduct.unit || "units",
             sellingFormat: editingProduct.sellingFormat || "units",
             deliveryExcluded: Boolean(editingProduct.deliveryExcluded),
@@ -662,8 +665,8 @@ export default function ProductManagement() {
     filteredProductsCount: products?.filter((product: any) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (statusFilter === "expiring") return matchesSearch && !!product.expiryDate;
       const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
-      
       return matchesSearch && matchesStatus;
     }).length
   });
@@ -898,6 +901,7 @@ export default function ProductManagement() {
         contentCategory: product.contentCategory || "general",
         specialHandling: typeof product.specialHandling === 'object' ? product.specialHandling : {},
         shelfLife: String(product.shelfLife || ""),
+        expiryDate: product.expiryDate ? String(product.expiryDate).substring(0, 10) : "",
         lowStockThreshold: String(product.lowStockThreshold || "50"),
         // Pallet configuration fields
         sellingFormat: product.sellingFormat || "units",
@@ -1269,13 +1273,22 @@ export default function ProductManagement() {
     window.URL.revokeObjectURL(url);
   };
 
-  const filteredProducts = products?.filter((product: any) => {
+  const filteredProducts = (products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (statusFilter === "expiring") {
+      return matchesSearch && !!product.expiryDate;
+    }
     const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
-    
     return matchesSearch && matchesStatus;
-  }) || [];
+  }) || []).sort((a: any, b: any) => {
+    if (statusFilter === "expiring") {
+      const dateA = a.expiryDate ? new Date(a.expiryDate).getTime() : Infinity;
+      const dateB = b.expiryDate ? new Date(b.expiryDate).getTime() : Infinity;
+      return dateA - dateB;
+    }
+    return 0;
+  });
 
   return (
     <>
@@ -1676,6 +1689,23 @@ export default function ProductManagement() {
                             </FormControl>
                             <p className="text-xs text-gray-500 mt-1">
                               Overrides the default for this product only. Leave blank to fall back to your account default (currently {user?.defaultLowStockThreshold || 50} units — set in Settings → Notifications).
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="expiryDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Expiry Date <span className="text-gray-400 font-normal">(optional)</span></FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Best-before or use-by date. Shown on the product card with colour-coded alerts.
                             </p>
                             <FormMessage />
                           </FormItem>
@@ -2390,6 +2420,7 @@ export default function ProductManagement() {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                <SelectItem value="expiring">Expiring Products</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
@@ -2590,7 +2621,9 @@ export default function ProductManagement() {
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">No products found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || statusFilter !== "all"
+                {statusFilter === "expiring"
+                  ? "No expiry dates set — add expiry dates to your products to track them here"
+                  : searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first product"}
               </p>

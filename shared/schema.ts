@@ -10,6 +10,7 @@ import {
   decimal,
   boolean,
   uuid,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -477,6 +478,7 @@ export const products = pgTable("products", {
   temperatureRequirement: varchar("temperature_requirement").default("ambient"), // 'frozen', 'chilled', 'ambient'
   specialHandling: jsonb("special_handling").default({}), // {fragile: boolean, hazardous: boolean, perishable: boolean}
   shelfLife: integer("shelf_life"), // Days before expiry
+  expiryDate: date("expiry_date"), // Specific expiry / best-before date for this batch
   contentCategory: varchar("content_category").default("general"), // 'food', 'pharmaceuticals', 'electronics', 'textiles', 'general'
   
 
