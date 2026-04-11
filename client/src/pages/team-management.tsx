@@ -772,6 +772,8 @@ export default function TeamManagement() {
                             size="sm"
                             onClick={() => handleEditRole(member)}
                             className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
+                            aria-label="Edit role"
+                            title="Edit role"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
