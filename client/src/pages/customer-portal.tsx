@@ -4997,39 +4997,24 @@ export default function CustomerPortal() {
                             const computedBeforeFees = computedSubtotal + computedShipping;
                             const computedTransactionFee = (computedBeforeFees * 0.055) + 0.50;
                             const computedTotal = computedBeforeFees + computedTransactionFee;
-                            const orderItems = cart.map(cartItem => {
-                              let computedTotal2: number;
-                              let promoLabel: string | undefined;
-                              if (cartItem.sellingType === 'pallets') {
-                                computedTotal2 = parseFloat((cartItem.product as any).palletPrice || '0') * cartItem.quantity;
-                              } else {
-                                const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
-                                computedTotal2 = pricing.totalCost;
-                                promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
-                              }
-                              return {
-                                product: { ...cartItem.product, palletPrice: (cartItem.product as any).palletPrice },
-                                quantity: cartItem.quantity,
-                                sellingType: cartItem.sellingType,
-                                computedTotal: computedTotal2,
-                                promoLabel,
-                              };
-                            });
                             setCompletedOrder({
                               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
-                              cart: orderItems as any,
+                              cart: cart.map(cartItem => ({
+                                product: cartItem.product,
+                                quantity: cartItem.quantity,
+                                sellingType: cartItem.sellingType,
+                              })),
                               customerData: {
                                 ...customerData,
                                 shippingOption: currentShippingOption,
                                 selectedDeliveryAddress: customerData.selectedDeliveryAddress,
                               },
-                              wholesaler,
                               subtotal: computedSubtotal,
                               transactionFee: computedTransactionFee,
                               shippingCost: computedShipping,
                               totalAmount: computedTotal,
                               payLater: true,
-                            } as any);
+                            });
                             setCart([]);
                             setPayLaterMode(false);
                             setClientSecret('');
@@ -5049,10 +5034,10 @@ export default function CustomerPortal() {
                               title: "Order Placed!",
                               description: `${orderData.orderNumber} — Pay Later order confirmed. The supplier will contact you.`,
                             });
-                          } catch (err: any) {
+                          } catch (err: unknown) {
                             toast({
                               title: "Order Failed",
-                              description: err.message || "Failed to place order. Please try again.",
+                              description: err instanceof Error ? err.message : "Failed to place order. Please try again.",
                               variant: "destructive",
                             });
                           } finally {

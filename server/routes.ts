@@ -6649,7 +6649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lineTotal = unitPrice * quantity;
         } else {
           const basePrice = parseFloat(product.price);
-          const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+          const offers = product.promotionalOffers ?? [];
           const now = new Date();
           unitPrice = basePrice;
           lineTotal = basePrice * quantity;
@@ -6760,34 +6760,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // --- Send notifications ---
 
       // WhatsApp notification to wholesaler (mirrors create-order flow)
-      if (wholesalerProfile && (wholesalerProfile as any).twilioAuthToken && (wholesalerProfile as any).twilioPhoneNumber) {
+      if (wholesalerProfile?.whatsappAccessToken && wholesalerProfile.whatsappBusinessPhoneId) {
         const currencySymbol = wholesalerProfile.preferredCurrency === 'GBP' ? '£' : '$';
         const waMessage = `🛒 New Pay Later Order!\n\nOrder: ${orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${total}\n\nPayment: Due on invoice — no upfront payment taken.`;
         try {
-          if ((wholesalerProfile as any).whatsappEnabled && (wholesalerProfile as any).whatsappAccessToken && (wholesalerProfile as any).whatsappBusinessPhoneId) {
-            await whatsAppBusinessService.sendMessage(
-              (wholesalerProfile as any).businessPhone || (wholesalerProfile as any).phoneNumber,
-              waMessage,
-              {
-                accessToken: (wholesalerProfile as any).whatsappAccessToken,
-                phoneNumberId: (wholesalerProfile as any).whatsappBusinessPhoneId,
-              }
-            );
-          }
-        } catch (waError) {
-          console.error('❌ WhatsApp notification error (pay-later):', waError);
+          await whatsAppBusinessService.sendMessage(
+            wholesalerProfile.businessPhone || wholesalerProfile.phoneNumber || '',
+            waMessage,
+            {
+              accessToken: wholesalerProfile.whatsappAccessToken,
+              phoneNumberId: wholesalerProfile.whatsappBusinessPhoneId,
+            }
+          );
+        } catch (waError: unknown) {
+          console.error('❌ WhatsApp notification error (pay-later):', waError instanceof Error ? waError.message : String(waError));
         }
       }
 
       if (wholesalerProfile && customerEmail) {
         try {
           const savedItems = await storage.getOrderItems(order.id);
-          const enrichedItems = await Promise.all(savedItems.map(async (item: any) => {
-            const product = await storage.getProduct(item.productId);
-            return { ...item, productName: product?.name || `Product #${item.productId}`, product: product ? { name: product.name } : null };
+          const enrichedItems = await Promise.all(savedItems.map(async (item) => {
+            const prod = await storage.getProduct(item.productId);
+            return { ...item, productName: prod?.name || `Product #${item.productId}`, product: prod ? { name: prod.name } : null };
           }));
           await sendCustomerInvoiceEmail(
-            { name: customerName, email: customerEmail, phone: customerPhone, address: deliveryAddress || undefined } as any,
+            { name: customerName, email: customerEmail, phone: customerPhone, address: deliveryAddress || undefined },
             order,
             enrichedItems,
             wholesalerProfile
@@ -6799,10 +6797,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (wholesalerProfile?.email) {
         try {
-          const enrichedForEmail = await Promise.all(orderItemsData.map(async (item: any) => {
-            const product = await storage.getProduct(item.productId);
+          const enrichedForEmail = await Promise.all(orderItemsData.map(async (item) => {
+            const prod = await storage.getProduct(item.productId);
             return {
-              productName: product?.name || `Product #${item.productId}`,
+              productName: prod?.name || `Product #${item.productId}`,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               total: item.total,
@@ -6854,9 +6852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderId: order.id,
         orderNumber: order.orderNumber || orderNumber,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Error creating pay-later order:', error);
-      res.status(500).json({ message: 'Failed to create order: ' + error.message });
+      res.status(500).json({ message: 'Failed to create order: ' + (error instanceof Error ? error.message : String(error)) });
     }
   });
 
