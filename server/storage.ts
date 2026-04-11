@@ -890,7 +890,7 @@ export class DatabaseStorage implements IStorage {
         }
       } catch { parsedOffers = []; }
       const livePromo = resolveLivePromo(parsedOffers, String(row.price));
-      return {
+      return ({
         id: Number(row.id),
         name: String(row.name),
         wholesalerId: String(row.wholesaler_id),
@@ -905,12 +905,12 @@ export class DatabaseStorage implements IStorage {
         imageUrl: row.image_url ? String(row.image_url) : null,
         images: Array.isArray(row.images) ? row.images : [],
         category: row.category ? String(row.category) : null,
-        status: String(row.status) as any,
+        status: String(row.status),
         priceVisible: Boolean(row.price_visible !== false),
         negotiationEnabled: Boolean(row.negotiation_enabled),
         minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
         editCount: Number(row.edit_count || 0),
-        sellingFormat: String(row.selling_format || 'units') as any,
+        sellingFormat: String(row.selling_format || 'units'),
         palletPrice: row.pallet_price ? String(row.pallet_price) : null,
         palletMoq: row.pallet_moq ? Number(row.pallet_moq) : null,
         palletStock: row.pallet_stock ? Number(row.pallet_stock) : null,
@@ -935,14 +935,14 @@ export class DatabaseStorage implements IStorage {
         unitConfiguration: {},
         unitSize: row.size_per_unit ? String(row.size_per_unit) : null,
         unitWeightKg: null,
-        temperatureRequirement: 'ambient' as any,
+        temperatureRequirement: 'ambient',
         specialHandling: {},
         shelfLife: null,
         contentCategory: null,
         expiryDate: row.expiry_date ? String(row.expiry_date) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null,
-      } as any;
+      });
     });
   }
 
