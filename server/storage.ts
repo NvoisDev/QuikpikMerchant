@@ -3650,7 +3650,7 @@ export class DatabaseStorage implements IStorage {
 
   async autoResolveStockAlertsIfRestocked(productId: number, newStock: number): Promise<number> {
     const [product] = await db
-      .select({ lowStockThreshold: products.lowStockThreshold, moq: products.moq })
+      .select({ lowStockThreshold: products.lowStockThreshold, moq: products.moq, wholesalerId: products.wholesalerId })
       .from(products)
       .where(eq(products.id, productId))
       .limit(1);
@@ -3660,12 +3660,20 @@ export class DatabaseStorage implements IStorage {
     const openAlerts = await db
       .select({ id: stockAlerts.id })
       .from(stockAlerts)
-      .where(and(eq(stockAlerts.productId, productId), eq(stockAlerts.isResolved, false)));
+      .where(and(
+        eq(stockAlerts.productId, productId),
+        eq(stockAlerts.wholesalerId, product.wholesalerId),
+        eq(stockAlerts.isResolved, false)
+      ));
     if (openAlerts.length === 0) return 0;
     await db
       .update(stockAlerts)
       .set({ isResolved: true, resolvedAt: new Date() })
-      .where(and(eq(stockAlerts.productId, productId), eq(stockAlerts.isResolved, false)));
+      .where(and(
+        eq(stockAlerts.productId, productId),
+        eq(stockAlerts.wholesalerId, product.wholesalerId),
+        eq(stockAlerts.isResolved, false)
+      ));
     return openAlerts.length;
   }
 
