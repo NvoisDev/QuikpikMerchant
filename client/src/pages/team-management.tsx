@@ -636,9 +636,10 @@ export default function TeamManagement() {
               {Array.isArray(teamMembers) && teamMembers.map((member: TeamMember) => (
                 <div 
                   key={member.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg space-y-4 sm:space-y-0"
+                  className="flex flex-col p-4 border rounded-lg gap-3"
                 >
-                  <div className="flex items-center space-x-4">
+                  {/* Row 1: Avatar + Name + Email */}
+                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                       <span className="text-emerald-700 font-semibold text-sm">
                         {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
@@ -648,22 +649,22 @@ export default function TeamManagement() {
                       <h3 className="font-semibold text-gray-900 truncate">
                         {member.firstName} {member.lastName}
                       </h3>
-                      <p className="text-sm text-gray-600 flex items-center gap-2 truncate">
+                      <p className="text-sm text-gray-600 flex items-center gap-1 min-w-0">
                         <Mail className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>
                       </p>
                     </div>
                   </div>
-                  
-                  {/* Status and Role - Mobile responsive */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-                    <div className="flex items-center gap-2">
+
+                  {/* Row 2: Status + Role badges + last login (last login hidden on mobile) */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {getStatusIcon(member.status)}
                       <Badge variant={getStatusBadgeVariant(member.status)} className="text-xs">
                         {member.status}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {member.role === 'admin' ? (
                         <ShieldCheck className="h-4 w-4 text-blue-500" />
                       ) : (
@@ -676,82 +677,78 @@ export default function TeamManagement() {
                         {member.role === 'admin' ? 'Full Access' : 'Limited Access'}
                       </span>
                     </div>
-                    
-                    {/* Last login display */}
-                    <p className="text-xs text-gray-400 hidden sm:block min-w-[130px]">
+                    <p className="text-xs text-gray-400 hidden sm:block">
                       {formatLastLogin((member as any).lastLoginAt)}
                     </p>
+                  </div>
 
-                    {/* Actions — owner only */}
-                    {user?.role !== 'team_member' && (
-                      <div className="flex flex-wrap items-center gap-2">
-                        {member.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleResendInvite(member.id)}
-                              disabled={resendInviteMutation.isPending}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 text-xs"
-                            >
-                              <Mail className="h-3 w-3 mr-1" />
-                              <span className="hidden sm:inline">{resendInviteMutation.isPending ? "Sending..." : "Resend Email"}</span>
-                              <span className="sm:hidden">Resend</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCopyInviteLink(member)}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 text-xs"
-                            >
-                              <Copy className="h-3 w-3 mr-1" />
-                              <span className="hidden sm:inline">Copy Link</span>
-                              <span className="sm:hidden">Copy</span>
-                            </Button>
-                          </>
-                        )}
-                        {member.status !== 'pending' && (
+                  {/* Row 3: Action buttons */}
+                  {user?.role !== 'team_member' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {member.status === 'pending' && (
+                        <>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditRole(member)}
-                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
+                            onClick={() => handleResendInvite(member.id)}
+                            disabled={resendInviteMutation.isPending}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 text-xs"
                           >
-                            <Edit className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">Edit Role</span>
-                            <span className="sm:hidden">Edit</span>
+                            <Mail className="h-3 w-3 mr-1" />
+                            {resendInviteMutation.isPending ? "Sending..." : "Resend Email"}
                           </Button>
-                        )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 text-xs px-2">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {member.status !== 'pending' && (
-                              <DropdownMenuItem
-                                onClick={() => resetPasswordMutation.mutate(member.id)}
-                                className="text-blue-600"
-                                disabled={resetPasswordMutation.isPending}
-                              >
-                                <KeyRound className="h-4 w-4 mr-2" />
-                                Send password reset
-                              </DropdownMenuItem>
-                            )}
-                            {member.status === 'active' && (
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'suspended' })}
-                                className="text-amber-600"
-                              >
-                                <PauseCircle className="h-4 w-4 mr-2" />
-                                Suspend access
-                              </DropdownMenuItem>
-                            )}
-                            {member.status === 'suspended' && (
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'active' })}
-                                className="text-green-600"
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyInviteLink(member)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 text-xs"
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy Link
+                          </Button>
+                        </>
+                      )}
+                      {member.status !== 'pending' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditRole(member)}
+                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit Role
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 text-xs px-2">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {member.status !== 'pending' && (
+                            <DropdownMenuItem
+                              onClick={() => resetPasswordMutation.mutate(member.id)}
+                              className="text-blue-600"
+                              disabled={resetPasswordMutation.isPending}
+                            >
+                              <KeyRound className="h-4 w-4 mr-2" />
+                              Send password reset
+                            </DropdownMenuItem>
+                          )}
+                          {member.status === 'active' && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'suspended' })}
+                              className="text-amber-600"
+                            >
+                              <PauseCircle className="h-4 w-4 mr-2" />
+                              Suspend access
+                            </DropdownMenuItem>
+                          )}
+                          {member.status === 'suspended' && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ memberId: member.id, status: 'active' })}
+                              className="text-green-600"
                               >
                                 <PlayCircle className="h-4 w-4 mr-2" />
                                 Reactivate
@@ -768,10 +765,9 @@ export default function TeamManagement() {
                         </DropdownMenu>
                       </div>
                     )}
-                    {user?.role === 'team_member' && (
-                      <p className="text-xs text-gray-400 italic">Read only</p>
-                    )}
-                  </div>
+                  {user?.role === 'team_member' && (
+                    <p className="text-xs text-gray-400 italic">Read only</p>
+                  )}
                 </div>
               ))}
             </div>
