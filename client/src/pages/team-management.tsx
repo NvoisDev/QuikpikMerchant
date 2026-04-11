@@ -37,7 +37,8 @@ import {
   PlayCircle,
   MoreVertical,
   KeyRound,
-  Phone
+  Phone,
+  Eye
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,7 +54,7 @@ const teamMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional(),
   phoneNumber: z.string().optional(),
-  role: z.enum(["admin", "member"]),
+  role: z.enum(["admin", "member", "viewer"]),
   permissions: z.array(z.string()).default(["products", "orders", "customers"]),
 });
 
@@ -523,6 +524,15 @@ export default function TeamManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="viewer" textValue="Viewer">
+                            <div className="flex flex-col py-1">
+                              <div className="flex items-center gap-2">
+                                <Eye className="w-4 h-4 text-purple-500" />
+                                <span className="font-medium">Viewer</span>
+                              </div>
+                              <span className="text-xs text-gray-500">Read-only — can view but cannot make any changes</span>
+                            </div>
+                          </SelectItem>
                           <SelectItem value="member" textValue="Member">
                             <div className="flex flex-col py-1">
                               <div className="flex items-center gap-2">
@@ -710,14 +720,19 @@ export default function TeamManagement() {
                       <div className="flex items-center gap-1">
                         {member.role === 'admin' ? (
                           <ShieldCheck className="h-4 w-4 text-blue-500" />
+                        ) : member.role === 'viewer' ? (
+                          <Eye className="h-4 w-4 text-purple-500" />
                         ) : (
                           <Shield className="h-4 w-4 text-gray-400" />
                         )}
-                        <Badge variant={member.role === 'admin' ? 'default' : 'outline'} className={`text-xs ${member.role === 'admin' ? 'bg-blue-500 text-white' : ''}`}>
-                          {member.role === 'admin' ? 'Admin' : 'Member'}
+                        <Badge
+                          variant={member.role === 'admin' ? 'default' : 'outline'}
+                          className={`text-xs ${member.role === 'admin' ? 'bg-blue-500 text-white' : member.role === 'viewer' ? 'border-purple-300 text-purple-700' : ''}`}
+                        >
+                          {member.role === 'admin' ? 'Admin' : member.role === 'viewer' ? 'Viewer' : 'Member'}
                         </Badge>
                         <span className="text-xs text-gray-500 hidden sm:inline">
-                          {member.role === 'admin' ? 'Full Access' : 'Limited Access'}
+                          {member.role === 'admin' ? 'Full Access' : member.role === 'viewer' ? 'View Only' : 'Limited Access'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-400 hidden sm:block">
@@ -887,6 +902,19 @@ export default function TeamManagement() {
                       <div className="text-left">
                         <div className="font-medium">Member</div>
                         <div className="text-xs opacity-75">Limited access based on tab permissions</div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      variant={selectedMemberForRoleEdit.role === 'viewer' ? 'default' : 'outline'}
+                      className={`w-full justify-start ${selectedMemberForRoleEdit.role === 'viewer' ? 'bg-purple-500 text-white' : 'text-purple-600 hover:bg-purple-50 border-purple-200'}`}
+                      onClick={() => handleUpdateRole('viewer')}
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      <div className="text-left">
+                        <div className="font-medium">Viewer</div>
+                        <div className="text-xs opacity-75">Read-only — can view data but cannot make changes</div>
                       </div>
                     </Button>
                   </div>

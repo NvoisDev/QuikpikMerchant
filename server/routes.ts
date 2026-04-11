@@ -3839,6 +3839,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── Viewer-role guard middleware ───────────────────────────────────────────
+  // Resolves the team member's sub-role (admin/member/viewer) from the
+  // teamMembers table and blocks write requests when the role is 'viewer'.
+  // Usage: app.post('/api/foo', requireAuth, requireNotViewer, handler)
+  const requireNotViewer = async (req: any, res: any, next: any) => {
+    if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
+      try {
+        const members = await storage.getTeamMembers(req.user.wholesalerId);
+        const member = members.find((m: any) => m.email === req.user.email);
+        if (member?.role === 'viewer') {
+          return res.status(403).json({ message: 'Viewers can only view data. This action requires a higher permission level.' });
+        }
+      } catch {
+        // If lookup fails, allow the request through (fail open for this guard)
+      }
+    }
+    next();
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
       // Always fetch fresh user data from database to ensure subscription updates are reflected
@@ -3847,9 +3867,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let responseUser = freshUserData || req.user;
       
-      // Check if this user is a team member and get wholesaler info
+      // Check if this user is a team member and get wholesaler info + sub-role
       if (responseUser.role === 'team_member' && responseUser.wholesalerId) {
         const wholesalerInfo = await storage.getUser(responseUser.wholesalerId);
+        const members = await storage.getTeamMembers(responseUser.wholesalerId);
+        const member = members.find((m: any) => m.email === responseUser.email);
+        const teamMemberRole = member?.role ?? 'member';
         if (wholesalerInfo) {
           responseUser = {
             ...responseUser,
@@ -3857,6 +3880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             logoType: wholesalerInfo.logoType,
             logoUrl: wholesalerInfo.logoUrl,
             isTeamMember: true,
+            teamMemberRole,
             role: 'team_member'
           };
         }
@@ -4080,7 +4104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products', requireAuth, requireProductLimits(), async (req: any, res) => {
+  app.post('/api/products', requireAuth, requireNotViewer, requireProductLimits(), async (req: any, res) => {
     try {
       // Use parent company ID for team members to ensure data inheritance
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -4119,7 +4143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/products/:id', requireAuth, async (req: any, res) => {
+  app.patch('/api/products/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
       ? req.user.wholesalerId 
       : req.user.id;
@@ -4157,7 +4181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/products/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/products/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       // Use parent company ID for team members to inherit data access
@@ -4237,7 +4261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add a promotion to a product
-  app.post('/api/products/:id/promotions', requireAuth, async (req: any, res) => {
+  app.post('/api/products/:id/promotions', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -4292,7 +4316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a promotion on a product
-  app.patch('/api/products/:id/promotions/:promoId', requireAuth, async (req: any, res) => {
+  app.patch('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -4348,7 +4372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a promotion from a product
-  app.delete('/api/products/:id/promotions/:promoId', requireAuth, async (req: any, res) => {
+  app.delete('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -4472,7 +4496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark order as ready for collection/delivery
-  app.put('/api/orders/:id/ready-for-collection', requireAuth, async (req: any, res) => {
+  app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       console.log(`📦 Ready for collection request for order ID: ${orderId}`);
@@ -4701,7 +4725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark order as paid offline (cash, bank transfer, cheque, etc.)
-  app.post('/api/orders/:id/mark-as-paid', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/mark-as-paid', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -5256,7 +5280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/orders', requireAuth, async (req: any, res) => {
+  app.post('/api/orders', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { items, deliveryAddress, notes } = req.body;
@@ -6940,7 +6964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/orders/:id/status', requireAuth, async (req: any, res) => {
+  app.patch('/api/orders/:id/status', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
@@ -7004,7 +7028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel order with optional partial return and refund
-  app.post('/api/orders/:id/cancel', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/cancel', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -7970,7 +7994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Refund order
-  app.post('/api/orders/:id/refund', requireAuth, async (req: any, res) => {
+  app.post('/api/orders/:id/refund', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -8499,7 +8523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products/:id/stock-adjustment', requireAuth, async (req: any, res) => {
+  app.post('/api/products/:id/stock-adjustment', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const productId = parseInt(req.params.id);
@@ -8649,7 +8673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/customer-groups', requireAuth, async (req: any, res) => {
+  app.post('/api/customer-groups', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -8698,7 +8722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
+  app.put('/api/customer-groups/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -8732,7 +8756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete customer group
-  app.delete('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/customer-groups/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -8835,7 +8859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add member to customer group
-  app.post('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/members', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -9010,7 +9034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add existing customer to group by customer ID
-  app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -9092,7 +9116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove member from customer group
-  app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
+  app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -9171,7 +9195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Merge duplicate customers
-  app.post('/api/customers/merge', requireAuth, async (req: any, res) => {
+  app.post('/api/customers/merge', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
@@ -9730,7 +9754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp Broadcast endpoints
-  app.post('/api/broadcasts', requireAuth, requireBroadcastLimits(), async (req: any, res) => {
+  app.post('/api/broadcasts', requireAuth, requireNotViewer, requireBroadcastLimits(), async (req: any, res) => {
     try {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
       // Use parent company ID for team members
@@ -17142,7 +17166,7 @@ https://quikpik.app`;
     }
   });
 
-  app.post('/api/customers', requireAuth, async (req: any, res) => {
+  app.post('/api/customers', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
@@ -17437,7 +17461,7 @@ https://quikpik.app`;
     }
   });
 
-  app.delete('/api/customers/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/customers/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const customerId = req.params.id;
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
@@ -17587,7 +17611,7 @@ https://quikpik.app`;
     }
   });
 
-  app.patch('/api/customers/:id', requireAuth, async (req: any, res) => {
+  app.patch('/api/customers/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const customerId = req.params.id;
       const updates = req.body;

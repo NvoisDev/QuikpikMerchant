@@ -125,6 +125,7 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 
 export default function ProductManagement() {
   const { user } = useAuth();
+  const isViewer = (user as any)?.teamMemberRole === 'viewer';
   const [, navigate] = useLocation();
   
   // SECURITY FIX: Removed hardcoded mock user to prevent data isolation bugs
@@ -1468,6 +1469,7 @@ export default function ProductManagement() {
                 </Dialog>
               </div>
               
+              {!isViewer && (
               <Button 
                 size="sm"
                 variant="outline"
@@ -1504,6 +1506,7 @@ export default function ProductManagement() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
+              )}
             </div>
 
               {/* Standalone Dialog without DialogTrigger */}
@@ -2506,6 +2509,7 @@ export default function ProductManagement() {
                                 )}
                               </div>
                             </div>
+                            {!isViewer && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
@@ -2567,6 +2571,7 @@ export default function ProductManagement() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            )}
                           </div>
                           {product.description && (
                             <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
@@ -2627,7 +2632,7 @@ export default function ProductManagement() {
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first product"}
               </p>
-              {!(searchQuery || statusFilter !== "all") && (
+              {!(searchQuery || statusFilter !== "all") && !isViewer && (
                 <div className="mt-6">
                   <Button onClick={() => {
                     setEditingProduct(null);

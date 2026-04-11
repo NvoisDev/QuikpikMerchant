@@ -176,6 +176,7 @@ interface CustomerStats {
 
 export default function Customers() {
   const { user } = useAuth();
+  const isViewer = (user as any)?.teamMemberRole === 'viewer';
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
@@ -933,10 +934,12 @@ export default function Customers() {
             <span className="hidden sm:inline">Requests</span>
           </Button>
         </Link>
+        {!isViewer && (
         <Button size="sm" className="text-xs sm:text-sm" onClick={() => setIsAddCustomerDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
           Add
         </Button>
+        )}
       </PageHeader>
           <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
             <DialogTrigger asChild>
@@ -1067,6 +1070,7 @@ export default function Customers() {
                 title="Managing Customer Groups"
                 steps={helpContent.customerDirectory.steps}
               />
+              {!isViewer && (
               <Button
                 className="w-full sm:w-auto"
                 disabled={planLimitsLoading}
@@ -1084,6 +1088,7 @@ export default function Customers() {
                 <span className="hidden xs:inline">Create Group</span>
                 <span className="xs:hidden">Create</span>
               </Button>
+              )}
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogContent>
                   <DialogHeader>
@@ -1468,14 +1473,19 @@ export default function Customers() {
                             <Eye className="h-4 w-4 mr-2" />
                             View Orders
                           </DropdownMenuItem>
+                          {!isViewer && (
                           <DropdownMenuItem onClick={() => handleAddToGroup(customer)}>
                             <UserCheck className="h-4 w-4 mr-2" />
                             Add to Group
                           </DropdownMenuItem>
+                          )}
+                          {!isViewer && (
                           <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
                             <Edit3 className="h-4 w-4 mr-2" />
                             Edit Customer
                           </DropdownMenuItem>
+                          )}
+                          {!isViewer && (
                           <DropdownMenuItem 
                             onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
                             disabled={sendWelcomeMessageMutation.isPending}
@@ -1483,6 +1493,8 @@ export default function Customers() {
                             <Send className="h-4 w-4 mr-2" />
                             Send Welcome
                           </DropdownMenuItem>
+                          )}
+                          {!isViewer && (
                           <DropdownMenuItem 
                             className="text-orange-600"
                             onClick={() => {
@@ -1495,6 +1507,8 @@ export default function Customers() {
                             <ShieldX className="h-4 w-4 mr-2" />
                             Remove Access
                           </DropdownMenuItem>
+                          )}
+                          {!isViewer && (
                           <DropdownMenuItem 
                             className="text-red-600"
                             onClick={() => {
@@ -1506,6 +1520,7 @@ export default function Customers() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

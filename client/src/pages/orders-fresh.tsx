@@ -179,6 +179,7 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 
 export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
+  const isViewer = (user as any)?.teamMemberRole === 'viewer';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1117,6 +1118,7 @@ export default function OrdersFresh() {
       <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
         Refresh
       </Button>
+      {!isViewer && (
       <Link href="/quick-quote">
         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
           <FileText className="w-4 h-4 mr-1 md:mr-2" />
@@ -1124,6 +1126,7 @@ export default function OrdersFresh() {
           <span className="sm:hidden">Quote</span>
         </Button>
       </Link>
+      )}
     </PageHeader>
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
@@ -1539,7 +1542,7 @@ export default function OrdersFresh() {
                           </Badge>
                         ) : order.status === 'cancelled' ? (
                           <span className="text-red-400 text-xs">—</span>
-                        ) : (
+                        ) : !isViewer ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1590,7 +1593,7 @@ export default function OrdersFresh() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        )}
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500">
                         <div className="flex items-center justify-between">
@@ -1685,7 +1688,7 @@ export default function OrdersFresh() {
                         )}
                       </div>
                       
-                      {order.status !== 'fulfilled' && order.status !== 'cancelled' && (
+                      {order.status !== 'fulfilled' && order.status !== 'cancelled' && !isViewer && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -2220,7 +2223,7 @@ export default function OrdersFresh() {
               </div>
 
               {/* Mark as Paid — visible for ALL orders that aren't fully paid and not cancelled */}
-              {selectedOrder.paymentStatus !== 'paid' && selectedOrder.status !== 'cancelled' && (
+              {selectedOrder.paymentStatus !== 'paid' && selectedOrder.status !== 'cancelled' && !isViewer && (
                 <div>
                   <Button
                     size="sm"
@@ -2668,7 +2671,7 @@ export default function OrdersFresh() {
                           {selectedOrder.refundReason && !selectedOrder.cancellationRequest && (
                             <div className="text-xs text-gray-400 mt-0.5">{selectedOrder.refundReason}</div>
                           )}
-                          {canRetry && (
+                          {canRetry && !isViewer && (
                             <button
                               onClick={() => retryRefund(selectedOrder.id)}
                               disabled={isRetryingRefund}
@@ -2742,7 +2745,8 @@ export default function OrdersFresh() {
                     {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
                     {selectedOrder.fulfillmentType === 'pickup' && 
                      selectedOrder.status !== 'ready_for_collection' && 
-                     selectedOrder.status !== 'fulfilled' && (
+                     selectedOrder.status !== 'fulfilled' &&
+                     !isViewer && (
                       <Button 
                         size="sm"
                         onClick={() => markReadyForCollection(selectedOrder.id)}
@@ -2756,7 +2760,7 @@ export default function OrdersFresh() {
                     )}
 
                     {/* Mark as Fulfilled Button */}
-                    {selectedOrder.status !== 'fulfilled' && (
+                    {selectedOrder.status !== 'fulfilled' && !isViewer && (
                       <Button 
                         size="sm"
                         onClick={() => markAsFulfilled(selectedOrder.id)}
