@@ -1122,6 +1122,8 @@ export default function CustomerPortal() {
     message: ''
   });
   const [showCheckout, setShowCheckout] = useState(false);
+  const [payLaterMode, setPayLaterMode] = useState(false);
+  const [isPlacingPayLaterOrder, setIsPlacingPayLaterOrder] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [orderSuccessData, setOrderSuccessData] = useState<{
@@ -1179,13 +1181,13 @@ export default function CustomerPortal() {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
   }, [customerData.shippingOption]);
 
-  // Auto-create payment intent when checkout opens with pre-selected shipping
+  // Auto-create payment intent when checkout opens with pre-selected shipping (skip in pay-later mode)
   useEffect(() => {
-    if (showCheckout && customerData.shippingOption && !clientSecret && !isCreatingIntent && cart.length > 0) {
+    if (showCheckout && !payLaterMode && customerData.shippingOption && !clientSecret && !isCreatingIntent && cart.length > 0) {
       console.log('🚚 AUTO-CREATING: Payment intent on checkout open with pre-selected shipping:', customerData.shippingOption);
       createPaymentIntentForCheckout(customerData.shippingOption);
     }
-  }, [showCheckout, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
+  }, [showCheckout, payLaterMode, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
 
 
 
@@ -4430,7 +4432,7 @@ export default function CustomerPortal() {
         )}
 
         {/* Checkout Modal Dialog */}
-        <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+        <Dialog open={showCheckout} onOpenChange={(open) => { setShowCheckout(open); if (!open) setPayLaterMode(false); }}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">Complete Your Order</DialogTitle>
@@ -4884,10 +4886,197 @@ export default function CustomerPortal() {
 
                 {/* Payment Form */}
                 <div className="border-t pt-6">
+                  {/* Pay Now / Pay Later toggle */}
+                  {customerData.shippingOption && (
+                    <div className="mb-5">
+                      <h3 className="font-semibold mb-2">Payment Method</h3>
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayLaterMode(false);
+                            if (customerData.shippingOption && !clientSecret && !isCreatingIntent) {
+                              createPaymentIntentForCheckout(customerData.shippingOption);
+                            }
+                          }}
+                          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                            !payLaterMode
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          💳 Pay Now
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayLaterMode(true);
+                            setClientSecret('');
+                          }}
+                          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                            payLaterMode
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          📋 Pay Later
+                        </button>
+                      </div>
+                      {payLaterMode && (
+                        <p className="text-xs text-blue-700 mt-1.5">
+                          Your order will be placed now. The supplier will contact you to arrange payment.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Debug current shipping option when checkout modal opens */}
                   {console.log('🚚 CHECKOUT MODAL: Opening with shipping option:', customerData.shippingOption)}
                   {console.log('🚚 CHECKOUT MODAL: Client secret exists:', !!clientSecret)}
-                  
+
+                  {/* Pay Later — place order directly */}
+                  {payLaterMode && customerData.shippingOption ? (
+                    <div className="space-y-3">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium">Pay Later — No payment required now</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Your order total of{' '}
+                          <strong>
+                            {(() => {
+                              const subtotal = cartStats.subtotal;
+                              const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                                ? parseFloat(wholesaler.deliveryFlatRate) : 0;
+                              const beforeFees = subtotal + shipping;
+                              const transactionFee = (beforeFees * 0.055) + 0.50;
+                              return `£${(beforeFees + transactionFee).toFixed(2)}`;
+                            })()}
+                          </strong>{' '}
+                          will be due on invoice. The supplier will be notified of your order.
+                        </p>
+                      </div>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={isPlacingPayLaterOrder || !customerData.shippingOption || (customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress)}
+                        onClick={async () => {
+                          if (!wholesaler?.id) return;
+                          setIsPlacingPayLaterOrder(true);
+                          try {
+                            const cartItems = cart.map(cartItem => {
+                              let promoLabel: string | undefined;
+                              if (cartItem.sellingType !== 'pallets') {
+                                const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
+                                promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
+                              }
+                              return {
+                                product: {
+                                  id: cartItem.product.id,
+                                  name: cartItem.product.name,
+                                  price: cartItem.product.price,
+                                  palletPrice: (cartItem.product as any).palletPrice,
+                                  promoPrice: cartItem.product.promoPrice,
+                                  promoActive: cartItem.product.promoActive,
+                                },
+                                quantity: cartItem.quantity,
+                                sellingType: cartItem.sellingType,
+                                promoLabel,
+                              };
+                            });
+                            const response = await fetch('/api/marketplace/create-order-pay-later', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                cart: cartItems,
+                                customerData: {
+                                  name: customerData.name,
+                                  email: customerData.email,
+                                  phone: customerData.phone,
+                                },
+                                shippingOption: customerData.shippingOption,
+                                wholesalerId: wholesaler.id,
+                                notes: customerData.notes || null,
+                                selectedDeliveryAddress: customerData.selectedDeliveryAddress || null,
+                                selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id || null,
+                              }),
+                            });
+                            if (!response.ok) {
+                              const errData = await response.json().catch(() => ({}));
+                              throw new Error(errData.message || 'Failed to place order');
+                            }
+                            const orderData = await response.json();
+                            const currentShippingOption = customerData.shippingOption;
+                            const computedSubtotal = cartStats.subtotal;
+                            const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                              ? parseFloat(wholesaler.deliveryFlatRate) : 0;
+                            const computedBeforeFees = computedSubtotal + computedShipping;
+                            const computedTransactionFee = (computedBeforeFees * 0.055) + 0.50;
+                            const computedTotal = computedBeforeFees + computedTransactionFee;
+                            const orderItems = cart.map(cartItem => {
+                              let computedTotal2: number;
+                              let promoLabel: string | undefined;
+                              if (cartItem.sellingType === 'pallets') {
+                                computedTotal2 = parseFloat((cartItem.product as any).palletPrice || '0') * cartItem.quantity;
+                              } else {
+                                const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
+                                computedTotal2 = pricing.totalCost;
+                                promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
+                              }
+                              return {
+                                product: { ...cartItem.product, palletPrice: (cartItem.product as any).palletPrice },
+                                quantity: cartItem.quantity,
+                                sellingType: cartItem.sellingType,
+                                computedTotal: computedTotal2,
+                                promoLabel,
+                              };
+                            });
+                            setCompletedOrder({
+                              orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
+                              cart: orderItems as any,
+                              customerData: {
+                                ...customerData,
+                                shippingOption: currentShippingOption,
+                                selectedDeliveryAddress: customerData.selectedDeliveryAddress,
+                              },
+                              wholesaler,
+                              subtotal: computedSubtotal,
+                              transactionFee: computedTransactionFee,
+                              shippingCost: computedShipping,
+                              totalAmount: computedTotal,
+                            } as any);
+                            setCart([]);
+                            setPayLaterMode(false);
+                            setClientSecret('');
+                            setLastUsedShippingOption(null);
+                            setCustomerData(prev => ({
+                              ...prev,
+                              shippingOption: undefined,
+                              selectedDeliveryAddress: null,
+                              addressExplicitlyCleared: false,
+                              selectedShippingService: undefined,
+                            }));
+                            refetchProducts();
+                            if (featuredProductId) refetchFeaturedProduct();
+                            setShowCheckout(false);
+                            setShowThankYou(true);
+                            toast({
+                              title: "Order Placed!",
+                              description: `${orderData.orderNumber} — Pay Later order confirmed. The supplier will contact you.`,
+                            });
+                          } catch (err: any) {
+                            toast({
+                              title: "Order Failed",
+                              description: err.message || "Failed to place order. Please try again.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsPlacingPayLaterOrder(false);
+                          }
+                        }}
+                      >
+                        {isPlacingPayLaterOrder ? 'Placing Order...' : 'Place Order (Pay Later)'}
+                      </Button>
+                    </div>
+                  ) : (
+                  <>
                   {/* Only show validation error if user tries to pay without address */}
                   {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress && clientSecret ? (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -5010,6 +5199,8 @@ export default function CustomerPortal() {
                     }}
                   />
                   ) : null}
+                  </>
+                  )}
                 </div>
               </div>
             )}

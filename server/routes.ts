@@ -6507,6 +6507,258 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pay Later order creation — no Stripe required
+  app.post('/api/marketplace/create-order-pay-later', async (req, res) => {
+    try {
+      const {
+        cart,
+        customerData,
+        shippingOption,
+        wholesalerId,
+        notes,
+        selectedDeliveryAddress,
+        selectedDeliveryAddressId
+      } = req.body;
+
+      if (!cart?.length || !customerData || !wholesalerId || !shippingOption) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const customerName: string = customerData.name || '';
+      const customerEmail: string = customerData.email || '';
+      const customerPhone: string = customerData.phone || '';
+
+      if (!customerPhone) {
+        return res.status(400).json({ message: 'Customer phone number required' });
+      }
+
+      // --- Find or create customer (mirrors create-order logic) ---
+      let customer = await storage.getUserByPhone(customerPhone);
+      const { firstName, lastName } = parseCustomerName(customerName);
+
+      if (!customer && customerEmail) {
+        customer = await storage.getUserByEmail(customerEmail);
+      }
+
+      if (!customer) {
+        customer = await storage.createCustomer({
+          phoneNumber: customerPhone,
+          firstName,
+          lastName,
+          role: 'retailer',
+          email: customerEmail,
+          wholesalerId,
+        });
+        try {
+          const ws = await storage.getUser(wholesalerId);
+          if (ws) {
+            const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
+            const wsName = ws.businessName || `${ws.firstName} ${ws.lastName}`.trim() || 'Your Wholesale Partner';
+            await sendWelcomeMessages({
+              customerName: `${firstName} ${lastName}`.trim(),
+              customerEmail: customerEmail || '',
+              customerPhone,
+              wholesalerName: wsName,
+              wholesalerEmail: ws.email || 'hello@quikpik.co',
+              wholesalerPhone: ws.phoneNumber || '',
+              wholesalerAccountName: `${ws.firstName} ${ws.lastName || ''}`.trim() || 'IBK',
+              portalUrl,
+              wholesalerId: ws.id,
+              wholesalerLogoType: ws.logoType,
+              wholesalerLogoUrl: ws.logoUrl,
+            });
+          }
+        } catch (welcomeError) {
+          console.error('❌ Welcome message error (pay-later):', welcomeError);
+        }
+      } else {
+        let emailConflict = false;
+        if (customerEmail && customer.email !== customerEmail) {
+          const existing = await storage.getUserByEmail(customerEmail);
+          if (existing && existing.id !== customer.id) emailConflict = true;
+        }
+        const needsUpdate =
+          customer.firstName !== firstName ||
+          customer.lastName !== lastName ||
+          (customerEmail && customer.email !== customerEmail && !emailConflict);
+        if (needsUpdate) {
+          customer = await storage.updateCustomer(customer.id, {
+            firstName,
+            lastName,
+            email: emailConflict ? (customer.email || undefined) : (customerEmail || customer.email || undefined),
+          });
+        }
+      }
+
+      // --- Look up wholesaler for delivery rate ---
+      const wholesalerProfile = await storage.getWholesalerProfile(wholesalerId);
+      const shippingCost = shippingOption === 'delivery' && wholesalerProfile?.deliveryFlatRate
+        ? parseFloat(wholesalerProfile.deliveryFlatRate)
+        : 0;
+
+      // --- Calculate totals ---
+      const subtotal = (cart as any[]).reduce((sum: number, item: any) => {
+        if (item.sellingType === 'pallets') {
+          return sum + parseFloat(item.product.palletPrice || '0') * item.quantity;
+        }
+        const unitPrice = item.product.promoActive && item.product.promoPrice
+          ? parseFloat(item.product.promoPrice)
+          : parseFloat(item.product.price || '0');
+        return sum + unitPrice * item.quantity;
+      }, 0);
+
+      const beforeFees = subtotal + shippingCost;
+      const transactionFee = (beforeFees * 0.055) + 0.50;
+      const total = (beforeFees + transactionFee).toFixed(2);
+      const platformFee = (subtotal * 0.033).toFixed(2);
+
+      // --- Build delivery address ---
+      let deliveryAddress: string | null = null;
+      let deliveryAddressId: number | null = null;
+      if (shippingOption === 'delivery' && selectedDeliveryAddress) {
+        const addr = selectedDeliveryAddress as any;
+        const parts = [
+          addr.addressLine1, addr.addressLine2, addr.city,
+          addr.state, addr.postalCode, addr.country || 'United Kingdom'
+        ].filter((p: any) => p && typeof p === 'string' && p.trim());
+        deliveryAddress = parts.join(', ') || null;
+        deliveryAddressId = addr.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null);
+      }
+
+      // --- Build order items ---
+      const orderItemsData = (cart as any[]).map((item: any) => {
+        const unitPrice = item.sellingType === 'pallets'
+          ? parseFloat(item.product.palletPrice || '0')
+          : (item.product.promoActive && item.product.promoPrice
+              ? parseFloat(item.product.promoPrice)
+              : parseFloat(item.product.price || '0'));
+        return {
+          orderId: 0,
+          productId: item.product.id,
+          quantity: item.quantity,
+          unitPrice: unitPrice.toFixed(2),
+          total: (unitPrice * item.quantity).toFixed(2),
+          sellingType: item.sellingType || 'units',
+          appliedOfferLabel: item.promoLabel || null,
+          freeItems: item.freeItems || 0,
+        };
+      });
+
+      const orderNumber = await generateOrderNumber(wholesalerId);
+
+      const orderData = {
+        orderNumber,
+        wholesalerId,
+        retailerId: customer.id,
+        customerName,
+        customerEmail,
+        customerPhone,
+        subtotal: subtotal.toFixed(2),
+        platformFee,
+        customerTransactionFee: transactionFee.toFixed(2),
+        total,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        depositPercentage: 0,
+        amountPaid: '0.00',
+        amountOutstanding: total,
+        notes: notes || null,
+        deliveryAddress,
+        deliveryAddressId,
+        fulfillmentType: shippingOption === 'delivery' ? 'delivery' : 'pickup',
+        deliveryCarrier: shippingOption === 'delivery' ? 'Supplier Arranged' : null,
+        deliveryCost: shippingCost.toFixed(2),
+        shippingTotal: shippingCost.toFixed(2),
+      };
+
+      const order = await db.transaction(async (trx) => {
+        return await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
+      });
+
+      console.log(`✅ Pay-Later order #${order.id} (${orderNumber}) created for ${customerName}, total: ${total}, status: unpaid`);
+
+      // --- Send notifications ---
+      if (wholesalerProfile && customerEmail) {
+        try {
+          const savedItems = await storage.getOrderItems(order.id);
+          const enrichedItems = await Promise.all(savedItems.map(async (item: any) => {
+            const product = await storage.getProduct(item.productId);
+            return { ...item, productName: product?.name || `Product #${item.productId}`, product: product ? { name: product.name } : null };
+          }));
+          await sendCustomerInvoiceEmail(
+            { name: customerName, email: customerEmail, phone: customerPhone, address: deliveryAddress || undefined } as any,
+            order,
+            enrichedItems,
+            wholesalerProfile
+          );
+        } catch (emailError) {
+          console.error('❌ Failed to send pay-later customer email:', emailError);
+        }
+      }
+
+      if (wholesalerProfile?.email) {
+        try {
+          const enrichedForEmail = await Promise.all(orderItemsData.map(async (item: any) => {
+            const product = await storage.getProduct(item.productId);
+            return {
+              productName: product?.name || `Product #${item.productId}`,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.total,
+              appliedOfferLabel: item.appliedOfferLabel,
+              freeItems: item.freeItems,
+            };
+          }));
+          const emailData: OrderEmailData = {
+            orderNumber,
+            customerName,
+            customerEmail: customerEmail || '',
+            customerPhone,
+            shippingAddress: deliveryAddress || undefined,
+            total,
+            subtotal: subtotal.toFixed(2),
+            platformFee,
+            customerTransactionFee: transactionFee.toFixed(2),
+            wholesalerPlatformFee: platformFee,
+            shippingTotal: shippingCost.toFixed(2),
+            fulfillmentType: shippingOption === 'delivery' ? 'delivery' : 'pickup',
+            items: enrichedForEmail,
+            wholesaler: {
+              id: wholesalerProfile.id,
+              businessName: wholesalerProfile.businessName || `${wholesalerProfile.firstName} ${wholesalerProfile.lastName}`,
+              firstName: wholesalerProfile.firstName || '',
+              lastName: wholesalerProfile.lastName || '',
+              email: wholesalerProfile.email,
+              logoUrl: wholesalerProfile.logoUrl,
+              logoType: wholesalerProfile.logoType,
+            },
+            orderDate: new Date().toISOString(),
+            paymentMethod: 'Pay Later',
+          };
+          const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
+          await sendEmail({
+            to: wholesalerProfile.email,
+            from: 'hello@quikpik.co',
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          });
+        } catch (emailError) {
+          console.error('❌ Failed to send pay-later wholesaler email:', emailError);
+        }
+      }
+
+      return res.json({
+        success: true,
+        orderId: order.id,
+        orderNumber: order.orderNumber || orderNumber,
+      });
+    } catch (error: any) {
+      console.error('❌ Error creating pay-later order:', error);
+      res.status(500).json({ message: 'Failed to create order: ' + error.message });
+    }
+  });
+
   // Multi-Wholesaler Dashboard Widgets API (public endpoint)
   app.get('/api/dashboard/multi-wholesaler-stats', async (req: any, res) => {
     try {
