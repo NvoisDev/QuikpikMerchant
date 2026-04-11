@@ -1252,7 +1252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (session.subscription) {
             try {
               const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-              subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+              if (subscription.current_period_end) {
+                subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+              }
               
               // Update user's Stripe subscription ID
               await storage.updateUser(userId, {
@@ -1487,8 +1489,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const subProductLimit = subPlan.planId === 'premium' ? -1 : (subPlan.planId === 'standard' ? 50 : 10);
-        const subPeriodEnd = new Date(subscription.current_period_end * 1000);
-        const subPeriodStart = new Date(subscription.current_period_start * 1000);
+        const subPeriodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const subPeriodStart = subscription.current_period_start
+          ? new Date(subscription.current_period_start * 1000)
+          : new Date();
 
         await storage.updateUser(subUser.id, {
           currentPlan: subPlan.planId,
