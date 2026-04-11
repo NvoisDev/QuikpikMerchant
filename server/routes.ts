@@ -6520,8 +6520,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedDeliveryAddressId
       } = req.body;
 
-      if (!cart?.length || !customerData || !wholesalerId || !shippingOption) {
+      if (!Array.isArray(cart) || cart.length === 0 || !customerData || !wholesalerId || !shippingOption) {
         return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      if (!['pickup', 'delivery'].includes(shippingOption)) {
+        return res.status(400).json({ message: 'Invalid shipping option' });
+      }
+
+      // Delivery requires an address
+      if (shippingOption === 'delivery' && !selectedDeliveryAddress) {
+        return res.status(400).json({ message: 'A delivery address is required for delivery orders' });
       }
 
       const customerName: string = customerData.name || '';
@@ -6596,22 +6605,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? parseFloat(wholesalerProfile.deliveryFlatRate)
         : 0;
 
-      // --- Calculate totals ---
-      // Use frontend-computed line totals when available (they include full promotional pricing logic
-      // such as quantity-based promos, buy-X-get-Y-free, etc.). Fall back to simple price derivation
-      // only for items that did not include a pre-computed total.
-      const subtotal = (cart as any[]).reduce((sum: number, item: any) => {
-        if (typeof item.computedLineTotal === 'number') {
-          return sum + item.computedLineTotal;
+      // --- Compute all pricing server-side from canonical product data ---
+      // Cart items only supply productId, quantity, sellingType — no client prices are trusted.
+      interface PayLaterCartItem {
+        productId: number;
+        quantity: number;
+        sellingType: string;
+      }
+      interface PayLaterOrderItem {
+        orderId: number;
+        productId: number;
+        quantity: number;
+        unitPrice: string;
+        total: string;
+        sellingType: string;
+        appliedOfferLabel: string | null;
+        freeItems: number;
+      }
+      const orderItemsData: PayLaterOrderItem[] = [];
+      let subtotal = 0;
+
+      for (const rawItem of cart as PayLaterCartItem[]) {
+        const productId = Number(rawItem.productId);
+        const quantity = Number(rawItem.quantity);
+        const sellingType = rawItem.sellingType === 'pallets' ? 'pallets' : 'units';
+
+        if (!productId || !quantity || quantity <= 0) {
+          return res.status(400).json({ message: 'Invalid cart item: missing productId or quantity' });
         }
-        if (item.sellingType === 'pallets') {
-          return sum + parseFloat(item.product.palletPrice || '0') * item.quantity;
+
+        const product = await storage.getProduct(productId);
+        if (!product || product.wholesalerId !== wholesalerId) {
+          return res.status(400).json({ message: `Product ${productId} not found` });
         }
-        const unitPrice = item.product.promoActive && item.product.promoPrice
-          ? parseFloat(item.product.promoPrice)
-          : parseFloat(item.product.price || '0');
-        return sum + unitPrice * item.quantity;
-      }, 0);
+
+        let unitPrice: number;
+        let lineTotal: number;
+        let appliedOfferLabel: string | null = null;
+        let freeItems = 0;
+
+        if (sellingType === 'pallets') {
+          unitPrice = parseFloat(product.palletPrice || '0');
+          lineTotal = unitPrice * quantity;
+        } else {
+          const basePrice = parseFloat(product.price);
+          const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+          const now = new Date();
+          unitPrice = basePrice;
+          lineTotal = basePrice * quantity;
+
+          for (const offer of offers) {
+            if (!offer.isActive) continue;
+            const start = offer.startDate ? new Date(offer.startDate) : null;
+            const end = offer.endDate ? new Date(offer.endDate) : null;
+            if (start && start > now) continue;
+            if (end && end < now) continue;
+
+            if (offer.type === 'percentage_discount' && offer.discountPercentage) {
+              unitPrice = Math.round(basePrice * (1 - offer.discountPercentage / 100) * 100) / 100;
+              lineTotal = unitPrice * quantity;
+              appliedOfferLabel = offer.name || `${offer.discountPercentage}% off`;
+              break;
+            } else if (offer.type === 'fixed_price' && offer.fixedPrice) {
+              unitPrice = offer.fixedPrice;
+              lineTotal = unitPrice * quantity;
+              appliedOfferLabel = offer.name || 'Special Price';
+              break;
+            } else if (offer.type === 'buy_x_get_y_free' && offer.buyQuantity && offer.getQuantity) {
+              const sets = Math.floor(quantity / offer.buyQuantity);
+              freeItems = sets * offer.getQuantity;
+              lineTotal = basePrice * quantity;
+              appliedOfferLabel = offer.name || `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`;
+              break;
+            } else if (offer.type === 'bundle_deal' && offer.minQuantity && offer.fixedPrice) {
+              if (quantity >= offer.minQuantity) {
+                unitPrice = offer.fixedPrice;
+                lineTotal = unitPrice * quantity;
+                appliedOfferLabel = offer.name || `${offer.minQuantity}+ deal`;
+                break;
+              }
+            } else if (offer.type === 'clearance' && offer.fixedPrice) {
+              unitPrice = offer.fixedPrice;
+              lineTotal = unitPrice * quantity;
+              appliedOfferLabel = offer.name || 'Clearance';
+              break;
+            }
+          }
+        }
+
+        subtotal += lineTotal;
+        orderItemsData.push({
+          orderId: 0,
+          productId,
+          quantity,
+          unitPrice: unitPrice.toFixed(2),
+          total: lineTotal.toFixed(2),
+          sellingType,
+          appliedOfferLabel,
+          freeItems,
+        });
+      }
 
       const beforeFees = subtotal + shippingCost;
       const transactionFee = (beforeFees * 0.055) + 0.50;
@@ -6622,42 +6715,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let deliveryAddress: string | null = null;
       let deliveryAddressId: number | null = null;
       if (shippingOption === 'delivery' && selectedDeliveryAddress) {
-        const addr = selectedDeliveryAddress as any;
+        const addr = selectedDeliveryAddress as Record<string, string | number | undefined>;
         const parts = [
-          addr.addressLine1, addr.addressLine2, addr.city,
-          addr.state, addr.postalCode, addr.country || 'United Kingdom'
-        ].filter((p: any) => p && typeof p === 'string' && p.trim());
+          addr['addressLine1'], addr['addressLine2'], addr['city'],
+          addr['state'], addr['postalCode'], addr['country'] || 'United Kingdom'
+        ].filter((p): p is string => typeof p === 'string' && p.trim().length > 0);
         deliveryAddress = parts.join(', ') || null;
-        deliveryAddressId = addr.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null);
+        deliveryAddressId = addr['id'] ? Number(addr['id']) : (selectedDeliveryAddressId ? parseInt(String(selectedDeliveryAddressId)) : null);
       }
-
-      // --- Build order items ---
-      const orderItemsData = (cart as any[]).map((item: any) => {
-        let unitPrice: number;
-        let lineTotal: number;
-        if (typeof item.computedUnitPrice === 'number' && typeof item.computedLineTotal === 'number') {
-          unitPrice = item.computedUnitPrice;
-          lineTotal = item.computedLineTotal;
-        } else if (item.sellingType === 'pallets') {
-          unitPrice = parseFloat(item.product.palletPrice || '0');
-          lineTotal = unitPrice * item.quantity;
-        } else {
-          unitPrice = item.product.promoActive && item.product.promoPrice
-            ? parseFloat(item.product.promoPrice)
-            : parseFloat(item.product.price || '0');
-          lineTotal = unitPrice * item.quantity;
-        }
-        return {
-          orderId: 0,
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: unitPrice.toFixed(2),
-          total: lineTotal.toFixed(2),
-          sellingType: item.sellingType || 'units',
-          appliedOfferLabel: item.promoLabel || null,
-          freeItems: item.freeItems || 0,
-        };
-      });
 
       const orderNumber = await generateOrderNumber(wholesalerId);
 
@@ -6693,6 +6758,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Pay-Later order #${order.id} (${orderNumber}) created for ${customerName}, total: ${total}, status: unpaid`);
 
       // --- Send notifications ---
+
+      // WhatsApp notification to wholesaler (mirrors create-order flow)
+      if (wholesalerProfile && (wholesalerProfile as any).twilioAuthToken && (wholesalerProfile as any).twilioPhoneNumber) {
+        const currencySymbol = wholesalerProfile.preferredCurrency === 'GBP' ? '£' : '$';
+        const waMessage = `🛒 New Pay Later Order!\n\nOrder: ${orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${total}\n\nPayment: Due on invoice — no upfront payment taken.`;
+        try {
+          if ((wholesalerProfile as any).whatsappEnabled && (wholesalerProfile as any).whatsappAccessToken && (wholesalerProfile as any).whatsappBusinessPhoneId) {
+            await whatsAppBusinessService.sendMessage(
+              (wholesalerProfile as any).businessPhone || (wholesalerProfile as any).phoneNumber,
+              waMessage,
+              {
+                accessToken: (wholesalerProfile as any).whatsappAccessToken,
+                phoneNumberId: (wholesalerProfile as any).whatsappBusinessPhoneId,
+              }
+            );
+          }
+        } catch (waError) {
+          console.error('❌ WhatsApp notification error (pay-later):', waError);
+        }
+      }
+
       if (wholesalerProfile && customerEmail) {
         try {
           const savedItems = await storage.getOrderItems(order.id);

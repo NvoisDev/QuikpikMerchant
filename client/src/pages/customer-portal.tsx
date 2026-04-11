@@ -4963,35 +4963,11 @@ export default function CustomerPortal() {
                           if (!wholesaler?.id) return;
                           setIsPlacingPayLaterOrder(true);
                           try {
-                            const cartItems = cart.map(cartItem => {
-                              let computedUnitPrice: number;
-                              let computedLineTotal: number;
-                              let promoLabel: string | undefined;
-                              if (cartItem.sellingType === 'pallets') {
-                                computedUnitPrice = parseFloat((cartItem.product as any).palletPrice || '0');
-                                computedLineTotal = computedUnitPrice * cartItem.quantity;
-                              } else {
-                                const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
-                                computedUnitPrice = pricing.effectivePrice;
-                                computedLineTotal = pricing.totalCost;
-                                promoLabel = pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : undefined;
-                              }
-                              return {
-                                product: {
-                                  id: cartItem.product.id,
-                                  name: cartItem.product.name,
-                                  price: cartItem.product.price,
-                                  palletPrice: (cartItem.product as any).palletPrice,
-                                  promoPrice: cartItem.product.promoPrice,
-                                  promoActive: cartItem.product.promoActive,
-                                },
-                                quantity: cartItem.quantity,
-                                sellingType: cartItem.sellingType,
-                                computedUnitPrice,
-                                computedLineTotal,
-                                promoLabel,
-                              };
-                            });
+                            const cartItems = cart.map(cartItem => ({
+                              productId: cartItem.product.id,
+                              quantity: cartItem.quantity,
+                              sellingType: cartItem.sellingType,
+                            }));
                             const response = await fetch('/api/marketplace/create-order-pay-later', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
