@@ -1112,8 +1112,8 @@ export default function OrdersFresh() {
                     <TableHead className="text-xs">Customer</TableHead>
                     <TableHead className="text-xs">Net Amount</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Actions</TableHead>
                     <TableHead className="text-xs">Expiration Date</TableHead>
+                    <TableHead className="text-xs">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1192,6 +1192,15 @@ export default function OrdersFresh() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
+                            {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-[10px] text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString('en-GB')}</div>; })()}
+                          </div>
+                          <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs">
                         {(() => {
                           const refAmt = parseFloat(order.amountRefunded || '0');
@@ -1258,15 +1267,6 @@ export default function OrdersFresh() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : null}
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                            {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-[10px] text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString('en-GB')}</div>; })()}
-                          </div>
-                          <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        </div>
                       </TableCell>
                     </TableRow>
                       </Fragment>
