@@ -13139,7 +13139,7 @@ Please contact the customer to confirm this order.
               <span>Shipping:</span>
               <span>${currencySymbol}${order.deliveryCost}</span>
             </div>` : ''}
-            ${parseFloat(order.customerTransactionFee || '0') > 0 ? `
+            ${parseFloat(order.customerTransactionFee || '0') > 0 && order.stripePaymentIntentId ? `
             <div style="display: flex; justify-content: space-between; margin: 8px 0; color: #6b7280; font-size: 14px;">
               <span>Transaction Fee (5.5% + £0.50):</span>
               <span>${currencySymbol}${parseFloat(order.customerTransactionFee).toFixed(2)}</span>
@@ -13220,7 +13220,7 @@ Please contact the customer to confirm this order.
             items: items && items.length > 0 ? items : (order.items || []),
             retailer: order.retailer || customer,
           };
-          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, true);
+          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, !!orderForPdf.stripePaymentIntentId);
           const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
           pdfAttachment = {
             content: pdfBuffer.toString('base64'),
@@ -14111,7 +14111,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -14147,7 +14147,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -14182,8 +14182,8 @@ https://quikpik.app`;
       const orderRef = order.orderNumber || `#${order.id}`;
       const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
 
-      // Generate customer-facing invoice (showTransactionFee = true)
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
+      // Show transaction fee only for Stripe-processed payments, not manual (cash/bank transfer) payments
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
       const pdfAttachment: SendGridAttachment = {
         content: pdfBuffer.toString('base64'),
         filename: invoiceFilename,
@@ -19061,7 +19061,7 @@ https://quikpik.app`;
           let quoteAttachment: SendGridAttachment | null = null;
           try {
             const orderForPdf = { ...quoteOrder, items: pdfItems, retailer: customer };
-            const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, true);
+            const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, !isPayLater);
             quoteAttachment = {
               content: pdfBuffer.toString('base64'),
               filename: `invoice-${orderNumber}.pdf`,
