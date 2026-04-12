@@ -1113,7 +1113,7 @@ export default function OrdersFresh() {
                     <TableHead className="text-xs">Net Amount</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs">Actions</TableHead>
-                    <TableHead className="text-xs">Date / Due</TableHead>
+                    <TableHead className="text-xs">Expiration Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1263,7 +1263,7 @@ export default function OrdersFresh() {
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                            {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-[10px] text-amber-600 font-medium">Due {due.toLocaleDateString()}</div> : null; })()}
+                            {(() => { const due = getBalanceDueDate(order); if (!due) return null; const isExpired = due <= new Date(); return <div className="text-[10px] text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString()}</div>; })()}
                           </div>
                           <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         </div>
@@ -1295,7 +1295,7 @@ export default function OrdersFresh() {
                         <div>
                           <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
                           <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
-                          {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString()}</div> : null; })()}
+                          {(() => { const due = getBalanceDueDate(order); if (!due) return null; const isExpired = due <= new Date(); return <div className="text-xs text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString()}</div>; })()}
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
