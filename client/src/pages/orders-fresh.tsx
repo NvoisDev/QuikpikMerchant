@@ -17,6 +17,7 @@ import { Link } from "wouter";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
@@ -834,19 +835,15 @@ export default function OrdersFresh() {
   const shareInvoice = async (order: Order) => {
     setIsSharingInvoice(true);
     try {
-      const response = await fetch(`/api/orders/${order.id}/share-invoice`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (response.status === 400) {
-        const data = await response.json();
-        toast({ title: 'No email on file', description: data.message || 'This customer has no email address on record.', variant: 'destructive' });
-        return;
-      }
-      if (!response.ok) throw new Error('Failed to send invoice');
+      await apiRequest('POST', `/api/orders/${order.id}/share-invoice`);
       toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
-    } catch {
-      toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('400')) {
+        toast({ title: 'No email on file', description: 'This customer has no email address on record.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
+      }
     } finally {
       setIsSharingInvoice(false);
     }

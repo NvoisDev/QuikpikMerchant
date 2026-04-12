@@ -14589,13 +14589,12 @@ https://quikpik.app`;
         disposition: 'attachment',
       };
 
-      const { wrapCustomerEmail, emailCard, getEmailLogoUrl } = await import('./email-templates');
       const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
       const branding = { businessName, logoUrl };
 
       const body = emailCard(
         `<p style="margin:0 0 12px;color:#374151;font-size:15px">Hi ${customerName},</p>` +
-        `<p style="margin:0 0 16px;color:#374151;font-size:15px">Please find your invoice <strong>${orderRef}</strong> attached to this email.</p>` +
+        `<p style="margin:0 0 16px;color:#374151;font-size:15px">${businessName} is sharing your invoice <strong>${orderRef}</strong> with you. Please find it attached to this email.</p>` +
         `<p style="margin:0;color:#6b7280;font-size:13px">If you have any questions about this invoice, please get in touch with us directly.</p>`
       );
 
