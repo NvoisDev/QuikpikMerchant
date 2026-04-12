@@ -4511,17 +4511,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Task 3: Expire Stripe checkout session when offline payment fully pays the order
-      if (newPaymentStatus === 'paid' && !isStripePayment && order.stripePaymentLinkId && stripe) {
-        try {
-          await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
-          updateData.stripePaymentLinkUrl = null;
-          updateData.stripePaymentLinkId = null;
-          console.log(`🔒 Stripe checkout session expired for order ${order.orderNumber} (offline full payment)`);
-        } catch (stripeErr) {
-          // Best-effort — session may already be used or expired
-          console.warn(`⚠️ Could not expire Stripe session for order ${order.orderNumber}:`, stripeErr);
-          updateData.stripePaymentLinkUrl = null;
-          updateData.stripePaymentLinkId = null;
+      // Always clear link fields on full offline payment regardless of Stripe SDK availability
+      if (newPaymentStatus === 'paid' && !isStripePayment && order.stripePaymentLinkId) {
+        updateData.stripePaymentLinkUrl = null;
+        updateData.stripePaymentLinkId = null;
+        if (stripe) {
+          try {
+            await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
+            console.log(`🔒 Stripe checkout session expired for order ${order.orderNumber} (offline full payment)`);
+          } catch (stripeErr) {
+            // Best-effort — session may already be used or expired
+            console.warn(`⚠️ Could not expire Stripe session for order ${order.orderNumber}:`, stripeErr);
+          }
         }
       }
 
@@ -14226,7 +14227,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, false);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod));
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
