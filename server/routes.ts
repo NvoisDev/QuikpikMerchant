@@ -4476,13 +4476,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
       if (order.paymentStatus === 'paid') return res.status(400).json({ error: 'Order is already fully paid' });
 
-      const currentOutstanding = parseFloat(order.amountOutstanding || '0');
+      // Determine if this is a Stripe-based payment
+      const isStripePayment = (method === 'payment_link') ||
+        (!method && (order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod)));
+
+      // For offline payments use the fee-free base (subtotal + delivery) as the target
+      const subtotalBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+      const currentAmountPaid = parseFloat(order.amountPaid || '0');
+      const offlineOutstanding = Math.max(0, subtotalBase - currentAmountPaid);
+      const currentOutstanding = isStripePayment
+        ? parseFloat(order.amountOutstanding || '0')
+        : offlineOutstanding;
+
       if (parsedAmount > currentOutstanding + 0.01) {
         return res.status(400).json({ error: `Amount (£${parsedAmount.toFixed(2)}) exceeds outstanding balance (£${currentOutstanding.toFixed(2)})` });
       }
 
-      const newAmountPaid = parseFloat(order.amountPaid || '0') + parsedAmount;
-      const newAmountOutstanding = Math.max(0, currentOutstanding - parsedAmount);
+      const newAmountPaid = currentAmountPaid + parsedAmount;
+      const newAmountOutstanding = isStripePayment
+        ? Math.max(0, parseFloat(order.amountOutstanding || '0') - parsedAmount)
+        : Math.max(0, subtotalBase - newAmountPaid);
       const newPaymentStatus = newAmountOutstanding <= 0.01 ? 'paid' : 'part_paid';
 
       const updateData: Record<string, any> = {
@@ -4497,11 +4510,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.status = 'paid';
       }
 
+      // Task 3: Expire Stripe checkout session when offline payment fully pays the order
+      if (newPaymentStatus === 'paid' && !isStripePayment && order.stripePaymentLinkId && stripe) {
+        try {
+          await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
+          updateData.stripePaymentLinkUrl = null;
+          updateData.stripePaymentLinkId = null;
+          console.log(`🔒 Stripe checkout session expired for order ${order.orderNumber} (offline full payment)`);
+        } catch (stripeErr) {
+          // Best-effort — session may already be used or expired
+          console.warn(`⚠️ Could not expire Stripe session for order ${order.orderNumber}:`, stripeErr);
+          updateData.stripePaymentLinkUrl = null;
+          updateData.stripePaymentLinkId = null;
+        }
+      }
+
       await db.update(orders).set(updateData).where(eq(orders.id, orderId));
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
       console.log(`✅ Order ${order.orderNumber} marked as ${newPaymentStatus} offline — £${parsedAmount.toFixed(2)} via ${method || 'unspecified'}${note ? ` (${note})` : ''}`);
+
+      // Task 4: Send payment notifications to customer and wholesaler (best-effort)
+      try {
+        const [customer, wholesaler] = await Promise.all([
+          storage.getUser(order.retailerId),
+          storage.getUser(order.wholesalerId),
+        ]);
+
+        if (customer && wholesaler) {
+          const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
+          const businessName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Supplier';
+          const customerName = customer.firstName || 'there';
+          const netAmount = subtotalBase; // Offline = full subtotal, no platform fee
+          const paidSoFar = newAmountPaid;
+          const outstanding = newAmountOutstanding;
+          const methodLabel: Record<string, string> = {
+            cash: 'Cash', bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
+            pay_later: 'Pay Later', other: 'Other',
+          };
+          const methodText = methodLabel[method || ''] || 'offline payment';
+          const isPaidInFull = newPaymentStatus === 'paid';
+
+          // Customer email
+          if (customer.email) {
+            try {
+              const custEmailBody =
+                emailHeading('Payment Received', { size: '22px', color: '#10b981' }) +
+                `<p style="margin:0 0 16px">Hi ${customerName}, ${businessName} has recorded a payment for order <strong>${order.orderNumber}</strong>.</p>` +
+                emailCard(
+                  `<p style="margin:0 0 4px"><b>Amount received:</b> ${currencySymbol}${parsedAmount.toFixed(2)}</p>` +
+                  `<p style="margin:0 0 4px"><b>Method:</b> ${methodText}</p>` +
+                  `<p style="margin:0 0 4px"><b>Total paid:</b> ${currencySymbol}${paidSoFar.toFixed(2)}</p>` +
+                  (outstanding > 0.01
+                    ? `<p style="margin:0"><b>Outstanding balance:</b> <span style="color:#dc2626">${currencySymbol}${outstanding.toFixed(2)}</span></p>`
+                    : `<p style="margin:0">${emailBadge('Fully Paid', '#10b981')}</p>`),
+                  { borderColor: '#a7f3d0', bgColor: '#f0fdf4' }
+                ) +
+                (note ? emailCard(`<p style="margin:0;color:#6b7280"><b>Note:</b> ${note}</p>`) : '') +
+                (outstanding > 0.01
+                  ? `<p style="margin:16px 0;font-size:14px;color:#6b7280">Please arrange your remaining balance of ${currencySymbol}${outstanding.toFixed(2)} with ${businessName}.</p>`
+                  : `<p style="margin:16px 0;font-size:14px;color:#6b7280">Thank you — your order is now fully paid!</p>`);
+
+              await sendEmail({
+                to: customer.email,
+                subject: `Payment Received — Order ${order.orderNumber}`,
+                html: wrapCustomerEmail(custEmailBody, {
+                  businessName,
+                  logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl),
+                }, { preheader: `${currencySymbol}${parsedAmount.toFixed(2)} payment recorded for order ${order.orderNumber}` }),
+                from: `${businessName} via Quikpik <hello@quikpik.co>`,
+              });
+              console.log(`📧 Payment notification email sent to customer ${customer.email}`);
+            } catch (emailErr) {
+              console.error('⚠️ Failed to send customer payment email:', emailErr);
+            }
+          }
+
+          // Customer SMS
+          if (customer.phoneNumber) {
+            try {
+              const smsMsg = isPaidInFull
+                ? `Hi ${customerName}! ${businessName} has received your payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Your order is now fully paid. Thank you!\n\nDo not reply to this message.`
+                : `Hi ${customerName}! ${businessName} has received a payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Outstanding balance: ${currencySymbol}${outstanding.toFixed(2)}.\n\nDo not reply to this message.`;
+              await sendSMS({ to: customer.phoneNumber, message: smsMsg });
+              console.log(`📱 Payment notification SMS sent to customer ${customer.phoneNumber}`);
+            } catch (smsErr) {
+              console.error('⚠️ Failed to send customer payment SMS:', smsErr);
+            }
+          }
+
+          // Wholesaler email
+          if (wholesaler.email) {
+            try {
+              const wholesalerBody =
+                emailHeading('Payment Recorded', { size: '22px', color: '#10b981' }) +
+                `<p style="margin:0 0 16px">A payment has been recorded for order <strong>${order.orderNumber}</strong> (${order.customerName || customerName}).</p>` +
+                emailCard(
+                  `<p style="margin:0 0 4px"><b>Amount received:</b> ${currencySymbol}${parsedAmount.toFixed(2)}</p>` +
+                  `<p style="margin:0 0 4px"><b>Method:</b> ${methodText}</p>` +
+                  `<p style="margin:0 0 4px"><b>Total paid:</b> ${currencySymbol}${paidSoFar.toFixed(2)}</p>` +
+                  `<p style="margin:0 0 4px"><b>Your net amount:</b> <span style="color:#10b981;font-weight:bold">${currencySymbol}${netAmount.toFixed(2)}</span></p>` +
+                  (outstanding > 0.01
+                    ? `<p style="margin:0"><b>Outstanding balance:</b> <span style="color:#dc2626">${currencySymbol}${outstanding.toFixed(2)}</span></p>`
+                    : `<p style="margin:0">${emailBadge('Fully Paid', '#10b981')}</p>`),
+                  { borderColor: '#a7f3d0', bgColor: '#f0fdf4' }
+                ) +
+                (note ? emailCard(`<p style="margin:0;color:#6b7280"><b>Note:</b> ${note}</p>`) : '') +
+                emailButton('View Order', `${process.env.APP_URL || 'https://quikpik.app'}/orders/${order.id}`);
+
+              await sendEmail({
+                to: wholesaler.email,
+                subject: `Payment Recorded — Order ${order.orderNumber}`,
+                html: wrapCustomerEmail(wholesalerBody, {
+                  businessName,
+                  logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl),
+                }, { preheader: `${currencySymbol}${parsedAmount.toFixed(2)} recorded for order ${order.orderNumber}` }),
+                from: `Quikpik <hello@quikpik.co>`,
+              });
+              console.log(`📧 Payment notification email sent to wholesaler ${wholesaler.email}`);
+            } catch (emailErr) {
+              console.error('⚠️ Failed to send wholesaler payment email:', emailErr);
+            }
+          }
+        }
+      } catch (notifyErr) {
+        console.error('⚠️ Payment notification error (non-fatal):', notifyErr);
+      }
+
       return res.json({ success: true, order: updatedOrder });
     } catch (error) {
       console.error('❌ mark-as-paid error:', error);
@@ -13224,7 +13360,7 @@ Please contact the customer to confirm this order.
             items: items && items.length > 0 ? items : (order.items || []),
             retailer: order.retailer || customer,
           };
-          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, !!orderForPdf.stripePaymentIntentId);
+          const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod));
           const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
           pdfAttachment = {
             content: pdfBuffer.toString('base64'),
@@ -14115,7 +14251,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -14151,7 +14287,7 @@ https://quikpik.app`;
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -14187,7 +14323,7 @@ https://quikpik.app`;
       const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
 
       // Show transaction fee only for Stripe-processed payments, not manual (cash/bank transfer) payments
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, !!order.stripePaymentIntentId);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
       const pdfAttachment: SendGridAttachment = {
         content: pdfBuffer.toString('base64'),
         filename: invoiceFilename,
@@ -18734,7 +18870,7 @@ https://quikpik.app`;
         depositPercentage: validDepositPercentage,
         balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
         amountPaid: '0.00',
-        amountOutstanding: total.toFixed(2),
+        amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteDeliveryCharge : total).toFixed(2),
         paymentStatus: 'unpaid',
         ...(validDepositPercentage === 0 ? { paymentMethod: 'pay_later' } : {}),
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),

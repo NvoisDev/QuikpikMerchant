@@ -190,9 +190,15 @@ const getPaymentMethodLabel = (method: string): string => {
   return labels[method] || method;
 };
 
+const isStripePayment = (order: Order): boolean =>
+  order.paymentMethod === 'payment_link' ||
+  (!order.paymentMethod && !!order.stripePaymentIntentId);
+
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
+  // Offline payments: no platform fee deducted — wholesaler keeps the full amount
+  if (!isStripePayment(order)) return subtotal + deliveryCost;
   const actualPlatformFee = parseFloat(order.platformFee || '0');
   const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
   return (subtotal + deliveryCost) - feeToDeduct;
@@ -585,7 +591,15 @@ export default function OrderDetail() {
 
   const openMarkAsPaid = () => {
     if (!order) return;
-    setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
+    let defaultAmount: string;
+    if (isStripePayment(order)) {
+      defaultAmount = order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '';
+    } else {
+      const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+      const alreadyPaid = parseFloat(order.amountPaid || '0');
+      defaultAmount = Math.max(0, offlineBase - alreadyPaid).toFixed(2);
+    }
+    setMarkAsPaidAmount(defaultAmount);
     setMarkAsPaidMethod('cash');
     setMarkAsPaidNote('');
     setIsMarkAsPaidOpen(true);
@@ -995,10 +1009,12 @@ export default function OrderDetail() {
                 <span>{formatMoney(parseFloat(order.deliveryCost || '0'))}</span>
               </div>
             )}
-            <div className="flex justify-between text-red-600">
-              <span>Platform Fee (3.3%):</span>
-              <span>-{formatMoney(parseFloat(order.platformFee || '0') || (parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')) * 0.033)}</span>
-            </div>
+            {isStripePayment(order) && (
+              <div className="flex justify-between text-red-600">
+                <span>Platform Fee (3.3%):</span>
+                <span>-{formatMoney(parseFloat(order.platformFee || '0') || (parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')) * 0.033)}</span>
+              </div>
+            )}
             {parseFloat(order.amountRefunded || '0') > 0 && (() => {
               const wholesalerTotal = calculateNetAmount(order);
               const amountPaid = parseFloat(order.amountPaid || '0');
@@ -1049,7 +1065,7 @@ export default function OrderDetail() {
                 })())}</span>
               </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">Amount you receive after platform fee deduction</div>
+            <div className="text-xs text-gray-500 mt-1">{isStripePayment(order) ? 'Amount you receive after platform fee deduction' : 'Amount you receive (no platform fee for offline payments)'}</div>
           </div>
         </div>
 
@@ -1078,10 +1094,17 @@ export default function OrderDetail() {
         {/* Payment Status Section for Quotes */}
         {order.isQuote && (() => {
           const productTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-          const customerTotal = parseFloat(order.total || '0');
-          const paymentRatio = customerTotal > 0 ? parseFloat(order.amountPaid || '0') / customerTotal : 0;
-          const wholesalerPaid = productTotal * paymentRatio;
-          const wholesalerOutstanding = order.status === 'cancelled' ? 0 : productTotal - wholesalerPaid;
+          const amountPaidRaw = parseFloat(order.amountPaid || '0');
+          // For Stripe payments amountPaid includes customer fee, so use ratio to derive wholesaler amount.
+          // For offline payments amountPaid IS the wholesale amount — use it directly.
+          const wholesalerPaid = isStripePayment(order)
+            ? (() => {
+                const customerTotal = parseFloat(order.total || '0');
+                const paymentRatio = customerTotal > 0 ? amountPaidRaw / customerTotal : 0;
+                return productTotal * paymentRatio;
+              })()
+            : Math.min(amountPaidRaw, productTotal);
+          const wholesalerOutstanding = order.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
 
           return (
             <div>
@@ -1542,7 +1565,9 @@ export default function OrderDetail() {
             <p className="text-sm text-gray-500">
               Order {order.orderNumber || `#${order.id}`} — outstanding{' '}
               <span className="font-medium text-gray-800">
-                {formatMoney(parseFloat(order.amountOutstanding || '0'))}
+                {formatMoney(isStripePayment(order)
+                  ? parseFloat(order.amountOutstanding || '0')
+                  : Math.max(0, parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0') - parseFloat(order.amountPaid || '0')))}
               </span>
             </p>
             <div className="space-y-1">
