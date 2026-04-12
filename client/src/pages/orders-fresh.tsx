@@ -91,6 +91,8 @@ interface OrderItem {
     imageUrl?: string;
     moq?: number;
   };
+  appliedOfferLabel?: string | null;
+  freeItems?: number;
 }
 
 // Component to fetch and display delivery address details by ID for wholesaler
@@ -850,8 +852,19 @@ export default function OrdersFresh() {
 
     lines.push(`📋 ${order.isQuote ? 'Quote' : 'Order'}: ${orderRef}`);
 
+    let anyPromos = false;
     if (order.items && order.items.length > 0) {
-      const shown = order.items.slice(0, 3).map(item => `${item.quantity}× ${item.product?.name || 'item'}`);
+      const shown = order.items.slice(0, 3).map(item => {
+        const name = item.product?.name || 'item';
+        const label = item.appliedOfferLabel;
+        const free = item.freeItems || 0;
+        let suffix = '';
+        if (label && free > 0) suffix = ` (${label}, +${free} free)`;
+        else if (label) suffix = ` (${label})`;
+        else if (free > 0) suffix = ` (+${free} free)`;
+        if (suffix) anyPromos = true;
+        return `${item.quantity}× ${name}${suffix}`;
+      });
       const extra = order.items.length > 3 ? ` + ${order.items.length - 3} more` : '';
       lines.push(`🛍️ ${shown.join(', ')}${extra}`);
     }
@@ -872,6 +885,11 @@ export default function OrdersFresh() {
       if (order.stripePaymentLinkUrl) {
         lines.push(`Pay here → ${order.stripePaymentLinkUrl}`);
       }
+    }
+
+    if (anyPromos) {
+      lines.push('');
+      lines.push(`🏷️ Promotional pricing applied — see your invoice for full details.`);
     }
 
     lines.push('');

@@ -13146,8 +13146,8 @@ Please contact the customer to confirm this order.
         
         const promoLabel = item.appliedOfferLabel || '';
         const freeItemsCount = item.freeItems || 0;
-        const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;padding:2px 8px;border-radius:12px;margin-top:4px;">🎁 ${promoLabel}</span>` : '';
-        const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} free</span>` : '';
+        const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';
+        const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE</span>` : '';
         
         return `
           <tr>
@@ -13226,11 +13226,43 @@ Please contact the customer to confirm this order.
             </div>
           </div>
 
-          <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h4>Payment Status: PAID ✅</h4>
-            <p>Your order has been confirmed and payment processed successfully. The wholesaler will prepare your order and contact you with delivery details.</p>
-            <p><strong>Important:</strong> When contacting the store about this order, please quote your <strong>Wholesale Reference: ${order.orderNumber || `WS-${order.id}`}</strong> for quick identification.</p>
-          </div>
+          ${(() => {
+            const ps = order.paymentStatus || 'unpaid';
+            const isPayLater = ps === 'unpaid' && (Number(order.depositPercentage) === 0);
+            const outstanding = parseFloat(order.amountOutstanding || '0');
+            const payLink = order.stripePaymentLinkUrl && outstanding > 0
+              ? `<p style="margin-top:8px;"><a href="${order.stripePaymentLinkUrl}" style="background:#22c55e;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:bold;">Pay Now &rarr;</a></p>`
+              : '';
+            let statusBg = '#e5f3ff';
+            let statusHeading = '';
+            let statusMsg = '';
+            if (ps === 'paid') {
+              statusBg = '#dcfce7';
+              statusHeading = 'Payment Received';
+              statusMsg = 'Your payment has been received in full. Thank you!';
+            } else if (ps === 'part_paid') {
+              statusBg = '#fef3c7';
+              statusHeading = 'Deposit Paid';
+              const bal = outstanding > 0 ? ` Balance due: ${currencySymbol}${outstanding.toFixed(2)}.` : '';
+              statusMsg = `Your deposit has been received.${bal} The remaining balance will be due before/on delivery.`;
+            } else if (isPayLater) {
+              statusBg = '#f0f9ff';
+              statusHeading = 'Pay Later';
+              statusMsg = 'No payment is required today. The wholesaler will be in touch with payment details.';
+            } else {
+              statusBg = '#fff7ed';
+              statusHeading = 'Payment Pending';
+              statusMsg = outstanding > 0
+                ? `${currencySymbol}${outstanding.toFixed(2)} is outstanding. Please complete your payment to confirm your order.`
+                : 'Please complete your payment to confirm your order.';
+            }
+            return `<div style="background: ${statusBg}; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4 style="margin:0 0 8px;">${statusHeading}</h4>
+            <p style="margin:0 0 4px;">${statusMsg}</p>
+            ${payLink}
+            <p style="margin-top:8px;"><strong>Order Reference: ${order.orderNumber || `WS-${order.id}`}</strong> — please quote this when contacting the store.</p>
+          </div>`;
+          })()}
 
           <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h4>Store Contact Information</h4>
@@ -13835,13 +13867,21 @@ https://quikpik.app`;
     const psColor = ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626';
 
     // Items — NEVER use order.total (includes customer transaction fee)
-    const orderItems = (order.items || []).map((item: any) => ({
-      name: item.product?.name || item.productName || 'Product',
-      qty: Number(item.quantity) || 0,
-      unitPrice: parseFloat(item.unitPrice || '0'),
-      lineTotal: parseFloat(item.unitPrice || '0') * (Number(item.quantity) || 0),
-      promo: item.appliedOfferLabel || '',
-    }));
+    const orderItems = (order.items || []).map((item: any) => {
+      const promoLabel = item.appliedOfferLabel || '';
+      const freeCount = Number(item.freeItems) || 0;
+      let promoLine = '';
+      if (promoLabel && freeCount > 0) promoLine = `${promoLabel} · +${freeCount} free included`;
+      else if (promoLabel) promoLine = promoLabel;
+      else if (freeCount > 0) promoLine = `+${freeCount} free included`;
+      return {
+        name: item.product?.name || item.productName || 'Product',
+        qty: Number(item.quantity) || 0,
+        unitPrice: parseFloat(item.unitPrice || '0'),
+        lineTotal: parseFloat(item.unitPrice || '0') * (Number(item.quantity) || 0),
+        promo: promoLine,
+      };
+    });
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
     const txFee = showTransactionFee ? parseFloat(order.customerTransactionFee || '0') : 0;
@@ -14031,7 +14071,7 @@ https://quikpik.app`;
       let rowY = drawTableHeader(tableY);
 
       for (const item of orderItems) {
-        const rowH = item.promo ? 38 : 26;
+        const rowH = item.promo ? 40 : 26;
         // New page if needed — re-draw table header on continuation pages
         if (rowY + rowH > 810) {
           doc.addPage({ size: 'A4', margin: 0 });
@@ -14041,8 +14081,11 @@ https://quikpik.app`;
         doc.font('Helvetica').fontSize(10).fillColor(DARK)
           .text(item.name, xProduct + 6, rowY + 7, { width: CW_PRODUCT - 12, ellipsis: true, lineBreak: false });
         if (item.promo) {
-          doc.font('Helvetica').fontSize(8).fillColor('#16a34a')
-            .text(item.promo, xProduct + 6, rowY + 21, { width: CW_PRODUCT - 12, lineBreak: false });
+          // Draw a light green pill background behind the promo text
+          const promoTextWidth = Math.min(item.promo.length * 5.2 + 12, CW_PRODUCT - 14);
+          doc.roundedRect(xProduct + 4, rowY + 22, promoTextWidth, 13, 3).fill('#dcfce7');
+          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#15803d')
+            .text(item.promo, xProduct + 8, rowY + 24, { width: promoTextWidth - 6, lineBreak: false });
         }
         doc.font('Helvetica').fontSize(10).fillColor(DARK)
           .text(String(item.qty), xQty, rowY + 7, { width: CW_QTY, align: 'center' });
