@@ -1103,6 +1103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })(),
               stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
               stripePaymentLinkId: null,
+              // Set payment method to 'payment_link' only if not already recorded manually
+              ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
             })
             .where(eq(orders.id, parseInt(orderId)));
           
@@ -4488,6 +4490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amountOutstanding: newAmountOutstanding.toFixed(2),
         paymentStatus: newPaymentStatus,
       };
+
+      if (method) updateData.paymentMethod = method;
 
       if (newPaymentStatus === 'paid' && order.status === 'confirmed') {
         updateData.status = 'paid';
@@ -18732,6 +18736,7 @@ https://quikpik.app`;
         amountPaid: '0.00',
         amountOutstanding: total.toFixed(2),
         paymentStatus: 'unpaid',
+        ...(validDepositPercentage === 0 ? { paymentMethod: 'pay_later' } : {}),
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
 

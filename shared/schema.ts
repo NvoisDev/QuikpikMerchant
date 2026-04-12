@@ -585,6 +585,7 @@ export const orders = pgTable("orders", {
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0.00"), // Amount customer has paid
   amountOutstanding: decimal("amount_outstanding", { precision: 10, scale: 2 }).default("0.00"), // Remaining balance
   paymentStatus: varchar("payment_status").default("unpaid"), // 'unpaid' | 'part_paid' | 'paid'
+  paymentMethod: varchar("payment_method"), // 'cash' | 'bank_transfer' | 'payment_link' | 'pay_later' | 'card' | 'cheque' | 'other'
   
   // Refund tracking
   amountRefunded: decimal("amount_refunded", { precision: 10, scale: 2 }).default("0.00"), // Total amount refunded

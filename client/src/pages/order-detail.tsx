@@ -60,6 +60,7 @@ interface Order {
   amountPaid?: string;
   amountOutstanding?: string;
   paymentStatus?: string;
+  paymentMethod?: string;
   stripePaymentLinkUrl?: string;
   wholesalerBusinessName?: string;
   amountRefunded?: string;
@@ -174,6 +175,19 @@ const getPaymentStatusLabel = (paymentStatus: string) => {
     paid: "Paid"
   };
   return labels[paymentStatus] || paymentStatus;
+};
+
+const getPaymentMethodLabel = (method: string): string => {
+  const labels: Record<string, string> = {
+    cash: 'Cash',
+    bank_transfer: 'Bank Transfer',
+    payment_link: 'Payment Link',
+    pay_later: 'Pay Later',
+    card: 'Card Payment',
+    cheque: 'Cheque',
+    other: 'Other',
+  };
+  return labels[method] || method;
 };
 
 const calculateNetAmount = (order: Order) => {
@@ -1117,6 +1131,12 @@ export default function OrderDetail() {
                     </Badge>
                   )}
                 </div>
+                {order.paymentMethod && (
+                  <div className="flex justify-between text-gray-600 text-xs mt-1">
+                    <span>Method:</span>
+                    <span className="font-medium">{getPaymentMethodLabel(order.paymentMethod)}</span>
+                  </div>
+                )}
 
                 {wholesalerOutstanding > 0.01 && (
                   <div className="pt-2 border-t mt-2 space-y-2">
