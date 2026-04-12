@@ -283,9 +283,8 @@ export default function ProductCard({
               Locked
             </span>
           ) : (
-            <span className="flex items-center gap-1 bg-green-600/80 text-white text-xs px-2 py-1 rounded-full">
+            <span className="flex items-center bg-green-600/80 text-white text-xs p-1 rounded-full">
               <LockOpen className="h-3 w-3" />
-              Active
             </span>
           )}
         </div>
