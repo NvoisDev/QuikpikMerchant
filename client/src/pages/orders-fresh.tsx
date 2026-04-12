@@ -852,7 +852,10 @@ export default function OrdersFresh() {
 
     lines.push(`📋 ${order.isQuote ? 'Quote' : 'Order'}: ${orderRef}`);
 
-    let anyPromos = false;
+    // Scan ALL items for promotions (not just the first 3 shown)
+    const anyPromos = (order.items || []).some(
+      item => (item.appliedOfferLabel) || (item.freeItems || 0) > 0
+    );
     if (order.items && order.items.length > 0) {
       const shown = order.items.slice(0, 3).map(item => {
         const name = item.product?.name || 'item';
@@ -862,7 +865,6 @@ export default function OrdersFresh() {
         if (label && free > 0) suffix = ` (${label}, +${free} free)`;
         else if (label) suffix = ` (${label})`;
         else if (free > 0) suffix = ` (+${free} free)`;
-        if (suffix) anyPromos = true;
         return `${item.quantity}× ${name}${suffix}`;
       });
       const extra = order.items.length > 3 ? ` + ${order.items.length - 3} more` : '';

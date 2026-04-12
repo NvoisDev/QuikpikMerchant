@@ -13147,7 +13147,7 @@ Please contact the customer to confirm this order.
         const promoLabel = item.appliedOfferLabel || '';
         const freeItemsCount = item.freeItems || 0;
         const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';
-        const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE</span>` : '';
+        const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE ITEMS</span>` : '';
         
         return `
           <tr>
@@ -14071,7 +14071,7 @@ https://quikpik.app`;
       let rowY = drawTableHeader(tableY);
 
       for (const item of orderItems) {
-        const rowH = item.promo ? 40 : 26;
+        const rowH = item.promo ? 38 : 26;
         // New page if needed — re-draw table header on continuation pages
         if (rowY + rowH > 810) {
           doc.addPage({ size: 'A4', margin: 0 });
@@ -14084,7 +14084,7 @@ https://quikpik.app`;
           // Draw a light green pill background behind the promo text
           const promoTextWidth = Math.min(item.promo.length * 5.2 + 12, CW_PRODUCT - 14);
           doc.roundedRect(xProduct + 4, rowY + 22, promoTextWidth, 13, 3).fill('#dcfce7');
-          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#15803d')
+          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#16a34a')
             .text(item.promo, xProduct + 8, rowY + 24, { width: promoTextWidth - 6, lineBreak: false });
         }
         doc.font('Helvetica').fontSize(10).fillColor(DARK)
