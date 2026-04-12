@@ -56,6 +56,7 @@ interface Order {
   refundReason?: string;
   refundedAt?: string;
   stripePaymentIntentId?: string;
+  paymentMethod?: string;
   notes?: string;
   cancelledAt?: string;
   stockRestored?: boolean;
@@ -631,12 +632,17 @@ export default function OrdersFresh() {
     return labels[paymentStatus] || paymentStatus;
   };
 
-  // Calculate amounts after platform fee using actual database platform fees
+  // Returns true for Stripe-paid orders (transaction fee applies); false for offline orders (no fee)
+  const isStripePayment = (order: Order) =>
+    order.paymentMethod === 'payment_link' ||
+    (!order.paymentMethod && !!order.stripePaymentIntentId);
+
+  // Calculate net amount: offline orders keep full subtotal+delivery; Stripe orders deduct platform fee
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
+    if (!isStripePayment(order)) return subtotal + deliveryCost;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal + delivery
     const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
     return (subtotal + deliveryCost) - feeToDeduct;
   };
@@ -1129,7 +1135,7 @@ export default function OrdersFresh() {
                       <TableCell className="font-medium text-xs">
                         <div>
                           <div>{formatMoney(calculateNetAmount(order))}</div>
-                          <div className="text-xs text-gray-500">After platform fee</div>
+                          <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After platform fee' : 'No platform fee'}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
@@ -1286,7 +1292,7 @@ export default function OrdersFresh() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <div className="font-medium text-sm">{formatMoney(calculateNetAmount(order))}</div>
-                            <div className="text-xs text-gray-500">After platform fee</div>
+                            <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After platform fee' : 'No platform fee'}</div>
                           </div>
                           <Eye className="h-4 w-4 text-gray-400" />
                         </div>
