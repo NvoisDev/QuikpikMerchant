@@ -14360,8 +14360,8 @@ https://quikpik.app`;
       }
       const cPhone = order.customerPhone || order.retailer?.phoneNumber;
       if (cPhone) {
-        doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-          .text(String(cPhone), c2, btY, { width: COL_W - 8, lineBreak: false });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+          .text(String(cPhone), c2, btY, { width: COL_W - 8 });
         btY += 12;
       }
       const cEmail = order.customerEmail || order.retailer?.email;
@@ -14376,8 +14376,12 @@ https://quikpik.app`;
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
         .text(businessName, c3, metaY + 12, { width: COL_W - 8 });
       let fromY = metaY + 26;
+      if (wholesaler.businessPhone) {
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+          .text(wholesaler.businessPhone, c3, fromY, { width: COL_W - 8 });
+        fromY += 13;
+      }
       const fromLines: string[] = [];
-      if (wholesaler.businessPhone) fromLines.push(wholesaler.businessPhone);
       if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
       const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
       if (cityPostal) fromLines.push(cityPostal);
