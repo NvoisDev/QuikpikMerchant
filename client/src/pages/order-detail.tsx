@@ -934,17 +934,11 @@ export default function OrderDetail() {
                     const pickupAddr = (user as AuthUser)?.pickupAddress?.trim();
                     const bizAddr = (user as AuthUser)?.businessAddress?.trim();
                     const resolvedAddr = pickupAddr || bizAddr;
-                    const city = (user as AuthUser)?.city?.trim();
-                    const postalCode = (user as AuthUser)?.postalCode?.trim();
-                    if (resolvedAddr || city || postalCode) {
-                      const suffix = [city, postalCode].filter(Boolean).join(', ');
-                      const fullAddr = resolvedAddr && suffix && !resolvedAddr.includes(suffix)
-                        ? `${resolvedAddr}, ${suffix}`
-                        : resolvedAddr || suffix;
+                    if (resolvedAddr) {
                       return (
                         <div className="flex items-start mt-2 gap-1">
                           <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-orange-700 text-xs">{fullAddr}</span>
+                          <span className="text-orange-700 text-xs">{resolvedAddr}</span>
                         </div>
                       );
                     }
