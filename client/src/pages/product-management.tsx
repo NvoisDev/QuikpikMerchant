@@ -136,9 +136,10 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">(
-    () => (localStorage.getItem("productsViewMode") as "grid" | "list") || "list"
-  );
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("productsViewMode");
+    return saved === "grid" || saved === "list" ? saved : "list";
+  });
   const handleSetViewMode = (mode: "grid" | "list") => {
     localStorage.setItem("productsViewMode", mode);
     setViewMode(mode);
