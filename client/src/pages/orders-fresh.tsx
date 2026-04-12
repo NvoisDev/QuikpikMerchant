@@ -1113,7 +1113,6 @@ export default function OrdersFresh() {
                     <TableHead className="text-xs">Net Amount</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs">Actions</TableHead>
-                    <TableHead className="text-xs">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1258,15 +1257,6 @@ export default function OrdersFresh() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : null}
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                            {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-[10px] text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
-                          </div>
-                          <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        </div>
                       </TableCell>
                     </TableRow>
                       </Fragment>
