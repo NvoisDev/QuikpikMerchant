@@ -14394,7 +14394,7 @@ https://quikpik.app`;
       }
 
       // ── ITEMS TABLE ───────────────────────────────────────────────────
-      const tableY = metaY + 90;
+      const tableY = metaY + 120;
       // Column widths (must sum to CONTENT_W = 515.28)
       const CW_PRODUCT = Math.round(CONTENT_W * 0.50); // 258
       const CW_QTY     = Math.round(CONTENT_W * 0.11); //  57
