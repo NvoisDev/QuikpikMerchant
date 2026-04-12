@@ -839,21 +839,30 @@ export default function OrdersFresh() {
       const orderRef = order.orderNumber || `#${order.id}`;
 
       // Try native share (mobile: WhatsApp, iMessage, AirDrop, email, etc.)
+      let nativeShareSucceeded = false;
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
-        const response = await fetch(`/api/orders/${order.id}/invoice/customer`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to generate invoice');
-        const blob = await response.blob();
-        const file = new File([blob], filename, { type: 'application/pdf' });
-
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ title: `Invoice ${orderRef}`, files: [file] });
-          return; // user handled sharing via native sheet
+        try {
+          const response = await fetch(`/api/orders/${order.id}/invoice/customer`, { credentials: 'include' });
+          if (response.ok) {
+            const blob = await response.blob();
+            const file = new File([blob], filename, { type: 'application/pdf' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ title: `Invoice ${orderRef}`, files: [file] });
+              nativeShareSucceeded = true;
+              return; // user handled sharing via native sheet
+            }
+          }
+        } catch (shareErr: unknown) {
+          if (shareErr instanceof DOMException && (shareErr.name === 'AbortError' || shareErr.name === 'NotAllowedError')) return;
+          // PDF fetch/share failed — fall through to email fallback
         }
       }
 
       // Fallback: email the invoice to the customer
-      await apiRequest('POST', `/api/orders/${order.id}/share-invoice`);
-      toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
+      if (!nativeShareSucceeded) {
+        await apiRequest('POST', `/api/orders/${order.id}/share-invoice`);
+        toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
+      }
     } catch (err: unknown) {
       // AbortError / NotAllowedError means user dismissed the native share sheet — not an error
       if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
