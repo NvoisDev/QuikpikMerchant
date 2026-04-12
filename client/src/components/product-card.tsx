@@ -143,7 +143,7 @@ export default function ProductCard({
     now.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const formatted = expiry.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    if (diffDays < 0) return { label: "Expired", className: "bg-red-100 text-red-700 border-red-200", formatted };
+    if (diffDays < 0) return { label: `Expired · ${formatted}`, className: "bg-red-100 text-red-700 border-red-200", formatted };
     if (diffDays <= 30) return { label: `Expiring soon · ${formatted}`, className: "bg-amber-100 text-amber-700 border-amber-200", formatted };
     return { label: `Exp: ${formatted}`, className: "bg-gray-100 text-gray-600 border-gray-200", formatted };
   };

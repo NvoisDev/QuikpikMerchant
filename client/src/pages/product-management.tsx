@@ -138,7 +138,7 @@ export default function ProductManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("productsViewMode");
-    return saved === "grid" || saved === "list" ? saved : "list";
+    return saved === "grid" || saved === "list" ? saved : "grid";
   });
   const handleSetViewMode = (mode: "grid" | "list") => {
     localStorage.setItem("productsViewMode", mode);
