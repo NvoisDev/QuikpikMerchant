@@ -1263,7 +1263,7 @@ export default function OrdersFresh() {
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                            {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-[10px] text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString()}</div>; })()}
+                            {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-[10px] text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString('en-GB')}</div>; })()}
                           </div>
                           <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         </div>
@@ -1295,7 +1295,7 @@ export default function OrdersFresh() {
                         <div>
                           <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
                           <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
-                          {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-xs text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString()}</div>; })()}
+                          {(() => { const due = getBalanceDueDate(order); if (!due) return null; const today = new Date(); today.setHours(0,0,0,0); const dueDay = new Date(due); dueDay.setHours(0,0,0,0); const isExpired = dueDay <= today; return <div className="text-xs text-amber-600 font-medium">{isExpired ? 'Expired' : 'Expiration date'} {due.toLocaleDateString('en-GB')}</div>; })()}
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
