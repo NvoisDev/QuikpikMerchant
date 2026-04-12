@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, CreditCard, Truck } from 'lucide-react';
 import { Link } from "wouter";
-import { useCurrency } from "@/hooks/useCurrency";
+import { formatCurrency } from "@/lib/currencies";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -71,7 +71,6 @@ const CheckoutForm = ({ orderId }: { orderId: number }) => {
 };
 
 export default function Checkout() {
-  const { formatMoney } = useCurrency();
   const { user } = useAuth();
   const { toast } = useToast();
   const [clientSecret, setClientSecret] = useState("");
@@ -182,12 +181,12 @@ export default function Checkout() {
                       <h4 className="font-medium text-gray-900">{item.product?.name}</h4>
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                       <p className="text-sm text-gray-600">
-                        Unit Price: {formatMoney(item.unitPrice)}
+                        Unit Price: {formatCurrency(item.unitPrice, order?.currency || 'GBP')}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">
-                        {formatMoney(item.total)}
+                        {formatCurrency(item.total, order?.currency || 'GBP')}
                       </p>
                     </div>
                   </div>
@@ -199,20 +198,20 @@ export default function Checkout() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-medium text-gray-900">
-                      {formatMoney(order.subtotal)}
+                      {formatCurrency(order.subtotal, order?.currency || 'GBP')}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Transaction Fee:</span>
                     <span className="font-medium text-gray-900">
-                      {formatMoney(6.00)}
+                      {formatCurrency(6.00, order?.currency || 'GBP')}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between items-center text-lg font-semibold">
                     <span className="text-gray-900">Total:</span>
                     <span className="text-gray-900">
-                      {formatMoney(order.total)}
+                      {formatCurrency(order.total, order?.currency || 'GBP')}
                     </span>
                   </div>
                 </div>

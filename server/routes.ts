@@ -12737,7 +12737,7 @@ Customer: ${customerName}
 Phone: ${formattedPhoneNumber}
 Product: ${product.name}
 Quantity: ${quantity.toLocaleString()} units
-Total: ${getCurrencySymbol(wholesaler.defaultCurrency || 'GBP')}${totalAmount}
+Total: ${getCurrencySymbol(wholesaler.preferredCurrency || 'GBP')}${totalAmount}
 
 Order ID: ${order.id}
 Status: Pending Confirmation

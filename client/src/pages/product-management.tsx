@@ -2575,17 +2575,17 @@ export default function ProductManagement() {
                                     {product.promoActive && product.promoPrice ? (
                                       <>
                                         <span className="text-green-600">
-                                          {formatCurrency(parseFloat(product.promoPrice), product.currency || "GBP")}
+                                          {formatMoney(parseFloat(product.promoPrice))}
                                         </span>
                                         <span className="text-gray-500 line-through text-xs">
-                                          {formatCurrency(parseFloat(product.price), product.currency || "GBP")}
+                                          {formatMoney(parseFloat(product.price))}
                                         </span>
                                         <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                                           PROMO
                                         </Badge>
                                       </>
                                     ) : (
-                                      formatCurrency(parseFloat(product.price), product.currency || "GBP")
+                                      formatMoney(parseFloat(product.price))
                                     )}
                                   </div>
                                 ) : "Hidden"}

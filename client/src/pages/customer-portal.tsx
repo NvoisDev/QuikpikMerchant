@@ -736,7 +736,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
               ) : (
                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
               )}
-              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal))}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal), wholesaler?.defaultCurrency || 'GBP')}</span>
               {order.items && order.items.length > 0 && (
                 <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
               )}
@@ -1219,7 +1219,7 @@ export default function CustomerPortal() {
         } else if (orders < 10) {
           return `Welcome back, valued customer! ${orders} orders and counting ⭐`;
         } else {
-          return `Welcome back, loyal customer! ${formatCurrency(spent)} in total spending 🏆`;
+          return `Welcome back, loyal customer! ${formatCurrency(spent, wholesaler?.defaultCurrency || 'GBP')} in total spending 🏆`;
         }
       };
       
@@ -2795,7 +2795,7 @@ export default function CustomerPortal() {
                     {customerOrderStats && customerOrderStats.totalOrders > 0 && (
                       <div className="mt-2 animate-fade-in-delayed-2">
                         <p className="text-sm opacity-80">
-                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 {formatCurrency(customerOrderStats.totalSpent || 0)} total spent
+                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 {formatCurrency(customerOrderStats.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')} total spent
                         </p>
                         {customerOrderStats.totalOrders >= 10 && (
                           <p className="text-xs opacity-70 mt-1">⭐ Loyal customer since your first order!</p>
@@ -4385,7 +4385,7 @@ export default function CustomerPortal() {
                       </div>
                       <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
-                          {formatCurrency(customerOrderStats?.totalSpent || 0)}
+                          {formatCurrency(customerOrderStats?.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')}
                         </div>
                         <div className="text-sm text-gray-600">Total Spent</div>
                       </div>
@@ -5229,7 +5229,7 @@ export default function CustomerPortal() {
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Checkout ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
                       <span className="ml-auto text-xs opacity-80">
-{formatCurrency(cartStats.totalValue)}
+{formatCurrency(cartStats.totalValue, wholesaler?.defaultCurrency || 'GBP')}
                       </span>
                     </Button>
 
