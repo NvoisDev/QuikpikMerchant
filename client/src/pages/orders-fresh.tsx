@@ -637,6 +637,14 @@ export default function OrdersFresh() {
     order.paymentMethod === 'payment_link' ||
     (!order.paymentMethod && !!order.stripePaymentIntentId);
 
+  // Compute payment balance due date from order creation + balanceDueDays; returns null when not applicable
+  const getBalanceDueDate = (order: Order): Date | null => {
+    if (!order.balanceDueDays || order.balanceDueDays === 0 || order.paymentStatus === 'paid') return null;
+    const due = new Date(order.createdAt);
+    due.setDate(due.getDate() + order.balanceDueDays);
+    return due;
+  };
+
   // Calculate net amount: offline orders keep full subtotal+delivery; Stripe orders deduct platform fee
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
@@ -1256,9 +1264,12 @@ export default function OrdersFresh() {
                         ) : null}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500">
-                        <div className="flex items-center justify-between">
-                          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                          <Eye className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
+                            {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-[10px] text-amber-600 font-medium">Due {due.toLocaleDateString()}</div> : null; })()}
+                          </div>
+                          <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1283,71 +1294,75 @@ export default function OrdersFresh() {
                         </div>
                       )}
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="font-medium text-sm">{order.orderNumber || `#${order.id}`}</div>
-                          <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
+                    <CardContent className="p-3">
+                      {/* Top row: order # + date | amount + eye */}
+                      <div className="flex justify-between items-start mb-1.5">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs">{order.orderNumber || `#${order.id}`}</div>
+                          <div className="text-[10px] text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
+                          {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-[10px] text-amber-600 font-medium">Due {due.toLocaleDateString()}</div> : null; })()}
                         </div>
-                        <div className="text-right flex items-center gap-2">
+                        <div className="text-right flex items-center gap-1.5 flex-shrink-0 ml-2">
                           <div>
-                            <div className="font-medium text-sm">{formatMoney(calculateNetAmount(order))}</div>
-                            <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After platform fee' : 'No platform fee'}</div>
+                            <div className="font-semibold text-xs">{formatMoney(calculateNetAmount(order))}</div>
+                            <div className="text-[10px] text-gray-500">{isStripePayment(order) ? 'After fee' : 'No fee'}</div>
                           </div>
-                          <Eye className="h-4 w-4 text-gray-400" />
+                          <Eye className="h-3.5 w-3.5 text-gray-400" />
                         </div>
                       </div>
-                      
-                      <div className="mb-3">
-                        <div className="font-medium text-xs">{order.customerName || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{order.customerEmail}</div>
+
+                      {/* Customer */}
+                      <div className="flex items-baseline gap-1 mb-1.5 min-w-0">
+                        <span className="font-medium text-[11px] truncate">{order.customerName || 'Unknown'}</span>
+                        <span className="text-[10px] text-gray-400 truncate">{order.customerEmail}</span>
                       </div>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
+
+                      {/* Status badges */}
+                      <div className="flex flex-wrap gap-1 mb-2">
                         {(() => {
                           const refAmt = parseFloat(order.amountRefunded || '0');
                           const paidAmt = parseFloat(order.amountPaid || '0');
                           if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
-                            return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                            return <Badge className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
                           } else if (refAmt > 0 && refAmt < paidAmt) {
-                            return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                            return <Badge className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0">{order.refundedAt ? 'Part Refund' : 'Part Refund Pending'}</Badge>;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
-                            return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
+                            return <Badge className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0">Paid</Badge>;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
-                            return <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>;
+                            return <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1.5 py-0">Part Paid</Badge>;
                           } else {
-                            return <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>;
+                            return <Badge className="bg-red-100 text-red-800 text-[10px] px-1.5 py-0">Unpaid</Badge>;
                           }
                         })()}
                         {order.status === 'fulfilled' ? (
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                          <Badge className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0">Fulfilled</Badge>
                         ) : order.status === 'ready_for_collection' ? (
-                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                          <Badge className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0">Ready</Badge>
                         ) : order.status === 'cancelled' ? (
-                          <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                          <Badge className="bg-red-100 text-red-800 text-[10px] px-1.5 py-0">Cancelled</Badge>
                         ) : (
-                          <Badge className="bg-gray-100 text-gray-800 text-xs">Unfulfilled</Badge>
+                          <Badge className="bg-gray-100 text-gray-800 text-[10px] px-1.5 py-0">Unfulfilled</Badge>
                         )}
                         {order.isQuote ? (
-                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
-                            <UserPen className="w-3 h-3" />
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
+                            <UserPen className="w-2.5 h-2.5" />
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title="Online Order (placed by customer)">
-                            <ShoppingCart className="w-3 h-3" />
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                            <ShoppingCart className="w-2.5 h-2.5" />
                           </Badge>
                         )}
                         {order.fulfillmentType && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                             {order.fulfillmentType === 'delivery' ? (
-                              <><Truck className="w-2 h-2 mr-1" />Delivery</>
+                              <><Truck className="w-2 h-2 mr-0.5" />Delivery</>
                             ) : (
-                              <><MapPin className="w-2 h-2 mr-1" />Collection</>
+                              <><MapPin className="w-2 h-2 mr-0.5" />Collection</>
                             )}
                           </Badge>
                         )}
                       </div>
-                      
+
                       {order.status !== 'fulfilled' && order.status !== 'cancelled' && !isViewer && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1356,7 +1371,7 @@ export default function OrdersFresh() {
                               variant="outline"
                               disabled={updatingOrderId === order.id}
                               onClick={(e) => e.stopPropagation()}
-                              className="text-xs w-full flex items-center justify-center gap-1.5"
+                              className="text-xs w-full flex items-center justify-center gap-1.5 h-7"
                             >
                               {updatingOrderId === order.id
                                 ? <><Loader2 className="h-3 w-3 animate-spin" /> Updating...</>
