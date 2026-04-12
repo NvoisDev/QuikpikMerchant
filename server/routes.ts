@@ -125,7 +125,6 @@ import { healthCheck } from "./health";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
-import nodemailer from "nodemailer";
 import { SubscriptionService } from "./subscription-service";
 import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits } from "./middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
@@ -488,71 +487,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test auth endpoint for development
-  app.get('/api/test-auth', async (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ error: "Not found" });
-    }
-    
-    const testUser = {
-      id: 'test-user-123',
-      firstName: 'Test',
-      lastName: 'User', 
-      email: 'test@example.com',
-      businessName: 'Test Business',
-      role: 'wholesaler',
-      logoType: 'business',
-      logoUrl: ''
-    };
-    
-    res.json({ user: testUser, authenticated: true });
-  });
-
-
-  // Test products endpoint (development only - bypasses auth for demo)
-  app.get('/api/test-products', async (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ error: "Not found" });
-    }
-    
-    try {
-      // Return some test products for demonstration
-      const testProducts = [
-        {
-          id: '1',
-          name: 'Premium Widget A',
-          description: 'High-quality widget for premium customers',
-          price: '29.99',
-          stock: 150,
-          category: 'Electronics',
-          status: 'active'
-        },
-        {
-          id: '2', 
-          name: 'Standard Widget B',
-          description: 'Reliable widget for everyday use',
-          price: '19.99',
-          stock: 75,
-          category: 'Electronics', 
-          status: 'active'
-        },
-        {
-          id: '3',
-          name: 'Economy Widget C',
-          description: 'Budget-friendly widget option',
-          price: '12.99',
-          stock: 200,
-          category: 'Basic',
-          status: 'active'
-        }
-      ];
-      
-      res.json(testProducts);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch test products" });
-    }
-  });
-
   // Logo upload URL endpoint (temporary bypass for testing)
   app.post('/api/logo-upload-url', async (req, res) => {
     try {
@@ -696,45 +630,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // SECURITY FIX: Disabled debug login endpoint that was causing data leaks
-  // Debug endpoints should only be enabled in development and require explicit email
-  app.post("/api/debug/login", async (req, res) => {
-    // Only allow in development environment
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ error: "Not found" });
-    }
-    
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ error: "Email is required for debug login" });
-      }
-      
-      console.log('🔍 Debug login - session check:', {
-        sessionExists: !!req.session,
-        sessionId: req.sessionID,
-        requestedEmail: email
-      });
-      
-      const user = await storage.getUserByEmail(email);
-      if (user && req.session) {
-        (req.session as any).userId = user.id;
-        (req.session as any).user = user;
-        console.log(`🔐 Debug session created for user ${user.email}`, {
-          sessionId: req.sessionID,
-          userId: user.id
-        });
-        res.json({ success: true, user: { id: user.id, email: user.email, role: user.role } });
-      } else {
-        console.log('❌ User not found or session not available', { userFound: !!user, sessionExists: !!req.session });
-        res.status(404).json({ error: "User not found or session unavailable" });
-      }
-    } catch (error) {
-      console.error('Debug login error:', error);
-      res.status(500).json({ error: "Login failed" });
-    }
-  });
   // Set up trust proxy setting before any middleware  
   app.set("trust proxy", 1);
   
@@ -872,41 +767,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // STRIPE WEBHOOKS - MUST BE FIRST TO AVOID VITE CATCH-ALL INTERFERENCE
-  // TEST ENDPOINT TO VERIFY LOGGING
-  app.post('/api/test-webhook', async (req, res) => {
-    console.log(`🧪 TEST WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Test body:`, JSON.stringify(req.body, null, 2));
-    res.json({ test: 'working', received: true });
-  });
-
-  // SIMPLIFIED TEST ENDPOINT
-  app.post('/api/debug-test', async (req, res) => {
-    console.log(`🔧 DEBUG TEST EXECUTING - ${new Date().toISOString()}`);
-    console.log(`🔧 Body received:`, req.body);
-    res.json({ debug: 'success', timestamp: new Date().toISOString() });
-  });
-
-
-
-  // Debug session endpoint to understand the issue
-  app.get('/api/debug/session', (req: any, res) => {
-    console.log('🔍 Session Debug:', {
-      sessionExists: !!req.session,
-      sessionId: req.sessionID,
-      sessionUser: (req.session as any)?.user,
-      sessionUserId: (req.session as any)?.userId,
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      cookies: req.headers.cookie
-    });
-    
-    res.json({
-      sessionExists: !!req.session,
-      sessionId: req.sessionID,
-      hasUser: !!(req.session as any)?.user,
-      hasUserId: !!(req.session as any)?.userId,
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
-    });
-  });
 
   // Stripe Connect endpoint - Debug session data thoroughly
   app.post('/api/stripe/connect', async (req: any, res) => {
@@ -1152,14 +1012,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  // TEST WITH SIMILAR PATH PATTERN TO WORKING ENDPOINTS
-  app.post('/api/webhook-test/verify', async (req, res) => {
-    console.log(`🎯 WEBHOOK TEST EXECUTING - ${new Date().toISOString()}`);
-    console.log(`🎯 Body received:`, req.body);
-    res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
-  });
-
 
   // STRIPE WEBHOOK - Signature-verified handler for all Stripe events
   app.post('/api/webhooks/stripe', async (req, res) => {
@@ -1700,50 +1552,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Customer verification error:", error);
       res.status(500).json({ error: "Customer verification failed" });
-    }
-  });
-
-  // SMS verification request
-  // Debug endpoint to get verification codes when SMS fails
-  app.post('/api/customer-auth/get-debug-code', async (req, res) => {
-    const { wholesalerId, lastFourDigits } = req.body;
-    
-    if (!wholesalerId || !lastFourDigits) {
-      return res.status(400).json({ error: "Wholesaler ID and last four digits required" });
-    }
-    
-    try {
-      // Find the latest SMS verification code for this customer
-      let customer;
-      try {
-        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      } catch (error: any) {
-        // Handle security error when multiple customers share same last 4 digits
-        if (error.message.includes('Multiple customers found with same phone number suffix')) {
-          return res.status(400).json({ 
-            error: "Multiple customers found with the same phone number ending. Please contact support for assistance.",
-            securityIssue: true
-          });
-        }
-        throw error; // Re-throw other errors
-      }
-      
-      if (!customer) {
-        return res.status(404).json({ error: "Customer not found" });
-      }
-      
-      // Get the latest SMS code from database
-      const verificationCode = await storage.getLatestSMSCode(customer.id);
-      
-      res.json({ 
-        success: true,
-        debugCode: verificationCode,
-        message: "Debug code retrieved for development",
-        customerName: customer.name,
-        phone: customer.phone
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
     }
   });
 
@@ -3723,16 +3531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add a debug endpoint to check session state
-  app.get('/api/auth/debug', async (req: any, res) => {
-    res.json({
-      sessionExists: !!req.session,
-      sessionData: req.session,
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      user: req.user ? { id: req.user.id, email: req.user.email } : null
-    });
-  });
-
   // Profile completion endpoint for Google OAuth users
   app.put('/api/auth/complete-profile', requireAuth, async (req: any, res) => {
     try {
@@ -5193,36 +4991,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to fetch order statistics",
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
-      });
-    }
-  });
-
-  // Debug orders endpoint for development (temporary)
-  app.get('/api/orders-debug', async (req: any, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ message: "Not found" });
-    }
-    
-    try {
-      const search = req.query.search;
-      const wholesalerId = req.query.wholesalerId || 'user_1756056297340_surulere'; // Default to Surulere
-      
-      console.log(`🔧 DEBUG: Fetching orders for wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
-      const orders = await storage.getOrders(wholesalerId, undefined, search);
-      console.log(`🔧 DEBUG: Found ${orders.length} orders`);
-      
-      res.json({
-        success: true,
-        wholesalerId,
-        orderCount: orders.length,
-        orders: orders.slice(0, 5), // Show first 5 orders only for debugging
-      });
-    } catch (error) {
-      console.error("❌ DEBUG: Error fetching orders:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Failed to fetch orders",
-        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -9735,28 +9503,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate removed - using /api/webhooks/stripe below
 
-  // WhatsApp diagnostic endpoint
-  app.get('/api/test-whatsapp-credentials', async (req, res) => {
-    try {
-      console.log('🔧 WhatsApp Credentials Check:');
-      console.log('Twilio SID:', !!process.env.TWILIO_ACCOUNT_SID);
-      console.log('Twilio Token:', !!process.env.TWILIO_AUTH_TOKEN);  
-      console.log('Twilio Phone:', !!process.env.TWILIO_PHONE_NUMBER);
-      
-      res.json({
-        hasCredentials: {
-          twilioSID: !!process.env.TWILIO_ACCOUNT_SID,
-          twilioToken: !!process.env.TWILIO_AUTH_TOKEN,
-          twilioPhone: !!process.env.TWILIO_PHONE_NUMBER
-        },
-        environment: process.env.NODE_ENV
-      });
-    } catch (error) {
-      console.error('WhatsApp credentials check error:', error);
-      res.status(500).json({ error: 'Credentials check failed' });
-    }
-  });
-
   // WhatsApp Broadcast endpoints
   app.post('/api/broadcasts', requireAuth, requireNotViewer, requireBroadcastLimits(), async (req: any, res) => {
     try {
@@ -10050,39 +9796,6 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Note: Removed subscription system completely
-
-  // DEBUG: Endpoint to check Stripe products
-  app.get('/api/debug/stripe-products', async (req, res) => {
-    try {
-      
-      const products = await stripe.products.list({ active: true });
-      const prices = await stripe.prices.list({ active: true });
-      
-      res.json({
-        products: products.data.map(p => ({
-          id: p.id,
-          name: p.name,
-          metadata: p.metadata
-        })),
-        prices: prices.data.map(p => ({
-          id: p.id,
-          product: p.product,
-          amount: p.unit_amount,
-          currency: p.currency,
-          metadata: p.metadata
-        }))
-      });
-    } catch (error) {
-      console.error('❌ Debug error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // NEW: Create Stripe customer and subscription (Real Checkout) - DEMO: No auth required for testing
-
-  // OLD: Keep old endpoint for compatibility - will be removed later
-
-  // Duplicate removed - subscription webhooks handled by /api/webhooks/stripe
 
   // Marketplace endpoints (public access)
   // Enhanced Marketplace Discovery API - Featured content
@@ -10398,24 +10111,6 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error: any) {
       console.error("Test endpoint error:", error);
       res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Test endpoint to check if basic DB connection works
-  app.get('/api/marketplace/wholesaler-test/:id', async (req, res) => {
-    try {
-      console.log("=== TESTING DB CONNECTION ===");
-      const { id } = req.params;
-      
-      // Try to get user from storage
-      const user = await storage.getUser(id);
-      const result = { rows: [{ count: user ? 1 : 0 }] };
-      console.log("Direct SQL result:", result.rows);
-      
-      res.json({ success: true, id, result: result.rows });
-    } catch (error) {
-      console.error("=== TEST ERROR ===", error);
-      res.status(500).json({ message: "Test failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -10904,40 +10599,6 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("Error fetching WhatsApp status:", error);
       res.status(500).json({ error: "Failed to fetch WhatsApp status" });
-    }
-  });
-
-  app.post('/api/whatsapp/test', requireAuth, async (req: any, res) => {
-    try {
-      const { testPhoneNumber } = req.body;
-      const wholesalerId = req.user.id;
-
-      if (!testPhoneNumber) {
-        return res.status(400).json({ 
-          success: false,
-          error: "Test phone number is required" 
-        });
-      }
-
-      // Get user configuration
-      const user = await storage.getUser(wholesalerId);
-      if (!user) {
-        return res.status(404).json({ 
-          success: false,
-          error: "User not found" 
-        });
-      }
-
-      console.log('📞 WhatsApp test requested for wholesaler:', wholesalerId);
-      const result = { success: true, message: 'WhatsApp test completed (simulated)' };
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error testing WhatsApp:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to test WhatsApp integration" 
-      });
     }
   });
 
@@ -14037,59 +13698,6 @@ https://quikpik.app`;
     } catch (error) {
       console.error("Error creating negotiation:", error);
       res.status(500).json({ message: "Failed to submit price quote request" });
-    }
-  });
-
-  // Test email endpoint for order confirmation
-  app.post('/api/test-order-email', requireAuth, async (req: any, res) => {
-    try {
-      const { orderId, testEmail } = req.body;
-      
-      if (!orderId || !testEmail) {
-        return res.status(400).json({ message: "Order ID and test email are required" });
-      }
-
-      // Get the order with all details
-      const order = await storage.getOrder(orderId);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      // Get wholesaler details
-      const wholesaler = await storage.getUser(order.wholesalerId);
-      if (!wholesaler) {
-        return res.status(404).json({ message: "Wholesaler not found" });
-      }
-
-      // Create test customer data
-      const testCustomer = {
-        name: `${order.retailer.firstName || 'Test'} ${order.retailer.lastName || 'Customer'}`,
-        email: testEmail,
-        phone: order.retailer.businessPhone || 'N/A',
-        address: order.deliveryAddress || 'Test Address'
-      };
-
-      // Enrich items with product details for email
-      const enrichedItems = await Promise.all(order.items.map(async (item: any) => {
-        const product = await storage.getProduct(item.productId);
-        return {
-          ...item,
-          productName: product?.name || `Product #${item.productId}`,
-          product: product ? { name: product.name } : null
-        };
-      }));
-
-      // Send test email
-      await sendCustomerInvoiceEmail(testCustomer, order, enrichedItems, wholesaler);
-      
-      res.json({ 
-        message: "Test email sent successfully",
-        sentTo: testEmail,
-        orderId: orderId
-      });
-    } catch (error) {
-      console.error("Error sending test email:", error);
-      res.status(500).json({ message: "Failed to send test email", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -17599,93 +17207,6 @@ https://quikpik.app`;
     } catch (error) {
       console.error('Error deleting customer:', error);
       res.status(500).json({ error: 'Failed to delete customer' });
-    }
-  });
-
-  // Test endpoint for welcome messages
-  app.post('/api/test-welcome-messages', requireAuth, async (req: any, res) => {
-    try {
-      const { customerName, customerEmail, customerPhone } = req.body;
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
-      
-      const wholesaler = await storage.getUser(targetUserId);
-      if (!wholesaler) {
-        return res.status(400).json({ error: 'No wholesaler account found' });
-      }
-      
-      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-      const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
-      
-      const welcomeResult = await sendWelcomeMessages({
-        customerName,
-        customerEmail,
-        customerPhone,
-        wholesalerName,
-        wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-        wholesalerPhone: wholesaler.phoneNumber,
-        wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
-        portalUrl,
-        wholesalerId: wholesaler.id,
-        wholesalerLogoType: wholesaler.logoType,
-        wholesalerLogoUrl: wholesaler.logoUrl,
-      });
-      
-      res.json(welcomeResult);
-    } catch (error) {
-      console.error('Error in test welcome messages:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Manual welcome message test (no auth required for testing)
-  app.post('/api/manual-welcome-test', async (req, res) => {
-    try {
-      const { customerEmail, customerName, customerPhone, wholesalerId } = req.body;
-      
-      const wholesaler = await storage.getUser(wholesalerId);
-      if (!wholesaler) {
-        return res.status(400).json({ error: 'Wholesaler not found' });
-      }
-      
-      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-      const wholesalerAccountName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK';
-      const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
-      
-      console.log('🧪 Testing welcome messages with:', {
-        customerName,
-        customerEmail,
-        customerPhone,
-        wholesalerName,
-        wholesalerEmail: wholesaler.email,
-        wholesalerAccountName
-      });
-      
-      const welcomeResult = await sendWelcomeMessages({
-        customerName,
-        customerEmail,
-        customerPhone,
-        wholesalerName,
-        wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-        wholesalerPhone: wholesaler.phoneNumber,
-        wholesalerAccountName,
-        portalUrl,
-        wholesalerId: wholesaler.id,
-        wholesalerLogoType: wholesaler.logoType,
-        wholesalerLogoUrl: wholesaler.logoUrl,
-      });
-      
-      res.json({
-        success: true,
-        welcomeResult,
-        wholesalerUsed: {
-          name: wholesalerName,
-          email: wholesaler.email,
-          business: wholesaler.businessName
-        }
-      });
-    } catch (error) {
-      console.error('Manual welcome test error:', error);
-      res.status(500).json({ error: error.message });
     }
   });
 
