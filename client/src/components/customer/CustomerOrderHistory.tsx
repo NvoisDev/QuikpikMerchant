@@ -1181,6 +1181,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const ordersPerPage = 10;
   const queryClient = useQueryClient();
 
@@ -1412,6 +1413,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
   }
 
   return (
+    <>
     <Card className="w-full">
       <CardHeader className="pb-3 sm:pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1539,15 +1541,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-8 px-3 flex-1 sm:flex-none">
-                            <Eye className="h-3 w-3 mr-1" />
-                            <span className="text-xs">View Details</span>
-                          </Button>
-                        </DialogTrigger>
-                        <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} currency={currency} />
-                      </Dialog>
+                      <Button variant="outline" size="sm" className="h-8 px-3 flex-1 sm:flex-none" onClick={() => setSelectedOrder(order)}>
+                        <Eye className="h-3 w-3 mr-1" />
+                        <span className="text-xs">View Details</span>
+                      </Button>
                       <ReorderButton
                         order={order}
                         customerPhone={customerPhone}
@@ -1658,5 +1655,12 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         <QuikpikFooter />
       </CardContent>
     </Card>
+
+    {selectedOrder && (
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <OrderDetailsModal order={selectedOrder} wholesalerId={wholesalerId} customerPhone={customerPhone} currency={currency} />
+      </Dialog>
+    )}
+    </>
   );
 }

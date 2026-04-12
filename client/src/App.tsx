@@ -50,6 +50,7 @@ const QuickQuote = lazy(() => import("@/pages/quick-quote"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 const Promotions = lazy(() => import("@/pages/promotions"));
 const Integrations = lazy(() => import("@/pages/integrations"));
+const OrderDetail = lazy(() => import("@/pages/order-detail"));
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -121,6 +122,7 @@ function AuthenticatedRoutes() {
               <Route path="/customers/:customerId" component={CustomerDetail} />
               <Route path="/customers" component={Customers} />
               <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
+              <Route path="/orders/:id" component={OrderDetail} />
               <Route path="/orders" component={OrdersFresh} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/financials" component={Financials} />

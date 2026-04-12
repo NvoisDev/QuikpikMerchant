@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -176,6 +176,7 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 export default function OrdersFresh() {
   const { formatMoney } = useCurrency();
   const { user, isLoading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -425,33 +426,9 @@ export default function OrdersFresh() {
     }
   };
 
-  // Helper to setup the cancel dialog from a cancellation request
-  const setupCancellationDialog = (order: Order, request: any, requestId: number) => {
-    setSelectedOrder(order);
-    setPendingCancellationRequestId(requestId);
-    
-    // Pre-fill the reason from customer's request
-    setCancelReasonCategory('customer_request');
-    setCancelReason(`Customer request: ${request.reasonCategory.replace(/_/g, ' ')}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`);
-    
-    // Set up return items if order has items
-    if (order.items && order.items.length > 0) {
-      setReturnItems(order.items.map((item: OrderItem) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        sellingType: (item as any).sellingType || 'units',
-        maxQty: item.quantity
-      })));
-    }
-    
-    // Default refund settings
-    setProcessRefund(true);
-    setRefundType('card');
-    setRestockInventory(true);
-    setSendNotification(true);
-    
-    // Open the cancel form
-    setShowCancelForm(true);
+  // Navigate to order detail page with cancel form open for a cancellation request
+  const setupCancellationDialog = (order: Order, _request: { reasonCategory: string; reasonNotes?: string }, requestId: number) => {
+    navigate(`/orders/${order.id}?action=cancel&requestId=${requestId}`);
   };
 
   // Reject cancellation request
@@ -535,31 +512,9 @@ export default function OrdersFresh() {
     return pages;
   };
 
-  // Fetch detailed order information with items
-  const loadOrderDetails = async (order: Order) => {
-    try {
-      console.log(`🔍 Fetching detailed order information for order ${order.id}`);
-      
-      const response = await fetch(`/api/orders/${order.id}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        const orderWithItems = await response.json();
-        console.log(`✅ Loaded order ${order.id} with ${orderWithItems.items?.length || 0} items`);
-        setSelectedOrder(orderWithItems);
-      } else {
-        console.error(`❌ Failed to fetch order details: ${response.status}`);
-        // Fall back to basic order data without items
-        setSelectedOrder(order);
-      }
-    } catch (error) {
-      console.error(`❌ Error fetching order details:`, error);
-      // Fall back to basic order data without items
-      setSelectedOrder(order);
-    }
+  // Navigate to the order detail page
+  const loadOrderDetails = (order: Order) => {
+    navigate(`/orders/${order.id}`);
   };
 
   const cancelOrder = async () => {
@@ -730,41 +685,9 @@ export default function OrdersFresh() {
     }
   };
 
-  // Quick-open the cancel form from the dropdown (without a full modal fetch)
-  const openCancelForm = async (order: Order) => {
-    // Open the cancel form immediately so it feels responsive
-    setSelectedOrder(order);
-    setCancelReasonCategory('');
-    setCancelReason('');
-    setProcessRefund(true);
-    setRefundDelivery(false);
-    setRestockInventory(true);
-    setSendNotification(true);
-    setReturnItems([]);
-    setShowCancelForm(true);
-
-    // Fetch full order details with items in the background and populate quantity editors
-    try {
-      const response = await fetch(`/api/orders/${order.id}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (response.ok) {
-        const orderWithItems = await response.json();
-        setSelectedOrder(orderWithItems);
-        if (orderWithItems.items && orderWithItems.items.length > 0) {
-          setReturnItems(orderWithItems.items.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            sellingType: item.sellingType || 'units',
-            maxQty: item.quantity
-          })));
-        }
-      }
-    } catch (e) {
-      // Non-fatal — cancel form works without per-item editors
-    }
+  // Navigate to the order detail page with cancel form open
+  const openCancelForm = (order: Order) => {
+    navigate(`/orders/${order.id}?action=cancel`);
   };
 
   // Mark order as ready for collection
@@ -1907,8 +1830,8 @@ export default function OrdersFresh() {
         </CardContent>
       </Card>
 
-      {/* Order Details Modal */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => { setSelectedOrder(null); setShowCancelForm(false); setRefundDelivery(false); }}>
+      {/* REMOVED: Order Details Modal — now a full page at /orders/:id */}
+      {false && <Dialog open={false} onOpenChange={() => {}}>
         <DialogContent className="order-detail-mobile-fullscreen sm:max-w-lg sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:hidden">
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -2910,7 +2833,7 @@ export default function OrdersFresh() {
             )
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       {/* Mark as Paid (offline) Dialog */}
       <Dialog open={isMarkAsPaidOpen} onOpenChange={setIsMarkAsPaidOpen}>
