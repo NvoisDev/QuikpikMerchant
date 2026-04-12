@@ -860,7 +860,7 @@ export default function OrdersFresh() {
     if (total > 0) lines.push(`💰 Total: ${formatCurrency(total)}`);
 
     if (order.fulfillmentType === 'pickup' || order.fulfillmentType === 'collection') {
-      lines.push(`📦 Collection from store`);
+      lines.push(`📦 Collection from your store`);
     } else if (order.deliveryAddress) {
       lines.push(`📦 Delivery to: ${order.deliveryAddress}`);
     }
@@ -875,7 +875,7 @@ export default function OrdersFresh() {
     }
 
     lines.push('');
-    lines.push(`Thank you for your order! 🙏`);
+    lines.push(order.isQuote ? `Thank you for considering this quote! 🙏` : `Thank you for your order! 🙏`);
     lines.push(businessName);
 
     return lines.join('\n');
@@ -886,6 +886,7 @@ export default function OrdersFresh() {
     try {
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       const orderRef = order.orderNumber || `#${order.id}`;
+      const docType = order.isQuote ? 'Quote' : 'Invoice';
 
       // Try native share (mobile: WhatsApp, iMessage, AirDrop, email, etc.)
       let nativeShareSucceeded = false;
@@ -897,7 +898,7 @@ export default function OrdersFresh() {
             const file = new File([blob], filename, { type: 'application/pdf' });
             if (navigator.canShare({ files: [file] })) {
               const shareMessage = buildShareMessage(order);
-              await navigator.share({ title: `Invoice ${orderRef}`, text: shareMessage, files: [file] });
+              await navigator.share({ title: `${docType} ${orderRef}`, text: shareMessage, files: [file] });
               nativeShareSucceeded = true;
               return; // user handled sharing via native sheet
             }
