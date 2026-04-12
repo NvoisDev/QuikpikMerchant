@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link } from "wouter";
@@ -211,8 +211,9 @@ export default function OrdersFresh() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
 
-  // Invoice download state
+  // Invoice download / share state
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
+  const [isSharingInvoice, setIsSharingInvoice] = useState(false);
 
   // Mark as Paid (offline) dialog state
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
@@ -827,6 +828,27 @@ export default function OrdersFresh() {
       toast({ title: 'Error', description: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
     } finally {
       setIsDownloadingInvoice(false);
+    }
+  };
+
+  const shareInvoice = async (order: Order) => {
+    setIsSharingInvoice(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/share-invoice`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.status === 400) {
+        const data = await response.json();
+        toast({ title: 'No email on file', description: data.message || 'This customer has no email address on record.', variant: 'destructive' });
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to send invoice');
+      toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
+    } catch {
+      toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSharingInvoice(false);
     }
   };
 
@@ -2252,6 +2274,24 @@ export default function OrdersFresh() {
                     <FileText className="h-3.5 w-3.5 mr-1.5" />
                   )}
                   {isDownloadingInvoice ? 'Generating PDF...' : 'Download Invoice'}
+                </Button>
+              </div>
+
+              {/* Share Invoice — emails the customer-facing invoice to the customer */}
+              <div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-green-300 text-green-700 hover:bg-green-50 text-xs"
+                  onClick={() => shareInvoice(selectedOrder)}
+                  disabled={isSharingInvoice}
+                >
+                  {isSharingInvoice ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {isSharingInvoice ? 'Sending...' : 'Share Invoice with Customer'}
                 </Button>
               </div>
 

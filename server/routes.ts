@@ -14556,6 +14556,68 @@ https://quikpik.app`;
     }
   });
 
+  // Share customer-facing invoice via email (wholesaler sends to customer)
+  app.post('/api/orders/:id/share-invoice', requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user;
+      const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+      if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
+
+      const customerEmail = order.customerEmail || order.retailer?.email;
+      if (!customerEmail) {
+        return res.status(400).json({ message: 'No customer email on record for this order' });
+      }
+
+      const customerName = order.customerName || order.retailer?.businessName || 'Customer';
+      const businessName = wholesaler.businessName || 'Your Supplier';
+      const orderRef = order.orderNumber || `#${order.id}`;
+      const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
+
+      // Generate customer-facing invoice (showTransactionFee = true)
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
+      const pdfAttachment: SendGridAttachment = {
+        content: pdfBuffer.toString('base64'),
+        filename: invoiceFilename,
+        type: 'application/pdf',
+        disposition: 'attachment',
+      };
+
+      const { wrapCustomerEmail, emailCard, getEmailLogoUrl } = await import('./email-templates');
+      const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
+      const branding = { businessName, logoUrl };
+
+      const body = emailCard(
+        `<p style="margin:0 0 12px;color:#374151;font-size:15px">Hi ${customerName},</p>` +
+        `<p style="margin:0 0 16px;color:#374151;font-size:15px">Please find your invoice <strong>${orderRef}</strong> attached to this email.</p>` +
+        `<p style="margin:0;color:#6b7280;font-size:13px">If you have any questions about this invoice, please get in touch with us directly.</p>`
+      );
+
+      const html = wrapCustomerEmail(body, branding, { preheader: `Invoice ${orderRef} from ${businessName}` });
+
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+      await sgMail.send({
+        to: customerEmail,
+        from: 'hello@quikpik.co',
+        subject: `Your Invoice ${orderRef} – ${businessName}`,
+        html,
+        attachments: [pdfAttachment],
+      } as MailDataRequired);
+
+      console.log(`📧 Customer invoice shared: order ${orderRef} → ${customerEmail}`);
+      res.json({ message: `Invoice sent to ${customerEmail}` });
+    } catch (error) {
+      console.error('Error sharing invoice:', error);
+      res.status(500).json({ message: 'Failed to send invoice' });
+    }
+  });
+
   // Send simple receipt email for existing order
   app.post('/api/orders/:id/send-receipt', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
