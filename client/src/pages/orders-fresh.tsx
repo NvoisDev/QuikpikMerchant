@@ -1124,7 +1124,7 @@ export default function OrdersFresh() {
                       <Fragment key={order.id}>
                         {showSeparator && (
                           <TableRow className="bg-gray-50 hover:bg-gray-50">
-                            <TableCell colSpan={6} className="py-2 px-4">
+                            <TableCell colSpan={5} className="py-2 px-4">
                               <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
                             </TableCell>
                           </TableRow>
