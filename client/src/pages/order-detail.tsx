@@ -424,7 +424,7 @@ export default function OrderDetail() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ action: 'approved' })
+            body: JSON.stringify({ approved: true })
           }).catch(() => {});
           setPendingCancellationRequestId(null);
         }

@@ -27,6 +27,8 @@ export interface OrderItem {
   quantity: number;
   unitPrice: string;
   total: string;
+  appliedOfferLabel?: string | null;
+  freeItems?: number;
 }
 
 export interface Order {
@@ -46,6 +48,9 @@ export interface Order {
     businessPhone?: string;
     businessAddress?: string;
     deliveryNote?: string | null;
+    city?: string;
+    postalCode?: string;
+    country?: string;
   };
   fulfillmentType: string;
   deliveryCarrier: string;
@@ -873,15 +878,15 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {(item as any).appliedOfferLabel && (
+                  {item.appliedOfferLabel && (
                     <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mt-0.5">
-                      🎁 {(item as any).appliedOfferLabel}
+                      🎁 {item.appliedOfferLabel}
                     </span>
                   )}
                   <div className="text-xs text-gray-600">
                     Quantity: {item.quantity} units × {fmt(item.unitPrice)}
-                    {(item as any).freeItems > 0 && (
-                      <span className="ml-1 text-green-700 font-medium">+{(item as any).freeItems} free</span>
+                    {(item.freeItems ?? 0) > 0 && (
+                      <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}
                   </div>
                 </div>
@@ -1367,15 +1372,15 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {(item as any).appliedOfferLabel && (
+                  {item.appliedOfferLabel && (
                     <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mt-0.5">
-                      🎁 {(item as any).appliedOfferLabel}
+                      🎁 {item.appliedOfferLabel}
                     </span>
                   )}
                   <div className="text-xs text-gray-600">
                     Quantity: {item.quantity} units × {fmt(item.unitPrice)}
-                    {(item as any).freeItems > 0 && (
-                      <span className="ml-1 text-green-700 font-medium">+{(item as any).freeItems} free</span>
+                    {(item.freeItems ?? 0) > 0 && (
+                      <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}
                   </div>
                 </div>
@@ -1940,12 +1945,12 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     {order.items.slice(0, 2).map((item, index) => (
                       <div key={index} className="text-xs text-gray-700 break-words">
                         <span className="font-medium">{item.productName}</span>
-                        {(item as any).appliedOfferLabel && (
-                          <span className="ml-1 inline-block bg-purple-100 text-purple-700 text-xs px-1.5 py-0 rounded-full">🎁 {(item as any).appliedOfferLabel}</span>
+                        {item.appliedOfferLabel && (
+                          <span className="ml-1 inline-block bg-purple-100 text-purple-700 text-xs px-1.5 py-0 rounded-full">🎁 {item.appliedOfferLabel}</span>
                         )}
                         <span className="text-gray-500 ml-1">
                           {item.quantity} units × {fmt(item.unitPrice)}
-                          {(item as any).freeItems > 0 && <span className="text-green-700 font-medium ml-1">+{(item as any).freeItems} free</span>}
+                          {(item.freeItems ?? 0) > 0 && <span className="text-green-700 font-medium ml-1">+{item.freeItems} free</span>}
                         </span>
                       </div>
                     ))}
