@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "@/lib/currencies";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,9 +98,6 @@ interface Order {
   depositPercentage?: number;
   amountPaid?: string;
 }
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(amount);
 
 const formatDate = (date: Date | string) =>
   new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });

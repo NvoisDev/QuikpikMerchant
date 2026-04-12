@@ -19,14 +19,7 @@ import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
-// Simple currency formatter
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    minimumFractionDigits: 2
-  }).format(amount);
-};
+import { formatCurrency } from "@/lib/currencies";
 
 interface Order {
   id: number;

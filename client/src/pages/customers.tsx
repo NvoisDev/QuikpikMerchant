@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { formatCurrency } from "@/lib/currencies";
 import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -667,14 +668,6 @@ export default function Customers() {
       });
     },
   });
-
-  // Helper functions
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(amount);
-  };
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-GB', {

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2, ShoppingCart, Plus, TrendingUp, Clock, CheckCircle, Zap } from "lucide-react";
@@ -186,11 +187,6 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
   const totalSpent = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total || '0'), 0);
   const recentOrders = orders.slice(0, 3);
   const pendingOrders = orders.filter((order: any) => order.status === 'pending').length;
-
-  // Format currency with commas for amounts over 1,000
-  const formatCurrency = (amount: number) => {
-    return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

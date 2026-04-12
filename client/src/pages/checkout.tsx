@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, CreditCard, Truck } from 'lucide-react';
 import { Link } from "wouter";
+import { formatCurrency } from "@/lib/currencies";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -121,13 +122,6 @@ export default function Checkout() {
         });
     }
   }, [orderId, clientSecret, toast]);
-
-  const formatCurrency = (amount: number | string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(typeof amount === 'string' ? parseFloat(amount) : amount);
-  };
 
   if (orderLoading || !order) {
     return (
