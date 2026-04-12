@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2 } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2, ArrowLeft } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
@@ -1175,6 +1175,424 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
+function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, currency = 'GBP', onBack }: {
+  order: Order; wholesalerId: string; customerPhone: string; currency?: string; onBack: () => void;
+}) {
+  const fmt = (amount: string | number) => formatCurrency(amount, currency);
+  const queryClient = useQueryClient();
+  const subtotal = parseFloat(order.subtotal || '0');
+  const transactionFee = parseFloat(order.transactionFee || (subtotal * 0.055 + 0.50).toFixed(2));
+  const deliveryCost = parseFloat(order.deliveryCost || '0');
+  const totalPaid = parseFloat(order.total || '0');
+
+  return (
+    <div className="bg-white min-h-screen w-full">
+      {/* Sticky header with back button */}
+      <div className="sticky top-0 z-10 bg-white border-b px-4 py-3 flex items-center gap-3 shadow-sm">
+        <Button variant="ghost" size="sm" onClick={onBack} className="flex items-center gap-1 text-gray-600">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Orders
+        </Button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-semibold truncate">Order {order.orderNumber}</h2>
+          <p className="text-xs text-gray-500">Order ID: {order.id}</p>
+        </div>
+      </div>
+
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        {/* Order Status */}
+        <div>
+          <h3 className="font-semibold mb-2 text-sm sm:text-base">Status & Fulfillment</h3>
+          <div className="flex flex-wrap gap-2">
+            <Badge className={`${getStatusColor(order.status)} text-xs`}>
+              {getStatusIcon(order.status)}
+              <span className="ml-1 capitalize">{order.status}</span>
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
+            </Badge>
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
+              <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
+            ) : (
+              <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
+                {getPaymentStatusLabel(order.paymentStatus || 'paid')}
+              </Badge>
+            )}
+            <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Outstanding Balance Alert */}
+        {parseFloat(order.amountOutstanding || '0') > 0 && order.status !== 'cancelled' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-start">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                <span className="text-lg">💳</span>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-orange-900 text-sm">Outstanding Balance</h4>
+                <p className="text-orange-800 text-xs mt-1">
+                  You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
+                </p>
+                <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Order Total:</span>
+                    <span className="font-medium">{fmt(order.total)}</span>
+                  </div>
+                  {order.depositPercentage && order.depositPercentage < 100 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Deposit Required ({order.depositPercentage}%):</span>
+                      <span className="font-medium">{fmt((parseFloat(order.total) * (order.depositPercentage / 100)).toFixed(2))}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-green-700">
+                    <span>Amount Paid:</span>
+                    <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
+                  </div>
+                  <div className="flex justify-between text-orange-700 font-semibold border-t pt-1">
+                    <span>Outstanding:</span>
+                    <span>{fmt(order.amountOutstanding || '0')}</span>
+                  </div>
+                  {order.balanceDueDays !== undefined && order.balanceDueDays > 0 && parseFloat(order.amountOutstanding || '0') > 0 && (
+                    <div className="flex justify-between text-red-700 font-medium mt-1">
+                      <span>Balance Due By:</span>
+                      <span>{new Date(new Date(order.createdAt).getTime() + (order.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  )}
+                </div>
+                <PayBalanceButton order={order} customerPhone={customerPhone} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Ready for Collection Alert */}
+        {order.fulfillmentType === 'pickup' && order.status === 'ready_for_collection' && (
+          <div className="bg-orange-50 border-l-4 border-orange-400 p-3 sm:p-4 rounded-r-lg">
+            <div className="flex items-center">
+              <Warehouse className="h-5 w-5 text-orange-600 mr-3" />
+              <div>
+                <h3 className="font-semibold text-orange-900 text-sm sm:text-base">📦 Your Order is Ready for Collection!</h3>
+                <p className="text-orange-800 text-xs sm:text-sm mt-1">Great news! Your order is prepared and waiting for you to collect.</p>
+                {order.readyToCollectAt && (
+                  <p className="text-orange-700 text-xs mt-2">Ready since: {new Date(order.readyToCollectAt).toLocaleString()}</p>
+                )}
+                <div className="mt-3 text-xs sm:text-sm text-orange-800">
+                  <p className="font-medium">Next Steps:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Contact {order.wholesaler?.businessName} to arrange collection time</li>
+                    <li>Bring a copy of this order or your order number</li>
+                    <li>Collect during business hours</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Your Information */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Your Information</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+            <div className="text-xs break-words"><strong>Name:</strong> {order.customerName || 'Not available'}</div>
+            <div className="text-xs break-all"><strong>Email:</strong> {order.customerEmail || 'Not available'}</div>
+            <div className="text-xs"><strong>Phone:</strong> {order.customerPhone || 'Not available'}</div>
+            {order.customerAddress && (
+              <div className="text-xs break-words"><strong>Address:</strong> {formatAddress(order.customerAddress)}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Address Information */}
+        <div>
+          {order.fulfillmentType === 'pickup' ? (
+            <div>
+              <h3 className="font-medium mb-1 text-sm sm:text-base">Collection Address</h3>
+              <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-200">
+                <div className="flex items-start space-x-2">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs">📦</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-600 mb-1">Collect from business</div>
+                    <div className="font-medium text-sm break-words">{order.wholesaler?.businessName || 'Business'}</div>
+                    {(order.wholesaler?.businessAddress || order.wholesaler?.city) && (
+                      <div className="text-xs text-gray-700 mt-2 bg-white border rounded p-2">
+                        <div className="font-medium text-gray-900 mb-1">Collection Address:</div>
+                        <div>{order.wholesaler?.businessAddress}</div>
+                        {order.wholesaler?.city && (
+                          <div>{order.wholesaler.city} {order.wholesaler.postalCode}</div>
+                        )}
+                        {order.wholesaler?.country && <div>{order.wholesaler.country}</div>}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-600 mt-1">
+                      {order.status === 'ready_for_collection'
+                        ? 'Your order is ready! Contact the business to arrange collection time.'
+                        : 'Contact the business to arrange collection time.'}
+                    </div>
+                    {order.wholesaler?.businessPhone && (
+                      <div className="text-xs text-gray-600 mt-1"><strong>Phone:</strong> {order.wholesaler.businessPhone}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            (order.deliveryAddress || order.deliveryAddressId) && (
+              <DynamicDeliveryAddressDisplay
+                orderId={order.id}
+                orderStatus={order.status}
+                wholesalerId={wholesalerId}
+                staticAddress={order.deliveryAddress}
+                addressId={order.deliveryAddressId}
+                className="bg-gray-50 border-gray-200"
+                onAddressChanged={() => {
+                  queryClient.invalidateQueries({
+                    queryKey: ['/api/customer-orders', wholesalerId, encodeURIComponent(customerPhone)]
+                  });
+                }}
+              />
+            )
+          )}
+        </div>
+
+        {/* Order Items */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Items ({order.items.length})</h3>
+          <div className="space-y-2">
+            {order.items.map((item, index) => (
+              <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-xs break-words">{item.productName}</div>
+                  {(item as any).appliedOfferLabel && (
+                    <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mt-0.5">
+                      🎁 {(item as any).appliedOfferLabel}
+                    </span>
+                  )}
+                  <div className="text-xs text-gray-600">
+                    Quantity: {item.quantity} units × {fmt(item.unitPrice)}
+                    {(item as any).freeItems > 0 && (
+                      <span className="ml-1 text-green-700 font-medium">+{(item as any).freeItems} free</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-left sm:text-right flex-shrink-0">
+                  <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Payment Summary */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+            <div className="flex justify-between text-xs">
+              <span>Subtotal:</span>
+              <span className="font-medium">{fmt(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span className="font-medium">{fmt(transactionFee)}</span>
+            </div>
+            {deliveryCost > 0 && (
+              <div className="flex justify-between text-xs">
+                <span>Delivery Cost:</span>
+                <span className="font-medium">{fmt(deliveryCost)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold border-t pt-1 text-sm">
+              <span>Order Total:</span>
+              <span>{fmt(totalPaid)}</span>
+            </div>
+            {order.wholesaler?.deliveryNote && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-1.5">
+                <span className="text-amber-600 text-xs mt-0.5">📦</span>
+                <p className="text-xs text-amber-800">{order.wholesaler.deliveryNote}</p>
+              </div>
+            )}
+            {order.depositPercentage && order.depositPercentage < 100 && (
+              <div className="flex justify-between text-xs text-amber-700">
+                <span>Deposit ({order.depositPercentage}%):</span>
+                <span className="font-medium">{fmt(totalPaid * (order.depositPercentage / 100))}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs text-green-600">
+              <span>Amount Paid:</span>
+              <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
+            </div>
+            {order.status === 'cancelled' ? (
+              <div className="flex justify-between text-xs text-gray-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{fmt(0)} - Nothing to pay</span>
+              </div>
+            ) : parseFloat(order.amountOutstanding || '0') > 0 ? (
+              <div className="flex justify-between text-xs text-red-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{fmt(order.amountOutstanding || '0')}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-xs text-green-600 border-t pt-1">
+                <span>Outstanding Balance:</span>
+                <span className="font-medium">{fmt(0)} - Fully paid</span>
+              </div>
+            )}
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 && (
+              <div className="flex justify-between text-xs text-purple-700 bg-purple-50 p-2 rounded mt-1">
+                <span>Refunded:</span>
+                <span className="font-medium">{fmt(order.amountRefunded)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Order Timeline */}
+        <div>
+          <h3 className="font-medium mb-2 text-sm sm:text-base">Order Timeline</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-2">
+            <div className="flex items-start space-x-2 text-xs">
+              <div className={`w-2 h-2 ${parseFloat(order.amountPaid || '0') > 0 ? 'bg-green-500' : 'bg-orange-400'} rounded-full mt-1 flex-shrink-0`}></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                <span className="font-medium break-words">
+                  {parseFloat(order.amountPaid || '0') > 0
+                    ? 'Payment processed successfully'
+                    : order.isQuote ? 'Quote received - awaiting payment' : 'Order placed - awaiting payment'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                <span className="font-medium break-words">Order confirmation sent to you</span>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                <span className="font-medium break-words">Wholesaler notified of your order</span>
+              </div>
+            </div>
+            {order.status === 'ready_for_collection' && order.fulfillmentType === 'pickup' && order.readyToCollectAt && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">{format(new Date(order.readyToCollectAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                  <span className="font-medium break-words text-orange-700">📦 Order ready for collection</span>
+                </div>
+              </div>
+            )}
+            {order.amountRefunded && parseFloat(order.amountRefunded) > 0 && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">
+                    {order.refundedAt ? format(new Date(order.refundedAt), 'MMM d, yyyy')
+                      : order.cancelledAt ? format(new Date(order.cancelledAt), 'MMM d, yyyy') : 'Processing'}
+                  </span>
+                  <span className="font-medium break-words text-purple-700">Refunded: {fmt(parseFloat(order.amountRefunded))}</span>
+                </div>
+              </div>
+            )}
+            {order.status === 'cancelled' && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">
+                    {order.cancelledAt
+                      ? format(new Date(order.cancelledAt), "MMM d, yyyy 'at' h:mm a")
+                      : format(new Date(order.updatedAt), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                  <span className="font-medium break-words text-red-700">Order Cancelled</span>
+                  {order.refundReason && <span className="text-gray-500 block">{order.refundReason}</span>}
+                </div>
+              </div>
+            )}
+            {order.status === 'fulfilled' ? (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">{format(new Date(order.updatedAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                  <span className="font-medium break-words">Order fulfilled - ready for {order.fulfillmentType}</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                {order.status !== 'ready_for_collection' && (
+                  <>
+                    <div className="flex items-start space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                      <span className="text-gray-400 break-words">Awaiting wholesaler confirmation</span>
+                    </div>
+                    <div className="flex items-start space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                      <span className="text-gray-400 break-words">Order preparation pending</span>
+                    </div>
+                    {order.fulfillmentType === 'pickup' && (
+                      <div className="flex items-start space-x-2 text-xs">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                        <span className="text-gray-400 break-words">Ready for collection notification pending</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="flex items-start space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                  <span className="text-gray-400 break-words">
+                    {order.fulfillmentType === 'pickup' ? 'Collection completion pending' : 'Delivery completion pending'}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Product Images */}
+        {order.orderImages && order.orderImages.length > 0 && (
+          <div className="mt-4 border-t pt-4">
+            <h3 className="font-medium text-gray-900 mb-2 flex items-center text-sm sm:text-base">
+              <Camera className="h-4 w-4 mr-2 text-green-600" />
+              Product Photos ({order.orderImages.length})
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {order.orderImages.map((image, index) => (
+                <div key={image.id || index} className="relative cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.open(image.url, '_blank')}>
+                  <img
+                    src={image.url}
+                    alt={image.filename || `Order photo ${index + 1}`}
+                    className="w-full h-20 object-cover rounded border border-gray-200 hover:scale-105 transition-transform"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b">
+                    <div className="truncate">{image.description || image.filename || `Photo ${index + 1}`}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Click photos to view full size • Photos from {order.wholesaler?.businessName || 'your wholesaler'}
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t">
+          <ReorderButton order={order} customerPhone={customerPhone} currency={currency} />
+          <CancellationRequestButton order={order} customerPhone={customerPhone} />
+        </div>
+      </div>
+
+      <QuikpikFooter />
+    </div>
+  );
+}
+
 export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = 'GBP' }: CustomerOrderHistoryProps) {
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1308,6 +1726,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
     }
   };
 
+  if (selectedOrder) {
+    return (
+      <CustomerOrderDetailContent
+        order={selectedOrder}
+        wholesalerId={wholesalerId}
+        customerPhone={customerPhone}
+        currency={currency}
+        onBack={() => setSelectedOrder(null)}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <Card className="w-full">
@@ -1413,7 +1843,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
   }
 
   return (
-    <>
     <Card className="w-full">
       <CardHeader className="pb-3 sm:pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1655,12 +2084,5 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         <QuikpikFooter />
       </CardContent>
     </Card>
-
-    {selectedOrder && (
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <OrderDetailsModal order={selectedOrder} wholesalerId={wholesalerId} customerPhone={customerPhone} currency={currency} />
-      </Dialog>
-    )}
-    </>
   );
 }

@@ -209,6 +209,7 @@ export default function OrderDetail() {
   const [refundDelivery, setRefundDelivery] = useState(false);
   const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [pendingCancellationRequestId, setPendingCancellationRequestId] = useState<number | null>(null);
 
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
   const [markAsPaidAmount, setMarkAsPaidAmount] = useState('');
@@ -241,6 +242,10 @@ export default function OrderDetail() {
           })));
           setCancelReasonCategory('customer_request');
           setShowCancelForm(true);
+          const requestId = params.get('requestId');
+          if (requestId) {
+            setPendingCancellationRequestId(parseInt(requestId, 10));
+          }
         }
       })
       .catch(() => setLoading(false));
@@ -413,6 +418,16 @@ export default function OrderDetail() {
         setRestockInventory(true);
         setSendNotification(true);
         setStaffNote('');
+
+        if (pendingCancellationRequestId) {
+          await fetch(`/api/cancellation-requests/${pendingCancellationRequestId}/respond`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ action: 'approved' })
+          }).catch(() => {});
+          setPendingCancellationRequestId(null);
+        }
 
         if (data.refundFailed) {
           toast({
