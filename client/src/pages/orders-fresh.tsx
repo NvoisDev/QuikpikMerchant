@@ -847,10 +847,10 @@ export default function OrdersFresh() {
 
     lines.push(`Hi ${customerFirstName} 👋`);
     lines.push('');
-    lines.push(`Here's your ${order.isQuote ? 'quote' : 'invoice'} from ${businessName}.`);
+    lines.push(`Here's your invoice from ${businessName}.`);
     lines.push('');
 
-    lines.push(`📋 ${order.isQuote ? 'Quote' : 'Order'}: ${orderRef}`);
+    lines.push(`📋 Invoice: ${orderRef}`);
 
     // Scan ALL items for promotions (not just the first 3 shown)
     const anyPromos = (order.items || []).some(
@@ -895,7 +895,7 @@ export default function OrdersFresh() {
     }
 
     lines.push('');
-    lines.push(order.isQuote ? `Thank you for considering this quote! 🙏` : `Thank you for your order! 🙏`);
+    lines.push(`Thank you for your order! 🙏`);
     lines.push(businessName);
 
     return lines.join('\n');
