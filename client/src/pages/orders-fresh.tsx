@@ -832,6 +832,55 @@ export default function OrdersFresh() {
     }
   };
 
+  const buildShareMessage = (order: Order): string => {
+    const orderRef = order.orderNumber || `#${order.id}`;
+    const customerFirstName = order.customerName?.split(' ')[0] || 'there';
+    const businessName =
+      (user as AuthUser)?.businessName ||
+      order.wholesalerBusinessName ||
+      ((user as AuthUser)?.firstName ? `${(user as AuthUser).firstName} ${(user as AuthUser).lastName || ''}`.trim() : null) ||
+      'Your supplier';
+
+    const lines: string[] = [];
+
+    lines.push(`Hi ${customerFirstName} 👋`);
+    lines.push('');
+    lines.push(`Here's your ${order.isQuote ? 'quote' : 'invoice'} from ${businessName}.`);
+    lines.push('');
+
+    lines.push(`📋 ${order.isQuote ? 'Quote' : 'Order'}: ${orderRef}`);
+
+    if (order.items && order.items.length > 0) {
+      const shown = order.items.slice(0, 3).map(item => `${item.quantity}× ${item.product?.name || 'item'}`);
+      const extra = order.items.length > 3 ? ` + ${order.items.length - 3} more` : '';
+      lines.push(`🛍️ ${shown.join(', ')}${extra}`);
+    }
+
+    const total = parseFloat(order.total || '0');
+    if (total > 0) lines.push(`💰 Total: ${formatCurrency(total)}`);
+
+    if (order.fulfillmentType === 'pickup' || order.fulfillmentType === 'collection') {
+      lines.push(`📦 Collection from store`);
+    } else if (order.deliveryAddress) {
+      lines.push(`📦 Delivery to: ${order.deliveryAddress}`);
+    }
+
+    const outstanding = parseFloat(order.amountOutstanding || '0');
+    if (outstanding > 0) {
+      lines.push('');
+      lines.push(`💳 Balance due: ${formatCurrency(outstanding)}`);
+      if (order.stripePaymentLinkUrl) {
+        lines.push(`Pay here → ${order.stripePaymentLinkUrl}`);
+      }
+    }
+
+    lines.push('');
+    lines.push(`Thank you for your order! 🙏`);
+    lines.push(businessName);
+
+    return lines.join('\n');
+  };
+
   const shareInvoice = async (order: Order) => {
     setIsSharingInvoice(true);
     try {
@@ -847,7 +896,8 @@ export default function OrdersFresh() {
             const blob = await response.blob();
             const file = new File([blob], filename, { type: 'application/pdf' });
             if (navigator.canShare({ files: [file] })) {
-              await navigator.share({ title: `Invoice ${orderRef}`, files: [file] });
+              const shareMessage = buildShareMessage(order);
+              await navigator.share({ title: `Invoice ${orderRef}`, text: shareMessage, files: [file] });
               nativeShareSucceeded = true;
               return; // user handled sharing via native sheet
             }
