@@ -4915,7 +4915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({
           paidOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} IN ('paid', 'completed', 'processing', 'shipped') THEN 1 END)::int`,
           pendingOrdersCount: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)::int`,
-          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (${orders.total}::numeric - ${orders.platformFee}::numeric) ELSE 0 END), 0)::float`,
+          totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (${orders.subtotal}::numeric - ${orders.platformFee}::numeric) ELSE 0 END), 0)::float`,
         }).from(orders).where(tabFilter),
         db.select({
           activeCount: sql<number>`COUNT(CASE WHEN NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid')) THEN 1 END)::int`,
@@ -6584,9 +6584,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const beforeFees = subtotal + shippingCost;
-      const transactionFee = (beforeFees * 0.055) + 0.50;
-      const total = (beforeFees + transactionFee).toFixed(2);
-      const platformFee = (subtotal * 0.033).toFixed(2);
+      // Pay Later orders have no Stripe processing — no transaction fee or platform fee
+      const transactionFee = 0;
+      const total = beforeFees.toFixed(2);
+      const platformFee = '0.00';
 
       // --- Build delivery address ---
       let deliveryAddress: string | null = null;
@@ -18809,12 +18810,12 @@ https://quikpik.app`;
       );
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
-      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      const platformFee = subtotal * 0.033; // 3.3% platform fee on products + delivery
-      const total = subtotal + customerTransactionFee;
-
-      // Calculate deposit amount
+      // Pay Later (depositPercentage === 0) has no Stripe processing — no fees apply
       const validDepositPercentage = [0, 25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
+      const isPayLater = validDepositPercentage === 0;
+      const customerTransactionFee = isPayLater ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
+      const platformFee = isPayLater ? 0 : subtotal * 0.033; // 3.3% platform fee on products + delivery
+      const total = subtotal + customerTransactionFee;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
 
