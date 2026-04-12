@@ -2,17 +2,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/currencies";
 import { cleanAIDescription } from "@shared/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
   const number = typeof num === 'string' ? parseInt(num) : num;
   return number.toLocaleString();
 };
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
 import { 
   Edit, 
   Copy, 
@@ -25,14 +23,12 @@ import {
   Lock,
   LockOpen
 } from "lucide-react";
-import { SocialShare } from "@/components/social-share";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
 
 interface Product {
   id: number;
@@ -83,10 +79,7 @@ export default function ProductCard({
 }: ProductCardProps) {
   const [, navigate] = useLocation();
 
-  // Get subscription data from authenticated user (no separate API call needed)
   const { user } = useAuth();
-
-  // Note: formatCurrency is imported from @/lib/currencies
 
   const getStatusConfig = (status: string) => {
     switch (status) {
