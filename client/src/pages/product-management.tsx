@@ -2499,14 +2499,9 @@ export default function ProductManagement() {
                               <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
                             )}
                           </div>
-                          {/* Row 2: category + pack size + expiry */}
+                          {/* Row 2: category + expiry + pack size */}
                           <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                            {product.packQuantity && product.unitSize && product.unitOfMeasure && (
-                              <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
-                                {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
-                              </Badge>
-                            )}
                             {product.expiryDate && (() => {
                               const expiry = new Date(product.expiryDate);
                               const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -2516,6 +2511,11 @@ export default function ProductManagement() {
                               if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
                               return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
                             })()}
+                            {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+                              <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
+                                {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
+                              </Badge>
+                            )}
                           </div>
                           {product.description && (
                             <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
