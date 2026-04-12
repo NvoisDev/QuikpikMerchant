@@ -657,7 +657,8 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess }: {
   );
 };
 
-export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
+export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency = 'GBP' }: { order: Order, wholesalerId: string, customerPhone: string, currency?: string }) => {
+  const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const queryClient = useQueryClient();
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');
@@ -1545,7 +1546,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                             <span className="text-xs">View Details</span>
                           </Button>
                         </DialogTrigger>
-                        <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} />
+                        <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} currency={currency} />
                       </Dialog>
                       <ReorderButton
                         order={order}

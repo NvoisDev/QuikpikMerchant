@@ -12737,7 +12737,7 @@ Customer: ${customerName}
 Phone: ${formattedPhoneNumber}
 Product: ${product.name}
 Quantity: ${quantity.toLocaleString()} units
-Total: ${wholesaler.defaultCurrency === 'GBP' ? '£' : '$'}${totalAmount}
+Total: ${getCurrencySymbol(wholesaler.defaultCurrency || 'GBP')}${totalAmount}
 
 Order ID: ${order.id}
 Status: Pending Confirmation
@@ -13744,7 +13744,7 @@ https://quikpik.app`;
     const PDFDocument = (await import('pdfkit')).default;
 
     const currency = wholesaler.preferredCurrency || 'GBP';
-    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '\u20ac' : '\u00a3';
+    const currencySymbol = getCurrencySymbol(currency);
     const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
 
     const customerName = order.retailer

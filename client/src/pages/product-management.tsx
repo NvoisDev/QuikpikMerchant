@@ -25,6 +25,7 @@ import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -124,6 +125,7 @@ const productFormSchema = z.object({
 type ProductFormData = z.infer<typeof productFormSchema>;
 
 export default function ProductManagement() {
+  const { formatMoney } = useCurrency();
   const { user } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [, navigate] = useLocation();
