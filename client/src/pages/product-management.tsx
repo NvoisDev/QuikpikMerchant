@@ -2480,107 +2480,42 @@ export default function ProductManagement() {
                           className="w-14 h-14 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                {product.status === 'locked'
-                                  ? <Lock className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                                  : <LockOpen className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                                }
-                                <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
-                                  {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                                {product.packQuantity && product.unitSize && product.unitOfMeasure && (
-                                  <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
-                                    {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
-                                  </Badge>
-                                )}
-                                {product.stock === 0 && product.status !== "out_of_stock" && (
-                                  <Badge className="text-xs bg-red-500 text-white">Out of Stock</Badge>
-                                )}
-                                {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
-                                  <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
-                                )}
-                                {product.expiryDate && (() => {
-                                  const expiry = new Date(product.expiryDate);
-                                  const now = new Date(); now.setHours(0, 0, 0, 0);
-                                  const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                                  const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                  if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired</Badge>;
-                                  if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
-                                  return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
-                                })()}
-                              </div>
-                            </div>
-                            {!isViewer && (
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
-                              <Button
-                                variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                onClick={() => product.status !== 'locked' && handleEdit(product)}
-                                disabled={product.status === 'locked'}
-                                title="Edit"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); } }}
-                                disabled={product.status === 'locked'}
-                                title="Manage Stock"
-                              >
-                                <PackagePlus className="h-4 w-4" />
-                              </Button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-44">
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}
-                                    disabled={product.status === 'locked'}
-                                    className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                  >
-                                    {product.status === 'active' ? (
-                                      <><ToggleLeft className="h-4 w-4 mr-2" />Set Inactive</>
-                                    ) : (
-                                      <><ToggleRight className="h-4 w-4 mr-2" />Set Active</>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => product.status !== 'locked' && handleDuplicate(product)}
-                                    disabled={product.status === 'locked'}
-                                    className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                  >
-                                    <Copy className="h-4 w-4 mr-2" />
-                                    Duplicate
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => navigate(`/promotions?productId=${product.id}`)}
-                                    disabled={product.status === 'locked'}
-                                    className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                  >
-                                    <div className="relative mr-2">
-                                      <Tag className="h-4 w-4" />
-                                      {product.promoActive && (
-                                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500" />
-                                      )}
-                                    </div>
-                                    Promotions
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-red-600 focus:text-red-600">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                          <div className="flex items-center gap-1.5">
+                            {product.status === 'locked'
+                              ? <Lock className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                              : <LockOpen className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                            }
+                            <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+                          </div>
+                          {/* Row 1: status + stock alert badges */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
+                              {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
+                            </Badge>
+                            {product.stock === 0 && product.status !== "out_of_stock" && (
+                              <Badge className="text-xs bg-red-500 text-white">Out of Stock</Badge>
                             )}
+                            {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
+                              <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
+                            )}
+                          </div>
+                          {/* Row 2: category + pack size + expiry */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                            {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+                              <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
+                                {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
+                              </Badge>
+                            )}
+                            {product.expiryDate && (() => {
+                              const expiry = new Date(product.expiryDate);
+                              const now = new Date(); now.setHours(0, 0, 0, 0);
+                              const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                              const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                              if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired</Badge>;
+                              if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
+                              return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
+                            })()}
                           </div>
                           {product.description && (
                             <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
@@ -2621,6 +2556,72 @@ export default function ProductManagement() {
                               </div>
                             </div>
                           </div>
+                          {/* Action icons below the stats */}
+                          {!isViewer && (
+                          <div className="flex items-center gap-0.5 mt-2 -ml-1.5">
+                            <Button
+                              variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={() => product.status !== 'locked' && handleEdit(product)}
+                              disabled={product.status === 'locked'}
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); } }}
+                              disabled={product.status === 'locked'}
+                              title="Manage Stock"
+                            >
+                              <PackagePlus className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-44">
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
+                                  {product.status === 'active' ? (
+                                    <><ToggleLeft className="h-4 w-4 mr-2" />Set Inactive</>
+                                  ) : (
+                                    <><ToggleRight className="h-4 w-4 mr-2" />Set Active</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => product.status !== 'locked' && handleDuplicate(product)}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => navigate(`/promotions?productId=${product.id}`)}
+                                  disabled={product.status === 'locked'}
+                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
+                                  <div className="relative mr-2">
+                                    <Tag className="h-4 w-4" />
+                                    {product.promoActive && (
+                                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500" />
+                                    )}
+                                  </div>
+                                  Promotions
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-red-600 focus:text-red-600">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
