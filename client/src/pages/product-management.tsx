@@ -2497,6 +2497,15 @@ export default function ProductManagement() {
                                 {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
                                   <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
                                 )}
+                                {product.expiryDate && (() => {
+                                  const expiry = new Date(product.expiryDate);
+                                  const now = new Date(); now.setHours(0, 0, 0, 0);
+                                  const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                  const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                  if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired</Badge>;
+                                  if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
+                                  return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
+                                })()}
                               </div>
                             </div>
                             {!isViewer && (
