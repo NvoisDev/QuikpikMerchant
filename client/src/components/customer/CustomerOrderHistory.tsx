@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface CustomerOrderHistoryProps {
   wholesalerId: string;
   customerPhone: string;
+  currency?: string;
 }
 
 export interface OrderItem {
@@ -244,7 +245,8 @@ interface ReorderPreview {
   total: string;
 }
 
-export const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
+export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP' }: { order: Order, customerPhone: string, onSuccess?: () => void, currency?: string }) => {
+  const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -362,13 +364,13 @@ export const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Orde
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{item.productName}</p>
                     <p className="text-xs text-gray-500">
-                      {item.quantity} {item.sellingType} x {formatCurrency(item.unitPrice)}
+                      {item.quantity} {item.sellingType} x {fmt(item.unitPrice)}
                     </p>
                     {!item.inStock && (
                       <p className="text-xs text-orange-600 mt-0.5">Stock may have changed</p>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(item.total)}</p>
+                  <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
                 </div>
               ))}
             </div>
@@ -376,27 +378,27 @@ export const ReorderButton = ({ order, customerPhone, onSuccess }: { order: Orde
             <div className="border-t pt-3 space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span>{formatCurrency(preview.subtotal)}</span>
+                <span>{fmt(preview.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Transaction Fee</span>
-                <span>{formatCurrency(preview.transactionFee)}</span>
+                <span>{fmt(preview.transactionFee)}</span>
               </div>
               {parseFloat(preview.deliveryCost) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Delivery</span>
-                  <span>{formatCurrency(preview.deliveryCost)}</span>
+                  <span>{fmt(preview.deliveryCost)}</span>
                 </div>
               )}
               {parseFloat(preview.shippingTotal || '0') > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span>{formatCurrency(preview.shippingTotal)}</span>
+                  <span>{fmt(preview.shippingTotal)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold border-t pt-2">
                 <span>Total</span>
-                <span className="text-green-600">{formatCurrency(preview.total)}</span>
+                <span className="text-green-600">{fmt(preview.total)}</span>
               </div>
             </div>
 
@@ -722,26 +724,26 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
               <div className="flex-1">
                 <h4 className="font-semibold text-orange-900 text-sm">Outstanding Balance</h4>
                 <p className="text-orange-800 text-xs mt-1">
-                  You have an outstanding balance of <span className="font-bold">{formatCurrency(order.amountOutstanding || '0')}</span> on this order.
+                  You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
                 </p>
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Order Total:</span>
-                    <span className="font-medium">{formatCurrency(order.total)}</span>
+                    <span className="font-medium">{fmt(order.total)}</span>
                   </div>
                   {order.depositPercentage && order.depositPercentage < 100 && (
                     <div className="flex justify-between text-gray-600">
                       <span>Deposit Required ({order.depositPercentage}%):</span>
-                      <span className="font-medium">{formatCurrency((parseFloat(order.total) * (order.depositPercentage / 100)).toFixed(2))}</span>
+                      <span className="font-medium">{fmt((parseFloat(order.total) * (order.depositPercentage / 100)).toFixed(2))}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-green-700">
                     <span>Amount Paid:</span>
-                    <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+                    <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
                   </div>
                   <div className="flex justify-between text-orange-700 font-semibold border-t pt-1">
                     <span>Outstanding:</span>
-                    <span>{formatCurrency(order.amountOutstanding || '0')}</span>
+                    <span>{fmt(order.amountOutstanding || '0')}</span>
                   </div>
                   {order.balanceDueDays !== undefined && order.balanceDueDays > 0 && parseFloat(order.amountOutstanding || '0') > 0 && (
                     <div className="flex justify-between text-red-700 font-medium mt-1">
@@ -876,14 +878,14 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                     </span>
                   )}
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} units × {formatCurrency(item.unitPrice)}
+                    Quantity: {item.quantity} units × {fmt(item.unitPrice)}
                     {(item as any).freeItems > 0 && (
                       <span className="ml-1 text-green-700 font-medium">+{(item as any).freeItems} free</span>
                     )}
                   </div>
                 </div>
                 <div className="text-left sm:text-right flex-shrink-0">
-                  <div className="font-medium text-xs">{formatCurrency(parseFloat(item.unitPrice) * item.quantity)}</div>
+                  <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
                 </div>
               </div>
             ))}
@@ -896,21 +898,21 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
             <div className="flex justify-between text-xs">
               <span className="break-words">Subtotal:</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
+              <span className="font-medium">{fmt(subtotal)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="break-words">Transaction Fee (5.5% + £0.50):</span>
-              <span className="font-medium">{formatCurrency(transactionFee)}</span>
+              <span className="font-medium">{fmt(transactionFee)}</span>
             </div>
             {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="break-words">Delivery Cost:</span>
-                <span className="font-medium">{formatCurrency(deliveryCost)}</span>
+                <span className="font-medium">{fmt(deliveryCost)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
               <span>Order Total:</span>
-              <span>{formatCurrency(totalPaid)}</span>
+              <span>{fmt(totalPaid)}</span>
             </div>
             {order.wholesaler?.deliveryNote && (
               <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-1.5">
@@ -923,29 +925,29 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
             {order.depositPercentage && order.depositPercentage < 100 && (
               <div className="flex justify-between text-xs text-amber-700">
                 <span>Deposit ({order.depositPercentage}%):</span>
-                <span className="font-medium">{formatCurrency(totalPaid * (order.depositPercentage / 100))}</span>
+                <span className="font-medium">{fmt(totalPaid * (order.depositPercentage / 100))}</span>
               </div>
             )}
             <div className="flex justify-between text-xs text-green-600">
               <span>Amount Paid:</span>
-              <span className="font-medium">{formatCurrency(order.amountPaid || '0')}</span>
+              <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
             </div>
             
             {/* Outstanding balance - show £0.00 for cancelled orders */}
             {order.status === 'cancelled' ? (
               <div className="flex justify-between text-xs text-gray-600 border-t pt-1">
                 <span>Outstanding Balance:</span>
-                <span className="font-medium">{formatCurrency(0)} - Nothing to pay</span>
+                <span className="font-medium">{fmt(0)} - Nothing to pay</span>
               </div>
             ) : parseFloat(order.amountOutstanding || '0') > 0 ? (
               <div className="flex justify-between text-xs text-red-600 border-t pt-1">
                 <span>Outstanding Balance:</span>
-                <span className="font-medium">{formatCurrency(order.amountOutstanding || '0')}</span>
+                <span className="font-medium">{fmt(order.amountOutstanding || '0')}</span>
               </div>
             ) : (
               <div className="flex justify-between text-xs text-green-600 border-t pt-1">
                 <span>Outstanding Balance:</span>
-                <span className="font-medium">{formatCurrency(0)} - Fully paid</span>
+                <span className="font-medium">{fmt(0)} - Fully paid</span>
               </div>
             )}
             
@@ -953,7 +955,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
             {order.amountRefunded && parseFloat(order.amountRefunded) > 0 && (
               <div className="flex justify-between text-xs text-purple-700 bg-purple-50 p-2 rounded mt-1">
                 <span>Refunded:</span>
-                <span className="font-medium">{formatCurrency(order.amountRefunded)}</span>
+                <span className="font-medium">{fmt(order.amountRefunded)}</span>
               </div>
             )}
           </div>
@@ -1015,7 +1017,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { orde
                         : 'Processing'}
                   </span>
                   <span className="font-medium break-words text-purple-700">
-                    Refunded: {formatCurrency(parseFloat(order.amountRefunded))}
+                    Refunded: {fmt(parseFloat(order.amountRefunded))}
                   </span>
                 </div>
               </div>
@@ -1172,7 +1174,8 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
-export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
+export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = 'GBP' }: CustomerOrderHistoryProps) {
+  const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -1509,7 +1512,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                           <span className="ml-1 inline-block bg-purple-100 text-purple-700 text-xs px-1.5 py-0 rounded-full">🎁 {(item as any).appliedOfferLabel}</span>
                         )}
                         <span className="text-gray-500 ml-1">
-                          {item.quantity} units × {formatCurrency(item.unitPrice)}
+                          {item.quantity} units × {fmt(item.unitPrice)}
                           {(item as any).freeItems > 0 && <span className="text-green-700 font-medium ml-1">+{(item as any).freeItems} free</span>}
                         </span>
                       </div>
@@ -1529,7 +1532,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>{format(new Date(order.date), 'MMM d, yyyy')}</span>
                       </div>
                       <div className="text-sm font-semibold text-green-600">
-                        {formatCurrency(parseFloat(order.total))}
+                        {fmt(parseFloat(order.total))}
                       </div>
                     </div>
                     
@@ -1548,6 +1551,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         order={order}
                         customerPhone={customerPhone}
                         onSuccess={() => handleRefresh()}
+                        currency={currency}
                       />
                       <CancellationRequestButton 
                         order={order} 

@@ -2301,7 +2301,8 @@ export default function CustomerPortal() {
       wholesaler={{
         businessName: wholesaler?.businessName || 'Business',
         email: wholesaler?.email || 'hello@business.com',
-        phone: wholesaler?.businessPhone || wholesaler?.phone || '+44000000000'
+        phone: wholesaler?.businessPhone || wholesaler?.phone || '+44000000000',
+        currency: wholesaler?.defaultCurrency || 'GBP'
       }}
       onContinueShopping={() => {
         // Clear cart and order data
@@ -2844,7 +2845,7 @@ export default function CustomerPortal() {
                     <div className="animate-stats-counter">
                       <PriceDisplay
                         price={cartStats.totalValue}
-                        currency="GBP"
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
                         size="large"
                       />
@@ -2956,7 +2957,7 @@ export default function CustomerPortal() {
                                   <PriceDisplay
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                    currency="GBP"
+                                    currency={wholesaler?.defaultCurrency || 'GBP'}
                                     isGuestMode={isGuestMode}
                                     size="medium"
                                     showStrikethrough={true}
@@ -3902,7 +3903,7 @@ export default function CustomerPortal() {
                                     <PriceDisplay
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                      currency="GBP"
+                                      currency={wholesaler?.defaultCurrency || 'GBP'}
                                       isGuestMode={isGuestMode}
                                       size="medium"
                                     />
@@ -4169,7 +4170,7 @@ export default function CustomerPortal() {
                                             ? parseFloat((product as any).palletPrice?.toString() || '0') * cartItem.quantity
                                             : pricing.effectivePrice * cartItem.quantity
                                         }
-                                        currency="GBP"
+                                        currency={wholesaler?.defaultCurrency || 'GBP'}
                                         isGuestMode={false}
                                         size="small"
                                       />
@@ -4198,7 +4199,8 @@ export default function CustomerPortal() {
                 <Suspense fallback={<ComponentLoader />}>
                   <LazyOrderHistory 
                     wholesalerId={wholesaler.id} 
-                    customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'} 
+                    customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'}
+                    currency={wholesaler?.defaultCurrency || 'GBP'}
                   />
                 </Suspense>
               )}
@@ -4501,7 +4503,7 @@ export default function CustomerPortal() {
                             )}
                             <PriceDisplay
                               price={totalCost}
-                              currency="GBP"
+                              currency={wholesaler?.defaultCurrency || 'GBP'}
                               isGuestMode={false}
                               size="small"
                             />
@@ -4517,7 +4519,7 @@ export default function CustomerPortal() {
                         <span>Product Subtotal</span>
                         <PriceDisplay
                           price={cartStats.subtotal}
-                          currency="GBP"
+                          currency={wholesaler?.defaultCurrency || 'GBP'}
                           isGuestMode={false}
                           size="small"
                         />
@@ -4528,7 +4530,7 @@ export default function CustomerPortal() {
                         <span>Delivery</span>
                         <PriceDisplay
                           price={parseFloat(wholesaler.deliveryFlatRate)}
-                          currency="GBP"
+                          currency={wholesaler?.defaultCurrency || 'GBP'}
                           isGuestMode={false}
                           size="small"
                         />
@@ -4544,7 +4546,7 @@ export default function CustomerPortal() {
                             const beforeFees = subtotal + shipping;
                             return (beforeFees * 0.055) + 0.50;
                           })()}
-                          currency="GBP"
+                          currency={wholesaler?.defaultCurrency || 'GBP'}
                           isGuestMode={false}
                           size="small"
                         />
@@ -4562,7 +4564,7 @@ export default function CustomerPortal() {
                           const transactionFee = (beforeFees * 0.055) + 0.50;
                           return beforeFees + transactionFee;
                         })()}
-                        currency="GBP"
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
                         size="medium"
                       />

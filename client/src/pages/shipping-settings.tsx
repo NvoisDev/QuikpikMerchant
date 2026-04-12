@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ interface ShippingService {
 }
 
 export default function ShippingSettings() {
+  const { formatMoney } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -218,12 +220,6 @@ export default function ShippingSettings() {
     getDropShopsMutation.mutate(dropShopPostcode);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(price);
-  };
 
   if (statusLoading) {
     return (
@@ -598,7 +594,7 @@ export default function ShippingSettings() {
                               </div>
                               <div className="text-right">
                                 <div className="text-2xl font-bold text-green-600">
-                                  {formatPrice(quote.price)}
+                                  {formatMoney(quote.price)}
                                 </div>
                                 <p className="text-sm text-gray-500">{quote.deliveryTime}</p>
                               </div>

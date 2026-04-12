@@ -19,7 +19,7 @@ import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Order {
   id: number;
@@ -174,6 +174,7 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 };
 
 export default function OrdersFresh() {
+  const { formatMoney } = useCurrency();
   const { user, isLoading: authLoading } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [orders, setOrders] = useState<Order[]>([]);
@@ -865,7 +866,7 @@ export default function OrdersFresh() {
     }
 
     const total = parseFloat(order.total || '0');
-    if (total > 0) lines.push(`💰 Total: ${formatCurrency(total)}`);
+    if (total > 0) lines.push(`💰 Total: ${formatMoney(total)}`);
 
     if (order.fulfillmentType === 'pickup' || order.fulfillmentType === 'collection') {
       lines.push(`📦 Collection from your store`);
@@ -876,7 +877,7 @@ export default function OrdersFresh() {
     const outstanding = parseFloat(order.amountOutstanding || '0');
     if (outstanding > 0) {
       lines.push('');
-      lines.push(`💳 Balance due: ${formatCurrency(outstanding)}`);
+      lines.push(`💳 Balance due: ${formatMoney(outstanding)}`);
       if (order.stripePaymentLinkUrl) {
         lines.push(`Pay here → ${order.stripePaymentLinkUrl}`);
       }
@@ -1388,7 +1389,7 @@ export default function OrdersFresh() {
           {user?.role !== 'team_member' && (
             <div className="rounded-lg bg-green-50 px-3 py-2">
               <p className="text-[11px] font-medium text-green-700">Net Revenue</p>
-              <p className="text-sm font-bold text-green-800">{formatCurrency(orderStats?.totalRevenue ?? totalValue)}</p>
+              <p className="text-sm font-bold text-green-800">{formatMoney(orderStats?.totalRevenue ?? totalValue)}</p>
             </div>
           )}
           {user?.role !== 'team_member' && (
@@ -1439,7 +1440,7 @@ export default function OrdersFresh() {
                             Order {request.order?.orderNumber || `#${request.orderId}`}
                           </span>
                           <Badge className="bg-orange-100 text-orange-800 text-xs">
-                            {formatCurrency(parseFloat(request.order?.total || '0'))}
+                            {formatMoney(parseFloat(request.order?.total || '0'))}
                           </Badge>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
@@ -1585,7 +1586,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="font-medium text-xs">
                         <div>
-                          <div>{formatCurrency(calculateNetAmount(order))}</div>
+                          <div>{formatMoney(calculateNetAmount(order))}</div>
                           <div className="text-xs text-gray-500">After platform fee</div>
                         </div>
                       </TableCell>
@@ -1742,7 +1743,7 @@ export default function OrdersFresh() {
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
-                            <div className="font-medium text-sm">{formatCurrency(calculateNetAmount(order))}</div>
+                            <div className="font-medium text-sm">{formatMoney(calculateNetAmount(order))}</div>
                             <div className="text-xs text-gray-500">After platform fee</div>
                           </div>
                           <Eye className="h-4 w-4 text-gray-400" />
@@ -2011,7 +2012,7 @@ export default function OrdersFresh() {
                   {returnItems.length > 0 && deliveryCostValue > 0 && returnItems.some(ri => ri.quantity < ri.maxQty) && (
                     <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg bg-gray-50">
                       <input type="checkbox" checked={refundDelivery} onChange={(e) => setRefundDelivery(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
-                      <span className="text-sm text-gray-700">Include delivery charge refund ({formatCurrency(deliveryCostValue)})</span>
+                      <span className="text-sm text-gray-700">Include delivery charge refund ({formatMoney(deliveryCostValue)})</span>
                     </label>
                   )}
                   <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('card'); setProcessRefund(true); }}>
@@ -2019,7 +2020,7 @@ export default function OrdersFresh() {
                     <div className="ml-3 flex-1">
                       <span className="text-sm font-medium">Original payment method</span>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <p className="text-xs text-gray-500">Refund {formatCurrency(calculatedRefund)} GBP to card</p>
+                        <p className="text-xs text-gray-500">Refund {formatMoney(calculatedRefund)} GBP to card</p>
                         {isPartial && <span className="text-xs text-amber-600 font-medium">(partial refund)</span>}
                       </div>
                     </div>
@@ -2233,7 +2234,7 @@ export default function OrdersFresh() {
                       <div className="flex-1">
                         <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
                         <div className="text-xs text-gray-500">
-                          Quantity: {item.quantity} units × {formatCurrency(parseFloat(item.unitPrice))}
+                          Quantity: {item.quantity} units × {formatMoney(parseFloat(item.unitPrice))}
                         </div>
                         {(item as any).appliedOfferLabel && (
                           <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full mt-0.5">
@@ -2247,7 +2248,7 @@ export default function OrdersFresh() {
                         )}
                       </div>
                       <div className="font-medium text-sm ml-4">
-                        {formatCurrency(parseFloat(item.total))}
+                        {formatMoney(parseFloat(item.total))}
                       </div>
                     </div>
                   ))}
@@ -2260,17 +2261,17 @@ export default function OrdersFresh() {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>Products:</span>
-                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || '0'))}</span>
+                    <span>{formatMoney(parseFloat(selectedOrder.subtotal || '0'))}</span>
                   </div>
                   {parseFloat(selectedOrder.deliveryCost || '0') > 0 && (
                     <div className="flex justify-between text-blue-700">
                       <span>Delivery:</span>
-                      <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost || '0'))}</span>
+                      <span>{formatMoney(parseFloat(selectedOrder.deliveryCost || '0'))}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
+                    <span>-{formatMoney(parseFloat(selectedOrder.platformFee || '0') || (parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0')) * 0.033)}</span>
                   </div>
                   {parseFloat(selectedOrder.amountRefunded || '0') > 0 && (() => {
                     const wholesalerTotal = calculateNetAmount(selectedOrder);
@@ -2292,7 +2293,7 @@ export default function OrdersFresh() {
                             <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
                             {refundDateStr && <span className="text-xs text-purple-400 ml-1">· {refundDateStr}</span>}
                           </div>
-                          <span>-{formatCurrency(wholesalerRefund)}</span>
+                          <span>-{formatMoney(wholesalerRefund)}</span>
                         </div>
                         {isPartialRefund && retained > 0 && (
                           <div className="flex justify-between text-gray-500 text-xs mt-0.5">
@@ -2303,7 +2304,7 @@ export default function OrdersFresh() {
                                 <span className="text-green-600">· {selectedOrder.stockRestoredCount} unit{selectedOrder.stockRestoredCount !== 1 ? 's' : ''} restocked</span>
                               )}
                             </div>
-                            <span>{formatCurrency(retained)}</span>
+                            <span>{formatMoney(retained)}</span>
                           </div>
                         )}
                         {!isPartialRefund && selectedOrder.stockRestored && selectedOrder.stockRestoredCount && selectedOrder.stockRestoredCount > 0 && (
@@ -2317,7 +2318,7 @@ export default function OrdersFresh() {
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
-                      <span>{formatCurrency((() => {
+                      <span>{formatMoney((() => {
                         if (selectedOrder.status === 'cancelled' && parseFloat(selectedOrder.amountRefunded || '0') > 0) return 0;
                         const wholesalerTotal = calculateNetAmount(selectedOrder);
                         const amountPaid = parseFloat(selectedOrder.amountPaid || '0');
@@ -2404,21 +2405,21 @@ export default function OrdersFresh() {
                   <div className="bg-gray-50 p-3 rounded text-sm space-y-2">
                     <div className="flex justify-between">
                       <span>Order Total:</span>
-                      <span className="font-medium">{formatCurrency(productTotal)}</span>
+                      <span className="font-medium">{formatMoney(productTotal)}</span>
                     </div>
                     {selectedOrder.depositPercentage > 0 && selectedOrder.depositPercentage < 100 && (
                       <div className="flex justify-between text-amber-700">
                         <span>Deposit ({selectedOrder.depositPercentage}%):</span>
-                        <span>{formatCurrency(productTotal * (selectedOrder.depositPercentage / 100))}</span>
+                        <span>{formatMoney(productTotal * (selectedOrder.depositPercentage / 100))}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-green-600">
                       <span>Amount Paid:</span>
-                      <span className="font-medium">{formatCurrency(wholesalerPaid)}</span>
+                      <span className="font-medium">{formatMoney(wholesalerPaid)}</span>
                     </div>
                     <div className="flex justify-between text-red-600">
                       <span>Outstanding Balance:</span>
-                      <span className="font-medium">{formatCurrency(wholesalerOutstanding)}</span>
+                      <span className="font-medium">{formatMoney(wholesalerOutstanding)}</span>
                     </div>
                     {selectedOrder.balanceDueDays !== undefined && selectedOrder.balanceDueDays > 0 && wholesalerOutstanding > 0 && (
                       <div className="flex justify-between text-red-700 font-medium">
@@ -2638,14 +2639,14 @@ export default function OrdersFresh() {
                         {hasPaid && (
                           <div className="text-xs text-gray-500">
                             {hasDeposit
-                              ? formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))
-                              : formatCurrency(pTotal)}
+                              ? formatMoney(pTotal * ((selectedOrder as any).depositPercentage / 100))
+                              : formatMoney(pTotal)}
                             {' • '}{new Date(selectedOrder.createdAt).toLocaleDateString()}
                           </div>
                         )}
                         {!hasPaid && hasDeposit && (
                           <div className="text-xs text-gray-500">
-                            {formatCurrency(pTotal * ((selectedOrder as any).depositPercentage / 100))} deposit required
+                            {formatMoney(pTotal * ((selectedOrder as any).depositPercentage / 100))} deposit required
                           </div>
                         )}
                       </div>
@@ -2669,11 +2670,11 @@ export default function OrdersFresh() {
                         <div className={`text-xs ${isFullyPaid ? 'font-medium' : 'text-orange-600'}`}>
                           {isFullyPaid
                             ? 'Balance payment received'
-                            : `Balance outstanding: ${formatCurrency(wOutstanding)}`}
+                            : `Balance outstanding: ${formatMoney(wOutstanding)}`}
                         </div>
                         {isFullyPaid && (
                           <div className="text-xs text-gray-500">
-                            {formatCurrency(prodTotal - depositAmt)} • Full payment complete
+                            {formatMoney(prodTotal - depositAmt)} • Full payment complete
                           </div>
                         )}
                       </div>
@@ -2788,7 +2789,7 @@ export default function OrdersFresh() {
                         <div className={`w-2 h-2 rounded-full mt-1.5 ${dotColor}`}></div>
                         <div>
                           <div className={`text-xs font-medium ${textColor}`}>
-                            {label}: {formatCurrency(refundedAmt)}
+                            {label}: {formatMoney(refundedAmt)}
                           </div>
                           <div className="text-xs text-gray-500">
                             {isProcessed
@@ -2925,7 +2926,7 @@ export default function OrdersFresh() {
               <p className="text-sm text-gray-500">
                 Order {markAsPaidOrder.orderNumber || `#${markAsPaidOrder.id}`} — outstanding{' '}
                 <span className="font-medium text-gray-800">
-                  {formatCurrency(parseFloat(markAsPaidOrder.amountOutstanding || '0'))}
+                  {formatMoney(parseFloat(markAsPaidOrder.amountOutstanding || '0'))}
                 </span>
               </p>
             )}

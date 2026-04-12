@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,7 @@ interface AnalyticsData {
 }
 
 export default function Analytics() {
+  const { formatMoney } = useCurrency();
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [activeTab, setActiveTab] = useState("overview");
@@ -198,7 +199,7 @@ export default function Analytics() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(analyticsData?.revenue.total || 0)}
+                      {formatMoney(analyticsData?.revenue.total || 0)}
                     </p>
                     {formatChange(analyticsData?.revenue.change || 0)}
                   </div>
@@ -273,7 +274,7 @@ export default function Analytics() {
                     <XAxis dataKey="date" />
                     <YAxis />
                     <CartesianGrid strokeDasharray="3 3" />
-                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                    <Tooltip formatter={(value) => [formatMoney(Number(value)), "Revenue"]} />
                     <Area 
                       type="monotone" 
                       dataKey="amount" 
@@ -313,7 +314,7 @@ export default function Analytics() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                    <Tooltip formatter={(value) => [formatMoney(Number(value)), "Revenue"]} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -334,7 +335,7 @@ export default function Analytics() {
                       <p className="text-sm text-gray-600">{product.orders} orders</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(product.revenue)}</p>
+                      <p className="font-semibold">{formatMoney(product.revenue)}</p>
                     </div>
                   </div>
                 ))}
@@ -395,7 +396,7 @@ export default function Analytics() {
                       <p className="text-sm text-gray-600">{region.orders} orders</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(region.revenue)}</p>
+                      <p className="font-semibold">{formatMoney(region.revenue)}</p>
                     </div>
                   </div>
                 ))}
@@ -530,7 +531,7 @@ export default function Analytics() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Refunded</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(parseFloat(cancellationData?.totalRefunded || '0'))}
+                      {formatMoney(parseFloat(cancellationData?.totalRefunded || '0'))}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">refund value</p>
                   </div>
@@ -650,13 +651,13 @@ export default function Analytics() {
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Order Value Lost</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {formatCurrency(parseFloat(cancellationData?.totalValue || '0'))}
+                    {formatMoney(parseFloat(cancellationData?.totalValue || '0'))}
                   </p>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Refunds Issued</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(parseFloat(cancellationData?.totalRefunded || '0'))}
+                    {formatMoney(parseFloat(cancellationData?.totalRefunded || '0'))}
                   </p>
                 </div>
                 <div className="text-center p-4 border rounded-lg">

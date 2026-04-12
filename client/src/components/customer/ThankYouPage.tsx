@@ -52,6 +52,7 @@ interface ThankYouPageProps {
     businessName: string;
     email: string;
     phone: string;
+    currency?: string;
   };
   onContinueShopping: () => void;
   onViewOrders?: () => void;
@@ -71,6 +72,8 @@ export const ThankYouPage = ({
   onViewOrders,
   payLater = false
 }: ThankYouPageProps) => {
+  const currency = wholesaler?.currency || 'GBP';
+  const fmt = (amount: string | number) => formatCurrency(amount, currency);
   // Animation states
   const [showConfetti, setShowConfetti] = useState(true);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(true);
@@ -283,12 +286,12 @@ export const ThankYouPage = ({
                         <p className="font-medium">
 {(() => {
                             if (item.computedTotal !== undefined) {
-                              return formatCurrency(item.computedTotal);
+                              return fmt(item.computedTotal);
                             }
                             if (item.sellingType === "pallets") {
-                              return formatCurrency(parseFloat(item.product.palletPrice || "0") * item.quantity);
+                              return fmt(parseFloat(item.product.palletPrice || "0") * item.quantity);
                             }
-                            return formatCurrency(parseFloat(item.product.price || "0") * item.quantity);
+                            return fmt(parseFloat(item.product.price || "0") * item.quantity);
                           })()}
                         </p>
                       </div>
@@ -301,21 +304,21 @@ export const ThankYouPage = ({
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{fmt(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Transaction Fee (5.5% + £0.50):</span>
-                    <span>{formatCurrency(transactionFee)}</span>
+                    <span>{fmt(transactionFee)}</span>
                   </div>
                   {shippingCost > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Delivery Cost:</span>
-                      <span>{formatCurrency(shippingCost)}</span>
+                      <span>{fmt(shippingCost)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>{payLater ? 'Total Due:' : 'Total Paid:'}</span>
-                    <span>{formatCurrency(totalAmount)}</span>
+                    <span>{fmt(totalAmount)}</span>
                   </div>
                 </div>
 

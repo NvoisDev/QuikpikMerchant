@@ -119,6 +119,7 @@ import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
+import { getCurrencySymbol } from "../shared/utils/currency";
 import { whatsAppBusinessService } from "./whatsapp-simple";
 import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator";
 import { healthCheck } from "./health";
@@ -6117,7 +6118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send WhatsApp notification to wholesaler with wholesale reference
         if (wholesaler && (wholesaler as any).twilioAuthToken && (wholesaler as any).twilioPhoneNumber) {
-          const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
+          const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
           const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
           
           try {
@@ -6496,7 +6497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // WhatsApp notification to wholesaler (mirrors create-order flow)
       if (wholesalerProfile?.whatsappAccessToken && wholesalerProfile.whatsappBusinessPhoneId) {
-        const currencySymbol = wholesalerProfile.preferredCurrency === 'GBP' ? '£' : '$';
+        const currencySymbol = getCurrencySymbol(wholesalerProfile.preferredCurrency || 'GBP');
         const waMessage = `🛒 New Pay Later Order!\n\nOrder: ${orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${total}\n\nPayment: Due on invoice — no upfront payment taken.`;
         try {
           await whatsAppBusinessService.sendMessage(
@@ -12993,8 +12994,7 @@ Please contact the customer to confirm this order.
   // Email invoice function for customers
   async function sendCustomerInvoiceEmail(customer: any, order: any, items: any[], wholesaler: any) {
     try {
-      const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : 
-                           wholesaler.preferredCurrency === 'EUR' ? '€' : '$';
+      const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
       
       // Get customer name with proper fallback - handle both single name and split names
       const customerName = customer.name || 
@@ -13374,7 +13374,7 @@ Please contact the customer to confirm this order.
       const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
       const businessName = wholesaler.businessName || 'Quikpik Merchant';
       const currency = wholesaler.preferredCurrency || 'GBP';
-      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+      const currencySymbol = getCurrencySymbol(currency);
       
       const refundAmount = refund ? (refund.amount / 100) : parseFloat(order.total);
       const isFullRefund = refund ? (refund.amount >= parseFloat(order.total) * 100) : true;
@@ -13520,7 +13520,7 @@ Please contact the customer to confirm this order.
         // Get wholesaler and currency info first
         const wholesaler = await storage.getUser(product.wholesalerId);
         const currency = wholesaler?.preferredCurrency || 'GBP';
-        const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+        const currencySymbol = getCurrencySymbol(currency);
         
         // Automatically decline the bid and send email notification
         const negotiationData = {
@@ -13618,7 +13618,7 @@ The customer's bid was below your minimum acceptable price and has been automati
           const customerInfo = retailerId.includes('customer_') ? 'Customer' : 'Retailer';
           const total = (parseFloat(offeredPrice) * parseInt(quantity)).toFixed(2);
           const currency = wholesaler.preferredCurrency || 'GBP';
-          const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+          const currencySymbol = getCurrencySymbol(currency);
           
           const notificationMessage = `💬 Price Quote Request!
 

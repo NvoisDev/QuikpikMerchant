@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,6 +108,7 @@ export default function CustomerDetail() {
   const customerId = params?.customerId || "";
   const { toast } = useToast();
   const { user } = useAuth();
+  const { formatMoney } = useCurrency();
   const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
 
   const handleShareStore = async () => {
@@ -535,15 +536,15 @@ export default function CustomerDetail() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm">Total spend</span>
-            <span className="text-sm font-semibold">{formatCurrency(customer.totalSpent || 0)}</span>
+            <span className="text-sm font-semibold">{formatMoney(customer.totalSpent || 0)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Paid</span>
-            <span className="text-sm font-semibold text-green-600">{formatCurrency(customer.totalSpent || 0)}</span>
+            <span className="text-sm font-semibold text-green-600">{formatMoney(customer.totalSpent || 0)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Unpaid</span>
-            <span className="text-sm font-semibold text-red-500">{formatCurrency(customer.totalUnpaid || 0)}</span>
+            <span className="text-sm font-semibold text-red-500">{formatMoney(customer.totalUnpaid || 0)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Last order</span>
@@ -687,7 +688,7 @@ export default function CustomerDetail() {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <p className="text-sm font-semibold">{formatCurrency(parseFloat(order.total))}</p>
+                    <p className="text-sm font-semibold">{formatMoney(parseFloat(order.total))}</p>
                     <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
                       {paymentLabel}
                     </Badge>

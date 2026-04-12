@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -176,6 +176,7 @@ interface CustomerStats {
 }
 
 export default function Customers() {
+  const { formatMoney } = useCurrency();
   const { user } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { toast } = useToast();
@@ -1290,7 +1291,7 @@ export default function Customers() {
                   <DollarSign className="h-4 w-4 text-green-500 shrink-0" />
                   <div>
                     <p className="text-[11px] text-green-700">Paid</p>
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+                    <p className="text-sm font-bold text-green-600">{formatMoney(stats.totalRevenue)}</p>
                   </div>
                 </div>
               )}
@@ -1299,7 +1300,7 @@ export default function Customers() {
                   <Clock className="h-4 w-4 text-red-500 shrink-0" />
                   <div>
                     <p className="text-[11px] text-red-700">Unpaid</p>
-                    <p className="text-sm font-bold text-red-600">{formatCurrency(stats.totalUnpaid)}</p>
+                    <p className="text-sm font-bold text-red-600">{formatMoney(stats.totalUnpaid)}</p>
                   </div>
                 </div>
               )}
@@ -1448,11 +1449,11 @@ export default function Customers() {
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right hidden sm:block">
                       <p className="text-sm font-medium">{customer?.totalOrders || 0} orders</p>
-                      <p className="text-xs text-gray-500">{formatCurrency(customer?.totalSpent || 0)}</p>
+                      <p className="text-xs text-gray-500">{formatMoney(customer?.totalSpent || 0)}</p>
                     </div>
                     <div className="sm:hidden text-right">
                       <p className="text-xs font-medium">{customer?.totalOrders || 0}</p>
-                      <p className="text-[10px] text-gray-500">{formatCurrency(customer?.totalSpent || 0)}</p>
+                      <p className="text-[10px] text-gray-500">{formatMoney(customer?.totalSpent || 0)}</p>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
@@ -1581,7 +1582,7 @@ export default function Customers() {
                               </div>
                               <div className="flex items-center space-x-2">
                                 <DollarSign className="h-4 w-4 text-green-500" />
-                                <span className="font-medium">{formatCurrency(customer.totalSpent)}</span>
+                                <span className="font-medium">{formatMoney(customer.totalSpent)}</span>
                               </div>
                             </div>
                           </div>
@@ -1603,7 +1604,7 @@ export default function Customers() {
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-4">
-                                  <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                                  <span className="font-medium">{formatMoney(order.totalAmount)}</span>
                                   <Badge variant={
                                     order.status === 'fulfilled' ? 'default' : 
                                     order.status === 'confirmed' ? 'secondary' : 'outline'
