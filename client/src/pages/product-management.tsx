@@ -136,7 +136,13 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(
+    () => (localStorage.getItem("productsViewMode") as "grid" | "list") || "list"
+  );
+  const handleSetViewMode = (mode: "grid" | "list") => {
+    localStorage.setItem("productsViewMode", mode);
+    setViewMode(mode);
+  };
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -2420,7 +2426,7 @@ export default function ProductManagement() {
               <Button
                 variant={viewMode === "grid" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setViewMode("grid")}
+                onClick={() => handleSetViewMode("grid")}
                 className="p-1.5 h-9 w-9"
               >
                 <Grid className="h-4 w-4" />
@@ -2428,7 +2434,7 @@ export default function ProductManagement() {
               <Button
                 variant={viewMode === "list" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setViewMode("list")}
+                onClick={() => handleSetViewMode("list")}
                 className="p-1.5 h-9 w-9"
               >
                 <List className="h-4 w-4" />
