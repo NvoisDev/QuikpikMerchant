@@ -2277,23 +2277,25 @@ export default function OrdersFresh() {
                 </Button>
               </div>
 
-              {/* Share Invoice — emails the customer-facing invoice to the customer */}
-              <div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-green-300 text-green-700 hover:bg-green-50 text-xs"
-                  onClick={() => shareInvoice(selectedOrder)}
-                  disabled={isSharingInvoice}
-                >
-                  {isSharingInvoice ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  )}
-                  {isSharingInvoice ? 'Sending...' : 'Share Invoice with Customer'}
-                </Button>
-              </div>
+              {/* Share Invoice — emails the customer-facing invoice to the customer (not for viewers) */}
+              {!isViewer && (
+                <div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-green-300 text-green-700 hover:bg-green-50 text-xs"
+                    onClick={() => shareInvoice(selectedOrder)}
+                    disabled={isSharingInvoice}
+                  >
+                    {isSharingInvoice ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    {isSharingInvoice ? 'Sending...' : 'Share Invoice with Customer'}
+                  </Button>
+                </div>
+              )}
 
               {/* Payment Status Section for Quotes - Shows product values (excludes customer transaction fees) */}
               {selectedOrder.isQuote && (() => {

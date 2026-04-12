@@ -14605,7 +14605,7 @@ https://quikpik.app`;
       await sgMail.send({
         to: customerEmail,
         from: 'hello@quikpik.co',
-        subject: `Your Invoice ${orderRef} – ${businessName}`,
+        subject: `Your Invoice from ${businessName} – ${orderRef}`,
         html,
         attachments: [pdfAttachment],
       } as MailDataRequired);
