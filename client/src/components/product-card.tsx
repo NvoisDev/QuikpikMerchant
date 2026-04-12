@@ -12,16 +12,14 @@ const formatNumber = (num: number | string): string => {
 };
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { 
-  MoreHorizontal, 
   Edit, 
   Copy, 
   Trash2, 
   AlertTriangle,
-  BarChart3,
-  DollarSign,
-  Target,
-  TrendingUp,
+  PackagePlus,
+  Tag,
   ToggleLeft,
   ToggleRight,
   Lock,
@@ -32,11 +30,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import StockTracker from "@/components/stock-tracker";
 import { useState } from "react";
 
 interface Product {
@@ -75,6 +70,7 @@ interface ProductCardProps {
   onDelete: (id: number) => void;
   onDuplicate?: (product: Product) => void;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
+  onManageStock?: (product: Product) => void;
 }
 
 export default function ProductCard({ 
@@ -83,8 +79,9 @@ export default function ProductCard({
   onDelete, 
   onDuplicate,
   onStatusChange,
+  onManageStock,
 }: ProductCardProps) {
-  const [showStockTracker, setShowStockTracker] = useState(false);
+  const [, navigate] = useLocation();
 
   // Get subscription data from authenticated user (no separate API call needed)
   const { user } = useAuth();
@@ -324,96 +321,18 @@ export default function ProductCard({
         <div className={isLocked ? 'pointer-events-none' : ''}>
 
         {/* Product Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-lg line-clamp-1">
-              {product.name}
-            </h3>
-            {productSize && (
-              <p className="text-sm text-blue-600 font-medium mt-1">{productSize}</p>
+        <div className="mb-3">
+          <h3 className="font-semibold text-gray-900 text-lg line-clamp-1">
+            {product.name}
+          </h3>
+          {productSize && (
+            <p className="text-sm text-blue-600 font-medium mt-1">{productSize}</p>
+          )}
+          <div className="flex items-center gap-2 mt-1">
+            {product.category && (
+              <p className="text-sm text-gray-500">{product.category}</p>
             )}
-            <div className="flex items-center gap-2 mt-1">
-              {product.category && (
-                <p className="text-sm text-gray-500">{product.category}</p>
-              )}
-            </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={() => {
-                  console.log('🔥 EDIT BUTTON CLICKED ON:', product.name);
-                  
-                  if (isLocked) {
-                    console.log('❌ EDIT BLOCKED: Product is locked');
-                    return;
-                  }
-                  
-                  if (editInfo.disabled) {
-                    console.log('❌ EDIT BLOCKED: Edit limit reached');
-                    return;
-                  }
-                  
-                  if (!onEdit) {
-                    console.log('❌ EDIT BLOCKED: onEdit function not provided');
-                    return;
-                  }
-                  
-                  console.log('✅ EDIT ALLOWED: Calling onEdit function');
-                  onEdit(product);
-                }}
-                disabled={editInfo.disabled || isLocked}
-                className={(editInfo.disabled || isLocked) ? "opacity-50 cursor-not-allowed" : ""}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit {isLocked ? "(Product Locked)" : editInfo.disabled ? "(Limit reached)" : ""}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => {
-                  console.log('🔥 DUPLICATE BUTTON CLICKED ON:', product.name);
-                  
-                  if (isLocked) {
-                    return;
-                  }
-                  
-                  if (!handleDuplicate) {
-                    return;
-                  }
-                  
-                  handleDuplicate();
-                }}
-                disabled={isLocked}
-                className={isLocked ? "opacity-50 cursor-not-allowed" : ""}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate {isLocked ? "(Product Locked)" : ""}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowStockTracker(true)}>
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Stock Tracker
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}>
-                {product.status === 'active' ? (
-                  <><ToggleLeft className="mr-2 h-4 w-4" />Set Inactive</>
-                ) : (
-                  <><ToggleRight className="mr-2 h-4 w-4" />Set Active</>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete(product.id)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Description */}
@@ -516,40 +435,70 @@ export default function ProductCard({
           )}
         </div>
 
-        {/* Actions Row */}
+        {/* Actions Row — all actions visible as icon buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="flex items-center space-x-1">
-          </div>
-          
-          {/* Quick Actions */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center flex-wrap gap-1">
             <Button 
               variant="ghost" 
               size="icon" 
-              className={`h-7 w-7 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`h-8 w-8 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => !isLocked && onEdit(product)}
               disabled={isLocked}
-              title={isLocked ? "Product Locked - Upgrade plan to unlock" : "Edit Product"}
+              title={isLocked ? "Product Locked — upgrade to unlock" : "Edit product"}
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-4 w-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7"
-              onClick={handleDuplicate}
-              title="Duplicate Product"
+              className={`h-8 w-8 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isLocked && onManageStock && onManageStock(product)}
+              disabled={isLocked}
+              title="Manage Stock"
             >
-              <Copy className="h-3 w-3" />
+              <PackagePlus className="h-4 w-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className={`h-8 w-8 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isLocked && handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}
+              disabled={isLocked}
+              title={product.status === 'active' ? 'Set Inactive' : 'Set Active'}
+            >
+              {product.status === 'active'
+                ? <ToggleLeft className="h-4 w-4" />
+                : <ToggleRight className="h-4 w-4 text-green-600" />
+              }
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`h-8 w-8 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isLocked && navigate(`/promotions?productId=${product.id}`)}
+              disabled={isLocked}
+              title="Promotions"
+            >
+              <Tag className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`h-8 w-8 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isLocked && handleDuplicate()}
+              disabled={isLocked}
+              title="Duplicate product"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => onDelete(product.id)}
-              title="Delete Product"
+              title="Delete product"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -557,17 +506,6 @@ export default function ProductCard({
         </div>{/* end pointer-events wrapper */}
       </CardContent>
       </Card>
-      
-      {/* Stock Tracker Dialog */}
-      <Dialog open={showStockTracker} onOpenChange={setShowStockTracker}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Stock Tracker - {product.name}</DialogTitle>
-          </DialogHeader>
-          <StockTracker product={product} />
-        </DialogContent>
-      </Dialog>
-
     </>
   );
 }
