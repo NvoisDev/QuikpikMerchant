@@ -835,14 +835,33 @@ export default function OrdersFresh() {
   const shareInvoice = async (order: Order) => {
     setIsSharingInvoice(true);
     try {
+      const filename = `invoice-${order.orderNumber || order.id}.pdf`;
+      const orderRef = order.orderNumber || `#${order.id}`;
+
+      // Try native share (mobile: WhatsApp, iMessage, AirDrop, email, etc.)
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        const response = await fetch(`/api/orders/${order.id}/invoice/customer`, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to generate invoice');
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: 'application/pdf' });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ title: `Invoice ${orderRef}`, files: [file] });
+          return; // user handled sharing via native sheet
+        }
+      }
+
+      // Fallback: email the invoice to the customer
       await apiRequest('POST', `/api/orders/${order.id}/share-invoice`);
       toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
     } catch (err: unknown) {
+      // AbortError / NotAllowedError means user dismissed the native share sheet — not an error
+      if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
       const message = err instanceof Error ? err.message : '';
       if (message.includes('400')) {
         toast({ title: 'No email on file', description: 'This customer has no email address on record.', variant: 'destructive' });
       } else {
-        toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Could not share the invoice. Please try again.', variant: 'destructive' });
       }
     } finally {
       setIsSharingInvoice(false);

@@ -14520,6 +14520,31 @@ https://quikpik.app`;
     }
   });
 
+  // Customer-facing invoice download for authenticated wholesalers (for native share)
+  app.get('/api/orders/:id/invoice/customer', requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user;
+      const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+      if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
+
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, true);
+      const filename = `invoice-${order.orderNumber || order.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating customer invoice:', error);
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
+  });
+
   // Customer-facing invoice download (phone-based auth, no Google OAuth needed)
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber/:orderId/invoice', async (req, res) => {
     try {
