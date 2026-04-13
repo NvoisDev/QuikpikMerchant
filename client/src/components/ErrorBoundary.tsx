@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
+  componentStack?: string;
 }
 
 interface ErrorBoundaryProps {
@@ -38,6 +39,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return;
     }
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack });
   }
 
   reset = () => {
@@ -73,6 +75,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                   <code className="text-xs text-gray-700 break-all">
                     {this.state.error.message}
                   </code>
+                  {this.state.componentStack && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-gray-500 cursor-pointer">Component trace</summary>
+                      <pre className="text-xs text-gray-600 mt-1 whitespace-pre-wrap overflow-auto max-h-32">
+                        {this.state.componentStack}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               )}
               

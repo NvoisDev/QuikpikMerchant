@@ -2259,6 +2259,26 @@ export default function CustomerPortal() {
     />;
   }
 
+  // Show loading while wholesaler data is being fetched - prevents rendering with undefined wholesaler
+  if (wholesalerLoading && wholesalerId && !isEnhancedPreviewMode) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex space-x-1">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-6 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s`, animationDuration: '1.6s' }}
+              />
+            ))}
+          </div>
+          <p className="text-gray-600 text-center">Loading store...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show thank you page after successful order
   if (showThankYou && completedOrder && wholesaler && isAuthenticated) {
     console.log('🎉 Showing thank you page');
