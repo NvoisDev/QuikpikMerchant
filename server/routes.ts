@@ -13929,10 +13929,11 @@ https://quikpik.app`;
       } catch (_) {}
     }
 
-    // Payment status
+    // Payment status — cancelled orders always show VOID
+    const isCancelledOrder = order.status === 'cancelled';
     const ps = order.paymentStatus || 'unpaid';
-    const psLabel = ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid';
-    const psColor = ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626';
+    const psLabel = isCancelledOrder ? 'VOID' : (ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid');
+    const psColor = isCancelledOrder ? '#6b7280' : (ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626');
 
     // Items — NEVER use order.total (includes customer transaction fee)
     const orderItems = (order.items || []).map((item: any) => {
@@ -14209,6 +14210,21 @@ https://quikpik.app`;
         .text('Thank you for your business!', MARGIN, footerY + 12, { width: CONTENT_W, align: 'center' });
       doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN)
         .text('Powered by Quikpik Merchant', MARGIN, footerY + 26, { width: CONTENT_W, align: 'center' });
+
+      // ── VOID WATERMARK (cancelled orders only) ────────────────────────
+      if (isCancelledOrder) {
+        const range = doc.bufferedPageRange();
+        for (let p = 0; p < range.count; p++) {
+          doc.switchToPage(range.start + p);
+          doc.save();
+          doc.translate(PAGE_W / 2, PAGE_H / 2);
+          doc.rotate(-45);
+          doc.font('Helvetica-Bold').fontSize(120).fillOpacity(0.08).fillColor('#dc2626')
+            .text('VOID', -180, -60, { width: 360, align: 'center', lineBreak: false });
+          doc.restore();
+          doc.fillOpacity(1);
+        }
+      }
 
       doc.end();
     });

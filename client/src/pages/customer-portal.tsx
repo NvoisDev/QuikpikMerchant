@@ -720,7 +720,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
                 {getStatusIcon(order.status)}
                 <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
               </Badge>
-              {order.paymentStatus && (
+              {order.paymentStatus && order.status !== 'cancelled' && (
                 <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
                   {getPaymentStatusLabel(order.paymentStatus)}
                 </Badge>
@@ -757,7 +757,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
                 />
               </Dialog>
 
-              {order.paymentStatus !== 'paid' && (
+              {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
                 <PayBalanceButton order={order} customerPhone={customerPhone} />
               )}
 
@@ -776,7 +776,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className={`h-7 px-2 text-xs ${order.status === 'cancelled' ? 'text-gray-400 border-gray-200 hover:bg-gray-50' : ''}`}
                 disabled={downloadingInvoiceId === order.id}
                 onClick={() => downloadInvoice(order)}
               >
@@ -785,7 +785,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
                 ) : (
                   <Download className="h-3 w-3 mr-1" />
                 )}
-                {downloadingInvoiceId === order.id ? 'Generating...' : 'Invoice'}
+                {downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
               </Button>
             </div>
           </div>

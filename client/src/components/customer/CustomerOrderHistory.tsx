@@ -1963,11 +1963,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                       <Badge className="bg-purple-100 text-purple-800 text-xs">
                         Refunded
                       </Badge>
-                    ) : (
+                    ) : order.status !== 'cancelled' ? (
                       <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'unpaid')} text-xs`}>
                         {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
                       </Badge>
-                    )}
+                    ) : null}
                     <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
                       {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
                     </Badge>
@@ -2034,7 +2034,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 px-3 flex-1 sm:flex-none"
+                        className={`h-8 px-3 flex-1 sm:flex-none ${order.status === 'cancelled' ? 'text-gray-400 border-gray-200 hover:bg-gray-50' : ''}`}
                         disabled={downloadingInvoiceId === order.id}
                         onClick={() => downloadInvoice(order)}
                       >
@@ -2043,7 +2043,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                         ) : (
                           <Download className="h-3 w-3 mr-1" />
                         )}
-                        <span className="text-xs">{downloadingInvoiceId === order.id ? 'Generating...' : 'Invoice'}</span>
+                        <span className="text-xs">{downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}</span>
                       </Button>
                     </div>
                   </div>
