@@ -795,11 +795,20 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
   );
 }
 
+// VERSION MARKER: task110-fix-2026-04-13 — hooks order fixed in task109, loading guard added in task110
+const CUSTOMER_PORTAL_VERSION = 'task110-fix-2026-04-13';
+
 export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
   const [location] = useLocation();
   const { toast } = useToast();
-  
+
+  // Version marker – visible in browser console to confirm deployment has this fix
+  // Root cause of "wholesaler is not defined": hooks order violation fixed in task109
+  // (early return if(!wholesalerId) was between hook declarations; wholesaler useQuery
+  //  was declared after that early return, creating a TDZ gap on renders that skipped it)
+  console.log(`[CustomerPortal ${CUSTOMER_PORTAL_VERSION}] render`);
+
   // Theme system
   const { theme, changeTheme } = useCustomerTheme();
 
