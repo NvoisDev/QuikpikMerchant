@@ -892,6 +892,8 @@ export default function CustomerPortal() {
     enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
     staleTime: 0, // CRITICAL FIX: No cache to prevent cross-customer contamination
     refetchOnMount: true, // Always fetch fresh data on component mount
+    refetchInterval: 30000, // silently re-poll every 30 s
+    refetchIntervalInBackground: false, // pause when tab is hidden
   });
 
   // Check for existing customer session on load
@@ -4896,6 +4898,7 @@ export default function CustomerPortal() {
                             }));
                             refetchProducts();
                             if (featuredProductId) refetchFeaturedProduct();
+                            queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
                             setShowCheckout(false);
                             setShowThankYou(true);
                             toast({
@@ -5035,6 +5038,7 @@ export default function CustomerPortal() {
                       }
                       
                       // Close checkout modal and show thank you page
+                      queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
                       setShowCheckout(false);
                       setShowThankYou(true);
                     }}
