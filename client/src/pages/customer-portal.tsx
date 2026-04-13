@@ -3088,7 +3088,7 @@ export default function CustomerPortal() {
               </div>
             </TabsContent>
 
-            <TabsContent value="products" className="space-y-6">
+            <TabsContent value="products" className="space-y-6 mb-16">
               {/* Product Search and Filters */}
               {/* Sticky search + filter toolbar */}
               <div className="sticky top-16 z-30 bg-white -mx-4 px-4 pt-2 pb-3 border-b border-gray-100 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-xl sm:shadow-sm sm:border-gray-100">
@@ -3180,7 +3180,7 @@ export default function CustomerPortal() {
                     ))}
                   </div>
                 ) : productsError ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-16">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load products</h3>
                     <p className="text-gray-500 mb-4">There was an error loading the product catalog.</p>
@@ -3189,7 +3189,7 @@ export default function CustomerPortal() {
                     </Button>
                   </div>
                 ) : filteredProducts.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-16">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
                     <p className="text-gray-500">
@@ -3652,11 +3652,11 @@ export default function CustomerPortal() {
                         </Card>
                       ) : (
                         // List View
-                        <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
+                        <Card key={product.id} className="group rounded-xl border border-gray-100 hover:shadow-md bg-white transition-all">
                           <CardContent className="p-3 sm:p-4">
                             <div className="flex gap-3 sm:gap-4">
                               {/* Product Image Gallery */}
-                              <div className="relative w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
+                              <div className="relative w-24 h-24 bg-white rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                                 {(() => {
                                   // Get all available images (primary imageUrl + additional images array)
                                   const allImages = [
@@ -4012,6 +4012,9 @@ export default function CustomerPortal() {
                                           // Always show modal if product has pallet pricing option
                                           if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                             setSelectedProductForModal(product);
+                                            setModalStep('type');
+                                            setSelectedModalType(null);
+                                            setModalQuantity(product.moq || 1);
                                             setShowUnitSelectionModal(true);
                                           } else {
                                             // No pallet option, add units directly
@@ -4019,10 +4022,11 @@ export default function CustomerPortal() {
                                           }
                                         }}
                                         disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        className="text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        style={{backgroundColor: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                         title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : 'Add to cart'}
                                       >
-                                        <Plus className="h-3 w-3 mr-1" />
+                                        <ShoppingCart className="h-3 w-3 mr-1" />
                                         Add
                                       </Button>
                                     )}
