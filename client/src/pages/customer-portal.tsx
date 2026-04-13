@@ -875,6 +875,7 @@ export default function CustomerPortal() {
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
   const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
+  const [browseOrAccessTarget, setBrowseOrAccessTarget] = useState<any>(null);
 
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
@@ -930,8 +931,10 @@ export default function CustomerPortal() {
   const isBrowseMode = urlParams.has('browse');
   
   const [showAuth, setShowAuth] = useState(() => {
-    const isPreviewModeCheck = location === '/preview-store';
-    return !isPreviewModeCheck && (!hasAuthParam || forceLoginParam);
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
+    const isBrowseModeCheck = params.has('browse');
+    return !isPreviewModeCheck && !isBrowseModeCheck && (!hasAuthParam || forceLoginParam);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
 
@@ -2554,7 +2557,7 @@ export default function CustomerPortal() {
                         window.location.href = `/store/${wholesalerItem.id}`;
                       }
                     } else {
-                      window.location.href = `/store/${wholesalerItem.id}?browse=true`;
+                      setBrowseOrAccessTarget(wholesalerItem);
                     }
                   }}
                 >
@@ -2658,6 +2661,70 @@ export default function CustomerPortal() {
               Search
             </button>
           </div>
+
+          {/* Browse or Request Access picker — shown when tapping an inaccessible seller */}
+          {browseOrAccessTarget && (
+            <div
+              className="absolute inset-0 bg-black/30 flex items-end"
+              onClick={() => setBrowseOrAccessTarget(null)}
+            >
+              <div
+                className="w-full bg-white rounded-t-2xl p-5 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Drag handle */}
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+
+                <div className="flex items-center gap-3 mb-5">
+                  <Logo
+                    size="md"
+                    variant="icon-only"
+                    className="w-11 h-11 rounded-xl flex-shrink-0"
+                    user={{
+                      logoType: browseOrAccessTarget.logoType || 'business',
+                      logoUrl: browseOrAccessTarget.logoUrl,
+                      businessName: browseOrAccessTarget.businessName,
+                      firstName: browseOrAccessTarget.firstName,
+                      lastName: browseOrAccessTarget.lastName
+                    }}
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">{browseOrAccessTarget.businessName || "Business"}</p>
+                    <p className="text-xs text-gray-500">{browseOrAccessTarget.storeTagline || "Wholesale products"}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    className="w-full py-3.5 btn-theme-primary rounded-xl text-base font-semibold"
+                    onClick={() => {
+                      setBrowseOrAccessTarget(null);
+                      setShowWholesalerSearch(false);
+                      setWholesalerSearchQuery("");
+                      window.location.href = `/store/${browseOrAccessTarget.id}?browse=true`;
+                    }}
+                  >
+                    Browse store
+                  </button>
+                  <button
+                    className="w-full py-3.5 border border-gray-200 rounded-xl text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={async () => {
+                      await handleRequestAccess(browseOrAccessTarget);
+                      setBrowseOrAccessTarget(null);
+                    }}
+                  >
+                    Request Access
+                  </button>
+                  <button
+                    className="w-full py-2 text-sm text-gray-400"
+                    onClick={() => setBrowseOrAccessTarget(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
