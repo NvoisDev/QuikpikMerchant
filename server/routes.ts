@@ -2253,9 +2253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rawMethod = order.paymentMethod;
         const isOnline = rawMethod === 'payment_link' || rawMethod === 'card' ||
                          (!rawMethod && !!order.stripePaymentIntentId);
-        const transactionFee = (storedFee !== null && storedFee !== undefined)
-          ? parseFloat(storedFee)
-          : (isOnline ? (subtotal * 0.055) + 0.50 : 0);
+        // For offline orders, always force fee to 0 regardless of what's stored in DB.
+        // This corrects orders that were created before the quote creation fee bug was fixed.
+        const transactionFee = isOnline
+          ? ((storedFee !== null && storedFee !== undefined) ? parseFloat(storedFee) : (subtotal * 0.055) + 0.50)
+          : 0;
+
+        // For offline orders, total = subtotal + delivery only (no fee).
+        // Override any incorrectly-stored DB total to ensure transparency.
+        const deliveryCost = parseFloat(order.deliveryCost || '0');
+        const correctedTotal = isOnline ? total : (subtotal + deliveryCost);
         
         // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
         const platformFee = subtotal * 0.033;
@@ -2273,7 +2280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             minute: '2-digit'
           }),
           status: order.status,
-          total: total.toFixed(2),
+          total: correctedTotal.toFixed(2),
           subtotal: subtotal.toFixed(2),
           transactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
           platformFee: platformFee.toFixed(2), // For internal calculation only
@@ -18763,7 +18770,7 @@ https://quikpik.app`;
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage, fulfillmentType, deliveryAddressId, hasDeliveryAddress: !!deliveryAddress, hasCustomAddressFields: !!customAddressFields });
       
@@ -18835,11 +18842,15 @@ https://quikpik.app`;
       );
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
-      // Pay Later (depositPercentage === 0) has no Stripe processing — no fees apply
+      // Pay Later (depositPercentage === 0) has no Stripe processing — no fees apply.
+      // Offline payment methods (cash, bank_transfer, cheque, other) also have no fees.
       const validDepositPercentage = [0, 25, 50, 75, 100].includes(depositPercentage) ? depositPercentage : 100;
       const isPayLater = validDepositPercentage === 0;
-      const customerTransactionFee = isPayLater ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      const platformFee = isPayLater ? 0 : subtotal * 0.033; // 3.3% platform fee on products + delivery
+      const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
+      const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
+      const isOffline = isPayLater || isOfflineMethod;
+      const customerTransactionFee = isOffline ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
+      const platformFee = isOffline ? 0 : subtotal * 0.033; // 3.3% platform fee on products + delivery
       const total = subtotal + customerTransactionFee;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
@@ -18899,7 +18910,8 @@ https://quikpik.app`;
         amountPaid: '0.00',
         amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteDeliveryCharge : total).toFixed(2),
         paymentStatus: 'unpaid',
-        ...(validDepositPercentage === 0 ? { paymentMethod: 'pay_later' } : {}),
+        ...(isPayLater ? { paymentMethod: 'pay_later' } :
+            (isOfflineMethod ? { paymentMethod: requestedPaymentMethod } : {})),
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
 
@@ -18958,11 +18970,11 @@ https://quikpik.app`;
         }
       }
 
-      // Create Stripe Payment Link (skip for 0% pay-later quotes)
+      // Create Stripe Payment Link (skip for pay-later and offline payment methods)
       let paymentLinkUrl = '';
       let paymentLinkId = '';
       
-      if (stripe && validDepositPercentage > 0) {
+      if (stripe && validDepositPercentage > 0 && !isOffline) {
         try {
           // Create line items for Stripe
           // Deposits: single line item for the deposit amount (% of total including transaction fee)

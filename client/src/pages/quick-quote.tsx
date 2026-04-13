@@ -108,6 +108,7 @@ export default function QuickQuote() {
   });
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
+  const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('payment_link');
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
   const [deliveryCharge, setDeliveryCharge] = useState<string>('');
   const [deliveryAddressId, setDeliveryAddressId] = useState<number | null>(null);
@@ -188,6 +189,7 @@ export default function QuickQuote() {
       deliveryAddressId?: number | null;
       deliveryAddress?: string;
       customAddressFields?: { addressLine1: string; city: string; postalCode: string; state: string; label: string };
+      paymentMethod?: string;
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       if (!response.ok) {
@@ -362,6 +364,9 @@ export default function QuickQuote() {
       return;
     }
 
+    // Determine effective payment method: pay_later overrides everything, otherwise use selection
+    const effectivePaymentMethod = depositPercentage === 0 ? 'pay_later' : quotePaymentMethod;
+
     createQuoteMutation.mutate({
       customerId: selectedCustomer.id,
       items: quoteItems,
@@ -369,6 +374,7 @@ export default function QuickQuote() {
       depositPercentage,
       balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
+      paymentMethod: effectivePaymentMethod,
       ...(fulfillmentType === 'delivery' && {
         deliveryCharge: parseFloat(deliveryCharge) || 0,
         deliveryAddressId: isUsingCustomAddress ? null : deliveryAddressId,
@@ -1106,6 +1112,36 @@ export default function QuickQuote() {
                 </div>
               )}
 
+              {depositPercentage > 0 && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Payment Method</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: 'payment_link', label: '💳 Payment Link' },
+                      { value: 'cash', label: '💵 Cash' },
+                      { value: 'bank_transfer', label: '🏦 Bank Transfer' },
+                      { value: 'cheque', label: '📄 Cheque' },
+                    ] as const).map(({ value, label }) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={quotePaymentMethod === value ? 'default' : 'outline'}
+                        className={`text-xs ${quotePaymentMethod === value ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                        size="sm"
+                        onClick={() => setQuotePaymentMethod(value)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                  {quotePaymentMethod !== 'payment_link' && (
+                    <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+                      No payment link will be generated. The customer will pay by {quotePaymentMethod === 'bank_transfer' ? 'bank transfer' : quotePaymentMethod}. No transaction fees apply.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {depositPercentage > 0 && depositPercentage < 100 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
                   <div className="flex justify-between text-sm">
@@ -1163,7 +1199,11 @@ export default function QuickQuote() {
           <Card>
             <CardHeader>
               <CardTitle>Send Quote</CardTitle>
-              <CardDescription>How would you like to share the payment link?</CardDescription>
+              <CardDescription>
+                {depositPercentage > 0 && quotePaymentMethod !== 'payment_link'
+                  ? 'How would you like to notify the customer?'
+                  : 'How would you like to share the payment link?'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
