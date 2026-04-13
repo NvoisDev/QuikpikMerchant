@@ -306,10 +306,12 @@ export const ThankYouPage = ({
                     <span>Subtotal:</span>
                     <span>{fmt(subtotal)}</span>
                   </div>
+                  {transactionFee > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Transaction Fee (5.5% + £0.50):</span>
                     <span>{fmt(transactionFee)}</span>
                   </div>
+                  )}
                   {shippingCost > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Delivery Cost:</span>

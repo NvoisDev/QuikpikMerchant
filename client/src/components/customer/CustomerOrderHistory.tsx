@@ -161,7 +161,7 @@ export const getStatusIcon = (status: string) => {
 export const getPaymentStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'paid':
-      return 'bg-green-100 text-green-800';
+      return 'bg-teal-100 text-teal-800';
     case 'part_paid':
       return 'bg-orange-100 text-orange-800';
     case 'unpaid':
@@ -183,6 +183,27 @@ export const getPaymentStatusLabel = (status: string) => {
       return status || 'Unknown';
   }
 };
+
+export const getPaymentMethodLabel = (order: Order): string | null => {
+  const method = order.paymentMethod;
+  const labels: Record<string, string> = {
+    cash: 'Cash',
+    bank_transfer: 'Bank Transfer',
+    payment_link: 'Card / Payment Link',
+    pay_later: 'Pay Later',
+    card: 'Card Payment',
+    cheque: 'Cheque',
+    other: 'Other',
+  };
+  if (method && labels[method]) return labels[method];
+  if (!method && order.stripePaymentIntentId) return 'Card / Payment Link';
+  return null;
+};
+
+export const isOnlinePayment = (order: Order): boolean =>
+  order.paymentMethod === 'payment_link' ||
+  order.paymentMethod === 'card' ||
+  (!order.paymentMethod && !!order.stripePaymentIntentId);
 
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -667,9 +688,11 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
   const queryClient = useQueryClient();
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');
-  const transactionFee = parseFloat(order.transactionFee || (subtotal * 0.055 + 0.50).toFixed(2)); // Use stored transaction fee or calculate
+  const online = isOnlinePayment(order);
+  const transactionFee = online ? parseFloat(order.transactionFee ?? (subtotal * 0.055 + 0.50).toFixed(2)) : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0'); // Use stored delivery cost
   const totalPaid = parseFloat(order.total || '0');
+  const paymentMethodLabel = getPaymentMethodLabel(order);
   
   // Calculate what the total should be for verification
   const calculatedTotal = subtotal + transactionFee + deliveryCost;
@@ -902,14 +925,22 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+            {paymentMethodLabel && (
+              <div className="flex justify-between text-xs">
+                <span className="break-words text-gray-500">Payment Method:</span>
+                <span className="font-medium">{paymentMethodLabel}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span className="break-words">Subtotal:</span>
               <span className="font-medium">{fmt(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="break-words">Transaction Fee (5.5% + £0.50):</span>
-              <span className="font-medium">{fmt(transactionFee)}</span>
-            </div>
+            {transactionFee > 0 && (
+              <div className="flex justify-between text-xs">
+                <span className="break-words">Transaction Fee (5.5% + £0.50):</span>
+                <span className="font-medium">{fmt(transactionFee)}</span>
+              </div>
+            )}
             {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="break-words">Delivery Cost:</span>
@@ -1186,9 +1217,11 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const queryClient = useQueryClient();
   const subtotal = parseFloat(order.subtotal || '0');
-  const transactionFee = parseFloat(order.transactionFee || (subtotal * 0.055 + 0.50).toFixed(2));
+  const online = isOnlinePayment(order);
+  const transactionFee = online ? parseFloat(order.transactionFee ?? (subtotal * 0.055 + 0.50).toFixed(2)) : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0');
   const totalPaid = parseFloat(order.total || '0');
+  const paymentMethodLabel = getPaymentMethodLabel(order);
 
   return (
     <div className="bg-white min-h-screen w-full">
@@ -1396,14 +1429,22 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+            {paymentMethodLabel && (
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Payment Method:</span>
+                <span className="font-medium">{paymentMethodLabel}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span>Subtotal:</span>
               <span className="font-medium">{fmt(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span>Transaction Fee (5.5% + £0.50):</span>
-              <span className="font-medium">{fmt(transactionFee)}</span>
-            </div>
+            {transactionFee > 0 && (
+              <div className="flex justify-between text-xs">
+                <span>Transaction Fee (5.5% + £0.50):</span>
+                <span className="font-medium">{fmt(transactionFee)}</span>
+              </div>
+            )}
             {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span>Delivery Cost:</span>
@@ -1914,7 +1955,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     </Badge>
                     <Badge 
                       variant="outline" 
-                      className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}
+                      className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
                     >
                       {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
                     </Badge>
