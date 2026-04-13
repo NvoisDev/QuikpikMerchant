@@ -771,12 +771,10 @@ export default function ProductManagement() {
       
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
-    onSuccess: async (response: any) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      const updatedProduct = await response.json().catch(() => null);
-      if (updatedProduct && editingProduct) {
-        setEditingProduct(updatedProduct);
-      }
+      setIsDialogOpen(false);
+      setEditingProduct(null);
       toast({
         title: "Saved",
         description: "Product updated successfully",

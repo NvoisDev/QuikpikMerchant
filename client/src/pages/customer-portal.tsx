@@ -2034,8 +2034,15 @@ export default function CustomerPortal() {
       const response = await apiRequest('PUT', '/api/customer-profile/update', profileData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       setIsEditingProfile(false);
+      setCustomerData(prevData => ({
+        ...prevData,
+        name: variables.name || prevData.name,
+        email: variables.email || prevData.email,
+        phone: variables.phone || prevData.phone,
+        businessName: variables.businessName || prevData.businessName,
+      }));
       queryClient.invalidateQueries({ queryKey: ['/api/customer-auth/check', wholesalerId] });
       toast({
         title: "Profile Updated",
