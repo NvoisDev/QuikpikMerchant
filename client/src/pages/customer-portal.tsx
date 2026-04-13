@@ -3380,7 +3380,7 @@ export default function CustomerPortal() {
                                 // Get all available images (primary imageUrl + additional images array)
                                 const allImages = [
                                   ...(product.imageUrl ? [product.imageUrl] : []),
-                                  ...((product as any).images || [])
+                                  ...((product as any).images || []).filter((img: string) => img !== product.imageUrl)
                                 ].filter(Boolean);
                                 
                                 const currentImageIndex = productImageIndexes[product.id] || 0;
@@ -3821,7 +3821,7 @@ export default function CustomerPortal() {
                                   // Get all available images (primary imageUrl + additional images array)
                                   const allImages = [
                                     ...(product.imageUrl ? [product.imageUrl] : []),
-                                    ...((product as any).images || [])
+                                    ...((product as any).images || []).filter((img: string) => img !== product.imageUrl)
                                   ].filter(Boolean);
                                   
                                   const currentImageIndex = productImageIndexes[product.id] || 0;
