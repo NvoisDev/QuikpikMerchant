@@ -223,52 +223,100 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
 export function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {
   const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
   const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
-  let message = `📢 *Stock Update Alert*\n\nProduct: *${product.name}*\n\n`;
+
+  let message = `📢 *Stock Update Alert*\n\n`;
+  message += `Product: *${product.name}*\n\n`;
+
   switch (notificationType) {
     case 'out_of_stock':
-      message += `🚨 *OUT OF STOCK*\nThis product is currently unavailable.\n\n📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      message += `🚨 *OUT OF STOCK*\n`;
+      message += `This product is currently unavailable. We'll notify you when it's back in stock!\n\n`;
+      message += `📞 For alternative products or pre-orders, contact us:\n${businessName}\n📱 ${phone}`;
       break;
+
     case 'low_stock':
-      message += `⚠️ *LOW STOCK ALERT*\nOnly ${formatNumber(product.stock || 0)} units remaining!\n\n💰 Price: ${product.price}\n📦 MOQ: ${formatNumber(product.moq)} units\n\n📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      message += `⚠️ *LOW STOCK ALERT*\n`;
+      message += `Only ${formatNumber(product.stock || 0)} units remaining!\n\n`;
+      message += `💰 Price: ${product.price}\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `🛒 Order now to secure your stock!\n\n`;
+      message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
+
     case 'restocked':
-      message += `✅ *BACK IN STOCK*\n📦 Stock: ${formatNumber(product.stock || 0)} units\n💰 Price: ${product.price}\n\n📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      message += `✅ *BACK IN STOCK*\n`;
+      message += `Great news! This product is available again.\n\n`;
+      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
+      message += `💰 Price: ${product.price}\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `🛒 Place your order now!\n\n`;
+      message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
+
     case 'price_change':
-      message += `💰 *PRICE UPDATE*\nNew price: ${product.price}\n\n📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      message += `💰 *PRICE UPDATE*\n`;
+      message += `New price: ${product.price}\n`;
+      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `📞 Questions? Contact us:\n${businessName}\n📱 ${phone}`;
       break;
   }
+
   message += `\n\n✨ Powered by Quikpik`;
   return message;
 }
 
-export async function sendTeamInvitationEmail(teamMember: any, wholesaler: any): Promise<boolean> {
+export async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
   try {
-    if (!process.env.SENDGRID_API_KEY) throw new Error('SENDGRID_API_KEY not set');
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY environment variable is not set');
+    }
+
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
     const baseUrl = 'https://quikpik.app';
+
     const token = teamMember.inviteToken || String(teamMember.id);
     const inviteUrl = `${baseUrl}/team-invitation?token=${encodeURIComponent(token)}&email=${encodeURIComponent(teamMember.email)}`;
+
+    // Build accurate permissions description from tab settings
     let accessDescription = 'Full access to all platform areas.';
     try {
       const perms = await storage.getTabPermissions(wholesaler.id);
       const mainTabs = ['products', 'orders', 'customers', 'campaigns', 'analytics'];
-      const tabLabels: Record<string, string> = { products: 'Products', orders: 'Orders', customers: 'Customers', campaigns: 'Broadcast', analytics: 'Analytics' };
-      const allowed = mainTabs.filter(tab => { const perm = perms.find((p: any) => p.tabName === tab); return !perm || !perm.isRestricted; });
-      if (allowed.length > 0 && allowed.length < mainTabs.length) accessDescription = `Access to: ${allowed.map(t => tabLabels[t]).join(', ')}.`;
+      const tabLabels: Record<string, string> = {
+        products: 'Products', orders: 'Orders', customers: 'Customers',
+        campaigns: 'Broadcast', analytics: 'Analytics',
+      };
+      const allowed = mainTabs.filter(tab => {
+        const perm = perms.find((p: any) => p.tabName === tab);
+        return !perm || !perm.isRestricted;
+      });
+      if (allowed.length > 0 && allowed.length < mainTabs.length) {
+        accessDescription = `Access to: ${allowed.map(t => tabLabels[t]).join(', ')}.`;
+      }
     } catch { /* keep default */ }
+
     const roleLabel = teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1);
-    const inviteBody = `${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${teamMember.firstName},</p><p style="margin:0 0 20px"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik.</p>${emailCard(`<p style="margin:0 0 6px"><strong>Your Role:</strong> ${emailBadge(roleLabel)}</p><p style="margin:0;color:#6b7280;font-size:14px">${accessDescription}</p>`)}<p style="margin:0 0 4px">This invitation expires in <strong>7 days</strong>.</p><br>${emailButton('Accept Invitation & Join Team', inviteUrl)}${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">Sent by <strong>${wholesaler.email}</strong>. If unexpected, ignore this email.</p>`;
-    await sgMail.send({
+    const inviteBody = `${emailHeading("You're Invited!", { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${teamMember.firstName},</p><p style="margin:0 0 20px"><strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the wholesale management platform.</p>${emailCard(`<p style="margin:0 0 6px"><strong>Your Role:</strong> ${emailBadge(roleLabel)}</p><p style="margin:0;color:#6b7280;font-size:14px">${accessDescription}</p>`)}<p style="margin:0 0 4px">This invitation expires in <strong>7 days</strong>. Click the button below to create your account and get started.</p><br>${emailButton('Accept Invitation & Join Team', inviteUrl)}<p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0">Or copy and paste this link in your browser:<br><span style="word-break:break-all">${inviteUrl}</span></p>${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">This invitation was sent by <strong>${wholesaler.email}</strong>. If you didn't expect this invitation, you can safely ignore this email.</p>`;
+
+    const msg = {
       to: teamMember.email,
       from: { email: 'hello@quikpik.co', name: 'Quikpik Team' },
       subject: `You're invited to join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
-      html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` }),
-    });
-    console.log('✅ Team invitation email sent to:', teamMember.email);
+      html: wrapCustomerEmail(inviteBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${wholesaler.businessName || wholesaler.name} has invited you to join their team` })
+    };
+
+    const response = await sgMail.send(msg);
+    if (response[0].statusCode === 202) {
+      console.log('✅ Team invitation email sent to:', teamMember.email);
+    }
     return true;
   } catch (error: any) {
     console.error('Error sending team invitation email:', error);
+    if (error.response) {
+      console.error('SendGrid error response:', error.response.body);
+    }
     throw new Error('Failed to send invitation email: ' + (error.message || 'Unknown error'));
   }
 }
