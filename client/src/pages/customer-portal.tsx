@@ -3203,7 +3203,10 @@ export default function CustomerPortal() {
                   <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" : "space-y-4"}>
                     {filteredProducts.map((product) => {
                       const pricing = calculatePromotionalPricing(product, 1);
-                      const cartItem = cart.find(item => item.product.id === product.id);
+                      const cartItemUnits = cart.find(item => item.product.id === product.id && item.sellingType === 'units');
+                      const cartItemPallets = cart.find(item => item.product.id === product.id && item.sellingType === 'pallets');
+                      const cartItem = cartItemUnits || cartItemPallets;
+                      const hasPalletPricing = !!(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0);
                       
                       return viewMode === "grid" ? (
                         <Card key={product.id} className="group rounded-2xl overflow-hidden border border-gray-100 hover:border-[var(--theme-primary)] hover:shadow-lg transition-all duration-200 bg-white">
@@ -3456,146 +3459,67 @@ export default function CustomerPortal() {
                               </div>
 
                               {/* Add to Cart Controls */}
-                              <div className="mt-2">
-                                  {cartItem ? (
+                              <div className="mt-2 space-y-2">
+                                {/* Units stepper */}
+                                {cartItemUnits && (
+                                  <div>
+                                    {cartItemPallets && <p className="text-xs font-medium text-emerald-700 text-center mb-1">📦 Units</p>}
                                     <div className="flex items-center justify-center gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          if (cartItem.quantity <= product.moq) {
-                                            // Remove item if at or below MOQ
-                                            setCart(cart.filter(item => item.product.id !== product.id));
-                                          } else {
-                                            const updatedCart = cart.map(item => 
-                                              item.product.id === product.id 
-                                                ? { ...item, quantity: item.quantity - 1 }
-                                                : item
-                                            );
-                                            setCart(updatedCart);
-                                          }
-                                        }}
-                                        className="rounded-full h-8 w-8 p-0"
-                                      >
+                                      <Button size="sm" variant="outline" onClick={() => {
+                                        if (cartItemUnits.quantity <= product.moq) {
+                                          setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
+                                        } else {
+                                          setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: item.quantity - 1} : item));
+                                        }
+                                      }} className="rounded-full h-8 w-8 p-0">
                                         <Minus className="h-3 w-3" />
                                       </Button>
-                                      
-                                      {/* Adaptive Cart Input - Grid View */}
                                       <div className="relative">
-                                        <Input
-                                          type="number"
-                                          value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItem.quantity}
+                                        <Input type="number"
+                                          value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItemUnits.quantity}
                                           onChange={(e) => {
-                                            const inputValue = e.target.value;
-                                            setQuantityInputValues(prev => ({
-                                              ...prev,
-                                              [product.id]: inputValue
-                                            }));
-                                            
-                                            const parsedValue = parseInt(inputValue) || 0;
-                                            
-                                            if (parsedValue > 0 && parsedValue < product.moq) {
-                                              setShowMOQWarnings(prev => ({
-                                                ...prev,
-                                                [product.id]: true
-                                              }));
-                                            } else {
-                                              setShowMOQWarnings(prev => ({
-                                                ...prev,
-                                                [product.id]: false
-                                              }));
-                                            }
+                                            const v = e.target.value;
+                                            setQuantityInputValues(prev => ({...prev, [product.id]: v}));
+                                            const p = parseInt(v) || 0;
+                                            setShowMOQWarnings(prev => ({...prev, [product.id]: p > 0 && p < product.moq}));
                                           }}
-                                          onFocus={() => {
-                                            setActiveQuantityInput(product.id);
-                                            setShowQuantityHints(prev => ({
-                                              ...prev,
-                                              [product.id]: true
-                                            }));
-                                          }}
+                                          onFocus={() => { setActiveQuantityInput(product.id); setShowQuantityHints(prev => ({...prev, [product.id]: true})); }}
                                           onBlur={() => {
-                                            const inputValue = quantityInputValues[product.id];
-                                            const parsedValue = parseInt(inputValue) || 0;
-                                            
-                                            if (parsedValue === 0) {
-                                              setCart(cart.filter(item => item.product.id !== product.id));
+                                            const v = quantityInputValues[product.id];
+                                            const p = parseInt(v) || 0;
+                                            if (p === 0) {
+                                              setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
                                             } else {
-                                              const validQuantity = Math.max(product.moq, parsedValue);
-                                              const maxQuantity = Math.min(validQuantity, product.stock);
-                                              
-                                              const updatedCart = cart.map(item => 
-                                                item.product.id === product.id 
-                                                  ? { ...item, quantity: maxQuantity }
-                                                  : item
-                                              );
-                                              setCart(updatedCart);
+                                              const qty = Math.min(Math.max(product.moq, p), product.stock);
+                                              setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: qty} : item));
                                             }
-                                            
-                                            setQuantityInputValues(prev => {
-                                              const newState = { ...prev };
-                                              delete newState[product.id];
-                                              return newState;
-                                            });
-                                            setShowMOQWarnings(prev => ({
-                                              ...prev,
-                                              [product.id]: false
-                                            }));
-                                            setShowQuantityHints(prev => ({
-                                              ...prev,
-                                              [product.id]: false
-                                            }));
+                                            setQuantityInputValues(prev => { const s = {...prev}; delete s[product.id]; return s; });
+                                            setShowMOQWarnings(prev => ({...prev, [product.id]: false}));
+                                            setShowQuantityHints(prev => ({...prev, [product.id]: false}));
                                             setActiveQuantityInput(null);
                                           }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              e.currentTarget.blur();
-                                            }
-                                          }}
-                                          min={0}
-                                          max={product.stock}
-                                          className={`w-14 h-8 text-center rounded-lg text-sm ${
-                                            showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
-                                            activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
-                                          }`}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                          min={0} max={product.stock}
+                                          className={`w-14 h-8 text-center rounded-lg text-sm ${showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''}`}
                                           placeholder={product.moq.toString()}
                                         />
-                                        
                                         {showMOQWarnings[product.id] && (
                                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
                                             Min: {product.moq} units
                                             <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
                                           </div>
                                         )}
-                                        
                                         {showQuantityHints[product.id] && activeQuantityInput === product.id && (
                                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-[200px]">
                                             <div className="text-xs text-gray-600 mb-2 font-medium">Quick Add:</div>
                                             <div className="grid grid-cols-3 gap-1">
-                                              {getQuantitySuggestions(product, cartItem.quantity).map((suggestion, index) => (
-                                                <button
-                                                  key={index}
-                                                  onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    const updatedCart = cart.map(item => 
-                                                      item.product.id === product.id 
-                                                        ? { ...item, quantity: suggestion.value }
-                                                        : item
-                                                    );
-                                                    setCart(updatedCart);
-                                                    setShowQuantityHints(prev => ({
-                                                      ...prev,
-                                                      [product.id]: false
-                                                    }));
-                                                    setActiveQuantityInput(null);
-                                                  }}
-                                                  className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
-                                                    suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                    suggestion.type === 'bulk' ? 'text-white border-0' :
-                                                    'border-gray-300 text-gray-700'
-                                                  }`}
-                                                  title={suggestion.description}
-                                                >
+                                              {getQuantitySuggestions(product, cartItemUnits.quantity).map((suggestion, index) => (
+                                                <button key={index} onClick={(e) => {
+                                                  e.preventDefault(); e.stopPropagation();
+                                                  setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: suggestion.value} : item));
+                                                  setShowQuantityHints(prev => ({...prev, [product.id]: false}));
+                                                  setActiveQuantityInput(null);
+                                                }} className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' : suggestion.type === 'bulk' ? 'text-white border-0' : 'border-gray-300 text-gray-700'}`} style={suggestion.type === 'bulk' ? {backgroundColor: 'var(--theme-primary)'} : {}} title={suggestion.description}>
                                                   {suggestion.label}
                                                 </button>
                                               ))}
@@ -3604,48 +3528,90 @@ export default function CustomerPortal() {
                                           </div>
                                         )}
                                       </div>
-                                      
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          const updatedCart = cart.map(item => 
-                                            item.product.id === product.id 
-                                              ? { ...item, quantity: item.quantity + 1 }
-                                              : item
-                                          );
-                                          setCart(updatedCart);
-                                        }}
-                                        className="rounded-full h-8 w-8 p-0"
-                                      >
+                                      <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
                                         <Plus className="h-3 w-3" />
                                       </Button>
                                     </div>
-                                  ) : (
-                                    <Button
-                                      onClick={() => {
-                                        // Check if product has pallet pricing
-                                        if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
-                                          setSelectedProductForModal(product);
-                                          // Reset modal state and set initial quantity to MOQ
-                                          setModalStep('type');
-                                          setSelectedModalType(null);
-                                          setModalQuantity(product.moq || 1);
-                                          setShowUnitSelectionModal(true);
+                                  </div>
+                                )}
+
+                                {/* Pallets stepper */}
+                                {cartItemPallets && hasPalletPricing && (
+                                  <div>
+                                    {cartItemUnits && <p className="text-xs font-medium text-blue-700 text-center mb-1">🚛 Pallets</p>}
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button size="sm" variant="outline" onClick={() => {
+                                        const palMoq = (product as any).palletMoq || 1;
+                                        if (cartItemPallets.quantity <= palMoq) {
+                                          setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
                                         } else {
-                                          // No pallet option, add units directly
-                                          addToCart(product, product.moq, 'units');
+                                          setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity - 1} : item));
                                         }
-                                      }}
-                                      disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                      className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                      style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                      title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
-                                    >
-                                      <ShoppingCart className="h-4 w-4 mr-2" />
-                                      {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
-                                    </Button>
-                                  )}
+                                      }} className="rounded-full h-8 w-8 p-0">
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <Input type="number"
+                                        value={quantityInputValues[`${product.id}_pal`] !== undefined ? quantityInputValues[`${product.id}_pal`] : cartItemPallets.quantity}
+                                        onChange={(e) => { setQuantityInputValues(prev => ({...prev, [`${product.id}_pal`]: e.target.value})); }}
+                                        onBlur={() => {
+                                          const v = quantityInputValues[`${product.id}_pal`];
+                                          const p = parseInt(v) || 0;
+                                          const palMoq = (product as any).palletMoq || 1;
+                                          if (p === 0) {
+                                            setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
+                                          } else {
+                                            const palStock = (product as any).palletStock || 0;
+                                            const qty = Math.min(Math.max(palMoq, p), palStock || p);
+                                            setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: qty} : item));
+                                          }
+                                          setQuantityInputValues(prev => { const s = {...prev}; delete s[`${product.id}_pal`]; return s; });
+                                        }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                        min={1}
+                                        className="w-14 h-8 text-center rounded-lg text-sm"
+                                        placeholder={((product as any).palletMoq || 1).toString()}
+                                      />
+                                      <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Secondary "Also add" buttons */}
+                                {cartItemUnits && !cartItemPallets && hasPalletPricing && (
+                                  <button onClick={() => addToCart(product, (product as any).palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
+                                    + Also Add Pallets
+                                  </button>
+                                )}
+                                {cartItemPallets && !cartItemUnits && (
+                                  <button onClick={() => addToCart(product, product.moq || 1, 'units')} className="w-full text-xs py-1.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors">
+                                    + Also Add Units
+                                  </button>
+                                )}
+
+                                {/* Initial add button */}
+                                {!cartItemUnits && !cartItemPallets && (
+                                  <Button
+                                    onClick={() => {
+                                      if (hasPalletPricing) {
+                                        setSelectedProductForModal(product);
+                                        setModalStep('type');
+                                        setSelectedModalType(null);
+                                        setModalQuantity(product.moq || 1);
+                                        setShowUnitSelectionModal(true);
+                                      } else {
+                                        addToCart(product, product.moq, 'units');
+                                      }
+                                    }}
+                                    disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
+                                    className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                  >
+                                    <ShoppingCart className="h-4 w-4 mr-2" />
+                                    {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -3840,146 +3806,68 @@ export default function CustomerPortal() {
                                 </div>
 
                                 {/* Add to Cart Controls */}
-                                <div>
-                                  {cartItem ? (
+                                <div className="space-y-2">
+                                  {/* Units stepper */}
+                                  {cartItemUnits && (
+                                    <div>
+                                      {cartItemPallets && <p className="text-xs font-medium text-emerald-700 mb-1">📦 Units</p>}
                                       <div className="flex items-center gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => {
-                                            if (cartItem.quantity <= product.moq) {
-                                              setCart(cart.filter(item => item.product.id !== product.id));
-                                            } else {
-                                              const updatedCart = cart.map(item => 
-                                                item.product.id === product.id 
-                                                  ? { ...item, quantity: item.quantity - 1 }
-                                                  : item
-                                              );
-                                              setCart(updatedCart);
-                                            }
-                                          }}
-                                          className="rounded-full h-8 w-8 p-0"
-                                        >
+                                        <Button size="sm" variant="outline" onClick={() => {
+                                          if (cartItemUnits.quantity <= product.moq) {
+                                            setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
+                                          } else {
+                                            setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: item.quantity - 1} : item));
+                                          }
+                                        }} className="rounded-full h-8 w-8 p-0">
                                           <Minus className="h-3 w-3" />
                                         </Button>
                                         <div className="relative">
                                           <Input
                                             type="number"
-                                            value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItem.quantity}
+                                            value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItemUnits.quantity}
                                             onChange={(e) => {
-                                              const inputValue = e.target.value;
-                                              setQuantityInputValues(prev => ({
-                                                ...prev,
-                                                [product.id]: inputValue
-                                              }));
-                                              
-                                              const parsedValue = parseInt(inputValue) || 0;
-                                              
-                                              if (parsedValue > 0 && parsedValue < product.moq) {
-                                                setShowMOQWarnings(prev => ({
-                                                  ...prev,
-                                                  [product.id]: true
-                                                }));
-                                              } else {
-                                                setShowMOQWarnings(prev => ({
-                                                  ...prev,
-                                                  [product.id]: false
-                                                }));
-                                              }
+                                              const v = e.target.value;
+                                              setQuantityInputValues(prev => ({...prev, [product.id]: v}));
+                                              const p = parseInt(v) || 0;
+                                              setShowMOQWarnings(prev => ({...prev, [product.id]: p > 0 && p < product.moq}));
                                             }}
-                                            onFocus={() => {
-                                              setActiveQuantityInput(product.id);
-                                              setShowQuantityHints(prev => ({
-                                                ...prev,
-                                                [product.id]: true
-                                              }));
-                                            }}
+                                            onFocus={() => { setActiveQuantityInput(product.id); setShowQuantityHints(prev => ({...prev, [product.id]: true})); }}
                                             onBlur={() => {
-                                              const inputValue = quantityInputValues[product.id];
-                                              const parsedValue = parseInt(inputValue) || 0;
-                                              
-                                              if (parsedValue === 0) {
-                                                setCart(cart.filter(item => item.product.id !== product.id));
+                                              const v = quantityInputValues[product.id];
+                                              const p = parseInt(v) || 0;
+                                              if (p === 0) {
+                                                setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
                                               } else {
-                                                const validQuantity = Math.max(product.moq, parsedValue);
-                                                const maxQuantity = Math.min(validQuantity, product.stock);
-                                                
-                                                const updatedCart = cart.map(item => 
-                                                  item.product.id === product.id 
-                                                    ? { ...item, quantity: maxQuantity }
-                                                    : item
-                                                );
-                                                setCart(updatedCart);
+                                                const qty = Math.min(Math.max(product.moq, p), product.stock);
+                                                setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: qty} : item));
                                               }
-                                              
-                                              setQuantityInputValues(prev => {
-                                                const newState = { ...prev };
-                                                delete newState[product.id];
-                                                return newState;
-                                              });
-                                              setShowMOQWarnings(prev => ({
-                                                ...prev,
-                                                [product.id]: false
-                                              }));
-                                              setShowQuantityHints(prev => ({
-                                                ...prev,
-                                                [product.id]: false
-                                              }));
+                                              setQuantityInputValues(prev => { const s = {...prev}; delete s[product.id]; return s; });
+                                              setShowMOQWarnings(prev => ({...prev, [product.id]: false}));
+                                              setShowQuantityHints(prev => ({...prev, [product.id]: false}));
                                               setActiveQuantityInput(null);
                                             }}
-                                            onKeyDown={(e) => {
-                                              if (e.key === 'Enter') {
-                                                e.currentTarget.blur();
-                                              }
-                                            }}
-                                            min={0}
-                                            max={product.stock}
-                                            className={`w-14 h-8 text-center rounded-lg text-sm ${
-                                              showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
-                                              activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
-                                            }`}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                            min={0} max={product.stock}
+                                            className={`w-14 h-8 text-center rounded-lg text-sm ${showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''}`}
                                             placeholder={product.moq.toString()}
                                           />
-                                          
                                           {showMOQWarnings[product.id] && (
                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
                                               Min: {product.moq} units
                                               <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
                                             </div>
                                           )}
-                                          
                                           {showQuantityHints[product.id] && activeQuantityInput === product.id && (
                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-[200px]">
                                               <div className="text-xs text-gray-600 mb-2 font-medium">Quick Add:</div>
                                               <div className="grid grid-cols-3 gap-1">
-                                                {getQuantitySuggestions(product, cartItem.quantity).map((suggestion, index) => (
-                                                  <button
-                                                    key={index}
-                                                    onClick={(e) => {
-                                                      e.preventDefault();
-                                                      e.stopPropagation();
-                                                      const updatedCart = cart.map(item => 
-                                                        item.product.id === product.id 
-                                                          ? { ...item, quantity: suggestion.value }
-                                                          : item
-                                                      );
-                                                      setCart(updatedCart);
-                                                      setShowQuantityHints(prev => ({
-                                                        ...prev,
-                                                        [product.id]: false
-                                                      }));
-                                                      setActiveQuantityInput(null);
-                                                    }}
-                                                    className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
-                                                      suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                      suggestion.type === 'bulk' ? 'text-white border-0' :
-                                                      'border-gray-300 text-gray-700'
-                                                    }`}
-                                                    style={suggestion.type === 'bulk' ? {
-                                                      backgroundColor: 'var(--theme-primary)'
-                                                    } : {}}
-                                                    title={suggestion.description}
-                                                  >
+                                                {getQuantitySuggestions(product, cartItemUnits.quantity).map((suggestion, index) => (
+                                                  <button key={index} onClick={(e) => {
+                                                    e.preventDefault(); e.stopPropagation();
+                                                    setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: suggestion.value} : item));
+                                                    setShowQuantityHints(prev => ({...prev, [product.id]: false}));
+                                                    setActiveQuantityInput(null);
+                                                  }} className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' : suggestion.type === 'bulk' ? 'text-white border-0' : 'border-gray-300 text-gray-700'}`} style={suggestion.type === 'bulk' ? {backgroundColor: 'var(--theme-primary)'} : {}} title={suggestion.description}>
                                                     {suggestion.label}
                                                   </button>
                                                 ))}
@@ -3988,64 +3876,91 @@ export default function CustomerPortal() {
                                             </div>
                                           )}
                                         </div>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => {
-                                            const updatedCart = cart.map(item => 
-                                              item.product.id === product.id 
-                                                ? { ...item, quantity: item.quantity + 1 }
-                                                : item
-                                            );
-                                            setCart(updatedCart);
-                                          }}
-                                          className="rounded-full h-8 w-8 p-0"
-                                        >
+                                        <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'units' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
                                           <Plus className="h-3 w-3" />
                                         </Button>
                                       </div>
-                                    ) : (
-                                      <Button
-                                        onClick={() => {
-                                          if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
-                                            setSelectedProductForModal(product);
-                                            setModalStep('type');
-                                            setSelectedModalType(null);
-                                            setModalQuantity(product.moq || 1);
-                                            setShowUnitSelectionModal(true);
-                                          } else {
-                                            addToCart(product, product.moq || 1, 'units');
-                                          }
-                                        }}
-                                        disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                        className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                        title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : 'Add to cart'}
-                                      >
-                                        <ShoppingCart className="h-4 w-4 mr-2" />
-                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
-                                      </Button>
-                                    )}
-
-                                  {/* Total for this item */}
-                                  {cartItem && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      Total: <PriceDisplay
-                                        price={
-                                          cartItem.sellingType === 'pallets' 
-                                            ? parseFloat((product as any).palletPrice?.toString() || '0') * cartItem.quantity
-                                            : pricing.effectivePrice * cartItem.quantity
-                                        }
-                                        currency={wholesaler?.defaultCurrency || 'GBP'}
-                                        isGuestMode={false}
-                                        size="small"
-                                      />
-                                      {cartItem.sellingType === 'pallets' && (
-                                        <span className="ml-1">
-                                          ({cartItem.quantity} pallet{cartItem.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units = {cartItem.quantity * ((product as any).unitsPerPallet || 1)} total units)
-                                        </span>
-                                      )}
+                                      {cartItemUnits && <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={pricing.effectivePrice * cartItemUnits.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /></div>}
                                     </div>
+                                  )}
+
+                                  {/* Pallets stepper */}
+                                  {cartItemPallets && hasPalletPricing && (
+                                    <div>
+                                      {cartItemUnits && <p className="text-xs font-medium text-blue-700 mb-1">🚛 Pallets</p>}
+                                      <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => {
+                                          const palMoq = (product as any).palletMoq || 1;
+                                          if (cartItemPallets.quantity <= palMoq) {
+                                            setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
+                                          } else {
+                                            setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity - 1} : item));
+                                          }
+                                        }} className="rounded-full h-8 w-8 p-0">
+                                          <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <Input type="number"
+                                          value={quantityInputValues[`${product.id}_pal`] !== undefined ? quantityInputValues[`${product.id}_pal`] : cartItemPallets.quantity}
+                                          onChange={(e) => { setQuantityInputValues(prev => ({...prev, [`${product.id}_pal`]: e.target.value})); }}
+                                          onBlur={() => {
+                                            const v = quantityInputValues[`${product.id}_pal`];
+                                            const p = parseInt(v) || 0;
+                                            const palMoq = (product as any).palletMoq || 1;
+                                            if (p === 0) {
+                                              setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
+                                            } else {
+                                              const palStock = (product as any).palletStock || 0;
+                                              const qty = Math.min(Math.max(palMoq, p), palStock || p);
+                                              setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: qty} : item));
+                                            }
+                                            setQuantityInputValues(prev => { const s = {...prev}; delete s[`${product.id}_pal`]; return s; });
+                                          }}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                          min={1}
+                                          className="w-14 h-8 text-center rounded-lg text-sm"
+                                          placeholder={((product as any).palletMoq || 1).toString()}
+                                        />
+                                        <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
+                                          <Plus className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={parseFloat((product as any).palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units)</span></div>
+                                    </div>
+                                  )}
+
+                                  {/* Secondary "Also add" buttons */}
+                                  {cartItemUnits && !cartItemPallets && hasPalletPricing && (
+                                    <button onClick={() => addToCart(product, (product as any).palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
+                                      + Also Add Pallets
+                                    </button>
+                                  )}
+                                  {cartItemPallets && !cartItemUnits && (
+                                    <button onClick={() => addToCart(product, product.moq || 1, 'units')} className="w-full text-xs py-1.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors">
+                                      + Also Add Units
+                                    </button>
+                                  )}
+
+                                  {/* Initial add button */}
+                                  {!cartItemUnits && !cartItemPallets && (
+                                    <Button
+                                      onClick={() => {
+                                        if (hasPalletPricing) {
+                                          setSelectedProductForModal(product);
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
+                                          setShowUnitSelectionModal(true);
+                                        } else {
+                                          addToCart(product, product.moq || 1, 'units');
+                                        }
+                                      }}
+                                      disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
+                                      className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                      style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                    >
+                                      <ShoppingCart className="h-4 w-4 mr-2" />
+                                      {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
+                                    </Button>
                                   )}
                                 </div>
                               </div>
@@ -5403,6 +5318,32 @@ export default function CustomerPortal() {
                             for {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Both Option */}
+                    <div
+                      className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-purple-400 bg-purple-50"
+                      onClick={() => {
+                        const unitMoq = selectedProductForModal.moq || 1;
+                        const palMoq = (selectedProductForModal as any).palletMoq || 1;
+                        addToCart(selectedProductForModal, unitMoq, 'units');
+                        addToCart(selectedProductForModal, palMoq, 'pallets');
+                        setShowUnitSelectionModal(false);
+                        setSelectedProductForModal(null);
+                        setModalStep('type');
+                        setSelectedModalType(null);
+                      }}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-900">Both Units & Pallets</h4>
+                          <p className="text-sm text-gray-600">Order individual units and full pallets together</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {selectedProductForModal.moq || 1} units + {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-purple-600 text-2xl">+</div>
                       </div>
                     </div>
                   </div>
