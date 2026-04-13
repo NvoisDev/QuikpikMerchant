@@ -24,7 +24,7 @@ import {
   Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp, Banknote, ChevronRight,
   Eye, MoreHorizontal, ShieldCheck, ArrowLeft, ArrowRight, Heart,
   HelpCircle, Building, Star, Mail, Phone, MapPin, Filter, FileText,
-  X, Check, Loader2, Download
+  X, Check, Loader2, Download, Share2
 } from "lucide-react";
 
 // Optimized imports and lazy loading
@@ -947,7 +947,8 @@ export default function CustomerPortal() {
   const [selectedModalType, setSelectedModalType] = useState<'units' | 'pallets' | null>(null);
   const [modalQuantity, setModalQuantity] = useState(1);
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
-  
+  const [editableQuantities, setEditableQuantities] = useState<Record<number, string>>({});
+
   // Payment intent creation state
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
@@ -1285,6 +1286,17 @@ export default function CustomerPortal() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [quickActionExpanded]);
+
+  // Sync editableQuantities map whenever cart changes (used by checkout item rows)
+  useEffect(() => {
+    setEditableQuantities(prev => {
+      const next: Record<number, string> = {};
+      cart.forEach(i => {
+        next[i.product.id] = prev[i.product.id] !== undefined ? prev[i.product.id] : String(i.quantity);
+      });
+      return next;
+    });
+  }, [cart]);
 
   // Featured product ID is now managed by state initialized from URL
 
@@ -4288,7 +4300,7 @@ export default function CustomerPortal() {
                 {/* Order Summary with Fee Breakdown */}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold mb-3">Order Summary</h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {cart.map((item, index) => {
                       let itemPrice;
                       let totalCost;
@@ -4302,49 +4314,168 @@ export default function CustomerPortal() {
                         itemPrice = cartPricing.effectivePrice;
                         totalCost = cartPricing.totalCost;
                       }
+
+                      const moq = item.product.moq || 1;
+                      const availableStock = item.sellingType === 'pallets'
+                        ? ((item.product as any).palletStock || 999)
+                        : (item.product.stock || 999);
+                      const currentEditVal = editableQuantities[item.product.id] ?? String(item.quantity);
+
+                      const commitQty = (rawVal: string) => {
+                        const parsed = parseInt(rawVal, 10);
+                        const clamped = isNaN(parsed) || parsed < moq ? moq : Math.min(parsed, availableStock);
+                        setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(clamped) }));
+                        setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: clamped } : c));
+                      };
+
+                      const handleShare = async () => {
+                        const shareText = `${item.product.name} — £${itemPrice.toFixed(2)}/${item.sellingType === 'pallets' ? 'pallet' : 'unit'}`;
+                        if (navigator.share) {
+                          try { await navigator.share({ title: item.product.name, text: shareText, url: window.location.href }); } catch {}
+                        } else {
+                          await navigator.clipboard.writeText(`${shareText} — ${window.location.href}`);
+                          toast({ title: "Link copied!", description: "Product link copied to clipboard." });
+                        }
+                      };
                       
                       return (
-                        <div key={index} className="flex justify-between items-center py-2">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium">{item.product.name}</p>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                              Qty: {item.quantity} {item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}
-                              {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
-                                <span className="text-green-600 font-medium ml-1">
-                                  (£{cartPricing.effectivePrice.toFixed(2)} each - {cartPricing.promoLabel || 'promo price'})
-                                </span>
+                        <div key={index} className="bg-white rounded-lg border border-gray-200 p-3">
+                          {/* Row: image + details + price */}
+                          <div className="flex gap-3">
+                            {/* Product thumbnail */}
+                            <div className="flex-shrink-0">
+                              {(item.product.imageUrl || (item.product as any).images?.[0]) ? (
+                                <img
+                                  src={item.product.imageUrl || (item.product as any).images?.[0]}
+                                  alt={item.product.name}
+                                  className="w-16 h-16 object-cover rounded-md border border-gray-100"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+                                  <Package className="h-7 w-7 text-gray-400" />
+                                </div>
                               )}
-                            </p>
-                            {cartPricing && cartPricing.appliedOffers.length > 0 && (
-                              <span className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mt-1">
-                                🎁 {cartPricing.appliedOffers[0]}
-                              </span>
-                            )}
-                            {cartPricing && cartPricing.freeItems > 0 && (
-                              <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 ml-1">
-                                +{cartPricing.freeItems} free
-                              </span>
-                            )}
-                            {item.sellingType === 'pallets' && (
-                              <p className="text-xs text-gray-500">
-                                ({item.quantity * ((item.product as any).unitsPerPallet || 1)} total units)
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
-                              <div className="text-xs text-gray-500 line-through">
-                                £{(cartPricing.originalPrice * item.quantity).toFixed(2)}
+                            </div>
+
+                            {/* Name, badges, price */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="font-semibold text-sm leading-snug">{item.product.name}</p>
+                                <div className="text-right flex-shrink-0">
+                                  {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
+                                    <div className="text-xs text-gray-400 line-through">
+                                      £{(cartPricing.originalPrice * item.quantity).toFixed(2)}
+                                    </div>
+                                  )}
+                                  <PriceDisplay
+                                    price={totalCost}
+                                    currency={wholesaler?.defaultCurrency || 'GBP'}
+                                    isGuestMode={false}
+                                    size="small"
+                                  />
+                                </div>
                               </div>
-                            )}
-                            <PriceDisplay
-                              price={totalCost}
-                              currency={wholesaler?.defaultCurrency || 'GBP'}
-                              isGuestMode={false}
-                              size="small"
-                            />
+
+                              {/* Type + promo badges */}
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.sellingType === 'pallets' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                  {item.sellingType === 'pallets' ? 'Pallets' : 'Units'}
+                                </span>
+                                {cartPricing && cartPricing.promoLabel && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                                    {cartPricing.promoLabel}
+                                  </span>
+                                )}
+                                {cartPricing && cartPricing.appliedOffers?.length > 0 && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                                    🎁 {cartPricing.appliedOffers[0]}
+                                  </span>
+                                )}
+                                {cartPricing && cartPricing.freeItems > 0 && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                    +{cartPricing.freeItems} free
+                                  </span>
+                                )}
+                                {item.sellingType === 'pallets' && (
+                                  <span className="text-xs text-gray-500">
+                                    ({item.quantity * ((item.product as any).unitsPerPallet || 1)} units total)
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Unit price line */}
+                              <p className="text-xs text-gray-500 mt-1">
+                                £{itemPrice.toFixed(2)} / {item.sellingType === 'pallets' ? 'pallet' : 'unit'}
+                                {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
+                                  <span className="ml-1 text-gray-400 line-through">£{cartPricing.originalPrice.toFixed(2)}</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Controls row: qty stepper + Delete + Share */}
+                          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+                            {/* − qty + */}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0"
+                                onClick={() => {
+                                  if (item.quantity <= moq) {
+                                    setCart(cart.filter(c => c.product.id !== item.product.id));
+                                  } else {
+                                    const next = item.quantity - 1;
+                                    setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(next) }));
+                                    setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: next } : c));
+                                  }
+                                }}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <input
+                                type="number"
+                                value={currentEditVal}
+                                onChange={e => setEditableQuantities(prev => ({ ...prev, [item.product.id]: e.target.value }))}
+                                onBlur={e => commitQty(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') commitQty((e.target as HTMLInputElement).value); }}
+                                className="w-14 text-center border border-gray-300 rounded px-1 py-0.5 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0"
+                                onClick={() => {
+                                  const next = Math.min(item.quantity + 1, availableStock);
+                                  setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(next) }));
+                                  setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: next } : c));
+                                }}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+
+                            {/* Delete */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 h-7 text-xs px-2"
+                              onClick={() => setCart(cart.filter(c => c.product.id !== item.product.id))}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete
+                            </Button>
+
+                            {/* Share */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs px-2"
+                              onClick={handleShare}
+                            >
+                              <Share2 className="h-3 w-3 mr-1" />
+                              Share
+                            </Button>
                           </div>
                         </div>
                       );
