@@ -17497,11 +17497,13 @@ https://quikpik.app`;
 
       // Customer segmentation — iterate ALL orders so the count matches the customer portal,
       // but only accumulate spend from paid/completed orders.
+      // paidOrderCount is tracked separately so avgOrderValue uses a spend-meaningful denominator.
       const customerOrderMap = new Map();
       for (const order of orders) {
         const customerId = order.retailerId;
         const current = customerOrderMap.get(customerId) || {
           orderCount: 0,
+          paidOrderCount: 0,
           totalSpent: 0,
           lastOrderDate: null,
           firstOrderDate: null,
@@ -17518,6 +17520,7 @@ https://quikpik.app`;
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
           current.totalSpent += (orderSubtotal - orderPlatformFee);
+          current.paidOrderCount++;
         }
         
         const orderDate = new Date(order.createdAt);
@@ -17560,7 +17563,7 @@ https://quikpik.app`;
             orderCount: data.orderCount,
             totalSpent: Math.round(data.totalSpent * 100) / 100,
             lastOrderDate: data.lastOrderDate?.toISOString().split('T')[0] || '',
-            avgOrderValue: Math.round((data.totalSpent / data.orderCount) * 100) / 100
+            avgOrderValue: Math.round((data.totalSpent / (data.paidOrderCount || 1)) * 100) / 100
           };
         })
         .sort((a, b) => b.totalSpent - a.totalSpent)
