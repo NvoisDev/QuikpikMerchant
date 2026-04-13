@@ -37,6 +37,7 @@ import {
   Order,
   getStatusColor,
   getStatusIcon,
+  getStatusLabel,
   getPaymentStatusColor,
   getPaymentStatusLabel,
   ReorderButton,
@@ -718,7 +719,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge className={`${getStatusColor(order.status)} text-xs`}>
                 {getStatusIcon(order.status)}
-                <span className="ml-1">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
+                <span className="ml-1">{getStatusLabel(order.status || '')}</span>
               </Badge>
               {order.paymentStatus && order.status !== 'cancelled' && (
                 <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>

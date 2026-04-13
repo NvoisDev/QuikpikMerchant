@@ -124,6 +124,7 @@ export const getStatusColor = (status: string) => {
     case 'pending':
       return 'bg-yellow-100 text-yellow-800';
     case 'confirmed':
+    case 'paid':
       return 'bg-blue-100 text-blue-800';
     case 'processing':
       return 'bg-purple-100 text-purple-800';
@@ -145,6 +146,7 @@ export const getStatusIcon = (status: string) => {
     case 'pending':
       return <Clock className="h-3 w-3" />;
     case 'confirmed':
+    case 'paid':
       return <Check className="h-3 w-3" />;
     case 'processing':
       return <Package className="h-3 w-3" />;
@@ -156,6 +158,28 @@ export const getStatusIcon = (status: string) => {
       return <Warehouse className="h-3 w-3" />;
     default:
       return <Clock className="h-3 w-3" />;
+  }
+};
+
+export const getStatusLabel = (status: string): string => {
+  switch ((status || '').toLowerCase()) {
+    case 'pending':
+      return 'Pending';
+    case 'confirmed':
+    case 'paid':
+      return 'Confirmed';
+    case 'processing':
+      return 'Processing';
+    case 'items_prepared':
+      return 'Preparing';
+    case 'ready_for_collection':
+      return 'Ready to Collect';
+    case 'fulfilled':
+      return 'Fulfilled';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
   }
 };
 
@@ -1952,7 +1976,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     <div className="text-sm font-semibold">{order.orderNumber}</div>
                     <Badge className={`${getStatusColor(order.status)} text-xs`}>
                       {getStatusIcon(order.status)}
-                      <span className="ml-1 capitalize">{order.status}</span>
+                      <span className="ml-1">{getStatusLabel(order.status)}</span>
                     </Badge>
                     <Badge 
                       variant="outline" 
