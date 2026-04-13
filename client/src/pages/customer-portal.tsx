@@ -2665,7 +2665,7 @@ export default function CustomerPortal() {
         </div>
       )}
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8 pb-24">
+      <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
         {/* Guest Mode Notice */}
         {isGuestMode && (
           <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -2744,7 +2744,7 @@ export default function CustomerPortal() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="home" className="space-y-5 mb-16">
+            <TabsContent value="home" className="space-y-5 mb-16 pb-6">
               {/* Welcome Hero Banner */}
               <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
                 {/* Subtle decorative circles */}
@@ -3088,7 +3088,7 @@ export default function CustomerPortal() {
               </div>
             </TabsContent>
 
-            <TabsContent value="products" className="space-y-6 mb-16">
+            <TabsContent value="products" className="space-y-6 mb-16 pb-6">
               {/* Product Search and Filters */}
               {/* Sticky search + filter toolbar */}
               <div className="sticky top-16 z-30 bg-white -mx-4 px-4 pt-2 pb-3 border-b border-gray-100 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-xl sm:shadow-sm sm:border-gray-100">
@@ -4059,7 +4059,7 @@ export default function CustomerPortal() {
               </div>
             </TabsContent>
 
-            <TabsContent value="orders" className="space-y-6">
+            <TabsContent value="orders" className="space-y-6 pb-6">
               {/* Customer Order History */}
               {authenticatedCustomer && wholesaler?.id && (
                 <Suspense fallback={<ComponentLoader />}>
@@ -4072,7 +4072,7 @@ export default function CustomerPortal() {
               )}
             </TabsContent>
 
-            <TabsContent value="account" className="space-y-6">
+            <TabsContent value="account" className="space-y-6 pb-6">
               {isEnhancedPreviewMode ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                   <User className="w-12 h-12 mb-4 text-gray-300" />
@@ -4290,7 +4290,7 @@ export default function CustomerPortal() {
               )}
             </TabsContent>
 
-            <TabsContent value="help">
+            <TabsContent value="help" className="pb-6">
               <CustomerHelp wholesaler={wholesaler ? {
                 businessName: wholesaler.businessName,
                 phoneNumber: wholesaler.phoneNumber,
