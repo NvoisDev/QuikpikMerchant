@@ -13933,7 +13933,7 @@ https://quikpik.app`;
     const isCancelledOrder = order.status === 'cancelled';
     const ps = order.paymentStatus || 'unpaid';
     const psLabel = isCancelledOrder ? 'VOID' : (ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid');
-    const psColor = isCancelledOrder ? '#6b7280' : (ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626');
+    const psColor = isCancelledOrder ? '#dc2626' : (ps === 'paid' ? '#16a34a' : ps === 'part_paid' ? '#b45309' : '#dc2626');
 
     // Items — NEVER use order.total (includes customer transaction fee)
     const orderItems = (order.items || []).map((item: any) => {
