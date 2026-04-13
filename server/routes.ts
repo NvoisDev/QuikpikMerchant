@@ -2252,9 +2252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const storedFee = order.customerTransactionFee;
         const rawMethod = order.paymentMethod;
         const isOnline = rawMethod === 'payment_link' || rawMethod === 'card' ||
-                         (!rawMethod && !!(order as any).stripePaymentIntentId);
+                         (!rawMethod && !!order.stripePaymentIntentId);
         const transactionFee = (storedFee !== null && storedFee !== undefined)
-          ? parseFloat(storedFee as string)
+          ? parseFloat(storedFee)
           : (isOnline ? (subtotal * 0.055) + 0.50 : 0);
         
         // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
@@ -2286,7 +2286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deliveryAddress: order.deliveryAddress,
           deliveryAddressId: order.deliveryAddressId,
           paymentMethod: order.paymentMethod || null,
-          stripePaymentIntentId: (order as any).stripePaymentIntentId || null,
+          stripePaymentIntentId: order.stripePaymentIntentId || null,
           paymentStatus: order.paymentStatus || "paid",
           amountPaid: order.amountPaid || '0.00',
           amountOutstanding: order.amountOutstanding || '0.00',
