@@ -17495,9 +17495,10 @@ https://quikpik.app`;
         ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
       );
 
-      // Customer segmentation
+      // Customer segmentation — iterate ALL orders so the count matches the customer portal,
+      // but only accumulate spend from paid/completed orders.
       const customerOrderMap = new Map();
-      for (const order of validOrders) {
+      for (const order of orders) {
         const customerId = order.retailerId;
         const current = customerOrderMap.get(customerId) || {
           orderCount: 0,
@@ -17511,10 +17512,13 @@ https://quikpik.app`;
         }
 
         current.orderCount++;
-        // Use actual net amount (subtotal - platform fee) for wholesaler earnings
-        const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
-        const orderPlatformFee = parseFloat(order.platformFee || '0');
-        current.totalSpent += (orderSubtotal - orderPlatformFee);
+
+        // Only add to spend for paid/completed orders
+        if (['paid', 'processing', 'shipped', 'delivered', 'fulfilled', 'completed'].includes(order.status)) {
+          const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
+          const orderPlatformFee = parseFloat(order.platformFee || '0');
+          current.totalSpent += (orderSubtotal - orderPlatformFee);
+        }
         
         const orderDate = new Date(order.createdAt);
         if (!current.firstOrderDate || orderDate < current.firstOrderDate) {
