@@ -649,7 +649,7 @@ const PaymentFormContent = ({
   );
 };
 
-function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void }) {
+function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void; defaultCurrency?: string }) {
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
 
   const downloadInvoice = async (order: Order) => {
@@ -736,7 +736,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders }: {
               ) : (
                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
               )}
-              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal), wholesaler?.defaultCurrency || 'GBP')}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal), defaultCurrency || 'GBP')}</span>
               {order.items && order.items.length > 0 && (
                 <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
               )}
@@ -2884,6 +2884,7 @@ export default function CustomerPortal() {
                   wholesalerId={wholesalerId}
                   customerPhone={authenticatedCustomer.phone}
                   onViewAllOrders={() => setActiveTab("orders")}
+                  defaultCurrency={wholesaler?.defaultCurrency}
                 />
               )}
 
