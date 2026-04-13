@@ -2839,7 +2839,10 @@ export default function CustomerPortal() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {products?.slice(0, 3).map((product) => {
-                      const cartItem = cart.find(item => item.product.id === product.id);
+                      const cartItemUnitsHome = cart.find(item => item.product.id === product.id && item.sellingType === 'units');
+                      const cartItemPalletsHome = cart.find(item => item.product.id === product.id && item.sellingType === 'pallets');
+                      const cartItem = cartItemUnitsHome || cartItemPalletsHome;
+                      const hasPalletPricingHome = !!(product as any).palletPrice && parseFloat((product as any).palletPrice?.toString() || '0') > 0;
                       const pricing = calculatePromotionalPricing(product, product.moq);
                       
                       return (
@@ -2890,10 +2893,38 @@ export default function CustomerPortal() {
                                     />
                                     <span className="text-xs text-gray-400">MOQ: {product.moq}</span>
                                   </div>
+                                  {hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
+                                    <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                                      <span>🚛</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                    </p>
+                                  )}
                                 </div>
 
                                 {/* Quick Order Controls */}
                                 {cartItem ? (
+                                  <div className="space-y-2">
+                                    {/* Type badge + Change for home tab */}
+                                    {hasPalletPricingHome && (cartItemUnitsHome || cartItemPalletsHome) && !(cartItemUnitsHome && cartItemPalletsHome) && (
+                                      <div className="flex items-center justify-between">
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnitsHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                          {cartItemUnitsHome ? '📦 Units' : '🚛 Pallets'}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setCart(cart.filter(item => item.product.id !== product.id));
+                                            setSelectedProductForModal(product);
+                                            setModalStep('type');
+                                            setSelectedModalType(null);
+                                            setModalQuantity(product.moq || 1);
+                                            setShowUnitSelectionModal(true);
+                                          }}
+                                          className="text-xs text-gray-400 hover:text-gray-600 underline"
+                                        >
+                                          Change type
+                                        </button>
+                                      </div>
+                                    )}
                                   <div className="flex items-center justify-between gap-2">
                                     <Button
                                       size="sm"
@@ -2960,26 +2991,32 @@ export default function CustomerPortal() {
                                       <Plus className="h-3 w-3" />
                                     </Button>
                                   </div>
+                                  </div>
                                 ) : (
-                                  <Button
-                                    className="w-full rounded-full font-semibold text-white bg-theme-primary"
-                                    onClick={() => {
-                                      if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
-                                        setSelectedProductForModal(product);
-                                        setModalStep('type');
-                                        setSelectedModalType(null);
-                                        setModalQuantity(product.moq || 1);
-                                        setShowUnitSelectionModal(true);
-                                      } else {
-                                        addToCart(product, product.moq, 'units');
-                                      }
-                                    }}
-                                    onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '0.9'; }}
-                                    onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '1'; }}
-                                  >
-                                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                    Add to Cart
-                                  </Button>
+                                  <div>
+                                    <Button
+                                      className="w-full rounded-full font-semibold text-white bg-theme-primary"
+                                      onClick={() => {
+                                        if (hasPalletPricingHome) {
+                                          setSelectedProductForModal(product);
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
+                                          setShowUnitSelectionModal(true);
+                                        } else {
+                                          addToCart(product, product.moq, 'units');
+                                        }
+                                      }}
+                                      onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '0.9'; }}
+                                      onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '1'; }}
+                                    >
+                                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                      {hasPalletPricingHome ? 'Add to Cart →' : 'Add to Cart'}
+                                    </Button>
+                                    {hasPalletPricingHome && (
+                                      <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -3411,7 +3448,7 @@ export default function CustomerPortal() {
                               
                               {/* Pricing */}
                               <div className="flex items-end justify-between mt-2">
-                                <div>
+                                <div className="w-full">
                                   <PriceDisplay
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
@@ -3423,11 +3460,38 @@ export default function CustomerPortal() {
                                   {product.moq && product.moq > 1 && !cartItem && (
                                     <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
                                   )}
+                                  {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
+                                    <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                                      <span>🚛</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
                               {/* Add to Cart Controls */}
                               <div className="mt-2 space-y-2">
+                                {/* Type badge + Change link (single type in cart) */}
+                                {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
+                                  <div className="flex items-center justify-between">
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnits ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                      {cartItemUnits ? '📦 Units' : '🚛 Pallets'}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setCart(cart.filter(item => item.product.id !== product.id));
+                                        setSelectedProductForModal(product);
+                                        setModalStep('type');
+                                        setSelectedModalType(null);
+                                        setModalQuantity(product.moq || 1);
+                                        setShowUnitSelectionModal(true);
+                                      }}
+                                      className="text-xs text-gray-400 hover:text-gray-600 underline"
+                                    >
+                                      Change type
+                                    </button>
+                                  </div>
+                                )}
                                 {/* Units stepper */}
                                 {cartItemUnits && (
                                   <div>
@@ -3560,25 +3624,30 @@ export default function CustomerPortal() {
 
                                 {/* Initial add button */}
                                 {!cartItemUnits && !cartItemPallets && (
-                                  <Button
-                                    onClick={() => {
-                                      if (hasPalletPricing) {
-                                        setSelectedProductForModal(product);
-                                        setModalStep('type');
-                                        setSelectedModalType(null);
-                                        setModalQuantity(product.moq || 1);
-                                        setShowUnitSelectionModal(true);
-                                      } else {
-                                        addToCart(product, product.moq, 'units');
-                                      }
-                                    }}
-                                    disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                    className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                  >
-                                    <ShoppingCart className="h-4 w-4 mr-2" />
-                                    {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
-                                  </Button>
+                                  <div>
+                                    <Button
+                                      onClick={() => {
+                                        if (hasPalletPricing) {
+                                          setSelectedProductForModal(product);
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
+                                          setShowUnitSelectionModal(true);
+                                        } else {
+                                          addToCart(product, product.moq, 'units');
+                                        }
+                                      }}
+                                      disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
+                                      className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                      style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                    >
+                                      <ShoppingCart className="h-4 w-4 mr-2" />
+                                      {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                    </Button>
+                                    {hasPalletPricing && product.stock > 0 && (
+                                      <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -3771,10 +3840,37 @@ export default function CustomerPortal() {
                                   {product.moq && product.moq > 1 && !cartItem && (
                                     <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
                                   )}
+                                  {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
+                                    <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                                      <span>🚛</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                    </p>
+                                  )}
                                 </div>
 
                                 {/* Add to Cart Controls */}
                                 <div className="space-y-2">
+                                  {/* Type badge + Change link (single type in cart) */}
+                                  {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
+                                    <div className="flex items-center justify-between">
+                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnits ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                        {cartItemUnits ? '📦 Units' : '🚛 Pallets'}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          setCart(cart.filter(item => item.product.id !== product.id));
+                                          setSelectedProductForModal(product);
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
+                                          setShowUnitSelectionModal(true);
+                                        }}
+                                        className="text-xs text-gray-400 hover:text-gray-600 underline"
+                                      >
+                                        Change type
+                                      </button>
+                                    </div>
+                                  )}
                                   {/* Units stepper */}
                                   {cartItemUnits && (
                                     <div>
@@ -3910,25 +4006,30 @@ export default function CustomerPortal() {
 
                                   {/* Initial add button */}
                                   {!cartItemUnits && !cartItemPallets && (
-                                    <Button
-                                      onClick={() => {
-                                        if (hasPalletPricing) {
-                                          setSelectedProductForModal(product);
-                                          setModalStep('type');
-                                          setSelectedModalType(null);
-                                          setModalQuantity(product.moq || 1);
-                                          setShowUnitSelectionModal(true);
-                                        } else {
-                                          addToCart(product, product.moq || 1, 'units');
-                                        }
-                                      }}
-                                      disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                      className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                      style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                    >
-                                      <ShoppingCart className="h-4 w-4 mr-2" />
-                                      {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
-                                    </Button>
+                                    <div>
+                                      <Button
+                                        onClick={() => {
+                                          if (hasPalletPricing) {
+                                            setSelectedProductForModal(product);
+                                            setModalStep('type');
+                                            setSelectedModalType(null);
+                                            setModalQuantity(product.moq || 1);
+                                            setShowUnitSelectionModal(true);
+                                          } else {
+                                            addToCart(product, product.moq || 1, 'units');
+                                          }
+                                        }}
+                                        disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
+                                        className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                      >
+                                        <ShoppingCart className="h-4 w-4 mr-2" />
+                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                      </Button>
+                                      {hasPalletPricing && product.stock > 0 && (
+                                        <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               </div>
