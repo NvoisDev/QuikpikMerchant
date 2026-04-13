@@ -1082,19 +1082,6 @@ export default function CustomerPortal() {
     enabled: showWholesalerSearch, // Only fetch when search is open
   });
 
-  // Early return if no wholesaler ID
-  if (!wholesalerId) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h1>
-          <p className="text-gray-600">The requested store could not be found.</p>
-        </div>
-      </div>
-    );
-  }
-  
   // Cache invalidation when wholesaler ID changes
   useEffect(() => {
     if (wholesalerId) {
@@ -1203,6 +1190,31 @@ export default function CustomerPortal() {
     }
   }, [authenticatedCustomer?.phone, authenticatedCustomer?.id]);
 
+  // Fetch wholesaler data with proper caching
+  const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
+    queryKey: ['wholesaler', wholesalerId],
+    queryFn: async () => {
+      console.log(`Fetching wholesaler data for ID: ${wholesalerId}`);
+      const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
+      if (!response.ok) {
+        console.error(`Wholesaler fetch failed: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch wholesaler: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Wholesaler data received:', data);
+      return data;
+    },
+    enabled: !!wholesalerId,
+    retry: 1,
+    staleTime: 0, // No cache to prevent logo confusion
+    gcTime: 0, // No cache to prevent logo confusion
+    refetchOnWindowFocus: true, // Refresh when window regains focus
+    refetchOnMount: true, // Refresh on component mount
+    refetchInterval: false,
+    refetchOnReconnect: false,
+    refetchIntervalInBackground: false,
+  });
+
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
@@ -1233,7 +1245,7 @@ export default function CustomerPortal() {
       
       return () => clearTimeout(timer);
     }
-  }, [authenticatedCustomer, customerOrderStats, isAuthenticated]);
+  }, [authenticatedCustomer, customerOrderStats, isAuthenticated, wholesaler]);
 
   // Auto-hide quick actions panel after 10 seconds of inactivity
   useEffect(() => {
@@ -1261,34 +1273,7 @@ export default function CustomerPortal() {
     }
   }, [quickActionExpanded]);
 
-  // Shipping handled directly by supplier - no quotes API needed
-
   // Featured product ID is now managed by state initialized from URL
-
-  // Fetch wholesaler data with proper caching
-  const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
-    queryKey: ['wholesaler', wholesalerId],
-    queryFn: async () => {
-      console.log(`Fetching wholesaler data for ID: ${wholesalerId}`);
-      const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
-      if (!response.ok) {
-        console.error(`Wholesaler fetch failed: ${response.status} ${response.statusText}`);
-        throw new Error(`Failed to fetch wholesaler: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('Wholesaler data received:', data);
-      return data;
-    },
-    enabled: !!wholesalerId,
-    retry: 1,
-    staleTime: 0, // No cache to prevent logo confusion
-    gcTime: 0, // No cache to prevent logo confusion
-    refetchOnWindowFocus: true, // Refresh when window regains focus
-    refetchOnMount: true, // Refresh on component mount
-    refetchInterval: false,
-    refetchOnReconnect: false,
-    refetchIntervalInBackground: false,
-  });
 
   // Fetch featured product if specified with auto-refresh
   const { data: featuredProduct, isLoading: featuredLoading, refetch: refetchFeaturedProduct } = useQuery({
@@ -2228,26 +2213,14 @@ export default function CustomerPortal() {
   //   wholesalerLoading
   // });
 
-  // Show loading screen if wholesalerId is not available yet
+  // Show store not found if no wholesaler ID in URL
   if (!wholesalerId && !isEnhancedPreviewMode) {
-    console.log('⏳ Waiting for wholesalerId...');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          {/* Enhanced Loading Animation */}
-          <div className="flex space-x-1">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="w-2 h-6 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-pulse"
-                style={{
-                  animationDelay: `${i * 0.15}s`,
-                  animationDuration: '1.6s'
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-gray-600 text-center">Loading store...</p>
+        <div className="text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h1>
+          <p className="text-gray-600">The requested store could not be found.</p>
         </div>
       </div>
     );
