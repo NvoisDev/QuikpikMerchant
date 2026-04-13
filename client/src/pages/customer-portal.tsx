@@ -24,7 +24,7 @@ import {
   Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp, Banknote, ChevronRight,
   Eye, ShieldCheck, ArrowLeft, ArrowRight, Heart,
   HelpCircle, Building, Star, Mail, Phone, MapPin, Filter, FileText,
-  X, Check, Loader2, Download, Share2
+  X, Check, Loader2, Download, Share2, Lock
 } from "lucide-react";
 
 // Optimized imports and lazy loading
@@ -927,6 +927,7 @@ export default function CustomerPortal() {
   const urlParams = useMemo(() => new URLSearchParams(location.split('?')[1] || ''), [location]);
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
+  const isBrowseMode = urlParams.has('browse');
   
   const [showAuth, setShowAuth] = useState(() => {
     const isPreviewModeCheck = location === '/preview-store';
@@ -2150,6 +2151,15 @@ export default function CustomerPortal() {
 
   // Authentication state management using server sessions
   useEffect(() => {
+    if (isBrowseMode) {
+      // Browse mode: customer is exploring an inaccessible wholesaler's store
+      // Load the store but keep prices blurred and cart disabled
+      setShowAuth(false);
+      setIsGuestMode(true);
+      setIsAuthenticated(true);
+      return;
+    }
+
     if (isEnhancedPreviewMode) {
       // In preview mode (including wholesaler own store), skip customer authentication
       setShowAuth(false);
@@ -2202,7 +2212,7 @@ export default function CustomerPortal() {
     } else {
       console.log('🔄 Currently switching wholesaler, not showing auth screen');
     }
-  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
+  }, [isBrowseMode, isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
 
 
 
@@ -2525,28 +2535,28 @@ export default function CustomerPortal() {
               const WholesalerCard = ({ wholesalerItem }: { wholesalerItem: any }) => (
                 <div
                   key={wholesalerItem.id}
-                  className={`flex items-center space-x-3 p-3 rounded-xl transition-colors ${
-                    wholesalerItem.isAccessible
-                      ? 'hover:bg-gray-50 cursor-pointer active:bg-gray-100'
-                      : 'cursor-default'
-                  }`}
-                  onClick={wholesalerItem.isAccessible ? async () => {
+                  className="flex items-center space-x-3 p-3 rounded-xl transition-colors hover:bg-gray-50 cursor-pointer active:bg-gray-100"
+                  onClick={async () => {
                     setShowWholesalerSearch(false);
                     setWholesalerSearchQuery("");
-                    setIsSwitchingWholesaler(true);
-                    try {
-                      await fetch('/api/customer-auth/switch-wholesaler', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ targetWholesalerId: wholesalerItem.id })
-                      });
-                      window.location.href = `/store/${wholesalerItem.id}`;
-                    } catch {
-                      setIsSwitchingWholesaler(false);
-                      window.location.href = `/store/${wholesalerItem.id}`;
+                    if (wholesalerItem.isAccessible) {
+                      setIsSwitchingWholesaler(true);
+                      try {
+                        await fetch('/api/customer-auth/switch-wholesaler', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ targetWholesalerId: wholesalerItem.id })
+                        });
+                        window.location.href = `/store/${wholesalerItem.id}`;
+                      } catch {
+                        setIsSwitchingWholesaler(false);
+                        window.location.href = `/store/${wholesalerItem.id}`;
+                      }
+                    } else {
+                      window.location.href = `/store/${wholesalerItem.id}?browse=true`;
                     }
-                  } : undefined}
+                  }}
                 >
                   <Logo
                     size="md"
@@ -2654,49 +2664,28 @@ export default function CustomerPortal() {
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
         {/* Guest Mode Notice */}
         {isGuestMode && (
-          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-5">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Package className="w-4 h-4 text-blue-600" />
+                <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-amber-600" />
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Ready to Shop?
+                <h3 className="text-base font-semibold text-amber-900 mb-1">
+                  Prices are hidden
                 </h3>
-                <p className="text-blue-700 mb-4">
-                  To view pricing and place orders, you need to be added as a contact by the wholesaler first. 
-                  Once added, you'll be able to sign in and access all features including pricing, ordering, and collection options.
+                <p className="text-sm text-amber-700 mb-3">
+                  You're browsing {wholesaler?.businessName || "this store"} in preview mode. Request access to see pricing and place orders.
                 </p>
-                <div className="flex items-center space-x-4">
-                  <Button
-                    onClick={async () => {
-                      // Properly destroy session using POST logout
-                      try {
-                        await fetch('/api/auth/logout', { 
-                          method: 'POST',
-                          credentials: 'include',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          }
-                        });
-                        // Small delay to ensure session is destroyed
-                        setTimeout(() => {
-                          window.location.href = '/landing';
-                        }, 100);
-                      } catch (error) {
-                        // Fallback - just redirect
-                        window.location.href = '/landing';
-                      }
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                <div className="flex items-center gap-3">
+                  <button
+                    className="text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                    onClick={() => window.history.back()}
                   >
-                    Contact Wholesaler
-                  </Button>
-                  <div className="text-sm text-blue-600">
-                    <span className="font-medium">Need help?</span> Contact {wholesaler?.businessName} to get started
-                  </div>
+                    ← Back to explore
+                  </button>
+                  <span className="text-xs text-amber-600">Use "Request Access" from there to get prices</span>
                 </div>
               </div>
             </div>
