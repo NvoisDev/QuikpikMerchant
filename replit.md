@@ -8,6 +8,14 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+
+**April 13, 2026 - Routes Modularisation (Task #133):**
+- **ROUTES SPLIT INTO 13 MODULES**: `server/routes.ts` (19,811 lines, 288 routes) split into 13 feature module files under `server/routes/`
+- **MODULE FILES**: system.ts (25 routes), auth.ts (44), customer-auth.ts (12), products.ts (26), orders.ts (34), customers.ts (29), addresses.ts (13), marketplace.ts (34), analytics.ts (17), campaigns.ts (26), payments.ts (16), advertising.ts (4), admin.ts (8)
+- **SHARED CONTEXT**: All helpers (requireNotViewer, enforceNewPlanLimits, buildInvoicePdf, sendCustomerInvoiceEmail, etc.) defined in new thin orchestrator `server/routes.ts` (2,162 lines) and passed to modules via a `ctx` object
+- **SHARED TYPE**: `server/routes/shared.ts` exports `SharedRouteContext` type used by all module files
+- **ZERO LOGIC CHANGES**: Pure mechanical split — identical behaviour, all 288 routes preserved exactly
+
 **March 4, 2026 - Consistent Page Headers & Share/Bell Icons:**
 - **SHARED PageHeader COMPONENT**: Created `client/src/components/PageHeader.tsx` with Share2 + Bell (with red badge) icons on every page
 - **ALL WHOLESALER PAGES UPDATED**: Dashboard, Orders, Promotions, Products, Analytics, Customers, Campaigns, Settings, Customer Detail, Customer Registration Requests, Financial Health, Financials, Stock Alerts, Team Management, Business Performance
