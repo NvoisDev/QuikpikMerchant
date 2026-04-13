@@ -2901,6 +2901,46 @@ export default function CustomerPortal() {
                                   )}
                                 </div>
 
+                                {/* Stock Availability Indicator */}
+                                <div className="flex items-center gap-3">
+                                  {product.sellingFormat === 'units' && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                                      <span className="font-medium text-green-700 text-xs">
+                                        <Hash className="w-3 h-3 inline mr-1" />
+                                        {product.stock || 0} packs
+                                      </span>
+                                    </div>
+                                  )}
+                                  {product.sellingFormat === 'pallets' && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                      <span className="font-medium text-blue-700 text-xs">
+                                        <Package2 className="w-3 h-3 inline mr-1" />
+                                        {(product as any).palletStock || 0} pallets
+                                      </span>
+                                    </div>
+                                  )}
+                                  {product.sellingFormat === 'both' && (
+                                    <>
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                                        <span className="font-medium text-green-700 text-xs">
+                                          <Hash className="w-3 h-3 inline mr-1" />
+                                          {product.stock || 0} packs
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                        <span className="font-medium text-blue-700 text-xs">
+                                          <Package2 className="w-3 h-3 inline mr-1" />
+                                          {(product as any).palletStock || 0} pallets
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+
                                 {/* Quick Order Controls */}
                                 {cartItem ? (
                                   <div className="space-y-2">
