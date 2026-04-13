@@ -2728,7 +2728,7 @@ export default function CustomerPortal() {
               </TabsTrigger>
               <TabsTrigger value="products" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
                 <Store className="w-5 h-5 flex-shrink-0" />
-                <span className="text-[11px] font-medium leading-none">Shop</span>
+                <span className="text-[11px] font-medium leading-none">Products</span>
               </TabsTrigger>
               <TabsTrigger value="orders" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
                 <History className="w-5 h-5 flex-shrink-0" />
@@ -3074,15 +3074,15 @@ export default function CustomerPortal() {
                     </span>
                   </button>
 
-                  {/* Account */}
+                  {/* Sign Out */}
                   <button
-                    onClick={() => setActiveTab("account")}
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                    onClick={handleLogout}
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-red-50 transition-colors"
                   >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <User className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-red-100">
+                      <X className="w-5 h-5 text-red-500" />
                     </div>
-                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Account</span>
+                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Sign Out</span>
                   </button>
                 </div>
               </div>
