@@ -2038,10 +2038,10 @@ export default function CustomerPortal() {
       setIsEditingProfile(false);
       setCustomerData(prevData => ({
         ...prevData,
-        name: variables.name || prevData.name,
-        email: variables.email || prevData.email,
-        phone: variables.phone || prevData.phone,
-        businessName: variables.businessName || prevData.businessName,
+        name: variables.name ?? prevData.name,
+        email: variables.email ?? prevData.email,
+        phone: variables.phone ?? prevData.phone,
+        businessName: variables.businessName ?? prevData.businessName,
       }));
       queryClient.invalidateQueries({ queryKey: ['/api/customer-auth/check', wholesalerId] });
       toast({
