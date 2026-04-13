@@ -39,8 +39,6 @@ const Signup = lazy(() => import("@/pages/signup"));
 const SignupComplete = lazy(() => import("@/pages/signup-complete"));
 const WholesalerSelection = lazy(() => import("@/pages/WholesalerSelection"));
 const AcceptInvitation = lazy(() => import("@/pages/AcceptInvitation"));
-const ShippingSettings = lazy(() => import("@/pages/shipping-settings"));
-const ShippingTracking = lazy(() => import("@/pages/shipping-tracking"));
 const Customers = lazy(() => import("@/pages/customers"));
 const CustomerRegistrationRequests = lazy(() => import("@/pages/customer-registration-requests"));
 const AuthSuccess = lazy(() => import("@/pages/auth-success"));
@@ -139,7 +137,6 @@ function AuthenticatedRoutes() {
               <Route path="/subscription-pricing" component={SubscriptionPricing} />
               <Route path="/preview-store" component={CustomerPortal} />
               <Route path="/preview-store/:id" component={CustomerPortal} />
-              <Route path="/store/:id" component={CustomerPortal} />
               <Route path="/integrations" component={Integrations} />
             </>
           ) : (

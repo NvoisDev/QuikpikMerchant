@@ -20,14 +20,6 @@ interface WelcomeEmailParams {
   wholesalerLogoUrl?: string | null;
 }
 
-interface EmailParams {
-  to: string;
-  from: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}
-
 export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<boolean> {
   try {
     const { customerEmail, customerName, wholesalerName, wholesalerEmail, wholesalerAccountName, portalUrl } = params;
@@ -55,18 +47,3 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
   }
 }
 
-export async function sendEmail(params: EmailParams): Promise<boolean> {
-  try {
-    await mailService.send({
-      to: params.to,
-      from: params.from,
-      subject: params.subject,
-      text: params.text || '',
-      html: params.html || '',
-    });
-    return true;
-  } catch (error) {
-    console.error('SendGrid email error:', error);
-    return false;
-  }
-}

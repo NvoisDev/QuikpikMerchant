@@ -8,7 +8,7 @@ import { performanceMiddleware } from "./middleware/performance";
 import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, requireAnyAuth } from "./googleAuth";
+import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { validatePassword, hashPassword, verifyPassword } from "./passwordUtils";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans, userSubscriptions, stockMovements, orderCancellationRequests, wholesalerCustomerRelationships, teamMembers } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
@@ -10175,33 +10175,6 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("Error looking up wholesaler:", error);
       res.status(500).json({ message: "Failed to lookup wholesaler" });
-    }
-  });
-
-  // Test endpoint for Stripe account checking
-  app.get("/api/test-stripe-account/:wholesalerId", async (req: any, res) => {
-    try {
-      const { wholesalerId } = req.params;
-      console.log(`🔍 Test - Looking up wholesaler: ${wholesalerId}`);
-      
-      const wholesaler = await storage.getUser(wholesalerId);
-      console.log(`🔍 Test - Wholesaler result:`, wholesaler ? {
-        id: wholesaler.id,
-        businessName: wholesaler.businessName,
-        stripeAccountId: wholesaler.stripeAccountId,
-        email: wholesaler.email
-      } : 'null');
-      
-      res.json({
-        wholesalerId,
-        found: !!wholesaler,
-        hasStripeAccount: !!(wholesaler?.stripeAccountId),
-        stripeAccountId: wholesaler?.stripeAccountId,
-        businessName: wholesaler?.businessName
-      });
-    } catch (error: any) {
-      console.error("Test endpoint error:", error);
-      res.status(500).json({ error: error.message });
     }
   });
 
