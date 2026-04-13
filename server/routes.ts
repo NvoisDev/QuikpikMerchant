@@ -2246,8 +2246,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // CRITICAL FIX: Always use stored subtotal from database - never calculate
         const subtotal = parseFloat(order.subtotal || "0");
         
-        // Use stored customer transaction fee from database, or calculate as fallback
-        const transactionFee = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : (subtotal * 0.055) + 0.50;
+        // Use stored customer transaction fee from database.
+        // Fall back to a computed value ONLY when the stored value is missing AND it's an online payment.
+        // Offline (cash/bank_transfer/pay_later) orders have customerTransactionFee stored as "0.00".
+        const storedFee = order.customerTransactionFee;
+        const rawMethod = order.paymentMethod;
+        const isOnline = rawMethod === 'payment_link' || rawMethod === 'card' ||
+                         (!rawMethod && !!(order as any).stripePaymentIntentId);
+        const transactionFee = (storedFee !== null && storedFee !== undefined)
+          ? parseFloat(storedFee as string)
+          : (isOnline ? (subtotal * 0.055) + 0.50 : 0);
         
         // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
         const platformFee = subtotal * 0.033;
@@ -2277,7 +2285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerEmail: order.customerEmail,
           deliveryAddress: order.deliveryAddress,
           deliveryAddressId: order.deliveryAddressId,
-          paymentMethod: "Card Payment",
+          paymentMethod: order.paymentMethod || null,
+          stripePaymentIntentId: (order as any).stripePaymentIntentId || null,
           paymentStatus: order.paymentStatus || "paid",
           amountPaid: order.amountPaid || '0.00',
           amountOutstanding: order.amountOutstanding || '0.00',

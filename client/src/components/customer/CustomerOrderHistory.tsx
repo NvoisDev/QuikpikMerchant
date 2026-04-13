@@ -76,6 +76,7 @@ export interface Order {
   depositPercentage?: number;
   balanceDueDays?: number;
   stripePaymentLinkUrl?: string;
+  stripePaymentIntentId?: string;
   createdAt: string;
   updatedAt: string;
   readyToCollectAt?: string;
