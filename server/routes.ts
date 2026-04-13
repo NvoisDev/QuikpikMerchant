@@ -2251,8 +2251,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Offline (cash/bank_transfer/pay_later) orders have customerTransactionFee stored as "0.00".
         const storedFee = order.customerTransactionFee;
         const rawMethod = order.paymentMethod;
+        // isOnline covers:
+        // • paymentMethod explicitly set to 'payment_link' or 'card'
+        // • Legacy orders with no paymentMethod but a recorded Stripe payment intent
+        // • Unpaid payment-link quotes (no stripePaymentIntentId yet) that have a
+        //   stripePaymentLinkUrl — these are online orders awaiting first payment
         const isOnline = rawMethod === 'payment_link' || rawMethod === 'card' ||
-                         (!rawMethod && !!order.stripePaymentIntentId);
+                         (!rawMethod && !!order.stripePaymentIntentId) ||
+                         (!rawMethod && !!order.stripePaymentLinkUrl);
         // For offline orders, always force fee to 0 regardless of what's stored in DB.
         // This corrects orders that were created before the quote creation fee bug was fixed.
         const transactionFee = isOnline
@@ -18910,8 +18916,11 @@ https://quikpik.app`;
         amountPaid: '0.00',
         amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteDeliveryCharge : total).toFixed(2),
         paymentStatus: 'unpaid',
-        ...(isPayLater ? { paymentMethod: 'pay_later' } :
-            (isOfflineMethod ? { paymentMethod: requestedPaymentMethod } : {})),
+        // Always store paymentMethod when explicitly provided (including 'payment_link')
+        // so the customer portal can correctly classify online vs offline orders.
+        ...(isPayLater
+          ? { paymentMethod: 'pay_later' }
+          : (requestedPaymentMethod ? { paymentMethod: requestedPaymentMethod } : {})),
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
 
