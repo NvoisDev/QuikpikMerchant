@@ -2535,7 +2535,7 @@ export default function CustomerPortal() {
                     setWholesalerSearchQuery("");
                     setIsSwitchingWholesaler(true);
                     try {
-                      const response = await fetch('/api/customer-auth/switch-wholesaler', {
+                      await fetch('/api/customer-auth/switch-wholesaler', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
