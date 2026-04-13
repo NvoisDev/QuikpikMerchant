@@ -404,6 +404,7 @@ export default function QuickQuote() {
     setSendMethod('sms');
     setDepositPercentage(100);
     setBalanceDueDays(0);
+    setQuotePaymentMethod('payment_link');
     setFulfillmentType('pickup');
     setDeliveryAddressId(null);
     setDeliveryAddressText('');
