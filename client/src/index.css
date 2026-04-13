@@ -308,6 +308,23 @@
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent) 100%);
 }
 
+.gradient-theme-banner {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
+}
+
+.hover-bg-theme-secondary:hover {
+  background-color: var(--theme-secondary);
+}
+
+.theme-outlined {
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+  transition: background-color 0.15s ease;
+}
+.theme-outlined:hover {
+  background-color: var(--theme-secondary);
+}
+
 .shadow-theme {
   box-shadow: 0 4px 14px 0 hsla(var(--theme-primary-hsl), 0.2);
 }

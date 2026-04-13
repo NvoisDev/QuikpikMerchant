@@ -2452,10 +2452,7 @@ export default function CustomerPortal() {
                   onClick={() => setShowWholesalerSearch(true)}
                   variant="outline"
                   size="sm"
-                  className="text-xs px-2 font-medium border"
-                  style={{ borderColor: 'var(--theme-primary)', color: 'var(--theme-primary)' }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'var(--theme-secondary)'}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                  className="text-xs px-2 font-medium border theme-outlined"
                 >
                   <Search className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Seller</span>
@@ -2746,7 +2743,7 @@ export default function CustomerPortal() {
 
             <TabsContent value="home" className="space-y-5 mb-16 pb-6">
               {/* Welcome Hero Banner */}
-              <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
+              <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in gradient-theme-banner">
                 {/* Subtle decorative circles */}
                 <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5 pointer-events-none" />
                 <div className="absolute -bottom-10 -left-6 w-32 h-32 rounded-full bg-white opacity-5 pointer-events-none" />
@@ -2774,8 +2771,7 @@ export default function CustomerPortal() {
                   </div>
                   <Button
                     onClick={() => setActiveTab("products")}
-                    className="bg-white hover:bg-gray-50 border-0 rounded-full px-5 font-semibold shadow-sm flex-shrink-0 self-start sm:self-auto"
-                    style={{color: 'var(--theme-primary)'}}
+                    className="bg-white hover:bg-gray-50 border-0 rounded-full px-5 font-semibold shadow-sm flex-shrink-0 self-start sm:self-auto text-theme-primary"
                   >
                     <Store className="w-4 h-4 mr-2" />
                     Browse Products
@@ -2791,10 +2787,10 @@ export default function CustomerPortal() {
                   onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
                 >
                   <div className="flex flex-col items-center text-center gap-1.5">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <ShoppingCart className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
+                      <ShoppingCart className="w-5 h-5 text-theme-primary" />
                     </div>
-                    <p className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
+                    <p className="text-2xl font-extrabold leading-none text-theme-primary">
                       {cart.reduce((total, item) => total + item.quantity, 0)}
                     </p>
                     <p className="text-xs text-gray-500 font-medium">In Cart</p>
@@ -2807,10 +2803,10 @@ export default function CustomerPortal() {
                 {/* Cart Value */}
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <div className="flex flex-col items-center text-center gap-1.5">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <Banknote className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
+                      <Banknote className="w-5 h-5 text-theme-primary" />
                     </div>
-                    <div className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
+                    <div className="text-2xl font-extrabold leading-none text-theme-primary">
                       <PriceDisplay
                         price={cartStats.totalValue}
                         currency={wholesaler?.defaultCurrency || 'GBP'}
@@ -2825,10 +2821,10 @@ export default function CustomerPortal() {
                 {/* Total Orders */}
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
                   <div className="flex flex-col items-center text-center gap-1.5">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <History className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
+                      <History className="w-5 h-5 text-theme-primary" />
                     </div>
-                    <p className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
+                    <p className="text-2xl font-extrabold leading-none text-theme-primary">
                       {customerOrderStats?.totalOrders || 0}
                     </p>
                     <p className="text-xs text-gray-500 font-medium">Orders</p>
@@ -2853,13 +2849,12 @@ export default function CustomerPortal() {
               <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <TrendingUp className="w-5 h-5 text-theme-primary" />
                     Top Selling
                   </h2>
                   <button
                     onClick={() => setActiveTab("products")}
-                    className="text-sm font-medium flex items-center gap-1 hover:underline"
-                    style={{color: 'var(--theme-primary)'}}
+                    className="text-sm font-medium flex items-center gap-1 hover:underline text-theme-primary"
                   >
                     View All <ChevronRight className="w-4 h-4" />
                   </button>
@@ -2993,8 +2988,7 @@ export default function CustomerPortal() {
                                   </div>
                                 ) : (
                                   <Button
-                                    className="w-full rounded-full font-semibold text-white"
-                                    style={{background: 'var(--theme-primary)'}}
+                                    className="w-full rounded-full font-semibold text-white bg-theme-primary"
                                     onClick={() => {
                                       if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                         setSelectedProductForModal(product);
@@ -3032,8 +3026,8 @@ export default function CustomerPortal() {
                     onClick={() => setActiveTab("products")}
                     className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <Store className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-theme-secondary">
+                      <Store className="w-5 h-5 text-theme-primary" />
                     </div>
                     <span className="text-xs font-medium text-gray-700 leading-tight text-center">Shop</span>
                   </button>
@@ -3043,8 +3037,8 @@ export default function CustomerPortal() {
                     onClick={() => setActiveTab("orders")}
                     className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <History className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-theme-secondary">
+                      <History className="w-5 h-5 text-theme-primary" />
                     </div>
                     <span className="text-xs font-medium text-gray-700 leading-tight text-center">Orders</span>
                   </button>
@@ -3061,10 +3055,10 @@ export default function CustomerPortal() {
                     disabled={isCreatingIntent}
                     className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
                   >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center relative" style={{backgroundColor: 'var(--theme-secondary)'}}>
-                      <ShoppingCart className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center relative bg-theme-secondary">
+                      <ShoppingCart className="w-5 h-5 text-theme-primary" />
                       {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{backgroundColor: 'var(--theme-primary)'}}>
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center bg-theme-primary">
                           {cart.length}
                         </span>
                       )}
@@ -4159,19 +4153,19 @@ export default function CustomerPortal() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
+                        <div className="text-2xl font-bold text-theme-primary">
                           {customerOrderStats?.totalOrders || 0}
                         </div>
                         <div className="text-sm text-gray-600">Total Orders</div>
                       </div>
                       <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
+                        <div className="text-2xl font-bold text-theme-primary">
                           {formatCurrency(customerOrderStats?.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')}
                         </div>
                         <div className="text-sm text-gray-600">Total Spent</div>
                       </div>
                       <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>{cart.length}</div>
+                        <div className="text-2xl font-bold text-theme-primary">{cart.length}</div>
                         <div className="text-sm text-gray-600">Items in Cart</div>
                       </div>
                     </div>
@@ -5089,8 +5083,7 @@ export default function CustomerPortal() {
             <div className="fixed bottom-6 left-6 z-50">
               <Button
                 onClick={() => setQuickActionExpanded(!quickActionExpanded)}
-                className="quick-action-button rounded-full shadow-lg h-12 w-12 p-0 quick-action-pulse"
-                style={{background: 'var(--theme-primary)', color: 'white'}}
+                className="quick-action-button rounded-full shadow-lg h-12 w-12 p-0 quick-action-pulse bg-theme-primary text-white"
               >
                 {quickActionExpanded ? (
                   <ArrowLeft className="h-5 w-5" />
@@ -5743,8 +5736,7 @@ export default function CustomerPortal() {
           <div className="fixed bottom-6 right-6 z-50">
             <Button
               onClick={() => setShowCheckout(true)}
-              className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse"
-              style={{background: 'var(--theme-primary)', color: 'white'}}
+              className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse bg-theme-primary text-white"
             >
               <ShoppingCart className="h-6 w-6" />
               {cart.length > 0 && (
