@@ -5587,18 +5587,18 @@ export default function CustomerPortal() {
                           ? selectedProductForModal.stock 
                           : ((selectedProductForModal as any).palletStock || 0);
                         
-                        // Check if we're editing an existing cart item
-                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
+                        // Check if we're editing an existing cart item of the same type
+                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id && item.sellingType === selectedModalType);
                         
                         if (existingCartItem) {
-                          // Update existing cart item
+                          // Update existing cart item of same type
                           const requestedQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
                           const finalQuantity = Math.min(requestedQuantity, availableStock);
                           
                           setCart(prevCart => 
                             prevCart.map(item =>
-                              item.product.id === selectedProductForModal.id
-                                ? { ...item, quantity: finalQuantity, sellingType: selectedModalType! }
+                              item.product.id === selectedProductForModal.id && item.sellingType === selectedModalType
+                                ? { ...item, quantity: finalQuantity }
                                 : item
                             )
                           );
@@ -5647,7 +5647,7 @@ export default function CustomerPortal() {
                           ? selectedProductForModal.stock 
                           : ((selectedProductForModal as any).palletStock || 0);
                         
-                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
+                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id && item.sellingType === selectedModalType);
                         
                         if (availableStock <= 0) {
                           return "Out of Stock";
