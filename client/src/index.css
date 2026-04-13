@@ -324,6 +324,23 @@
   background-color: var(--theme-secondary) !important;
 }
 
+/* Bottom navigation bar overrides (customer portal mobile nav) */
+.bottom-nav-list {
+  background-color: #ffffff !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+.bottom-nav-list .tab-theme-active[data-state="inactive"] {
+  color: #9ca3af !important;
+  background-color: transparent !important;
+}
+.bottom-nav-list .tab-theme-active[data-state="active"] {
+  color: var(--theme-primary) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
 /* Dark theme text adjustments */
 [data-customer-theme="midnight"] {
   color-scheme: dark;

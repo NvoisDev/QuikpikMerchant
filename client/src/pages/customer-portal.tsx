@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   ShoppingCart, Plus, Minus, Trash2, Package, Store, Search, 
   Grid, List, Home, User, Settings, ShoppingBag, CheckCircle,
-  Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp,
+  Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp, Banknote, ChevronRight,
   Eye, MoreHorizontal, ShieldCheck, ArrowLeft, ArrowRight, Heart,
   HelpCircle, Building, Star, Mail, Phone, MapPin, Filter, FileText,
   X, Check, Loader2, Download
@@ -2366,21 +2366,20 @@ export default function CustomerPortal() {
         </div>
       )}
 
-      {/* Header - Mobile Responsive */}
+      {/* Header - Single-row on all viewports */}
       <div className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            {/* Center Section - Store Info with Logo */}
-            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1 sm:justify-center">
-              {/* Wholesaler Logo */}
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left — Store Logo + Name */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {wholesaler?.logoUrl ? (
                 <img 
                   src={wholesaler.logoUrl} 
                   alt={wholesaler.businessName || "Business logo"} 
-                  className="h-8 w-8 rounded-lg object-contain flex-shrink-0"
+                  className="h-10 w-10 rounded-xl object-contain flex-shrink-0 shadow-sm"
                 />
               ) : wholesaler?.logoType === "business" && wholesaler?.businessName ? (
-                <div className="h-8 w-8 rounded-lg bg-theme-primary flex items-center justify-center flex-shrink-0">
+                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0 shadow-sm">
                   <span className="text-sm font-bold text-white">
                     {wholesaler.businessName
                       .split(' ')
@@ -2390,7 +2389,7 @@ export default function CustomerPortal() {
                   </span>
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded-lg bg-theme-primary flex items-center justify-center flex-shrink-0">
+                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0 shadow-sm">
                   <span className="text-sm font-bold text-white">
                     {wholesaler?.businessName ? (
                       wholesaler.businessName.charAt(0).toUpperCase() + 
@@ -2399,135 +2398,92 @@ export default function CustomerPortal() {
                   </span>
                 </div>
               )}
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-gray-900 truncate leading-tight">
                   {wholesalerLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="flex space-x-0.5">
-                        {[...Array(2)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-1 h-4 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-pulse"
-                            style={{
-                              animationDelay: `${i * 0.2}s`,
-                              animationDuration: '1.5s'
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="hidden sm:inline">Loading...</span>
-                      <span className="sm:hidden">...</span>
-                    </div>
+                    <span className="text-gray-400">Loading...</span>
                   ) : wholesalerError ? (
                     "Store Unavailable"
                   ) : (
                     wholesaler?.businessName || "Wholesale Store"
                   )}
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600 truncate hidden sm:block">
+                <p className="text-xs text-gray-500 truncate leading-tight hidden sm:block">
                   {wholesaler?.storeTagline || "Premium wholesale products"}
                 </p>
               </div>
             </div>
-            
-            {/* Action Buttons - Mobile Stack */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
-              {/* Contact Wholesaler button for guests */}
+
+            {/* Right — Action buttons */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Guest: Back to Quikpik */}
               {isGuestMode && (
                 <Button
                   onClick={async () => {
-                    // Properly destroy session using POST logout
                     try {
-                      await fetch('/api/auth/logout', { 
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                          'Content-Type': 'application/json'
-                        }
-                      });
-                      // Small delay to ensure session is destroyed
-                      setTimeout(() => {
-                        window.location.href = '/landing';
-                      }, 100);
-                    } catch (error) {
-                      // Fallback - just redirect
-                      window.location.href = '/landing';
-                    }
+                      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+                      setTimeout(() => { window.location.href = '/landing'; }, 100);
+                    } catch { window.location.href = '/landing'; }
                   }}
                   variant="outline"
                   size="sm"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs px-2"
                 >
-                  <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Back to Quikpik</span>
-                  <span className="sm:hidden">Back</span>
-                </Button>
-              )}
-              
-
-
-              {/* Home and Logout buttons for authenticated customers */}
-              {isAuthenticated && !isPreviewMode && (
-                <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                >
-                  <span className="hidden sm:inline">Log out</span>
-                  <span className="sm:hidden">Logout</span>
+                  <ArrowLeft className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Back</span>
                 </Button>
               )}
 
-              {/* Find Seller button for authenticated customers */}
+              {/* Find Seller */}
               {isAuthenticated && !isPreviewMode && (
                 <Button
                   onClick={() => setShowWholesalerSearch(true)}
                   variant="outline"
                   size="sm"
-                  className="border text-xs sm:text-sm font-medium"
-                  style={{
-                    borderColor: 'var(--theme-primary)',
-                    color: 'var(--theme-primary)',
-
-                  }}
+                  className="text-xs px-2 font-medium border"
+                  style={{ borderColor: 'var(--theme-primary)', color: 'var(--theme-primary)' }}
                   onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'var(--theme-secondary)'}
                   onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                 >
-                  <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Find Seller</span>
-                  <span className="sm:hidden">Seller</span>
+                  <Search className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Seller</span>
                 </Button>
               )}
-              
-              {/* Theme Switcher */}
-              <ThemeSwitcher 
-                currentTheme={theme}
-                onThemeChange={changeTheme}
-              />
 
+              {/* Theme Switcher */}
+              <ThemeSwitcher currentTheme={theme} onThemeChange={changeTheme} />
+
+              {/* Cart */}
               {!isPreviewMode && (
                 <Button
                   onClick={async () => {
                     if (cart.length > 0) {
                       console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout - NO early payment intent');
                       console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                      // ✅ FIX: Don't create payment intent until user selects shipping
                       setShowCheckout(true);
                     }
                   }}
                   size="sm"
-                  className="btn-theme-primary relative text-xs sm:text-sm"
+                  className="btn-theme-primary relative px-3"
                   disabled={cart.length === 0 || isCreatingIntent}
                 >
-                  <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
-                  <span className="sm:hidden">({cartStats.totalItems})</span>
+                  <ShoppingCart className="w-4 h-4" />
                   {cartStats.totalItems > 0 && (
-                    <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
-                      {formatCurrency(cartStats.totalValue, wholesaler?.defaultCurrency)}
-                    </Badge>
+                    <span className="ml-1.5 text-xs font-semibold">{cartStats.totalItems}</span>
                   )}
+                </Button>
+              )}
+
+              {/* Logout */}
+              {isAuthenticated && !isPreviewMode && (
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-500 hover:bg-red-50 text-xs px-2"
+                >
+                  <span className="hidden sm:inline">Log out</span>
+                  <X className="w-3.5 h-3.5 sm:hidden" />
                 </Button>
               )}
             </div>
@@ -2697,7 +2653,7 @@ export default function CustomerPortal() {
         </div>
       )}
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8 pb-24">
         {/* Guest Mode Notice */}
         {isGuestMode && (
           <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -2752,137 +2708,121 @@ export default function CustomerPortal() {
         {/* Modern Tab Navigation - Only for authenticated users */}
         {isAuthenticated && !isGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
-                <Home className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Home</span>
+            {/* Fixed bottom navigation bar */}
+            <TabsList className="bottom-nav-list fixed bottom-0 inset-x-0 z-40 grid grid-cols-5 h-16 border-t border-gray-100 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+              <TabsTrigger value="home" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
+                <Home className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-none">Home</span>
               </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
-                <Store className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Products</span>
+              <TabsTrigger value="products" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
+                <Store className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-none">Shop</span>
               </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0 tab-theme-active">
-                <History className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline whitespace-nowrap">Orders</span>
+              <TabsTrigger value="orders" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
+                <History className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-none">Orders</span>
               </TabsTrigger>
-              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
-                <User className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Account</span>
+              <TabsTrigger value="account" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
+                <User className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-none">Account</span>
               </TabsTrigger>
-              <TabsTrigger value="help" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
-                <HelpCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Help</span>
+              <TabsTrigger value="help" className="tab-theme-active flex flex-col items-center justify-center gap-0.5 h-full rounded-none border-0 px-0 py-2">
+                <HelpCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[11px] font-medium leading-none">Help</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="home" className="space-y-6">
-              {/* Welcome Section with Microinteractions */}
-              <div className="rounded-lg p-6 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
-                {/* Animated background particles */}
-                <div className="absolute inset-0 opacity-10">
-                  {[...Array(8)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute rounded-full bg-white animate-float"
-                      style={{
-                        width: `${Math.random() * 15 + 8}px`,
-                        height: `${Math.random() * 15 + 8}px`,
-                        left: `${Math.random() * 100}%`,
-                        top: `${Math.random() * 100}%`,
-                        animationDelay: `${i * 0.7}s`,
-                        animationDuration: `${4 + Math.random() * 3}s`
-                      }}
-                    />
-                  ))}
-                </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative z-10">
-                  <div className="animate-slide-up">
-                    <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                      <span className="animate-wave">👋</span>
-                      Welcome back, {authenticatedCustomer?.firstName || authenticatedCustomer?.name}!
+            <TabsContent value="home" className="space-y-5">
+              {/* Welcome Hero Banner */}
+              <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
+                {/* Subtle decorative circles */}
+                <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5 pointer-events-none" />
+                <div className="absolute -bottom-10 -left-6 w-32 h-32 rounded-full bg-white opacity-5 pointer-events-none" />
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative z-10 gap-4">
+                  <div>
+                    <h1 className="text-3xl font-extrabold mb-1 leading-tight tracking-tight">
+                      Hi, {authenticatedCustomer?.firstName || (authenticatedCustomer?.name?.split(' ')[0])} 👋
                     </h1>
-                    <p className="opacity-90 animate-fade-in-delayed">
-                      Shopping at {wholesaler?.businessName}
+                    <p className="opacity-80 text-sm">
+                      Shopping at <span className="font-semibold opacity-100">{wholesaler?.businessName}</span>
                     </p>
                     {customerOrderStats && customerOrderStats.totalOrders > 0 && (
-                      <div className="mt-2 animate-fade-in-delayed-2">
-                        <p className="text-sm opacity-80">
-                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 {formatCurrency(customerOrderStats.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')} total spent
-                        </p>
-                        {customerOrderStats.totalOrders >= 10 && (
-                          <p className="text-xs opacity-70 mt-1">⭐ Loyal customer since your first order!</p>
-                        )}
+                      <div className="mt-3 flex items-center gap-4 text-sm opacity-90">
+                        <span className="flex items-center gap-1">
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          {customerOrderStats.totalOrders} orders
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Banknote className="w-3.5 h-3.5" />
+                          {formatCurrency(customerOrderStats.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')} spent
+                        </span>
                       </div>
                     )}
                   </div>
-                  <div className="mt-4 sm:mt-0">
-                    <Button
-                      onClick={() => setActiveTab("products")}
-                      className="bg-white hover:bg-gray-100 border-0 animate-bounce-subtle hover:animate-none transform hover:scale-105 transition-all duration-200"
-                      style={{color: 'var(--theme-primary)'}}
-                    >
-                      <Package className="w-4 h-4 mr-2" />
-                      Browse All Products
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => setActiveTab("products")}
+                    className="bg-white hover:bg-gray-50 border-0 rounded-full px-5 font-semibold shadow-sm flex-shrink-0 self-start sm:self-auto"
+                    style={{color: 'var(--theme-primary)'}}
+                  >
+                    <Store className="w-4 h-4 mr-2" />
+                    Browse Products
+                  </Button>
                 </div>
               </div>
 
-              {/* Quick Stats with Microinteractions */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed cursor-pointer" 
-                     onClick={async () => {
-                       if (!isPreviewMode && cart.length > 0) {
-                         console.log('🚚 CART STATS CHECKOUT: User clicked cart stats to checkout - NO early payment intent');
-                         console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                         // ✅ FIX: Don't create payment intent until user selects shipping
-                         setShowCheckout(true);
-                       }
-                     }}>
-                  <div className="flex items-center">
-                    <ShoppingCart className="w-8 h-8 mr-3 animate-pulse-glow" style={{color: 'var(--theme-primary)'}} />
-                    <div>
-                      <p className="text-sm text-gray-600">Items in Cart</p>
-                      <p className="text-2xl font-bold animate-stats-counter" style={{color: 'var(--theme-primary)'}}>
-                        {cart.reduce((total, item) => total + item.quantity, 0)}
-                      </p>
-                      {cart.length > 0 && (
-                        <p className="text-xs text-gray-500 animate-fade-in-delayed-2">Click to checkout</p>
-                      )}
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Cart Items */}
+                <div
+                  className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
+                >
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <ShoppingCart className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
                     </div>
+                    <p className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
+                      {cart.reduce((total, item) => total + item.quantity, 0)}
+                    </p>
+                    <p className="text-xs text-gray-500 font-medium">In Cart</p>
+                    {cart.length > 0 && (
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+                    )}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed">
-                  <div className="flex items-center">
-                    <div className="animate-stats-counter">
+
+                {/* Cart Value */}
+                <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <Banknote className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    </div>
+                    <div className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
                       <PriceDisplay
                         price={cartStats.totalValue}
                         currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
-                        size="large"
+                        size="medium"
                       />
                     </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-gray-600">Cart Total</p>
-                      {cartStats.totalValue > 0 && (
-                        <p className="text-xs opacity-70 animate-fade-in-delayed-2">💳 Ready to pay</p>
-                      )}
-                    </div>
+                    <p className="text-xs text-gray-500 font-medium">Cart Total</p>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed">
-                  <div className="flex items-center">
-                    <History className="w-8 h-8 mr-3" style={{color: 'var(--theme-primary)'}} />
-                    <div>
-                      <p className="text-sm text-gray-600">Total Orders</p>
-                      <p className="text-2xl font-bold animate-stats-counter" style={{color: 'var(--theme-primary)'}}>
-                        {customerOrderStats?.totalOrders || 0}
-                      </p>
-                      {(customerOrderStats?.totalOrders || 0) > 5 && (
-                        <p className="text-xs opacity-70 animate-fade-in-delayed-2">🏆 Frequent shopper</p>
-                      )}
+
+                {/* Total Orders */}
+                <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <History className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
                     </div>
+                    <p className="text-2xl font-extrabold leading-none" style={{color: 'var(--theme-primary)'}}>
+                      {customerOrderStats?.totalOrders || 0}
+                    </p>
+                    <p className="text-xs text-gray-500 font-medium">Orders</p>
+                    {(customerOrderStats?.totalOrders || 0) > 0 && (
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to view</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2898,16 +2838,19 @@ export default function CustomerPortal() {
               )}
 
               {/* Top Selling Products */}
-              <div className="bg-white rounded-lg p-6 border">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Top Selling Products</h2>
-                  <Button
-                    variant="outline"
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    Top Products
+                  </h2>
+                  <button
                     onClick={() => setActiveTab("products")}
-                    className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                    className="text-sm font-medium flex items-center gap-1 hover:underline"
+                    style={{color: 'var(--theme-primary)'}}
                   >
-                    View All Products
-                  </Button>
+                    View All <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
                 
                 {productsLoading ? (
@@ -2919,12 +2862,12 @@ export default function CustomerPortal() {
                       const pricing = calculatePromotionalPricing(product, product.moq);
                       
                       return (
-                        <Card key={product.id} className="h-full personalized-card animate-fade-in group cursor-pointer" 
+                        <Card key={product.id} className="h-full personalized-card animate-fade-in group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow" 
                               style={{animationDelay: `${Math.random() * 0.3}s`}}>
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
-                              {/* Product Image with Microinteractions */}
-                              <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden group-hover:shadow-lg transition-all duration-300">
+                          <CardContent className="p-0">
+                            <div className="space-y-0">
+                              {/* Product Image */}
+                              <div className="relative h-44 bg-gray-100 overflow-hidden group-hover:shadow-inner transition-all duration-300">
                                 {product.imageUrl ? (
                                   <img
                                     src={product.imageUrl}
@@ -2949,272 +2892,115 @@ export default function CustomerPortal() {
                                 </div>
                               </div>
 
-                              {/* Product Info with Animation */}
-                              <div className="animate-fade-in-delayed">
-                                <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-theme-primary transition-colors duration-300">
-                                  {product.name}
-                                </h3>
-                                {product.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-                                )}
-                                {/* Personalized product hints */}
-                                {customerOrderStats && customerOrderStats.totalOrders > 0 && (
-                                  <p className="text-xs opacity-70 mt-1 animate-fade-in-delayed-2">
-                                    ⭐ Popular with regular customers
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Pricing */}
-                              <div className="flex items-center justify-between">
+                              {/* Product Info */}
+                              <div className="p-4 space-y-3">
                                 <div>
-                                  <PriceDisplay
-                                    price={pricing.effectivePrice}
-                                    originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                    currency={wholesaler?.defaultCurrency || 'GBP'}
-                                    isGuestMode={isGuestMode}
-                                    size="medium"
-                                    showStrikethrough={true}
-                                  />
-                                  <p className="text-xs text-gray-500">MOQ: {product.moq} units</p>
+                                  <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-theme-primary transition-colors duration-300">
+                                    {product.name}
+                                  </h3>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <PriceDisplay
+                                      price={pricing.effectivePrice}
+                                      originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                      currency={wholesaler?.defaultCurrency || 'GBP'}
+                                      isGuestMode={isGuestMode}
+                                      size="medium"
+                                      showStrikethrough={true}
+                                    />
+                                    <span className="text-xs text-gray-400">MOQ: {product.moq}</span>
+                                  </div>
                                 </div>
-                              </div>
 
-                              {/* Stock Availability */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  {/* Dynamic Stock Indicator Based on Selling Format */}
-                                  {product.sellingFormat === 'units' && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-green-50 border-green-200 text-green-700">
-                                      <Hash className="w-3 h-3" />
-                                      {product.stock || 0} packs
-                                    </span>
-                                  )}
-                                  {product.sellingFormat === 'pallets' && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
-                                      <Package2 className="w-3 h-3" />
-                                      {(product as any).palletStock || 0} pallets
-                                    </span>
-                                  )}
-                                  {product.sellingFormat === 'both' && (
-                                    <>
-                                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-green-50 border-green-200 text-green-700">
-                                        <Hash className="w-3 h-3" />
-                                        {product.stock || 0} packs
-                                      </span>
-                                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
-                                        <Package2 className="w-3 h-3" />
-                                        {(product as any).palletStock || 0} pallets
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Quick Order Controls */}
-                              <div className="flex items-center justify-between">
-                                <div className="text-xs text-gray-500">
-                                  {formatNumber(product.stock)} available
-                                </div>
-                                
-                                <div className="flex items-center space-x-2">
-                                  {cartItem ? (
-                                    <div className="flex items-center space-x-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          if (cartItem.quantity <= product.moq) {
-                                            setCart(cart.filter(item => item.product.id !== product.id));
-                                          } else {
-                                            const updatedCart = cart.map(item => 
-                                              item.product.id === product.id 
-                                                ? { ...item, quantity: item.quantity - 1 }
-                                                : item
-                                            );
-                                            setCart(updatedCart);
-                                          }
-                                        }}
-                                        className="h-8 w-8 p-0"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </Button>
-                                      {/* Adaptive Cart Input - Home Page */}
-                                      <div className="relative">
-                                        <Input
-                                          type="number"
-                                          value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItem.quantity}
-                                          onChange={(e) => {
-                                            const inputValue = e.target.value;
-                                            setQuantityInputValues(prev => ({
-                                              ...prev,
-                                              [product.id]: inputValue
-                                            }));
-                                            
-                                            const parsedValue = parseInt(inputValue) || 0;
-                                            
-                                            if (parsedValue > 0 && parsedValue < product.moq) {
-                                              setShowMOQWarnings(prev => ({
-                                                ...prev,
-                                                [product.id]: true
-                                              }));
-                                            } else {
-                                              setShowMOQWarnings(prev => ({
-                                                ...prev,
-                                                [product.id]: false
-                                              }));
-                                            }
-                                          }}
-                                          onFocus={() => {
-                                            setActiveQuantityInput(product.id);
-                                            setShowQuantityHints(prev => ({
-                                              ...prev,
-                                              [product.id]: true
-                                            }));
-                                          }}
-                                          onBlur={() => {
-                                            const inputValue = quantityInputValues[product.id];
-                                            const parsedValue = parseInt(inputValue) || 0;
-                                            
-                                            if (parsedValue === 0) {
-                                              setCart(cart.filter(item => item.product.id !== product.id));
-                                            } else {
-                                              const validQuantity = Math.max(product.moq, parsedValue);
-                                              const maxQuantity = Math.min(validQuantity, product.stock);
-                                              
-                                              const updatedCart = cart.map(item => 
-                                                item.product.id === product.id 
-                                                  ? { ...item, quantity: maxQuantity }
-                                                  : item
-                                              );
-                                              setCart(updatedCart);
-                                            }
-                                            
-                                            setQuantityInputValues(prev => {
-                                              const newState = { ...prev };
-                                              delete newState[product.id];
-                                              return newState;
-                                            });
-                                            setShowMOQWarnings(prev => ({
-                                              ...prev,
-                                              [product.id]: false
-                                            }));
-                                            setShowQuantityHints(prev => ({
-                                              ...prev,
-                                              [product.id]: false
-                                            }));
-                                            setActiveQuantityInput(null);
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              e.currentTarget.blur();
-                                            }
-                                          }}
-                                          min={0}
-                                          max={product.stock}
-                                          className={`w-16 h-8 text-center text-sm ${
-                                            showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
-                                            activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
-                                          }`}
-                                          placeholder={product.moq.toString()}
-                                        />
-                                        
-                                        {showMOQWarnings[product.id] && (
-                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
-                                            Min: {product.moq} units
-                                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
-                                          </div>
-                                        )}
-                                        
-                                        {showQuantityHints[product.id] && activeQuantityInput === product.id && (
-                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-[200px]">
-                                            <div className="text-xs text-gray-600 mb-2 font-medium">Quick Add:</div>
-                                            <div className="grid grid-cols-3 gap-1">
-                                              {getQuantitySuggestions(product, cartItem.quantity).map((suggestion, index) => (
-                                                <button
-                                                  key={index}
-                                                  onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    const updatedCart = cart.map(item => 
-                                                      item.product.id === product.id 
-                                                        ? { ...item, quantity: suggestion.value }
-                                                        : item
-                                                    );
-                                                    setCart(updatedCart);
-                                                    setShowQuantityHints(prev => ({
-                                                      ...prev,
-                                                      [product.id]: false
-                                                    }));
-                                                    setActiveQuantityInput(null);
-                                                  }}
-                                                  className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
-                                                    suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                    suggestion.type === 'bulk' ? 'text-white border-0' :
-                                                    'border-gray-300 text-gray-700'
-                                                  }`}
-                                                  style={suggestion.type === 'bulk' ? {
-                                                    backgroundColor: 'var(--theme-primary)'
-                                                  } : {}}
-                                                  title={suggestion.description}
-                                                >
-                                                  {suggestion.label}
-                                                </button>
-                                              ))}
-                                            </div>
-                                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white border-l border-t border-gray-200 rotate-45"></div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          const updatedCart = cart.map(item => 
-                                            item.product.id === product.id 
-                                              ? { ...item, quantity: item.quantity + 1 }
-                                              : item
-                                          );
-                                          setCart(updatedCart);
-                                        }}
-                                        className="h-8 w-8 p-0"
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
+                                {/* Quick Order Controls */}
+                                {cartItem ? (
+                                  <div className="flex items-center justify-between gap-2">
                                     <Button
                                       size="sm"
+                                      variant="outline"
                                       onClick={() => {
-                                        // Check if product has pallet pricing
-                                        if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
-                                          setSelectedProductForModal(product);
-                                          // Reset modal state and set initial quantity to MOQ
-                                          setModalStep('type');
-                                          setSelectedModalType(null);
-                                          setModalQuantity(product.moq || 1);
-                                          setShowUnitSelectionModal(true);
+                                        if (cartItem.quantity <= product.moq) {
+                                          setCart(cart.filter(item => item.product.id !== product.id));
                                         } else {
-                                          // No pallet option, add units directly
-                                          addToCart(product, product.moq, 'units');
+                                          setCart(cart.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity - 1 } : item));
                                         }
                                       }}
-                                      className="text-white"
-                                      style={{background: 'var(--theme-primary)'}}
-                                      onMouseEnter={(e) => {
-                                        const target = e.target as HTMLElement;
-                                        target.style.backgroundColor = 'var(--theme-secondary)';
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        const target = e.target as HTMLElement;  
-                                        target.style.backgroundColor = 'var(--theme-primary)';
-                                      }}
+                                      className="h-8 w-8 p-0 flex-shrink-0"
                                     >
-                                      <Plus className="h-3 w-3 mr-1" />
-                                      Quick Add
+                                      <Minus className="h-3 w-3" />
                                     </Button>
-                                  )}
-                                </div>
+                                    <div className="relative flex-1">
+                                      <Input
+                                        type="number"
+                                        value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItem.quantity}
+                                        onChange={(e) => {
+                                          const inputValue = e.target.value;
+                                          setQuantityInputValues(prev => ({ ...prev, [product.id]: inputValue }));
+                                          const parsedValue = parseInt(inputValue) || 0;
+                                          setShowMOQWarnings(prev => ({ ...prev, [product.id]: parsedValue > 0 && parsedValue < product.moq }));
+                                        }}
+                                        onFocus={() => {
+                                          setActiveQuantityInput(product.id);
+                                          setShowQuantityHints(prev => ({ ...prev, [product.id]: true }));
+                                        }}
+                                        onBlur={() => {
+                                          const inputValue = quantityInputValues[product.id];
+                                          const parsedValue = parseInt(inputValue) || 0;
+                                          if (parsedValue === 0) {
+                                            setCart(cart.filter(item => item.product.id !== product.id));
+                                          } else {
+                                            const validQuantity = Math.max(product.moq, parsedValue);
+                                            const maxQuantity = Math.min(validQuantity, product.stock);
+                                            setCart(cart.map(item => item.product.id === product.id ? { ...item, quantity: maxQuantity } : item));
+                                          }
+                                          setQuantityInputValues(prev => { const s = { ...prev }; delete s[product.id]; return s; });
+                                          setShowMOQWarnings(prev => ({ ...prev, [product.id]: false }));
+                                          setShowQuantityHints(prev => ({ ...prev, [product.id]: false }));
+                                          setActiveQuantityInput(null);
+                                        }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                        min={0}
+                                        max={product.stock}
+                                        className={`w-full h-8 text-center text-sm ${showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''}`}
+                                        placeholder={product.moq.toString()}
+                                      />
+                                      {showMOQWarnings[product.id] && (
+                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
+                                          Min: {product.moq} units
+                                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setCart(cart.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item))}
+                                      className="h-8 w-8 p-0 flex-shrink-0"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    className="w-full rounded-full font-semibold text-white"
+                                    style={{background: 'var(--theme-primary)'}}
+                                    onClick={() => {
+                                      if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
+                                        setSelectedProductForModal(product);
+                                        setModalStep('type');
+                                        setSelectedModalType(null);
+                                        setModalQuantity(product.moq || 1);
+                                        setShowUnitSelectionModal(true);
+                                      } else {
+                                        addToCart(product, product.moq, 'units');
+                                      }
+                                    }}
+                                    onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '0.9'; }}
+                                    onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '1'; }}
+                                  >
+                                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                    Add to Cart
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -3226,56 +3012,66 @@ export default function CustomerPortal() {
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-white rounded-lg p-6 border">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Button
-                    variant="outline"
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-4 gap-3">
+                  {/* Browse Products */}
+                  <button
                     onClick={() => setActiveTab("products")}
-                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <Package className="w-6 h-6" />
-                    <span className="text-sm">Browse Products</span>
-                  </Button>
-                  <Button
-                    variant="outline"
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <Store className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Shop</span>
+                  </button>
+
+                  {/* Order History */}
+                  <button
                     onClick={() => setActiveTab("orders")}
-                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <History className="w-6 h-6" />
-                    <span className="text-sm">Order History</span>
-                  </Button>
-                  <Button
-                    variant="outline"
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <History className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Orders</span>
+                  </button>
+
+                  {/* Checkout */}
+                  <button
                     onClick={async () => {
                       if (cart.length > 0) {
-                        console.log('🚚 QUICK ACTIONS CHECKOUT: User clicked checkout in quick actions - NO early payment intent');
-                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                        // ✅ FIX: Don't create payment intent until user selects shipping
                         setShowCheckout(true);
                       } else {
                         setActiveTab("products");
                       }
                     }}
-                    className="h-20 flex flex-col items-center justify-center space-y-2"
                     disabled={isCreatingIntent}
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
                   >
-                    <ShoppingCart className="w-6 h-6" />
-                    <span className="text-sm">
-                      {cart.length > 0 ? `Checkout (${cart.length})` : "Start Shopping"}
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center relative" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <ShoppingCart className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                      {cart.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{backgroundColor: 'var(--theme-primary)'}}>
+                          {cart.length}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">
+                      {cart.length > 0 ? "Checkout" : "Cart"}
                     </span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      localStorage.removeItem('customerAuthData');
-                      window.location.reload();
-                    }}
-                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                  </button>
+
+                  {/* Account */}
+                  <button
+                    onClick={() => setActiveTab("account")}
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <User className="w-6 h-6" />
-                    <span className="text-sm">Sign Out</span>
-                  </Button>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{backgroundColor: 'var(--theme-secondary)'}}>
+                      <User className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Account</span>
+                  </button>
                 </div>
               </div>
             </TabsContent>
