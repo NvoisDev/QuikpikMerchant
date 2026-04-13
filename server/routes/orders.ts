@@ -1,45 +1,43 @@
 import type { Express } from "express";
-import type { SharedRouteContext } from "./shared";
+import {
+  db, storage, eq, and, or, desc, asc, inArray, gt, lt, gte, lte, ne, isNull, like, sql, count, sum,
+  users, orders, orderItems, products, customerGroups, customerGroupMembers,
+  smsVerificationCodes, customerRegistrationRequests, campaignOrders, subscriptionPlans,
+  userSubscriptions, stockMovements, orderCancellationRequests,
+  wholesalerCustomerRelationships, teamMembers,
+  insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
+  insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema,
+  insertSMSVerificationCodeSchema, insertCustomerRegistrationRequestSchema,
+  requireAuth, isAuthenticated, z,
+  stripe, openai, sgMail, twilio,
+  requireNotViewer, enforceNewPlanLimits, getProjectedDowngradeImpact,
+  orderPhotoUpload, sendCustomerInvoiceEmail, buildInvoicePdf, sendRefundReceipt,
+  createStripeRefundReceipt, generateOrderNotificationMessage, isInvitationExpired,
+  sendWelcomeEmail, passwordResetAttempts, ADMIN_EMAILS, geocodePostcode,
+  PLAN_ENFORCEMENT_LIMITS, getProductLimit, getCustomerGroupLimit, getBroadcastLimit,
+  getCustomersPerGroupLimit, getTeamMemberLimit,
+  generateOrderNumber, formatNumber, parseCustomerName, generateStockUpdateMessage,
+  sendTeamInvitationEmail, refundAcrossPaymentIntents, parseAddressForEmail, extractSessionId,
+  getCurrencySymbol, formatPhoneToInternational, validatePhoneNumber,
+  InventoryCalculator, PreciseShippingCalculator, healthCheck, parcel2goService,
+  whatsAppBusinessService, SubscriptionService, requireFeatureAccess,
+  requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits,
+  ReliableSMSService, sendSMS, sendEmail,
+  generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
+  createEmailVerification, verifyEmailCode, validatePassword, hashPassword, verifyPassword,
+  getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser,
+  generateProductDescription, generateProductImage, generatePersonalizedTagline,
+  generateCampaignSuggestions, optimizeMessageTiming,
+  generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
+  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
+  getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
+  generateDowngradeEffectiveEmail, sendWelcomeMessages,
+  orderNotificationService, quickOrderService, multiWholesalerService,
+  getEmailDeliveryAddress, queryOptimizer, queryCache, performanceMiddleware,
+  multer, sharp, compression, cookieParser,
+} from "./shared";
 
-export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void {
-  const {
-    db, storage, eq, and, or, desc, asc, inArray, gt, lt, gte, lte, ne, isNull, like, sql, count, sum,
-    users, orders, orderItems, products, customerGroups, customerGroupMembers,
-    smsVerificationCodes, customerRegistrationRequests, campaignOrders, subscriptionPlans,
-    userSubscriptions, stockMovements, orderCancellationRequests,
-    wholesalerCustomerRelationships, teamMembers,
-    insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
-    insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema,
-    insertSMSVerificationCodeSchema, insertCustomerRegistrationRequestSchema,
-    requireAuth, isAuthenticated, z,
-    stripe, openai, sgMail, twilio,
-    requireNotViewer, enforceNewPlanLimits, getProjectedDowngradeImpact,
-    orderPhotoUpload, sendCustomerInvoiceEmail, buildInvoicePdf, sendRefundReceipt,
-    createStripeRefundReceipt, generateOrderNotificationMessage, isInvitationExpired,
-    sendWelcomeEmail, passwordResetAttempts, ADMIN_EMAILS, geocodePostcode,
-    PLAN_ENFORCEMENT_LIMITS, getProductLimit, getCustomerGroupLimit, getBroadcastLimit,
-    getCustomersPerGroupLimit, getTeamMemberLimit,
-    generateOrderNumber, formatNumber, parseCustomerName, generateStockUpdateMessage,
-    sendTeamInvitationEmail, refundAcrossPaymentIntents, parseAddressForEmail, extractSessionId,
-    getCurrencySymbol, formatPhoneToInternational, validatePhoneNumber,
-    InventoryCalculator, PreciseShippingCalculator, healthCheck, parcel2goService,
-    whatsAppBusinessService, SubscriptionService, requireFeatureAccess,
-    requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits,
-    ReliableSMSService, sendSMS, sendEmail,
-    generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
-    createEmailVerification, verifyEmailCode, validatePassword, hashPassword, verifyPassword,
-    getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser,
-    generateProductDescription, generateProductImage, generatePersonalizedTagline,
-    generateCampaignSuggestions, optimizeMessageTiming,
-    generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
-    wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
-    getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-    generateDowngradeEffectiveEmail, sendWelcomeMessages,
-    orderNotificationService, quickOrderService, multiWholesalerService,
-    getEmailDeliveryAddress, queryOptimizer, queryCache, performanceMiddleware,
-    multer, sharp, compression, cookieParser,
-  } = ctx;
-
+export function registerOrderRoutes(app: Express): void {
   // PUT /api/orders/:orderId/change-delivery-address
   app.put('/api/orders/:orderId/change-delivery-address', async (req, res) => {
     try {
@@ -2047,7 +2045,7 @@ export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void
       }
       
       // Generate presigned URL for image upload
-      const { ObjectStorageService } = await import('./objectStorage.js');
+      const { ObjectStorageService } = await import('../objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
@@ -2076,7 +2074,7 @@ export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void
       }
       
       // Add image to order - normalize the URL for serving
-      const { ObjectStorageService } = await import('./objectStorage.js');
+      const { ObjectStorageService } = await import('../objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
       
@@ -2104,7 +2102,7 @@ export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer?.email && wholesaler) {
-          const { sendOrderPhotoNotificationEmail } = await import('./sendgrid-service.js');
+          const { sendOrderPhotoNotificationEmail } = await import('../sendgrid-service.js');
           
           const customerName = customer.firstName && customer.lastName 
             ? `${customer.firstName} ${customer.lastName}` 
@@ -2168,7 +2166,7 @@ export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void
       }
 
       // Upload binary buffer directly from server — no browser CORS needed
-      const { ObjectStorageService } = await import('./objectStorage.js');
+      const { ObjectStorageService } = await import('../objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const normalizedPath = await objectStorageService.uploadFileBuffer(
         req.file.buffer,
@@ -2197,7 +2195,7 @@ export function registerOrderRoutes(app: Express, ctx: SharedRouteContext): void
         const customer = await storage.getUser(order.retailerId);
         const wholesaler = await storage.getUser(order.wholesalerId);
         if (customer?.email && wholesaler) {
-          const { sendOrderPhotoNotificationEmail } = await import('./sendgrid-service.js');
+          const { sendOrderPhotoNotificationEmail } = await import('../sendgrid-service.js');
           const customerName = customer.firstName && customer.lastName
             ? `${customer.firstName} ${customer.lastName}`
             : customer.firstName || customer.businessName || 'Customer';

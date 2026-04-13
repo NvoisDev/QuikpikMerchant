@@ -1,45 +1,43 @@
 import type { Express } from "express";
-import type { SharedRouteContext } from "./shared";
+import {
+  db, storage, eq, and, or, desc, asc, inArray, gt, lt, gte, lte, ne, isNull, like, sql, count, sum,
+  users, orders, orderItems, products, customerGroups, customerGroupMembers,
+  smsVerificationCodes, customerRegistrationRequests, campaignOrders, subscriptionPlans,
+  userSubscriptions, stockMovements, orderCancellationRequests,
+  wholesalerCustomerRelationships, teamMembers,
+  insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
+  insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema,
+  insertSMSVerificationCodeSchema, insertCustomerRegistrationRequestSchema,
+  requireAuth, isAuthenticated, z,
+  stripe, openai, sgMail, twilio,
+  requireNotViewer, enforceNewPlanLimits, getProjectedDowngradeImpact,
+  orderPhotoUpload, sendCustomerInvoiceEmail, buildInvoicePdf, sendRefundReceipt,
+  createStripeRefundReceipt, generateOrderNotificationMessage, isInvitationExpired,
+  sendWelcomeEmail, passwordResetAttempts, ADMIN_EMAILS, geocodePostcode,
+  PLAN_ENFORCEMENT_LIMITS, getProductLimit, getCustomerGroupLimit, getBroadcastLimit,
+  getCustomersPerGroupLimit, getTeamMemberLimit,
+  generateOrderNumber, formatNumber, parseCustomerName, generateStockUpdateMessage,
+  sendTeamInvitationEmail, refundAcrossPaymentIntents, parseAddressForEmail, extractSessionId,
+  getCurrencySymbol, formatPhoneToInternational, validatePhoneNumber,
+  InventoryCalculator, PreciseShippingCalculator, healthCheck, parcel2goService,
+  whatsAppBusinessService, SubscriptionService, requireFeatureAccess,
+  requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits,
+  ReliableSMSService, sendSMS, sendEmail,
+  generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
+  createEmailVerification, verifyEmailCode, validatePassword, hashPassword, verifyPassword,
+  getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser,
+  generateProductDescription, generateProductImage, generatePersonalizedTagline,
+  generateCampaignSuggestions, optimizeMessageTiming,
+  generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
+  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
+  getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
+  generateDowngradeEffectiveEmail, sendWelcomeMessages,
+  orderNotificationService, quickOrderService, multiWholesalerService,
+  getEmailDeliveryAddress, queryOptimizer, queryCache, performanceMiddleware,
+  multer, sharp, compression, cookieParser,
+} from "./shared";
 
-export function registerSystemRoutes(app: Express, ctx: SharedRouteContext): void {
-  const {
-    db, storage, eq, and, or, desc, asc, inArray, gt, lt, gte, lte, ne, isNull, like, sql, count, sum,
-    users, orders, orderItems, products, customerGroups, customerGroupMembers,
-    smsVerificationCodes, customerRegistrationRequests, campaignOrders, subscriptionPlans,
-    userSubscriptions, stockMovements, orderCancellationRequests,
-    wholesalerCustomerRelationships, teamMembers,
-    insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
-    insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema,
-    insertSMSVerificationCodeSchema, insertCustomerRegistrationRequestSchema,
-    requireAuth, isAuthenticated, z,
-    stripe, openai, sgMail, twilio,
-    requireNotViewer, enforceNewPlanLimits, getProjectedDowngradeImpact,
-    orderPhotoUpload, sendCustomerInvoiceEmail, buildInvoicePdf, sendRefundReceipt,
-    createStripeRefundReceipt, generateOrderNotificationMessage, isInvitationExpired,
-    sendWelcomeEmail, passwordResetAttempts, ADMIN_EMAILS, geocodePostcode,
-    PLAN_ENFORCEMENT_LIMITS, getProductLimit, getCustomerGroupLimit, getBroadcastLimit,
-    getCustomersPerGroupLimit, getTeamMemberLimit,
-    generateOrderNumber, formatNumber, parseCustomerName, generateStockUpdateMessage,
-    sendTeamInvitationEmail, refundAcrossPaymentIntents, parseAddressForEmail, extractSessionId,
-    getCurrencySymbol, formatPhoneToInternational, validatePhoneNumber,
-    InventoryCalculator, PreciseShippingCalculator, healthCheck, parcel2goService,
-    whatsAppBusinessService, SubscriptionService, requireFeatureAccess,
-    requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits,
-    ReliableSMSService, sendSMS, sendEmail,
-    generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
-    createEmailVerification, verifyEmailCode, validatePassword, hashPassword, verifyPassword,
-    getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser,
-    generateProductDescription, generateProductImage, generatePersonalizedTagline,
-    generateCampaignSuggestions, optimizeMessageTiming,
-    generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
-    wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
-    getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-    generateDowngradeEffectiveEmail, sendWelcomeMessages,
-    orderNotificationService, quickOrderService, multiWholesalerService,
-    getEmailDeliveryAddress, queryOptimizer, queryCache, performanceMiddleware,
-    multer, sharp, compression, cookieParser,
-  } = ctx;
-
+export function registerSystemRoutes(app: Express): void {
   // GET /api/health
   app.get('/api/health', healthCheck);
 
@@ -81,7 +79,7 @@ export function registerSystemRoutes(app: Express, ctx: SharedRouteContext): voi
         });
       }
       
-      const { ObjectStorageService } = await import('./objectStorage.js');
+      const { ObjectStorageService } = await import('../objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
@@ -213,7 +211,7 @@ export function registerSystemRoutes(app: Express, ctx: SharedRouteContext): voi
   // GET /objects/:objectPath(*)
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
-      const { ObjectStorageService } = await import('./objectStorage.js');
+      const { ObjectStorageService } = await import('../objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
       objectStorageService.downloadObject(objectFile, res);
