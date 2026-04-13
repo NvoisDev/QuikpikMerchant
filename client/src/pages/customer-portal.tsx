@@ -3090,61 +3090,86 @@ export default function CustomerPortal() {
 
             <TabsContent value="products" className="space-y-6">
               {/* Product Search and Filters */}
-              <div className="bg-white rounded-lg shadow-sm border p-4 space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Search Products */}
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search products..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+              {/* Sticky search + filter toolbar */}
+              <div className="sticky top-16 z-30 bg-white -mx-4 px-4 pt-2 pb-3 border-b border-gray-100 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-xl sm:shadow-sm sm:border-gray-100">
+                {/* Row 1: Search + view toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-11 rounded-full border-gray-200"
+                    />
                   </div>
-                  
-                  {/* Category Filter */}
-                  <div className="sm:w-64">
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Categories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category || ''}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* View Toggle - Mobile Responsive */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    <Button
-                      variant={viewMode === "grid" ? "default" : "ghost"}
-                      size="sm"
+                  {/* View toggle — icon-only */}
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
                       onClick={() => setViewMode("grid")}
-                      className="px-2 sm:px-3 py-1.5"
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? '' : 'hover:bg-gray-100'}`}
+                      style={viewMode === 'grid' ? {backgroundColor: 'var(--theme-secondary)'} : {}}
                     >
-                      <Grid className="w-4 h-4" />
-                      <span className="hidden sm:inline ml-1">Grid</span>
-                    </Button>
-                    <Button
-                      variant={viewMode === "list" ? "default" : "ghost"}
-                      size="sm"
+                      <Grid className="w-4 h-4" style={viewMode === 'grid' ? {color: 'var(--theme-primary)'} : {color: '#6b7280'}} />
+                    </button>
+                    <button
                       onClick={() => setViewMode("list")}
-                      className="px-2 sm:px-3 py-1.5"
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? '' : 'hover:bg-gray-100'}`}
+                      style={viewMode === 'list' ? {backgroundColor: 'var(--theme-secondary)'} : {}}
                     >
-                      <List className="w-4 h-4" />
-                      <span className="hidden sm:inline ml-1">List</span>
-                    </Button>
+                      <List className="w-4 h-4" style={viewMode === 'list' ? {color: 'var(--theme-primary)'} : {color: '#6b7280'}} />
+                    </button>
                   </div>
                 </div>
+
+                {/* Row 2: Category pills (horizontal scroll) */}
+                <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
+                  <button
+                    onClick={() => setSelectedCategory("all")}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === 'all' ? 'text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    style={selectedCategory === 'all' ? {backgroundColor: 'var(--theme-primary)'} : {}}
+                  >
+                    All
+                  </button>
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category || '')}
+                      className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category ? 'text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      style={selectedCategory === category ? {backgroundColor: 'var(--theme-primary)'} : {}}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Hidden fallback Select (preserves state management) */}
+                <div className="hidden">
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category || ''}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {/* Product count */}
+              {!productsLoading && !productsError && (
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-sm text-gray-500">
+                    {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+                    {(searchTerm || selectedCategory !== 'all') && ' found'}
+                  </p>
+                </div>
+              )}
 
               {/* Products Display */}
               <div className="space-y-4">
@@ -3181,10 +3206,10 @@ export default function CustomerPortal() {
                       const cartItem = cart.find(item => item.product.id === product.id);
                       
                       return viewMode === "grid" ? (
-                        <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
-                          <CardContent className="p-4">
+                        <Card key={product.id} className="group rounded-2xl overflow-hidden border border-gray-100 hover:border-[var(--theme-primary)] hover:shadow-lg transition-all duration-200 bg-white">
+                          <CardContent className="p-0">
                             {/* Product Image Gallery */}
-                            <div className="relative aspect-square mb-4 bg-white rounded-lg overflow-hidden border border-gray-100">
+                            <div className="relative aspect-[4/3] bg-white overflow-hidden border-b border-gray-100">
                               {(() => {
                                 // Get all available images (primary imageUrl + additional images array)
                                 const allImages = [
@@ -3301,13 +3326,13 @@ export default function CustomerPortal() {
                             </div>
                             
                             {/* Product Info */}
-                            <div className="space-y-3">
+                            <div className="p-4 space-y-2">
                               <div>
-                                <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">
+                                <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 mb-1">
                                   {product.name}
                                 </h3>
                                 {product.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2">
+                                  <p className="text-xs text-gray-500 line-clamp-2">
                                     {cleanAIDescription(product.description)}
                                   </p>
                                 )}
@@ -3414,20 +3439,26 @@ export default function CustomerPortal() {
                               </div>
                               
                               {/* Pricing */}
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                                <PriceDisplay
-                                  price={pricing.effectivePrice}
-                                  originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                  currency={'GBP'}
-                                  isGuestMode={isGuestMode}
-                                  size="medium"
-                                  showStrikethrough={true}
-                                />
-                                
-                                {/* Add to Cart Controls */}
-                                <div className="flex items-center space-x-2 self-end sm:self-auto">
+                              <div className="flex items-end justify-between mt-2">
+                                <div>
+                                  <PriceDisplay
+                                    price={pricing.effectivePrice}
+                                    originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                    currency={'GBP'}
+                                    isGuestMode={isGuestMode}
+                                    size="medium"
+                                    showStrikethrough={true}
+                                  />
+                                  {product.moq && product.moq > 1 && !cartItem && (
+                                    <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Add to Cart Controls */}
+                              <div className="mt-2">
                                   {cartItem ? (
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center justify-center gap-2">
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -3444,7 +3475,7 @@ export default function CustomerPortal() {
                                             setCart(updatedCart);
                                           }
                                         }}
-                                        className="h-8 w-8 p-0"
+                                        className="rounded-full h-8 w-8 p-0"
                                       >
                                         <Minus className="h-3 w-3" />
                                       </Button>
@@ -3522,7 +3553,7 @@ export default function CustomerPortal() {
                                           }}
                                           min={0}
                                           max={product.stock}
-                                          className={`w-16 h-8 text-center text-sm ${
+                                          className={`w-14 h-8 text-center rounded-lg text-sm ${
                                             showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
                                             activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
                                           }`}
@@ -3585,14 +3616,13 @@ export default function CustomerPortal() {
                                           );
                                           setCart(updatedCart);
                                         }}
-                                        className="h-8 w-8 p-0"
+                                        className="rounded-full h-8 w-8 p-0"
                                       >
                                         <Plus className="h-3 w-3" />
                                       </Button>
                                     </div>
                                   ) : (
                                     <Button
-                                      size="sm"
                                       onClick={() => {
                                         // Check if product has pallet pricing
                                         if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
@@ -3608,27 +3638,14 @@ export default function CustomerPortal() {
                                         }
                                       }}
                                       disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                      className="text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                      className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
                                       style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                      onMouseEnter={(e) => {
-                                        const target = e.target as HTMLElement;
-                                        if (!(product.stock === 0 && ((product as any).palletStock || 0) === 0)) {
-                                          target.style.backgroundColor = 'var(--theme-secondary)';
-                                        }
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        const target = e.target as HTMLElement;  
-                                        if (!(product.stock === 0 && ((product as any).palletStock || 0) === 0)) {
-                                          target.style.backgroundColor = 'var(--theme-primary)';
-                                        }
-                                      }}
                                       title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
-                                      <Plus className="h-3 w-3 mr-1" />
-                                      Add
+                                      <ShoppingCart className="h-4 w-4 mr-2" />
+                                      {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
                                     </Button>
                                   )}
-                                </div>
                               </div>
                             </div>
                           </CardContent>
