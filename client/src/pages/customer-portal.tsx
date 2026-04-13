@@ -2420,17 +2420,15 @@ export default function CustomerPortal() {
                 </Button>
               )}
 
-              {/* Find Seller */}
+              {/* Explore pill */}
               {isAuthenticated && !isPreviewMode && (
-                <Button
+                <button
                   onClick={() => setShowWholesalerSearch(true)}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs px-2 font-medium border theme-outlined"
+                  className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-gray-400 hover:border-gray-300 hover:shadow-sm transition-all"
                 >
-                  <Search className="w-3.5 h-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">Seller</span>
-                </Button>
+                  <Search className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-500">Explore</span>
+                </button>
               )}
 
               {/* Theme Switcher */}
@@ -2474,164 +2472,177 @@ export default function CustomerPortal() {
         </div>
       </div>
 
-      {/* Wholesaler Search Modal */}
+      {/* Explore — Full-screen wholesaler search */}
       {showWholesalerSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {authenticatedCustomer?.phone ? "Browse Sellers" : "Find Other Sellers"}
-                </h3>
-                <Button
-                  onClick={() => setShowWholesalerSearch(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  ×
-                </Button>
-              </div>
-              <div className="mt-3">
-                <Input
-                  placeholder="Search by business name..."
-                  value={wholesalerSearchQuery}
-                  onChange={(e) => setWholesalerSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Top bar */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <button
+              onClick={() => { setShowWholesalerSearch(false); setWholesalerSearchQuery(""); }}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Heading + search field */}
+          <div className="px-6 pt-6 pb-4">
+            <h1 className="text-2xl font-bold text-gray-900 mb-5">
+              Hi, what are you looking for?
+            </h1>
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search for a seller or business name"
+                value={wholesalerSearchQuery}
+                onChange={(e) => setWholesalerSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-colors"
+              />
             </div>
-            
-            <div className="max-h-80 overflow-y-auto">
-              {wholesalersLoading ? (
-                <div className="p-4 space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex items-center space-x-3 animate-pulse">
-                      <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
+          </div>
+
+          {/* Results area */}
+          <div className="flex-1 overflow-y-auto px-4 pb-28">
+            {wholesalersLoading ? (
+              <div className="space-y-3 mt-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-3 animate-pulse p-3">
+                    <div className="w-12 h-12 bg-gray-200 rounded-xl flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                      <div className="h-3 bg-gray-200 rounded w-1/2" />
                     </div>
-                  ))}
-                </div>
-              ) : availableWholesalers.length > 0 ? (
-                <div className="p-2">
-                  {availableWholesalers.map((wholesalerItem: any) => (
-                    <div
-                      key={wholesalerItem.id}
-                      className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                        wholesalerItem.isAccessible 
-                          ? 'hover:bg-gray-50 cursor-pointer' 
-                          : 'bg-gray-50 border-2 border-dashed border-gray-300'
-                      }`}
-                      onClick={wholesalerItem.isAccessible ? async () => {
-                        setShowWholesalerSearch(false);
-                        setIsSwitchingWholesaler(true);
-                        
-                        // Use wholesaler switching for authenticated customers
-                        try {
-                          const response = await fetch('/api/customer-auth/switch-wholesaler', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json'
-                            },
-                            credentials: 'include',
-                            body: JSON.stringify({
-                              targetWholesalerId: wholesalerItem.id
-                            })
-                          });
-                          
-                          if (response.ok) {
-                            // Switch successful, redirect to new store
-                            window.location.href = `/store/${wholesalerItem.id}`;
-                          } else {
-                            // If switching fails, try direct navigation (fallback)
-                            setIsSwitchingWholesaler(false);
-                            window.location.href = `/store/${wholesalerItem.id}`;
-                          }
-                        } catch (error) {
-                          // Network error, try direct navigation (fallback)
-                          setIsSwitchingWholesaler(false);
-                          window.location.href = `/store/${wholesalerItem.id}`;
-                        }
-                      } : undefined}
-                    >
-                      {/* Wholesaler Logo */}
-                      <Logo 
-                        size="md" 
-                        variant="icon-only"
-                        className="flex-shrink-0"
-                        user={{
-                          logoType: wholesalerItem.logoType || 'business',
-                          logoUrl: wholesalerItem.logoUrl,
-                          businessName: wholesalerItem.businessName,
-                          firstName: wholesalerItem.firstName,
-                          lastName: wholesalerItem.lastName
-                        }}
-                      />
-                      
-                      <div className="flex-1 text-left">
-                        <h4 className="font-medium text-gray-900">{wholesalerItem.businessName || "Business"}</h4>
-                        <p className="text-sm text-gray-600">{wholesalerItem.storeTagline || "Wholesale products"}</p>
-                        {wholesalerItem.location && (
-                          <p className="text-xs text-gray-500 flex items-center mt-1">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {wholesalerItem.location}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        {wholesalerItem.rating && (
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <span className="text-sm text-gray-600 ml-1">{wholesalerItem.rating}</span>
-                          </div>
-                        )}
-                        
-                        {wholesalerItem.canRequestAccess ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRequestAccess(wholesalerItem);
-                            }}
-                          >
-                            Request Access
-                          </Button>
-                        ) : wholesalerItem.isAccessible ? (
-                          <div className="flex items-center text-green-600">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            <span className="text-xs">Access</span>
-                          </div>
-                        ) : (
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 text-center">
-                  <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">
-                    {authenticatedCustomer?.phone 
-                      ? (wholesalerSearchQuery 
-                          ? "No sellers found matching your search. Try different keywords." 
-                          : "Search to discover new sellers and request access to expand your supplier network.")
-                      : (wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores")
+                  </div>
+                ))}
+              </div>
+            ) : (() => {
+              const accessibleSellers = availableWholesalers.filter((w: any) => w.isAccessible);
+              const discoverSellers = availableWholesalers.filter((w: any) => !w.isAccessible);
+              const isSearching = wholesalerSearchQuery.trim().length > 0;
+
+              const WholesalerCard = ({ wholesalerItem }: { wholesalerItem: any }) => (
+                <div
+                  key={wholesalerItem.id}
+                  className={`flex items-center space-x-3 p-3 rounded-xl transition-colors ${
+                    wholesalerItem.isAccessible
+                      ? 'hover:bg-gray-50 cursor-pointer active:bg-gray-100'
+                      : 'cursor-default'
+                  }`}
+                  onClick={wholesalerItem.isAccessible ? async () => {
+                    setShowWholesalerSearch(false);
+                    setWholesalerSearchQuery("");
+                    setIsSwitchingWholesaler(true);
+                    try {
+                      const response = await fetch('/api/customer-auth/switch-wholesaler', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ targetWholesalerId: wholesalerItem.id })
+                      });
+                      window.location.href = `/store/${wholesalerItem.id}`;
+                    } catch {
+                      setIsSwitchingWholesaler(false);
+                      window.location.href = `/store/${wholesalerItem.id}`;
                     }
-                  </p>
-                  {authenticatedCustomer?.phone && !wholesalerSearchQuery && (
-                    <p className="text-sm text-gray-400 mt-2">
-                      Contact a seller to get registered with their store.
-                    </p>
+                  } : undefined}
+                >
+                  <Logo
+                    size="md"
+                    variant="icon-only"
+                    className="flex-shrink-0 w-12 h-12 rounded-xl"
+                    user={{
+                      logoType: wholesalerItem.logoType || 'business',
+                      logoUrl: wholesalerItem.logoUrl,
+                      businessName: wholesalerItem.businessName,
+                      firstName: wholesalerItem.firstName,
+                      lastName: wholesalerItem.lastName
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 text-sm">{wholesalerItem.businessName || "Business"}</h4>
+                    <p className="text-xs text-gray-500 truncate">{wholesalerItem.storeTagline || "Wholesale products"}</p>
+                    {wholesalerItem.location && (
+                      <p className="text-xs text-gray-400 flex items-center mt-0.5">
+                        <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                        {wholesalerItem.location}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {wholesalerItem.canRequestAccess ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-8 px-3"
+                        onClick={(e) => { e.stopPropagation(); handleRequestAccess(wholesalerItem); }}
+                      >
+                        Request Access
+                      </Button>
+                    ) : wholesalerItem.isAccessible ? (
+                      <div className="flex items-center text-green-600">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        <span className="text-xs font-medium">Access</span>
+                      </div>
+                    ) : (
+                      <Building2 className="w-4 h-4 text-gray-300" />
+                    )}
+                  </div>
+                </div>
+              );
+
+              if (isSearching) {
+                return availableWholesalers.length > 0 ? (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-400 px-3 mb-2">{availableWholesalers.length} result{availableWholesalers.length !== 1 ? 's' : ''}</p>
+                    {availableWholesalers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-16 text-center px-6">
+                    <Building2 className="w-14 h-14 text-gray-200 mb-4" />
+                    <p className="font-semibold text-gray-700">No sellers found</p>
+                    <p className="text-sm text-gray-400 mt-1">Try a different name or contact a seller to get registered.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-6 mt-2">
+                  {/* Your Sellers */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Your Sellers</h3>
+                    {accessibleSellers.length > 0 ? (
+                      accessibleSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)
+                    ) : (
+                      <p className="text-sm text-gray-400 px-3 py-4">You haven't been added to any stores yet.</p>
+                    )}
+                  </div>
+
+                  {/* Discover New Sellers */}
+                  {discoverSellers.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Discover New Sellers</h3>
+                      {discoverSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
+          </div>
+
+          {/* Sticky search button */}
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white border-t border-gray-100">
+            <button
+              className="w-full py-4 btn-theme-primary rounded-2xl text-base font-semibold"
+              onClick={() => {
+                if (!wholesalerSearchQuery.trim()) {
+                  document.querySelector<HTMLInputElement>('input[placeholder="Search for a seller or business name"]')?.focus();
+                }
+              }}
+            >
+              Search
+            </button>
           </div>
         </div>
       )}
