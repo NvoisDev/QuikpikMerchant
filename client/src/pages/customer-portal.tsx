@@ -2744,7 +2744,7 @@ export default function CustomerPortal() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="home" className="space-y-5">
+            <TabsContent value="home" className="space-y-5 mb-16">
               {/* Welcome Hero Banner */}
               <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
                 {/* Subtle decorative circles */}
@@ -2784,7 +2784,7 @@ export default function CustomerPortal() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Cart Items */}
                 <div
                   className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -2854,7 +2854,7 @@ export default function CustomerPortal() {
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" style={{color: 'var(--theme-primary)'}} />
-                    Top Products
+                    Top Selling
                   </h2>
                   <button
                     onClick={() => setActiveTab("products")}
@@ -3026,7 +3026,7 @@ export default function CustomerPortal() {
               {/* Quick Actions */}
               <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {/* Browse Products */}
                   <button
                     onClick={() => setActiveTab("products")}
