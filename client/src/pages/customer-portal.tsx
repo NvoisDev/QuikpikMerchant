@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 
@@ -938,6 +938,7 @@ export default function CustomerPortal() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
+  const carouselTouchStartX = useRef<number>(0);
   
   // State for enhanced unit/pallet selection modal
   const [showUnitSelectionModal, setShowUnitSelectionModal] = useState(false);
@@ -3405,7 +3406,21 @@ export default function CustomerPortal() {
                                 
                                 // Multiple images - show carousel with indicators
                                 return (
-                                  <div className="relative w-full h-full">
+                                  <div
+                                    className="relative w-full h-full"
+                                    onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0].clientX; }}
+                                    onTouchEnd={(e) => {
+                                      const diff = carouselTouchStartX.current - e.changedTouches[0].clientX;
+                                      if (Math.abs(diff) >= 40) {
+                                        setProductImageIndexes(prev => ({
+                                          ...prev,
+                                          [product.id]: diff > 0
+                                            ? (currentImageIndex === allImages.length - 1 ? 0 : currentImageIndex + 1)
+                                            : (currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1)
+                                        }));
+                                      }
+                                    }}
+                                  >
                                     <img 
                                       src={allImages[currentImageIndex]} 
                                       alt={`${product.name} - Image ${currentImageIndex + 1}`}
@@ -3846,7 +3861,21 @@ export default function CustomerPortal() {
                                   
                                   // Multiple images - show carousel with indicators
                                   return (
-                                    <div className="relative w-full h-full">
+                                    <div
+                                      className="relative w-full h-full"
+                                      onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0].clientX; }}
+                                      onTouchEnd={(e) => {
+                                        const diff = carouselTouchStartX.current - e.changedTouches[0].clientX;
+                                        if (Math.abs(diff) >= 40) {
+                                          setProductImageIndexes(prev => ({
+                                            ...prev,
+                                            [product.id]: diff > 0
+                                              ? (currentImageIndex === allImages.length - 1 ? 0 : currentImageIndex + 1)
+                                              : (currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1)
+                                          }));
+                                        }
+                                      }}
+                                    >
                                       <img 
                                         src={allImages[currentImageIndex]} 
                                         alt={`${product.name} - Image ${currentImageIndex + 1}`}
