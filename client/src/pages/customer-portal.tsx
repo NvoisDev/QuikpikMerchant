@@ -2758,7 +2758,7 @@ export default function CustomerPortal() {
                 <span className="hidden sm:inline">Home</span>
               </TabsTrigger>
               <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 tab-theme-active">
-                <Package className="w-4 h-4 flex-shrink-0" />
+                <Store className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden sm:inline">Products</span>
               </TabsTrigger>
               <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0 tab-theme-active">
