@@ -3123,7 +3123,7 @@ export default function CustomerPortal() {
                 </div>
 
                 {/* Row 2: Category pills (horizontal scroll) */}
-                <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
+                <div className="flex overflow-x-auto gap-2 pb-1" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
                   <button
                     onClick={() => setSelectedCategory("all")}
                     className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === 'all' ? 'text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
@@ -3752,30 +3752,16 @@ export default function CustomerPortal() {
                               </div>
                               
                               {/* Product Info */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 space-y-1 sm:space-y-0">
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1 text-sm sm:text-base">
-                                      {product.name}
-                                    </h3>
-                                    {product.description && (
-                                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                                        {cleanAIDescription(product.description)}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Price */}
-                                  <div className="flex-shrink-0 sm:ml-4">
-                                    <PriceDisplay
-                                      price={pricing.effectivePrice}
-                                      originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                      currency={wholesaler?.defaultCurrency || 'GBP'}
-                                      isGuestMode={isGuestMode}
-                                      size="medium"
-                                    />
-
-                                  </div>
+                              <div className="flex flex-col justify-between flex-1 py-1 min-w-0">
+                                <div>
+                                  <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 mb-1">
+                                    {product.name}
+                                  </h3>
+                                  {product.description && (
+                                    <p className="text-xs text-gray-500 line-clamp-1">
+                                      {cleanAIDescription(product.description)}
+                                    </p>
+                                  )}
                                 </div>
                                 
                                 {/* Product Details */}
@@ -3839,11 +3825,24 @@ export default function CustomerPortal() {
                                 
 
 
+                                {/* Price */}
+                                <div className="my-1.5">
+                                  <PriceDisplay
+                                    price={pricing.effectivePrice}
+                                    originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                    currency={wholesaler?.defaultCurrency || 'GBP'}
+                                    isGuestMode={isGuestMode}
+                                    size="medium"
+                                  />
+                                  {product.moq && product.moq > 1 && !cartItem && (
+                                    <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
+                                  )}
+                                </div>
+
                                 {/* Add to Cart Controls */}
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                                  <div className="flex items-center space-x-2 self-end sm:self-auto">
-                                    {cartItem ? (
-                                      <div className="flex items-center space-x-2">
+                                <div>
+                                  {cartItem ? (
+                                      <div className="flex items-center gap-2">
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -3859,7 +3858,7 @@ export default function CustomerPortal() {
                                               setCart(updatedCart);
                                             }
                                           }}
-                                          className="h-8 w-8 p-0"
+                                          className="rounded-full h-8 w-8 p-0"
                                         >
                                           <Minus className="h-3 w-3" />
                                         </Button>
@@ -3935,7 +3934,7 @@ export default function CustomerPortal() {
                                             }}
                                             min={0}
                                             max={product.stock}
-                                            className={`w-16 h-8 text-center text-sm ${
+                                            className={`w-14 h-8 text-center rounded-lg text-sm ${
                                               showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
                                               activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
                                             }`}
@@ -4000,16 +3999,14 @@ export default function CustomerPortal() {
                                             );
                                             setCart(updatedCart);
                                           }}
-                                          className="h-8 w-8 p-0"
+                                          className="rounded-full h-8 w-8 p-0"
                                         >
                                           <Plus className="h-3 w-3" />
                                         </Button>
                                       </div>
                                     ) : (
                                       <Button
-                                        size="sm"
                                         onClick={() => {
-                                          // Always show modal if product has pallet pricing option
                                           if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                             setSelectedProductForModal(product);
                                             setModalStep('type');
@@ -4017,24 +4014,22 @@ export default function CustomerPortal() {
                                             setModalQuantity(product.moq || 1);
                                             setShowUnitSelectionModal(true);
                                           } else {
-                                            // No pallet option, add units directly
                                             addToCart(product, product.moq || 1, 'units');
                                           }
                                         }}
                                         disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                        className="text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        style={{backgroundColor: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                        className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                         title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : 'Add to cart'}
                                       >
-                                        <ShoppingCart className="h-3 w-3 mr-1" />
-                                        Add
+                                        <ShoppingCart className="h-4 w-4 mr-2" />
+                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : 'Add to Cart'}
                                       </Button>
                                     )}
-                                  </div>
-                                  
+
                                   {/* Total for this item */}
                                   {cartItem && (
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <div className="text-xs text-gray-500 mt-1">
                                       Total: <PriceDisplay
                                         price={
                                           cartItem.sellingType === 'pallets' 
@@ -4046,9 +4041,9 @@ export default function CustomerPortal() {
                                         size="small"
                                       />
                                       {cartItem.sellingType === 'pallets' && (
-                                        <div className="text-xs text-gray-500 mt-1">
+                                        <span className="ml-1">
                                           ({cartItem.quantity} pallet{cartItem.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units = {cartItem.quantity * ((product as any).unitsPerPallet || 1)} total units)
-                                        </div>
+                                        </span>
                                       )}
                                     </div>
                                   )}

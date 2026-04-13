@@ -2,15 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Scrollbar hide utility */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
 /* Gentle Micro-animations for Interactive Elements */
 @layer base {
   /* Smooth transitions for all interactive elements */
