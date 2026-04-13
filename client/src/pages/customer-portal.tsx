@@ -2896,7 +2896,7 @@ export default function CustomerPortal() {
                                   {hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>
-                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
                                     </p>
                                   )}
                                 </div>
@@ -2908,7 +2908,7 @@ export default function CustomerPortal() {
                                     {hasPalletPricingHome && (cartItemUnitsHome || cartItemPalletsHome) && !(cartItemUnitsHome && cartItemPalletsHome) && (
                                       <div className="flex items-center justify-between">
                                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnitsHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                          {cartItemUnitsHome ? '📦 Units' : '🚛 Pallets'}
+                                          {cartItemUnitsHome ? '📦 Units ✓' : '🚛 Pallets ✓'}
                                         </span>
                                         <button
                                           onClick={() => {
@@ -3014,7 +3014,7 @@ export default function CustomerPortal() {
                                       {hasPalletPricingHome ? 'Add to Cart →' : 'Add to Cart'}
                                     </Button>
                                     {hasPalletPricingHome && (
-                                      <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                      <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
                                     )}
                                   </div>
                                 )}
@@ -3463,7 +3463,7 @@ export default function CustomerPortal() {
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>
-                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
                                     </p>
                                   )}
                                 </div>
@@ -3475,7 +3475,7 @@ export default function CustomerPortal() {
                                 {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
                                   <div className="flex items-center justify-between">
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnits ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                      {cartItemUnits ? '📦 Units' : '🚛 Pallets'}
+                                      {cartItemUnits ? '📦 Units ✓' : '🚛 Pallets ✓'}
                                     </span>
                                     <button
                                       onClick={() => {
@@ -3645,7 +3645,7 @@ export default function CustomerPortal() {
                                       {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
                                     </Button>
                                     {hasPalletPricing && product.stock > 0 && (
-                                      <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                      <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
                                     )}
                                   </div>
                                 )}
@@ -3843,7 +3843,7 @@ export default function CustomerPortal() {
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>
-                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} — Min {(product as any).palletMoq || 1}</span>
+                                      <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
                                     </p>
                                   )}
                                 </div>
@@ -3854,7 +3854,7 @@ export default function CustomerPortal() {
                                   {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
                                     <div className="flex items-center justify-between">
                                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnits ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                        {cartItemUnits ? '📦 Units' : '🚛 Pallets'}
+                                        {cartItemUnits ? '📦 Units ✓' : '🚛 Pallets ✓'}
                                       </span>
                                       <button
                                         onClick={() => {
@@ -4027,7 +4027,7 @@ export default function CustomerPortal() {
                                         {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
                                       </Button>
                                       {hasPalletPricing && product.stock > 0 && (
-                                        <p className="text-xs text-gray-400 text-center mt-1">Choose: units or pallets</p>
+                                        <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
                                       )}
                                     </div>
                                   )}
