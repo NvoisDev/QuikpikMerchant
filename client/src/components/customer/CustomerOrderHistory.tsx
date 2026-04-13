@@ -191,7 +191,7 @@ export const getPaymentMethodLabel = (order: Order): string | null => {
     bank_transfer: 'Bank Transfer',
     payment_link: 'Card / Payment Link',
     pay_later: 'Pay Later',
-    card: 'Card Payment',
+    card: 'Card / Payment Link',
     cheque: 'Cheque',
     other: 'Other',
   };
