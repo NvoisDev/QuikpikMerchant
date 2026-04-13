@@ -2620,12 +2620,16 @@ export default function CustomerPortal() {
                   </div>
 
                   {/* Discover New Sellers */}
-                  {discoverSellers.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Discover New Sellers</h3>
-                      {discoverSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)}
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Discover New Sellers</h3>
+                    {discoverSellers.length > 0 ? (
+                      discoverSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)
+                    ) : (
+                      <p className="text-sm text-gray-400 px-3 py-4">
+                        No new sellers found. Contact a seller to get registered with their store.
+                      </p>
+                    )}
+                  </div>
                 </div>
               );
             })()}
