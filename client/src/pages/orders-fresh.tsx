@@ -1154,6 +1154,8 @@ export default function OrdersFresh() {
                               return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
                             } else if (refAmt > 0 && refAmt < paidAmt) {
                               return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                            } else if (order.status === 'cancelled' && paidAmt === 0) {
+                              return null;
                             } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
                               return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
                             } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
@@ -1309,6 +1311,8 @@ export default function OrdersFresh() {
                             return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
                           } else if (refAmt > 0 && refAmt < paidAmt) {
                             return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                          } else if (order.status === 'cancelled' && paidAmt === 0) {
+                            return null;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
                             return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {

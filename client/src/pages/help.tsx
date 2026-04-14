@@ -21,7 +21,8 @@ import {
   Video,
   FileText,
   Mail,
-  Play
+  Play,
+  Banknote
 } from "lucide-react";
 import OnboardingRestartButton from "@/components/OnboardingRestartButton";
 
@@ -1884,6 +1885,78 @@ A: Yes, organize customers into groups with different pricing or terms as needed
 A: They can access all their registered stores with a single SMS authentication session.
 
 This system balances marketplace discovery with traditional B2B relationship management, giving you the best of both worlds.
+        `
+      }
+    ]
+  },
+  {
+    id: "finance-payouts",
+    title: "Finance & Payouts",
+    icon: Banknote,
+    description: "Track your Stripe payouts and reconcile payments with orders",
+    articles: [
+      {
+        title: "Understanding the Finance Page",
+        content: `
+### What Is the Finance Page?
+
+The **Finance** page (Finance in the sidebar) shows all the money Stripe sends to your bank account — your payouts. It is your single place to check what you've been paid and what is on its way.
+
+#### "To Be Paid" Balance
+
+At the top of the page you'll see a **To be paid** figure. This is money that has been collected from customers but not yet deposited into your bank account. Stripe typically transfers this within **2–7 business days** depending on your account settings and country.
+
+#### Payout Transactions Table
+
+Below the balance is a list of every payout Stripe has sent (or scheduled to send) to your bank. Each row shows:
+- **Payout date** — the date funds arrive in your bank account
+- **Status** — the current state of that payout (see below)
+- **Amount** — the total deposited in that single bank transfer
+
+#### Stripe Not Connected
+
+If you haven't connected a Stripe account yet, the page shows an orange prompt with a button to go to **Settings** and complete the setup. You must have a verified Stripe Connect account to receive payouts and see them here.
+        `
+      },
+      {
+        title: "Payout Statuses",
+        content: `
+### What Each Payout Status Means
+
+| Status | What It Means |
+|--------|--------------|
+| **Scheduled** | Stripe has queued this payout; funds will leave your Stripe balance shortly |
+| **In Transit** | Funds are on their way to your bank — your bank hasn't confirmed receipt yet |
+| **Deposited** | Funds have arrived in your bank account |
+| **Failed** | The payout could not be completed — check your bank account details in Settings → Payments |
+| **Cancelled** | The payout was cancelled before it was sent |
+
+Most payouts move from **Scheduled → In Transit → Deposited** within a few business days. If a payout is stuck on **Failed**, check that your bank account details in your Stripe dashboard are correct.
+        `
+      },
+      {
+        title: "Matching Payouts to Orders",
+        content: `
+### Seeing Which Orders Are in a Payout
+
+Click any row in the payout table to open the **Payout breakdown** panel on the right. This shows every individual transaction that makes up that payout:
+
+- **Order number** — the Quikpik order reference linked to that transaction
+- **Customer name** — who placed the order
+- **Order date** — when the order was created
+- **Amount** — the transaction amount included in this payout
+
+#### How the Amount Is Calculated
+
+The amount shown per transaction is what you actually received — after Quikpik's **3.3% platform fee** has been deducted. For example, if a customer paid £100, your share is approximately £96.70.
+
+#### Older Transactions Without an Order Link
+
+A small number of older transactions may appear without an order number or customer name. This happens for payments processed before payout-to-order tracking was introduced. All newer orders are matched automatically.
+
+#### Offline (Pay Later) Orders
+
+Pay Later and cash/bank-transfer orders are not processed through Stripe, so they will never appear in the Finance page payout list. Payouts here only cover card payments made via Stripe.
         `
       }
     ]
