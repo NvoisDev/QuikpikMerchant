@@ -930,9 +930,7 @@ export default function CustomerPortal() {
   const forceLoginParam = urlParams.has('login');
   const isBrowseMode = urlParams.has('browse');
   const browseFromId = urlParams.get('from'); // origin store ID to return to
-  // Prices are blurred in guest mode OR browse mode
-  const priceGuest = isGuestMode || isBrowseMode;
-  
+
   const [showAuth, setShowAuth] = useState(() => {
     const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
     const isBrowseModeCheck = new URLSearchParams(window.location.search).has('browse');
@@ -941,6 +939,8 @@ export default function CustomerPortal() {
     return !isPreviewModeCheck && !isBrowseModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
+  // Must be declared after isGuestMode — prices blurred in guest mode OR browse mode
+  const priceGuest = isGuestMode || isBrowseMode;
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
