@@ -877,6 +877,21 @@ export default function CustomerPortal() {
   const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
   const [showStoreSwitcher, setShowStoreSwitcher] = useState(false);
 
+  // Dedicated query for the store switcher — only fires when the sheet is open
+  const { data: switcherStores = [], isLoading: switcherStoresLoading } = useQuery({
+    queryKey: ["/api/customer-accessible-wholesalers/switcher", authenticatedCustomer?.phone],
+    queryFn: async () => {
+      const phoneNumber = encodeURIComponent(authenticatedCustomer!.phone);
+      const res = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: showStoreSwitcher && !!authenticatedCustomer?.phone,
+    staleTime: 60 * 1000, // 1 minute — fine for switcher
+  });
+
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
     queryKey: ["/api/customer-orders/stats", wholesalerId, authenticatedCustomer?.phone],
@@ -1043,7 +1058,6 @@ export default function CustomerPortal() {
       authenticatedCustomer?.phone, 
       wholesalerSearchQuery
     ],
-    enabled: !!authenticatedCustomer?.phone,
     queryFn: async () => {
       let response;
       
@@ -2693,8 +2707,7 @@ export default function CustomerPortal() {
             {/* Stores list */}
             <div className="overflow-y-auto flex-1 px-4 py-3">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Your Stores</p>
-              {availableWholesalers
-                .filter((w: any) => w.isAccessible)
+              {switcherStores
                 .map((w: any) => {
                   const isActive = w.id === wholesalerId;
                   return (
@@ -2745,11 +2758,11 @@ export default function CustomerPortal() {
                     </button>
                   );
                 })}
-              {wholesalersLoading ? (
+              {switcherStoresLoading ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="w-6 h-6 rounded-full border-2 border-gray-200 border-t-gray-500 animate-spin" />
                 </div>
-              ) : availableWholesalers.filter((w: any) => w.isAccessible).length === 0 && (
+              ) : switcherStores.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-6">No stores available</p>
               )}
             </div>
