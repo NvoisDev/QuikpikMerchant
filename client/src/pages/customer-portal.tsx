@@ -53,6 +53,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Shared utilities and types
@@ -814,6 +815,7 @@ export default function CustomerPortal() {
 
   // Theme system
   const { theme, changeTheme } = useCustomerTheme();
+  const isMobile = useIsMobile();
 
   // Detect if this is preview mode (accessed via /preview-store or wholesaler viewing own store)
   const isPreviewMode = location === '/preview-store' || location.startsWith('/preview-store/');
@@ -2912,7 +2914,7 @@ export default function CustomerPortal() {
                     </p>
                     <p className="text-[10px] sm:text-xs text-gray-500 font-medium">In Cart</p>
                     {cart.length > 0 && (
-                      <p className="hidden sm:block text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
                     )}
                   </div>
                 </div>
@@ -2923,12 +2925,12 @@ export default function CustomerPortal() {
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
                       <Banknote className="w-4 h-4 sm:w-5 sm:h-5 text-theme-primary" />
                     </div>
-                    <div className="text-sm sm:text-2xl font-extrabold leading-none text-theme-primary">
+                    <div className="font-extrabold leading-none text-theme-primary">
                       <PriceDisplay
                         price={cartStats.totalValue}
                         currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
-                        size="medium"
+                        size={isMobile ? "small" : "medium"}
                       />
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Cart Total</p>
@@ -2946,7 +2948,7 @@ export default function CustomerPortal() {
                     </p>
                     <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Orders</p>
                     {(customerOrderStats?.totalOrders || 0) > 0 && (
-                      <p className="hidden sm:block text-[10px] text-gray-400 leading-none">Tap to view</p>
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to view</p>
                     )}
                   </div>
                 </div>
