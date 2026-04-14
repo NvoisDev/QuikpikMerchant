@@ -41,6 +41,8 @@ async function runStartupMigrations() {
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE`,
     // Task #88: Add payment method to orders for display in order detail
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method varchar`,
+    // Task #154: Update Premium plan display price to £49.99
+    `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'premium' AND monthly_price != '49.99'`,
     // Task #153: Add stripe_transfer_id for exact payout-to-order reconciliation
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_transfer_id VARCHAR`,
     // Task #74: Drop any check constraint on team_members.role so 'viewer' is always valid.
@@ -68,7 +70,7 @@ async function fixStripePricesIfNeeded() {
 
   const EXPECTED: Record<string, { unitAmount: number; currency: string; interval: string; productId: string }> = {
     standard: { unitAmount: 1999, currency: 'gbp', interval: 'month', productId: 'prod_U7iIITiYIFwLA2' },
-    premium:  { unitAmount: 3999, currency: 'gbp', interval: 'month', productId: 'prod_U7iHoOyKGNk4CG' },
+    premium:  { unitAmount: 4999, currency: 'gbp', interval: 'month', productId: 'prod_U7iHoOyKGNk4CG' },
   };
 
   const plans = await db.select({
