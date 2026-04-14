@@ -917,7 +917,7 @@ export default function CustomerPortal() {
       
       return response.json();
     },
-    enabled: !!wholesalerId && !isEnhancedPreviewMode,
+    enabled: !!wholesalerId && !isEnhancedPreviewMode && !isBrowseMode,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
@@ -929,6 +929,9 @@ export default function CustomerPortal() {
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
   const isBrowseMode = urlParams.has('browse');
+  const browseFromId = urlParams.get('from'); // origin store ID to return to
+  // Prices are blurred in guest mode OR browse mode
+  const priceGuest = isGuestMode || isBrowseMode;
   
   const [showAuth, setShowAuth] = useState(() => {
     const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
@@ -1556,10 +1559,12 @@ export default function CustomerPortal() {
   }, [isEnhancedPreviewMode, toast]);
 
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
-    if (isEnhancedPreviewMode) {
+    if (isEnhancedPreviewMode || isBrowseMode) {
       toast({
-        title: "Preview Mode",
-        description: "Cart functionality is disabled in preview mode.",
+        title: isBrowseMode ? "Request access to order" : "Preview Mode",
+        description: isBrowseMode
+          ? "You're browsing in preview mode. Request access to this store to place orders."
+          : "Cart functionality is disabled in preview mode.",
         variant: "destructive",
       });
       return;
@@ -2156,10 +2161,9 @@ export default function CustomerPortal() {
   // Authentication state management using server sessions
   useEffect(() => {
     if (isBrowseMode) {
-      // Browse mode: customer is exploring an inaccessible wholesaler's store
-      // Load the store but keep prices blurred and cart disabled
+      // Browse mode: behaves like enhanced preview — products show, prices blurred via isBrowseMode flag
       setShowAuth(false);
-      setIsGuestMode(true);
+      setIsGuestMode(false);
       setIsAuthenticated(true);
       return;
     }
@@ -2702,7 +2706,7 @@ export default function CustomerPortal() {
                       setBrowseOrAccessTarget(null);
                       setShowWholesalerSearch(false);
                       setWholesalerSearchQuery("");
-                      window.location.href = `/store/${browseOrAccessTarget.id}?browse=true`;
+                      window.location.href = `/store/${browseOrAccessTarget.id}?browse=true${wholesalerId ? `&from=${wholesalerId}` : ''}`;
                     }}
                   >
                     Browse store
@@ -2730,8 +2734,8 @@ export default function CustomerPortal() {
       )}
 
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
-        {/* Guest Mode Notice */}
-        {isGuestMode && (
+        {/* Browse Mode Notice — shown when previewing an inaccessible store */}
+        {isBrowseMode && (
           <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-5">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
@@ -2749,11 +2753,17 @@ export default function CustomerPortal() {
                 <div className="flex items-center gap-3">
                   <button
                     className="text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
-                    onClick={() => window.history.back()}
+                    onClick={() => {
+                      if (browseFromId) {
+                        window.location.href = `/store/${browseFromId}`;
+                      } else {
+                        window.location.href = '/';
+                      }
+                    }}
                   >
-                    ← Back to explore
+                    ← Back to my store
                   </button>
-                  <span className="text-xs text-amber-600">Use "Request Access" from there to get prices</span>
+                  <span className="text-xs text-amber-600">Use "Request Access" from Explore to get prices</span>
                 </div>
               </div>
             </div>
@@ -2959,7 +2969,7 @@ export default function CustomerPortal() {
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                       currency={wholesaler?.defaultCurrency || 'GBP'}
-                                      isGuestMode={isGuestMode}
+                                      isGuestMode={priceGuest}
                                       size="medium"
                                       showStrikethrough={true}
                                     />
@@ -3565,7 +3575,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={'GBP'}
-                                    isGuestMode={isGuestMode}
+                                    isGuestMode={priceGuest}
                                     size="medium"
                                     showStrikethrough={true}
                                   />
@@ -3946,7 +3956,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={wholesaler?.defaultCurrency || 'GBP'}
-                                    isGuestMode={isGuestMode}
+                                    isGuestMode={priceGuest}
                                     size="medium"
                                   />
                                   {product.moq && product.moq > 1 && !cartItem && (
