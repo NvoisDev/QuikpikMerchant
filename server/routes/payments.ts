@@ -996,6 +996,14 @@ export function registerPaymentRoutes(app: Express): void {
       for (const txn of txns.data) {
         if (txn.type === 'payout') continue;
         const source = txn.source as any;
+        console.log('🔍 PAYOUT TXN DEBUG:', JSON.stringify({
+          txnId: txn.id, txnType: txn.type, txnAmount: txn.amount,
+          sourceType: typeof source, sourceId: typeof source === 'string' ? source : source?.id,
+          sourceObject: typeof source === 'object' ? source?.object : 'N/A',
+          sourcePaymentIntent: typeof source === 'object' ? source?.payment_intent : 'N/A',
+          sourceSourceTxn: typeof source === 'object' ? (typeof source?.source_transaction === 'string' ? source?.source_transaction : source?.source_transaction?.id) : 'N/A',
+          sourceTxnPaymentIntent: typeof source === 'object' && typeof source?.source_transaction === 'object' ? source?.source_transaction?.payment_intent : 'N/A',
+        }, null, 2));
         const paymentIntentId = source?.payment_intent ?? source?.source_transaction?.payment_intent;
 
         let orderNumber: string | null = null;
