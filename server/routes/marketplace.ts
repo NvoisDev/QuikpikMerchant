@@ -1044,12 +1044,9 @@ export function registerMarketplaceRoutes(app: Express): void {
           shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
-            productName: item.product.name,
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice),
-            sellingType: item.sellingType || 'units', // CRITICAL: Preserve selling type for order creation
-            appliedOfferLabel: item.appliedOfferLabel || null,
-            freeItems: item.freeItems || 0
+            sellingType: item.sellingType || 'units'
           })))
         }
       }, {
@@ -1102,12 +1099,9 @@ export function registerMarketplaceRoutes(app: Express): void {
                 shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
                 items: JSON.stringify(validatedItems.map(item => ({
                   productId: item.product.id,
-                  productName: item.product.name,
                   quantity: item.quantity,
                   unitPrice: parseFloat(item.unitPrice),
-                  sellingType: item.sellingType || 'units',
-                  appliedOfferLabel: item.appliedOfferLabel || null,
-                  freeItems: item.freeItems || 0
+                  sellingType: item.sellingType || 'units'
                 })))
               }
             };
