@@ -2793,8 +2793,10 @@ export function registerMarketplaceRoutes(app: Express): void {
                 } : null
               } : { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
-                ...item,
-                productName: item.productName || 'Product'
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                sellingType: item.sellingType || 'units'
               })))
             }
           });
@@ -2842,8 +2844,10 @@ export function registerMarketplaceRoutes(app: Express): void {
                 } : null
               } : { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
-                ...item,
-                productName: item.productName || 'Product'
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                sellingType: item.sellingType || 'units'
               })))
             }
           });
@@ -2889,8 +2893,10 @@ export function registerMarketplaceRoutes(app: Express): void {
               } : null
             } : { option: 'pickup' }),
             items: JSON.stringify(items.map(item => ({
-              ...item,
-              productName: item.productName || 'Product'
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              sellingType: item.sellingType || 'units'
             })))
           }
         });
