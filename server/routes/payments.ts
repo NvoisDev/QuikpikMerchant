@@ -942,231 +942,97 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
-  // GET /api/stripe/invoices
-  app.get('/api/stripe/invoices', requireAuth, async (req: any, res) => {
+
+  // GET /api/stripe/payouts
+  app.get('/api/stripe/payouts', requireAuth, async (req: any, res) => {
     try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
+      if (!stripe) return res.status(500).json({ message: 'Stripe not configured' });
 
-      const userId = req.user.id;
-      const { search, status, date_range } = req.query;
-
-      // Get user's Stripe Connect account ID
-      const user = await storage.getUser(userId);
+      const user = await storage.getUser(req.user.id);
       if (!user?.stripeAccountId) {
-        return res.json([]);
+        return res.json({ pendingBalance: 0, payouts: [] });
       }
 
-      // Build Stripe query parameters
-      const stripeParams: any = {
-        limit: 100,
-        expand: ['data.customer'],
-      };
+      const [payoutList, balance] = await Promise.all([
+        stripe.payouts.list({ limit: 25 }, { stripeAccount: user.stripeAccountId }),
+        stripe.balance.retrieve({ stripeAccount: user.stripeAccountId } as any),
+      ]);
 
-      if (status && status !== 'all') {
-        stripeParams.status = status;
-      }
+      const pendingBalance = (balance.pending || []).reduce((sum: number, b: any) => sum + b.amount, 0);
 
-      if (date_range && date_range !== 'all') {
-        const now = new Date();
-        let created_gte;
-        
-        switch (date_range) {
-          case 'today':
-            created_gte = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
-            break;
-          case 'week':
-            created_gte = Math.floor(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime() / 1000);
-            break;
-          case 'month':
-            created_gte = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
-            break;
-          case 'quarter':
-            const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-            created_gte = Math.floor(quarterStart.getTime() / 1000);
-            break;
-          case 'year':
-            created_gte = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
-            break;
-        }
-        
-        if (created_gte) {
-          stripeParams.created = { gte: created_gte };
-        }
-      }
-
-      // Fetch invoices from Stripe Connect account
-      const invoices = await stripe.invoices.list(stripeParams, {
-        stripeAccount: user.stripeAccountId,
-      });
-
-      // Filter by search term if provided
-      let filteredInvoices = invoices.data;
-      if (search) {
-        const searchLower = search.toString().toLowerCase();
-        filteredInvoices = invoices.data.filter(invoice => 
-          invoice.number?.toLowerCase().includes(searchLower) ||
-          invoice.customer_name?.toLowerCase().includes(searchLower) ||
-          invoice.customer_email?.toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Format invoices for frontend
-      const formattedInvoices = filteredInvoices.map(invoice => ({
-        id: invoice.id,
-        number: invoice.number,
-        status: invoice.status,
-        amount_due: invoice.amount_due,
-        amount_paid: invoice.amount_paid,
-        amount_remaining: invoice.amount_remaining,
-        currency: invoice.currency,
-        created: invoice.created,
-        due_date: invoice.due_date,
-        customer_name: invoice.customer_name,
-        customer_email: invoice.customer_email,
-        description: invoice.description,
-        hosted_invoice_url: invoice.hosted_invoice_url,
-        invoice_pdf: invoice.invoice_pdf,
+      const payouts = payoutList.data.map((p: any) => ({
+        id: p.id,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        arrivalDate: p.arrival_date,
+        created: p.created,
+        description: p.description,
       }));
 
-      res.json(formattedInvoices);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
+      res.json({ pendingBalance, payouts });
+    } catch (error: any) {
+      console.error('Error fetching payouts:', error);
+      res.status(500).json({ message: 'Failed to fetch payouts' });
     }
   });
 
-  // GET /api/stripe/financial-summary
-  app.get('/api/stripe/financial-summary', requireAuth, async (req: any, res) => {
+  // GET /api/stripe/payouts/:payoutId/transactions
+  app.get('/api/stripe/payouts/:payoutId/transactions', requireAuth, async (req: any, res) => {
     try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
+      if (!stripe) return res.status(500).json({ message: 'Stripe not configured' });
 
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user?.stripeAccountId) {
-        return res.json({
-          totalRevenue: 0,
-          revenueChange: 0,
-          paidInvoices: 0,
-          paidInvoicesChange: 0,
-          pendingAmount: 0,
-          pendingCount: 0,
-          platformFees: 0
+      const user = await storage.getUser(req.user.id);
+      if (!user?.stripeAccountId) return res.status(404).json({ message: 'No Stripe account' });
+
+      const { payoutId } = req.params;
+
+      const txns = await stripe.balanceTransactions.list(
+        { payout: payoutId, limit: 100, expand: ['data.source', 'data.source.source_transaction'] } as any,
+        { stripeAccount: user.stripeAccountId }
+      );
+
+      const results = [];
+      for (const txn of txns.data) {
+        if (txn.type === 'payout') continue;
+        const source = txn.source as any;
+        const charge = source?.source_transaction;
+        const paymentIntentId = charge?.payment_intent;
+
+        let orderNumber: string | null = null;
+        let customerName: string | null = null;
+        let orderTotal: number | null = null;
+
+        if (paymentIntentId && typeof paymentIntentId === 'string') {
+          try {
+            const order = await storage.getOrderByPaymentIntentId(paymentIntentId);
+            if (order) {
+              orderNumber = order.orderNumber;
+              customerName = order.customerName;
+              orderTotal = order.subtotal ? Number(order.subtotal) : Number(order.total);
+            }
+          } catch (_) {}
+        }
+
+        results.push({
+          id: txn.id,
+          amount: txn.amount,
+          currency: txn.currency,
+          date: txn.created,
+          description: txn.description,
+          orderNumber,
+          customerName,
+          orderTotal,
         });
       }
 
-      // Get current month and last month dates
-      const now = new Date();
-      const currentMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
-      const lastMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime() / 1000);
-      const lastMonthEnd = currentMonthStart - 1;
-
-      // Fetch current month invoices
-      const currentMonthInvoices = await stripe.invoices.list({
-        created: { gte: currentMonthStart },
-        limit: 100
-      }, {
-        stripeAccount: user.stripeAccountId,
-      });
-
-      // Fetch last month invoices for comparison
-      const lastMonthInvoices = await stripe.invoices.list({
-        created: { gte: lastMonthStart, lte: lastMonthEnd },
-        limit: 100
-      }, {
-        stripeAccount: user.stripeAccountId,
-      });
-
-      // Calculate current month metrics
-      const currentRevenue = currentMonthInvoices.data
-        .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
-
-      const currentPaidCount = currentMonthInvoices.data
-        .filter(inv => inv.status === 'paid').length;
-
-      // Calculate last month metrics for comparison
-      const lastRevenue = lastMonthInvoices.data
-        .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
-
-      const lastPaidCount = lastMonthInvoices.data
-        .filter(inv => inv.status === 'paid').length;
-
-      // Calculate pending amounts
-      const pendingInvoices = currentMonthInvoices.data.filter(inv => inv.status === 'open');
-      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount_due, 0) / 100;
-
-      // Calculate changes
-      const revenueChange = lastRevenue > 0 ? ((currentRevenue - lastRevenue) / lastRevenue * 100) : 0;
-      const paidInvoicesChange = lastPaidCount > 0 ? ((currentPaidCount - lastPaidCount) / lastPaidCount * 100) : 0;
-
-      // Platform fees (5% of total revenue)
-      const platformFees = currentRevenue * 0.05;
-
-      res.json({
-        totalRevenue: currentRevenue,
-        revenueChange: Math.round(revenueChange * 10) / 10,
-        paidInvoices: currentPaidCount,
-        paidInvoicesChange: Math.round(paidInvoicesChange * 10) / 10,
-        pendingAmount,
-        pendingCount: pendingInvoices.length,
-        platformFees: Math.round(platformFees * 100) / 100
-      });
-    } catch (error) {
-      console.error("Error fetching financial summary:", error);
-      res.status(500).json({ message: "Failed to fetch financial summary" });
+      res.json({ transactions: results });
+    } catch (error: any) {
+      console.error('Error fetching payout transactions:', error);
+      res.status(500).json({ message: 'Failed to fetch payout transactions' });
     }
   });
 
-  // GET /api/stripe/invoices/:invoiceId/download
-  app.get('/api/stripe/invoices/:invoiceId/download', requireAuth, async (req: any, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
-
-      const userId = req.user.id;
-      const { invoiceId } = req.params;
-
-      const user = await storage.getUser(userId);
-      if (!user?.stripeAccountId) {
-        return res.status(404).json({ message: "Stripe account not found" });
-      }
-
-      // Get invoice from Stripe
-      const invoice = await stripe.invoices.retrieve(invoiceId, {
-        stripeAccount: user.stripeAccountId,
-      });
-
-      if (!invoice.invoice_pdf) {
-        return res.status(404).json({ message: "Invoice PDF not available" });
-      }
-
-      // Fetch the PDF
-      const response = await fetch(invoice.invoice_pdf);
-      if (!response.ok) {
-        throw new Error('Failed to fetch invoice PDF');
-      }
-
-      const buffer = await response.arrayBuffer();
-      
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.pdf"`,
-        'Content-Length': buffer.byteLength.toString()
-      });
-
-      res.send(Buffer.from(buffer));
-    } catch (error) {
-      console.error("Error downloading invoice:", error);
-      res.status(500).json({ message: "Failed to download invoice" });
-    }
-  });
 
   // GET /api/subscriptions/plans
   app.get('/api/subscriptions/plans', async (req, res) => {
