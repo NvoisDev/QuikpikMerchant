@@ -994,7 +994,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               destination: wholesaler.stripeAccountId,
               amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
             };
-            paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
             console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
           }
         }
