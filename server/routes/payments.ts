@@ -988,96 +988,44 @@ export function registerPaymentRoutes(app: Express): void {
       const { payoutId } = req.params;
 
       const txns = await stripe.balanceTransactions.list(
-        { payout: payoutId, limit: 100, expand: ['data.source', 'data.source.source_transaction'] } as any,
+        { payout: payoutId, limit: 100 },
         { stripeAccount: user.stripeAccountId }
       );
 
-      // Helper: extract payment intent ID from any source shape
-      const resolvePaymentIntentId = async (source: any): Promise<string | null> => {
-        try {
-          if (!source) return null;
+      // Extract date range from Stripe transactions (skip the payout entry itself)
+      const chargeTxns = txns.data.filter((t) => t.type !== 'payout');
+      const timestamps = chargeTxns.map((t) => t.created);
+      const minTs = timestamps.length ? Math.min(...timestamps) : Math.floor(Date.now() / 1000) - 86400;
+      const maxTs = timestamps.length ? Math.max(...timestamps) : Math.floor(Date.now() / 1000);
 
-          // Case 1: source is an expanded object (charge or transfer)
-          if (typeof source === 'object') {
-            // Direct payment_intent on source (direct charge on connected account)
-            const directPi = source.payment_intent;
-            if (directPi) return typeof directPi === 'string' ? directPi : directPi?.id ?? null;
+      // Add a 1-day buffer either side to catch any timezone/processing delays
+      const fromDate = new Date((minTs - 86400) * 1000);
+      const toDate   = new Date((maxTs + 86400) * 1000);
 
-            // Transfer with source_transaction pointing to platform charge
-            const st = source.source_transaction;
-            if (st) {
-              if (typeof st === 'string' && st.startsWith('ch_')) {
-                // Not expanded — retrieve the platform charge directly
-                const charge = await stripe!.charges.retrieve(st);
-                const cPi = charge.payment_intent;
-                return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
-              }
-              if (typeof st === 'object') {
-                const stPi = st.payment_intent;
-                return typeof stPi === 'string' ? stPi : stPi?.id ?? null;
-              }
-            }
-            return null;
-          }
+      // Pull matching orders straight from our DB — no Stripe source parsing needed
+      const matchedOrders = await storage.getStripeOrdersForDateRange(
+        user.id,
+        fromDate,
+        toDate
+      );
 
-          // Case 2: source is a string ID (not expanded)
-          if (typeof source === 'string') {
-            if (source.startsWith('ch_')) {
-              const charge = await stripe!.charges.retrieve(source);
-              const cPi = charge.payment_intent;
-              return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
-            }
-            if (source.startsWith('tr_')) {
-              const transfer = await stripe!.transfers.retrieve(source);
-              const st = transfer.source_transaction as any;
-              if (st) {
-                const chargeId = typeof st === 'string' ? st : st?.id;
-                if (chargeId?.startsWith('ch_')) {
-                  const charge = await stripe!.charges.retrieve(chargeId);
-                  const cPi = charge.payment_intent;
-                  return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
-                }
-              }
-            }
-          }
-        } catch (_) {}
-        return null;
-      };
+      const transactions = chargeTxns.map((t) => ({
+        id: t.id,
+        amount: t.amount,
+        currency: t.currency,
+        date: t.created,
+      }));
 
-      const results = [];
-      for (const txn of txns.data) {
-        if (txn.type === 'payout') continue;
+      const orderRows = matchedOrders.map((o) => ({
+        orderNumber: o.orderNumber,
+        customerName: o.customerName,
+        subtotal: o.subtotal,
+        platformFee: o.platformFee,
+        deliveryCost: o.deliveryCost,
+        createdAt: o.createdAt,
+      }));
 
-        const paymentIntentId = await resolvePaymentIntentId(txn.source);
-
-        let orderNumber: string | null = null;
-        let customerName: string | null = null;
-        let orderTotal: number | null = null;
-
-        if (paymentIntentId) {
-          try {
-            const order = await storage.getOrderByPaymentIntentId(paymentIntentId);
-            if (order) {
-              orderNumber = order.orderNumber;
-              customerName = order.customerName;
-              orderTotal = order.subtotal ? Number(order.subtotal) : Number(order.total);
-            }
-          } catch (_) {}
-        }
-
-        results.push({
-          id: txn.id,
-          amount: txn.amount,
-          currency: txn.currency,
-          date: txn.created,
-          description: txn.description,
-          orderNumber,
-          customerName,
-          orderTotal,
-        });
-      }
-
-      res.json({ transactions: results });
+      res.json({ transactions, orders: orderRows });
     } catch (error: any) {
       console.error('Error fetching payout transactions:', error);
       res.status(500).json({ message: 'Failed to fetch payout transactions' });

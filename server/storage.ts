@@ -114,6 +114,7 @@ export interface IStorage {
   getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined>;
   getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined>;
+  getStripeOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
@@ -1550,6 +1551,21 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return result[0];
+  }
+
+  async getStripeOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]> {
+    return db
+      .select()
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.createdAt} >= ${fromDate}`,
+        sql`${orders.createdAt} <= ${toDate}`,
+        sql`${orders.stripePaymentIntentId} IS NOT NULL`,
+        sql`${orders.stripePaymentIntentId} != ''`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`
+      ))
+      .orderBy(desc(orders.createdAt));
   }
 
   async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order> {

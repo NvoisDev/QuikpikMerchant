@@ -37,10 +37,15 @@ interface PayoutTransaction {
   amount: number;
   currency: string;
   date: number;
-  description: string | null;
+}
+
+interface PayoutOrder {
   orderNumber: string | null;
   customerName: string | null;
-  orderTotal: number | null;
+  subtotal: string | null;
+  platformFee: string | null;
+  deliveryCost: string | null;
+  createdAt: string | null;
 }
 
 function formatDate(unixTs: number) {
@@ -83,7 +88,7 @@ export default function Financials() {
     },
   });
 
-  const { data: detailData, isLoading: detailLoading } = useQuery<{ transactions: PayoutTransaction[] }>({
+  const { data: detailData, isLoading: detailLoading } = useQuery<{ transactions: PayoutTransaction[]; orders: PayoutOrder[] }>({
     queryKey: ["/api/stripe/payouts", selectedPayout?.id, "transactions"],
     queryFn: async () => {
       const res = await fetch(`/api/stripe/payouts/${selectedPayout!.id}/transactions`, { credentials: "include" });
@@ -234,7 +239,7 @@ export default function Financials() {
                       <Skeleton key={i} className="h-10 w-full rounded" />
                     ))}
                   </div>
-                ) : !detailData || detailData.transactions.length === 0 ? (
+                ) : !detailData || detailData.orders.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     <p className="text-sm">No order breakdown available for this payout.</p>
@@ -247,26 +252,30 @@ export default function Financials() {
                           <TableHead className="text-xs font-semibold text-gray-600">Order</TableHead>
                           <TableHead className="text-xs font-semibold text-gray-600">Customer</TableHead>
                           <TableHead className="text-xs font-semibold text-gray-600">Date</TableHead>
-                          <TableHead className="text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-600 text-right">Net</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {detailData.transactions.map((txn) => (
-                          <TableRow key={txn.id}>
-                            <TableCell className="font-medium text-sm">
-                              {txn.orderNumber ? `#${txn.orderNumber}` : <span className="text-gray-400 text-xs">—</span>}
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-700">
-                              {txn.customerName ?? <span className="text-gray-400 text-xs">—</span>}
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-500">
-                              {formatDate(txn.date)}
-                            </TableCell>
-                            <TableCell className="text-right text-sm font-medium text-gray-900">
-                              {formatAmount(txn.amount, txn.currency)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {detailData.orders.map((order, i) => {
+                          const net = (Number(order.subtotal ?? 0) + Number(order.deliveryCost ?? 0) - Number(order.platformFee ?? 0));
+                          const dateMs = order.createdAt ? new Date(order.createdAt).getTime() / 1000 : 0;
+                          return (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium text-sm">
+                                {order.orderNumber ? `#${order.orderNumber}` : <span className="text-gray-400 text-xs">—</span>}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-700">
+                                {order.customerName ?? <span className="text-gray-400 text-xs">—</span>}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-500">
+                                {dateMs ? formatDate(dateMs) : "—"}
+                              </TableCell>
+                              <TableCell className="text-right text-sm font-medium text-gray-900">
+                                {formatAmount(Math.round(net * 100), "gbp")}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
