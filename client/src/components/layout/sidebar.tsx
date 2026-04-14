@@ -31,6 +31,7 @@ import {
   Badge,
   Tag,
   Puzzle,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -56,6 +57,7 @@ const navigation: NavigationItem[] = [
   { name: "Marketplace", href: "#", icon: Store, tabName: "marketplace", comingSoon: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
+  { name: "Finance", href: "/financials", icon: Banknote, tabName: "finance" },
   { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];

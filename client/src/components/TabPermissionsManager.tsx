@@ -20,7 +20,8 @@ import {
   CreditCard,
   Lock,
   Shield,
-  Puzzle
+  Puzzle,
+  Banknote
 } from 'lucide-react';
 
 const TAB_CONFIGS = [
@@ -71,6 +72,12 @@ const TAB_CONFIGS = [
     label: 'Team Management', 
     icon: UserCog,
     description: 'Team member invitations and management'
+  },
+  { 
+    name: 'finance', 
+    label: 'Finance', 
+    icon: Banknote,
+    description: 'Stripe payouts and balance overview'
   },
   { 
     name: 'subscription', 

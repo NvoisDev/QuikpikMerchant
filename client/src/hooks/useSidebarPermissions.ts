@@ -77,6 +77,7 @@ export function getTabNameFromPath(path: string): string {
     'integrations': 'integrations',
     'marketplace': 'marketplace',
     'team-management': 'team-management',
+    'financials': 'finance',
     'subscription-pricing': 'subscription',
     'settings': 'settings',
     'help': 'settings',
