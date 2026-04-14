@@ -3857,7 +3857,7 @@ export default function CustomerPortal() {
                               </div>
                               
                               {/* Product Info */}
-                              <div className="flex flex-col justify-between flex-1 py-1 min-w-0">
+                              <div className="flex flex-col flex-1 py-1 min-w-0">
                                 <div>
                                   <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 mb-1">
                                     {product.name}
@@ -3927,11 +3927,9 @@ export default function CustomerPortal() {
                                     </div>
                                   )}
                                 </div>
-                                
-
 
                                 {/* Price */}
-                                <div className="my-1.5">
+                                <div className="mt-1.5">
                                   <PriceDisplay
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
@@ -3949,8 +3947,10 @@ export default function CustomerPortal() {
                                     </p>
                                   )}
                                 </div>
+                              </div>
 
-                                {/* Add to Cart Controls */}
+                              {/* Add to Cart Controls — pinned top-right */}
+                              <div className="flex-shrink-0 self-start flex flex-col items-end pt-1">
                                 <div className="space-y-2">
                                   {/* Type badge + Change link (single type in cart) */}
                                   {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
@@ -4130,7 +4130,7 @@ export default function CustomerPortal() {
                                         {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
                                       </Button>
                                       {hasPalletPricing && product.stock > 0 && (
-                                        <p className="text-xs text-gray-500 text-right">units or pallets</p>
+                                        <p className="text-xs text-gray-500 text-center">units or pallets</p>
                                       )}
                                     </div>
                                   )}
