@@ -1526,18 +1526,22 @@ export function registerMarketplaceRoutes(app: Express): void {
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
-        // Capture Stripe Transfer ID for exact payout-to-order reconciliation
+        // Capture Stripe Transfer ID for exact payout-to-order reconciliation.
+        // This runs outside the transaction so a Stripe API failure never blocks the order.
         if (stripe && paymentIntent?.id) {
           try {
             const expandedPi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
               expand: ['latest_charge'],
-            } as any);
-            const charge = (expandedPi as any).latest_charge;
-            const transferId = charge
-              ? (typeof charge.transfer === 'string' ? charge.transfer : (charge.transfer as any)?.id)
-              : null;
+            });
+            const latestCharge = expandedPi.latest_charge;
+            // After expansion latest_charge is an object; when not expanded it is a string id.
+            const charge = latestCharge && typeof latestCharge === 'object' ? latestCharge : null;
+            const rawTransfer = charge?.transfer;
+            const transferId = typeof rawTransfer === 'string'
+              ? rawTransfer
+              : (rawTransfer && typeof rawTransfer === 'object' ? rawTransfer.id : null);
             if (transferId) {
-              await storage.updateOrder(order.id, { stripeTransferId: transferId } as any);
+              await storage.updateOrder(order.id, { stripeTransferId: transferId });
               console.log(`✅ Stored Stripe Transfer ID ${transferId} on order ${order.id}`);
             }
           } catch (transferErr) {

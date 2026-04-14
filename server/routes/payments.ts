@@ -992,59 +992,36 @@ export function registerPaymentRoutes(app: Express): void {
         { stripeAccount: user.stripeAccountId }
       );
 
-      // Skip the payout debit entry itself — keep only charge/payment transactions
-      const chargeTxns = txns.data.filter((t) => t.type !== 'payout');
+      // On a connected account, payment/charge balance transactions have `source` = Transfer ID (tr_xxx).
+      // Refunds, fees, and the payout debit itself are excluded.
+      const chargeTxns = txns.data.filter(
+        (t) => t.type === 'payment' || t.type === 'charge'
+      );
 
-      const transactions = chargeTxns.map((t) => ({
-        id: t.id,
-        amount: t.amount,
-        currency: t.currency,
-        date: t.created,
-      }));
-
-      // --- Exact match: use the Stripe Transfer ID stored on each order ---
-      // On the connected account, each balance transaction's `source` is the Transfer ID (tr_xxx)
-      const exactMatchResults = await Promise.all(
+      // Per-transaction exact match: Transfer ID → DB order (stored at order-creation time).
+      // Unmatched transactions (old orders, pre-fix) appear with null order fields.
+      const transactions = await Promise.all(
         chargeTxns.map(async (t) => {
-          const transferId = typeof t.source === 'string' ? t.source : (t.source as any)?.id;
+          // When not expanded, t.source is already the string Transfer ID.
+          const transferId = typeof t.source === 'string' ? t.source : null;
           const order = transferId ? await storage.getOrderByTransferId(transferId) : undefined;
-          return { txn: t, order };
+          const net = order
+            ? Number(order.subtotal ?? 0) + Number(order.deliveryCost ?? 0) - Number(order.platformFee ?? 0)
+            : null;
+          return {
+            id: t.id,
+            amount: t.amount,
+            currency: t.currency,
+            date: t.created,
+            orderNumber: order?.orderNumber ?? null,
+            customerName: order?.customerName ?? null,
+            orderTotal: net !== null ? net.toFixed(2) : null,
+            createdAt: order?.createdAt ?? null,
+          };
         })
       );
 
-      const exactlyMatched = exactMatchResults.filter(({ order }) => !!order);
-
-      let orderRows: any[];
-
-      if (exactlyMatched.length > 0) {
-        // New orders (post-fix): 1-to-1 Transfer ID → order match
-        orderRows = exactlyMatched.map(({ order }) => ({
-          orderNumber: order!.orderNumber,
-          customerName: order!.customerName,
-          subtotal: order!.subtotal,
-          platformFee: order!.platformFee,
-          deliveryCost: order!.deliveryCost,
-          createdAt: order!.createdAt,
-        }));
-      } else {
-        // Fallback for old payouts (pre-fix): approximate date-range match
-        const timestamps = chargeTxns.map((t) => t.created);
-        const minTs = timestamps.length ? Math.min(...timestamps) : Math.floor(Date.now() / 1000) - 86400;
-        const maxTs = timestamps.length ? Math.max(...timestamps) : Math.floor(Date.now() / 1000);
-        const fromDate = new Date((minTs - 86400) * 1000);
-        const toDate   = new Date((maxTs + 86400) * 1000);
-        const matchedOrders = await storage.getStripeOrdersForDateRange(user.id, fromDate, toDate);
-        orderRows = matchedOrders.map((o) => ({
-          orderNumber: o.orderNumber,
-          customerName: o.customerName,
-          subtotal: o.subtotal,
-          platformFee: o.platformFee,
-          deliveryCost: o.deliveryCost,
-          createdAt: o.createdAt,
-        }));
-      }
-
-      res.json({ transactions, orders: orderRows });
+      res.json({ transactions });
     } catch (error: any) {
       console.error('Error fetching payout transactions:', error);
       res.status(500).json({ message: 'Failed to fetch payout transactions' });

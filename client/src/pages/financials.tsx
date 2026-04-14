@@ -37,14 +37,9 @@ interface PayoutTransaction {
   amount: number;
   currency: string;
   date: number;
-}
-
-interface PayoutOrder {
   orderNumber: string | null;
   customerName: string | null;
-  subtotal: string | null;
-  platformFee: string | null;
-  deliveryCost: string | null;
+  orderTotal: string | null;
   createdAt: string | null;
 }
 
@@ -56,11 +51,26 @@ function formatDate(unixTs: number) {
   });
 }
 
+function formatDateStr(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function formatAmount(pence: number, currencyCode: string) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: currencyCode.toUpperCase(),
   }).format(pence / 100);
+}
+
+function formatPounds(pounds: string) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(Number(pounds));
 }
 
 function PayoutStatusBadge({ status }: { status: string }) {
@@ -88,7 +98,7 @@ export default function Financials() {
     },
   });
 
-  const { data: detailData, isLoading: detailLoading } = useQuery<{ transactions: PayoutTransaction[]; orders: PayoutOrder[] }>({
+  const { data: detailData, isLoading: detailLoading } = useQuery<{ transactions: PayoutTransaction[] }>({
     queryKey: ["/api/stripe/payouts", selectedPayout?.id, "transactions"],
     queryFn: async () => {
       const res = await fetch(`/api/stripe/payouts/${selectedPayout!.id}/transactions`, { credentials: "include" });
@@ -136,7 +146,7 @@ export default function Financials() {
           </Card>
         )}
 
-        {/* Payout transactions table */}
+        {/* Payout list table */}
         <div>
           <h2 className="text-base font-semibold text-gray-900 mb-3">Payout transactions</h2>
 
@@ -239,7 +249,7 @@ export default function Financials() {
                       <Skeleton key={i} className="h-10 w-full rounded" />
                     ))}
                   </div>
-                ) : !detailData || detailData.orders.length === 0 ? (
+                ) : !detailData || detailData.transactions.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     <p className="text-sm">No order breakdown available for this payout.</p>
@@ -256,26 +266,26 @@ export default function Financials() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {detailData.orders.map((order, i) => {
-                          const net = (Number(order.subtotal ?? 0) + Number(order.deliveryCost ?? 0) - Number(order.platformFee ?? 0));
-                          const dateMs = order.createdAt ? new Date(order.createdAt).getTime() / 1000 : 0;
-                          return (
-                            <TableRow key={i}>
-                              <TableCell className="font-medium text-sm">
-                                {order.orderNumber ? `#${order.orderNumber}` : <span className="text-gray-400 text-xs">—</span>}
-                              </TableCell>
-                              <TableCell className="text-sm text-gray-700">
-                                {order.customerName ?? <span className="text-gray-400 text-xs">—</span>}
-                              </TableCell>
-                              <TableCell className="text-sm text-gray-500">
-                                {dateMs ? formatDate(dateMs) : "—"}
-                              </TableCell>
-                              <TableCell className="text-right text-sm font-medium text-gray-900">
-                                {formatAmount(Math.round(net * 100), "gbp")}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                        {detailData.transactions.map((txn) => (
+                          <TableRow key={txn.id}>
+                            <TableCell className="font-medium text-sm">
+                              {txn.orderNumber
+                                ? `#${txn.orderNumber}`
+                                : <span className="text-gray-400 text-xs">—</span>}
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-700">
+                              {txn.customerName ?? <span className="text-gray-400 text-xs">—</span>}
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-500">
+                              {txn.createdAt ? formatDateStr(txn.createdAt) : formatDate(txn.date)}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-medium text-gray-900">
+                              {txn.orderTotal
+                                ? formatPounds(txn.orderTotal)
+                                : formatAmount(txn.amount, txn.currency)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
