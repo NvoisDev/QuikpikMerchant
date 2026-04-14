@@ -3975,7 +3975,7 @@ export default function CustomerPortal() {
                                   )}
                                   {/* Units stepper */}
                                   {cartItemUnits && (
-                                    <div>
+                                    <div className="flex flex-col items-end">
                                       {cartItemPallets && <p className="text-xs font-medium text-emerald-700 mb-1">📦 Units</p>}
                                       <div className="flex items-center gap-2">
                                         <Button size="sm" variant="outline" onClick={() => {
@@ -4052,7 +4052,7 @@ export default function CustomerPortal() {
 
                                   {/* Pallets stepper */}
                                   {cartItemPallets && hasPalletPricing && (
-                                    <div>
+                                    <div className="flex flex-col items-end">
                                       {cartItemUnits && <p className="text-xs font-medium text-blue-700 mb-1">🚛 Pallets</p>}
                                       <div className="flex items-center gap-2">
                                         <Button size="sm" variant="outline" onClick={() => {
@@ -4127,7 +4127,7 @@ export default function CustomerPortal() {
                                         style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                       >
                                         <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add →' : 'Add to Cart'}
+                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
                                       </Button>
                                       {hasPalletPricing && product.stock > 0 && (
                                         <p className="text-xs text-gray-500 text-right">units or pallets</p>
