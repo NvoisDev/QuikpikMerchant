@@ -1546,7 +1546,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(orders)
-      .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+      .where(ilike(orders.stripePaymentIntentId, `%${paymentIntentId}%`))
       .limit(1);
     
     return result[0];
