@@ -955,7 +955,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const [payoutList, balance] = await Promise.all([
         stripe.payouts.list({ limit: 25 }, { stripeAccount: user.stripeAccountId }),
-        stripe.balance.retrieve({ stripeAccount: user.stripeAccountId }),
+        stripe.balance.retrieve({}, { stripeAccount: user.stripeAccountId }),
       ]);
 
       const pendingBalance = (balance.pending || []).reduce((sum: number, b: any) => sum + b.amount, 0);
@@ -998,13 +998,23 @@ export function registerPaymentRoutes(app: Express): void {
         (t) => t.type === 'payment' || t.type === 'charge'
       );
 
-      // Per-transaction exact match: Transfer ID → DB order (stored at order-creation time).
-      // Unmatched transactions (old orders, pre-fix) appear with null order fields.
+      // Per-transaction order match with two complementary strategies:
+      //   - source starts with "tr_": destination charge → look up by Transfer ID (new orders)
+      //   - source starts with "pi_": direct connected-account charge → look up by PaymentIntent ID
+      // Both strategies use exact DB lookups; unmatched transactions appear with null order fields.
       const transactions = await Promise.all(
         chargeTxns.map(async (t) => {
-          // When not expanded, t.source is already the string Transfer ID.
-          const transferId = typeof t.source === 'string' ? t.source : null;
-          const order = transferId ? await storage.getOrderByTransferId(transferId) : undefined;
+          const sourceId = typeof t.source === 'string' ? t.source : null;
+          let order: Awaited<ReturnType<typeof storage.getOrderByTransferId>> | undefined;
+
+          if (sourceId?.startsWith('tr_')) {
+            // Destination charge: source is the Stripe Transfer ID stored at order creation
+            order = await storage.getOrderByTransferId(sourceId);
+          } else if (sourceId?.startsWith('pi_')) {
+            // Direct charge on connected account: source is the PaymentIntent ID
+            order = await storage.getOrderByPaymentIntentId(sourceId);
+          }
+
           const net = order
             ? Number(order.subtotal ?? 0) + Number(order.deliveryCost ?? 0) - Number(order.platformFee ?? 0)
             : null;
