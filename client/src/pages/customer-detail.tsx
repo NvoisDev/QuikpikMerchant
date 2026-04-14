@@ -529,32 +529,35 @@ export default function CustomerDetail() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          className="flex-1 flex flex-col items-center gap-1 h-auto py-3 bg-green-600 hover:bg-green-700 text-white"
-          onClick={() => navigate(`/quick-quote?customerId=${customerId}`)}
-        >
-          <FileText className="h-4 w-4" />
-          <span className="text-xs font-medium">Raise Quote</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="flex-1 flex flex-col items-center gap-1 h-auto py-3"
-          onClick={() => navigate(`/orders?customerId=${customerId}&search=${encodeURIComponent(fullName)}`)}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          <span className="text-xs font-medium">View Orders</span>
-        </Button>
-        {customer.phoneNumber && (
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3">Quick actions</h2>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 flex flex-col items-center gap-1 h-auto py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => navigate(`/quick-quote?customerId=${customerId}`)}
+          >
+            <FileText className="h-4 w-4" />
+            <span className="text-xs font-medium">Raise Quote</span>
+          </Button>
           <Button
             variant="outline"
-            className="flex-1 flex flex-col items-center gap-1 h-auto py-3"
-            onClick={() => window.open(`https://wa.me/${customer.phoneNumber.replace(/[^0-9]/g, '')}`, '_blank')}
+            className="flex-1 flex flex-col items-center gap-1 h-auto py-3 rounded-xl"
+            onClick={() => navigate(`/orders?customerId=${customerId}&search=${encodeURIComponent(fullName)}`)}
           >
-            <MessageSquare className="h-4 w-4" />
-            <span className="text-xs font-medium">WhatsApp</span>
+            <ShoppingBag className="h-4 w-4" />
+            <span className="text-xs font-medium">View Orders</span>
           </Button>
-        )}
+          {customer.phoneNumber && (
+            <Button
+              variant="outline"
+              className="flex-1 flex flex-col items-center gap-1 h-auto py-3 rounded-xl"
+              onClick={() => window.open(`https://wa.me/${customer.phoneNumber.replace(/[^0-9]/g, '')}`, '_blank')}
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="text-xs font-medium">WhatsApp</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Separator />
