@@ -944,7 +944,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                     );
                   })()}
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} units × {fmt(item.unitPrice)}
+                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {fmt(item.unitPrice)}
                     {(item.freeItems ?? 0) > 0 && (
                       <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}
@@ -1460,7 +1460,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                     );
                   })()}
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} units × {fmt(item.unitPrice)}
+                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {fmt(item.unitPrice)}
                     {(item.freeItems ?? 0) > 0 && (
                       <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}

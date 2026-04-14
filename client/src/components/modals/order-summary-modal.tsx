@@ -22,6 +22,7 @@ import {
 interface CartItem {
   productId: number;
   quantity: number;
+  sellingType?: 'units' | 'pallets';
   product: {
     id: number;
     name: string;
@@ -197,7 +198,7 @@ export default function OrderSummaryModal({
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{item.product.name}</h4>
                       <div className="text-sm text-gray-600 space-y-1">
-                        <p>Quantity: {item.quantity} units</p>
+                        <p>Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'}</p>
                         <p>Unit Price: {formatCurrency(item.product.price)}</p>
                         {item.quantity < item.product.moq && (
                           <div className="flex items-center text-orange-600">

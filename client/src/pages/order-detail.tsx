@@ -968,7 +968,7 @@ export default function OrderDetail() {
                 <div className="flex-1">
                   <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
                   <div className="text-xs text-gray-500">
-                    Quantity: {item.quantity} units × {formatMoney(parseFloat(item.unitPrice))}
+                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {formatMoney(parseFloat(item.unitPrice))}
                   </div>
                   {item.appliedOfferLabel && (
                     <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full mt-0.5">
