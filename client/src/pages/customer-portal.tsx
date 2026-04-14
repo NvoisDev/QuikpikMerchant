@@ -3214,6 +3214,62 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6 mb-16 pb-6">
+              {/* Stats Bar */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* Cart Items */}
+                <div
+                  className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
+                >
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                      {cart.reduce((total, item) => total + item.quantity, 0)}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium">In Cart</p>
+                    {cart.length > 0 && (
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cart Value */}
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <div className="font-extrabold leading-none text-theme-primary">
+                      <PriceDisplay
+                        price={cartStats.totalValue}
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
+                        isGuestMode={false}
+                        size="medium"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
+                  </div>
+                </div>
+
+                {/* Total Orders */}
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                      {customerOrderStats?.totalOrders || 0}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium">Orders</p>
+                    {(customerOrderStats?.totalOrders || 0) > 0 && (
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to view</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Product Search and Filters */}
               {/* Sticky search + filter toolbar */}
               <div className="sticky top-16 z-30 bg-white -mx-4 px-4 pt-2 pb-3 border-b border-gray-100 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-xl sm:shadow-sm sm:border-gray-100">
