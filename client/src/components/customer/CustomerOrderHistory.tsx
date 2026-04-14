@@ -926,11 +926,23 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {item.appliedOfferLabel && (
-                    <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mt-0.5">
-                      🎁 {item.appliedOfferLabel}
-                    </span>
-                  )}
+                  {item.appliedOfferLabel && (() => {
+                    const parts = item.appliedOfferLabel.split(' - ');
+                    const promoName = parts[0];
+                    const discountDetail = parts.length > 1 ? parts.slice(1).join(' - ') : null;
+                    return (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">
+                          🎁 {promoName}
+                        </span>
+                        {discountDetail && (
+                          <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+                            {discountDetail}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="text-xs text-gray-600">
                     Quantity: {item.quantity} units × {fmt(item.unitPrice)}
                     {(item.freeItems ?? 0) > 0 && (
@@ -1430,11 +1442,23 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {item.appliedOfferLabel && (
-                    <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mt-0.5">
-                      🎁 {item.appliedOfferLabel}
-                    </span>
-                  )}
+                  {item.appliedOfferLabel && (() => {
+                    const parts = item.appliedOfferLabel.split(' - ');
+                    const promoName = parts[0];
+                    const discountDetail = parts.length > 1 ? parts.slice(1).join(' - ') : null;
+                    return (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">
+                          🎁 {promoName}
+                        </span>
+                        {discountDetail && (
+                          <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+                            {discountDetail}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="text-xs text-gray-600">
                     Quantity: {item.quantity} units × {fmt(item.unitPrice)}
                     {(item.freeItems ?? 0) > 0 && (
