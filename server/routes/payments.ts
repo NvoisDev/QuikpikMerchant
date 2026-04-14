@@ -955,7 +955,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const [payoutList, balance] = await Promise.all([
         stripe.payouts.list({ limit: 25 }, { stripeAccount: user.stripeAccountId }),
-        stripe.balance.retrieve({ stripeAccount: user.stripeAccountId } as any),
+        stripe.balance.retrieve({ stripeAccount: user.stripeAccountId }),
       ]);
 
       const pendingBalance = (balance.pending || []).reduce((sum: number, b: any) => sum + b.amount, 0);

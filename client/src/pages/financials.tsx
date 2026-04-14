@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 import { Banknote, ChevronRight, CreditCard, Package, AlertCircle } from "lucide-react";
 
 interface Payout {
@@ -136,11 +137,16 @@ export default function Financials() {
           <Card className="border border-orange-200 bg-orange-50">
             <CardContent className="p-6 flex items-start gap-4">
               <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="font-medium text-orange-900">Stripe not connected</p>
                 <p className="text-sm text-orange-700 mt-1">
-                  Connect your Stripe account in Settings to start receiving payouts and see them here.
+                  Connect your Stripe account to start receiving payouts and track them here.
                 </p>
+                <Link href="/settings">
+                  <Button size="sm" className="mt-3 btn-theme-primary">
+                    Connect Stripe in Settings
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
