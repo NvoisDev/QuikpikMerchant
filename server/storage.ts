@@ -115,6 +115,7 @@ export interface IStorage {
   getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined>;
   getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined>;
   getStripeOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
+  getOrderByTransferId(transferId: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
@@ -1566,6 +1567,15 @@ export class DatabaseStorage implements IStorage {
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`
       ))
       .orderBy(desc(orders.createdAt));
+  }
+
+  async getOrderByTransferId(transferId: string): Promise<Order | undefined> {
+    const result = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.stripeTransferId, transferId))
+      .limit(1);
+    return result[0];
   }
 
   async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order> {

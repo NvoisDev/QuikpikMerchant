@@ -1526,6 +1526,25 @@ export function registerMarketplaceRoutes(app: Express): void {
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
+        // Capture Stripe Transfer ID for exact payout-to-order reconciliation
+        if (stripe && paymentIntent?.id) {
+          try {
+            const expandedPi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+              expand: ['latest_charge'],
+            } as any);
+            const charge = (expandedPi as any).latest_charge;
+            const transferId = charge
+              ? (typeof charge.transfer === 'string' ? charge.transfer : (charge.transfer as any)?.id)
+              : null;
+            if (transferId) {
+              await storage.updateOrder(order.id, { stripeTransferId: transferId } as any);
+              console.log(`✅ Stored Stripe Transfer ID ${transferId} on order ${order.id}`);
+            }
+          } catch (transferErr) {
+            console.warn(`⚠️ Could not store Stripe Transfer ID for order ${order.id}:`, transferErr);
+          }
+        }
+
         // Get wholesaler data for emails and notifications
         const wholesaler = await storage.getWholesalerProfile(wholesalerId);
 

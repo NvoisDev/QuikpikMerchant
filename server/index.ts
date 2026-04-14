@@ -41,6 +41,8 @@ async function runStartupMigrations() {
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE`,
     // Task #88: Add payment method to orders for display in order detail
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method varchar`,
+    // Task #153: Add stripe_transfer_id for exact payout-to-order reconciliation
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_transfer_id VARCHAR`,
     // Task #74: Drop any check constraint on team_members.role so 'viewer' is always valid.
     // The column is varchar with no enum — this is a no-op if no constraint exists.
     `DO $$ DECLARE con record; BEGIN FOR con IN SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='team_members' AND constraint_type='CHECK' AND constraint_name LIKE '%role%' LOOP EXECUTE 'ALTER TABLE team_members DROP CONSTRAINT IF EXISTS ' || quote_ident(con.constraint_name); END LOOP; END $$`,

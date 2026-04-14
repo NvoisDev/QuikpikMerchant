@@ -992,22 +992,8 @@ export function registerPaymentRoutes(app: Express): void {
         { stripeAccount: user.stripeAccountId }
       );
 
-      // Extract date range from Stripe transactions (skip the payout entry itself)
+      // Skip the payout debit entry itself — keep only charge/payment transactions
       const chargeTxns = txns.data.filter((t) => t.type !== 'payout');
-      const timestamps = chargeTxns.map((t) => t.created);
-      const minTs = timestamps.length ? Math.min(...timestamps) : Math.floor(Date.now() / 1000) - 86400;
-      const maxTs = timestamps.length ? Math.max(...timestamps) : Math.floor(Date.now() / 1000);
-
-      // Add a 1-day buffer either side to catch any timezone/processing delays
-      const fromDate = new Date((minTs - 86400) * 1000);
-      const toDate   = new Date((maxTs + 86400) * 1000);
-
-      // Pull matching orders straight from our DB — no Stripe source parsing needed
-      const matchedOrders = await storage.getStripeOrdersForDateRange(
-        user.id,
-        fromDate,
-        toDate
-      );
 
       const transactions = chargeTxns.map((t) => ({
         id: t.id,
@@ -1016,14 +1002,47 @@ export function registerPaymentRoutes(app: Express): void {
         date: t.created,
       }));
 
-      const orderRows = matchedOrders.map((o) => ({
-        orderNumber: o.orderNumber,
-        customerName: o.customerName,
-        subtotal: o.subtotal,
-        platformFee: o.platformFee,
-        deliveryCost: o.deliveryCost,
-        createdAt: o.createdAt,
-      }));
+      // --- Exact match: use the Stripe Transfer ID stored on each order ---
+      // On the connected account, each balance transaction's `source` is the Transfer ID (tr_xxx)
+      const exactMatchResults = await Promise.all(
+        chargeTxns.map(async (t) => {
+          const transferId = typeof t.source === 'string' ? t.source : (t.source as any)?.id;
+          const order = transferId ? await storage.getOrderByTransferId(transferId) : undefined;
+          return { txn: t, order };
+        })
+      );
+
+      const exactlyMatched = exactMatchResults.filter(({ order }) => !!order);
+
+      let orderRows: any[];
+
+      if (exactlyMatched.length > 0) {
+        // New orders (post-fix): 1-to-1 Transfer ID → order match
+        orderRows = exactlyMatched.map(({ order }) => ({
+          orderNumber: order!.orderNumber,
+          customerName: order!.customerName,
+          subtotal: order!.subtotal,
+          platformFee: order!.platformFee,
+          deliveryCost: order!.deliveryCost,
+          createdAt: order!.createdAt,
+        }));
+      } else {
+        // Fallback for old payouts (pre-fix): approximate date-range match
+        const timestamps = chargeTxns.map((t) => t.created);
+        const minTs = timestamps.length ? Math.min(...timestamps) : Math.floor(Date.now() / 1000) - 86400;
+        const maxTs = timestamps.length ? Math.max(...timestamps) : Math.floor(Date.now() / 1000);
+        const fromDate = new Date((minTs - 86400) * 1000);
+        const toDate   = new Date((maxTs + 86400) * 1000);
+        const matchedOrders = await storage.getStripeOrdersForDateRange(user.id, fromDate, toDate);
+        orderRows = matchedOrders.map((o) => ({
+          orderNumber: o.orderNumber,
+          customerName: o.customerName,
+          subtotal: o.subtotal,
+          platformFee: o.platformFee,
+          deliveryCost: o.deliveryCost,
+          createdAt: o.createdAt,
+        }));
+      }
 
       res.json({ transactions, orders: orderRows });
     } catch (error: any) {

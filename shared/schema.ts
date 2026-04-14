@@ -540,6 +540,7 @@ export const orders = pgTable("orders", {
   customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  stripeTransferId: varchar("stripe_transfer_id"), // Stripe Transfer ID for exact payout reconciliation
   deliveryAddress: text("delivery_address"),
   // CRITICAL: Store exact delivery address ID used for this order
   deliveryAddressId: integer("delivery_address_id").references(() => deliveryAddresses.id),

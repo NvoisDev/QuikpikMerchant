@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { stripe } from './routes/shared';
 import { generateWholesalerOrderNotificationEmail, getEmailLogoUrl } from './email-templates';
 import { sendEmail } from './sendgrid-service';
 import { ShippingAutomationService } from './shipping-automation';
@@ -379,7 +380,26 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   });
   
   console.log(`🚨 ORDER PROCESSOR DEBUG: Transaction-based order creation completed, order ID: ${order.id}`);
-  
+
+  // Capture Stripe Transfer ID for exact payout-to-order reconciliation
+  if (stripe && paymentIntent?.id) {
+    try {
+      const expandedPi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+        expand: ['latest_charge'],
+      } as any);
+      const charge = (expandedPi as any).latest_charge;
+      const transferId = charge
+        ? (typeof charge.transfer === 'string' ? charge.transfer : (charge.transfer as any)?.id)
+        : null;
+      if (transferId) {
+        await storage.updateOrder(order.id, { stripeTransferId: transferId } as any);
+        console.log(`✅ Stored Stripe Transfer ID ${transferId} on order ${order.id}`);
+      }
+    } catch (transferErr) {
+      console.warn(`⚠️ Could not store Stripe Transfer ID for order ${order.id}:`, transferErr);
+    }
+  }
+
   // 🔒 DATA INTEGRITY: Verify all items were saved correctly
   const savedItems = await storage.getOrderItems(order.id);
   if (savedItems.length !== items.length) {
