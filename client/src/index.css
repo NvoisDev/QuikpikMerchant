@@ -309,7 +309,7 @@
 }
 
 .gradient-theme-banner {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
+  background: linear-gradient(135deg, var(--theme-primary) 0%, color-mix(in srgb, var(--theme-primary) 75%, black) 100%);
 }
 
 .hover-bg-theme-secondary:hover {
