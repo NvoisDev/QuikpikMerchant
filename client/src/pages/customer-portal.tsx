@@ -1289,6 +1289,35 @@ export default function CustomerPortal() {
     });
   }, [cart]);
 
+  // Restore saved cart from localStorage when customer authenticates
+  useEffect(() => {
+    if (!wholesalerId || !authenticatedCustomer?.id) return;
+    const key = `quikpik_cart_${wholesalerId}_${authenticatedCustomer.id}`;
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved) as CartItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCart(parsed);
+        }
+      }
+    } catch {
+      // ignore parse errors (corrupt or incompatible data)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wholesalerId, authenticatedCustomer?.id]);
+
+  // Save cart to localStorage whenever it changes (only while authenticated)
+  useEffect(() => {
+    if (!wholesalerId || !authenticatedCustomer?.id) return;
+    const key = `quikpik_cart_${wholesalerId}_${authenticatedCustomer.id}`;
+    try {
+      localStorage.setItem(key, JSON.stringify(cart));
+    } catch {
+      // ignore storage errors (e.g. private browsing mode with full storage)
+    }
+  }, [cart, wholesalerId, authenticatedCustomer?.id]);
+
   // Featured product ID is now managed by state initialized from URL
 
   // Fetch featured product if specified with auto-refresh
