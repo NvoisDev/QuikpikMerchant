@@ -875,7 +875,6 @@ export default function CustomerPortal() {
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
   const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
-  const [browseOrAccessTarget, setBrowseOrAccessTarget] = useState<any>(null);
 
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
@@ -917,7 +916,7 @@ export default function CustomerPortal() {
       
       return response.json();
     },
-    enabled: !!wholesalerId && !isEnhancedPreviewMode && !window.location.search.includes('browse'),
+    enabled: !!wholesalerId && !isEnhancedPreviewMode,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
@@ -928,19 +927,13 @@ export default function CustomerPortal() {
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), [location]);
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
-  const isBrowseMode = urlParams.has('browse');
-  const browseFromId = urlParams.get('from'); // origin store ID to return to
-
   const [showAuth, setShowAuth] = useState(() => {
     const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
-    const isBrowseModeCheck = new URLSearchParams(window.location.search).has('browse');
     const hasAuthParamCheck = new URLSearchParams(window.location.search).has('auth');
     const forceLoginParamCheck = new URLSearchParams(window.location.search).has('login');
-    return !isPreviewModeCheck && !isBrowseModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
+    return !isPreviewModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
-  // Must be declared after isGuestMode — prices blurred in guest mode OR browse mode
-  const priceGuest = isGuestMode || isBrowseMode;
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1559,12 +1552,10 @@ export default function CustomerPortal() {
   }, [isEnhancedPreviewMode, toast]);
 
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
-    if (isEnhancedPreviewMode || isBrowseMode) {
+    if (isEnhancedPreviewMode) {
       toast({
-        title: isBrowseMode ? "Request access to order" : "Preview Mode",
-        description: isBrowseMode
-          ? "You're browsing in preview mode. Request access to this store to place orders."
-          : "Cart functionality is disabled in preview mode.",
+        title: "Preview Mode",
+        description: "Cart functionality is disabled in preview mode.",
         variant: "destructive",
       });
       return;
@@ -2160,14 +2151,6 @@ export default function CustomerPortal() {
 
   // Authentication state management using server sessions
   useEffect(() => {
-    if (isBrowseMode) {
-      // Browse mode: behaves like enhanced preview — products show, prices blurred via isBrowseMode flag
-      setShowAuth(false);
-      setIsGuestMode(false);
-      setIsAuthenticated(true);
-      return;
-    }
-
     if (isEnhancedPreviewMode) {
       // In preview mode (including wholesaler own store), skip customer authentication
       setShowAuth(false);
@@ -2220,7 +2203,7 @@ export default function CustomerPortal() {
     } else {
       console.log('🔄 Currently switching wholesaler, not showing auth screen');
     }
-  }, [isBrowseMode, isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
+  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
 
 
 
@@ -2561,8 +2544,6 @@ export default function CustomerPortal() {
                         setIsSwitchingWholesaler(false);
                         window.location.href = `/store/${wholesalerItem.id}`;
                       }
-                    } else {
-                      setBrowseOrAccessTarget(wholesalerItem);
                     }
                   }}
                 >
@@ -2667,108 +2648,10 @@ export default function CustomerPortal() {
             </button>
           </div>
 
-          {/* Browse or Request Access picker — shown when tapping an inaccessible seller */}
-          {browseOrAccessTarget && (
-            <div
-              className="absolute inset-0 bg-black/30 flex items-end"
-              onClick={() => setBrowseOrAccessTarget(null)}
-            >
-              <div
-                className="w-full bg-white rounded-t-2xl p-5 shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Drag handle */}
-                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-
-                <div className="flex items-center gap-3 mb-5">
-                  <Logo
-                    size="md"
-                    variant="icon-only"
-                    className="w-11 h-11 rounded-xl flex-shrink-0"
-                    user={{
-                      logoType: browseOrAccessTarget.logoType || 'business',
-                      logoUrl: browseOrAccessTarget.logoUrl,
-                      businessName: browseOrAccessTarget.businessName,
-                      firstName: browseOrAccessTarget.firstName,
-                      lastName: browseOrAccessTarget.lastName
-                    }}
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-900">{browseOrAccessTarget.businessName || "Business"}</p>
-                    <p className="text-xs text-gray-500">{browseOrAccessTarget.storeTagline || "Wholesale products"}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    className="w-full py-3.5 btn-theme-primary rounded-xl text-base font-semibold"
-                    onClick={() => {
-                      setBrowseOrAccessTarget(null);
-                      setShowWholesalerSearch(false);
-                      setWholesalerSearchQuery("");
-                      window.location.href = `/store/${browseOrAccessTarget.id}?browse=true${wholesalerId ? `&from=${wholesalerId}` : ''}`;
-                    }}
-                  >
-                    Browse store
-                  </button>
-                  <button
-                    className="w-full py-3.5 border border-gray-200 rounded-xl text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={async () => {
-                      await handleRequestAccess(browseOrAccessTarget);
-                      setBrowseOrAccessTarget(null);
-                    }}
-                  >
-                    Request Access
-                  </button>
-                  <button
-                    className="w-full py-2 text-sm text-gray-400"
-                    onClick={() => setBrowseOrAccessTarget(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
-        {/* Browse Mode Notice — shown when previewing an inaccessible store */}
-        {isBrowseMode && (
-          <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-5">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Lock className="w-4 h-4 text-amber-600" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-amber-900 mb-1">
-                  Prices are hidden
-                </h3>
-                <p className="text-sm text-amber-700 mb-3">
-                  You're browsing {wholesaler?.businessName || "this store"} in preview mode. Request access to see pricing and place orders.
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    className="text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
-                    onClick={() => {
-                      if (browseFromId) {
-                        window.location.href = `/store/${browseFromId}`;
-                      } else {
-                        window.location.href = '/';
-                      }
-                    }}
-                  >
-                    ← Back to my store
-                  </button>
-                  <span className="text-xs text-amber-600">Use "Request Access" from Explore to get prices</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modern Tab Navigation - Only for authenticated users */}
         {isAuthenticated && !isGuestMode && (
@@ -2969,7 +2852,7 @@ export default function CustomerPortal() {
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                       currency={wholesaler?.defaultCurrency || 'GBP'}
-                                      isGuestMode={priceGuest}
+                                      isGuestMode={isGuestMode}
                                       size="medium"
                                       showStrikethrough={true}
                                     />
@@ -3575,7 +3458,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={'GBP'}
-                                    isGuestMode={priceGuest}
+                                    isGuestMode={isGuestMode}
                                     size="medium"
                                     showStrikethrough={true}
                                   />
@@ -3956,7 +3839,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={wholesaler?.defaultCurrency || 'GBP'}
-                                    isGuestMode={priceGuest}
+                                    isGuestMode={isGuestMode}
                                     size="medium"
                                   />
                                   {product.moq && product.moq > 1 && !cartItem && (
