@@ -917,7 +917,7 @@ export default function CustomerPortal() {
       
       return response.json();
     },
-    enabled: !!wholesalerId && !isEnhancedPreviewMode && !isBrowseMode,
+    enabled: !!wholesalerId && !isEnhancedPreviewMode && !window.location.search.includes('browse'),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
