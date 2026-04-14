@@ -992,25 +992,69 @@ export function registerPaymentRoutes(app: Express): void {
         { stripeAccount: user.stripeAccountId }
       );
 
+      // Helper: extract payment intent ID from any source shape
+      const resolvePaymentIntentId = async (source: any): Promise<string | null> => {
+        try {
+          if (!source) return null;
+
+          // Case 1: source is an expanded object (charge or transfer)
+          if (typeof source === 'object') {
+            // Direct payment_intent on source (direct charge on connected account)
+            const directPi = source.payment_intent;
+            if (directPi) return typeof directPi === 'string' ? directPi : directPi?.id ?? null;
+
+            // Transfer with source_transaction pointing to platform charge
+            const st = source.source_transaction;
+            if (st) {
+              if (typeof st === 'string' && st.startsWith('ch_')) {
+                // Not expanded — retrieve the platform charge directly
+                const charge = await stripe!.charges.retrieve(st);
+                const cPi = charge.payment_intent;
+                return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
+              }
+              if (typeof st === 'object') {
+                const stPi = st.payment_intent;
+                return typeof stPi === 'string' ? stPi : stPi?.id ?? null;
+              }
+            }
+            return null;
+          }
+
+          // Case 2: source is a string ID (not expanded)
+          if (typeof source === 'string') {
+            if (source.startsWith('ch_')) {
+              const charge = await stripe!.charges.retrieve(source);
+              const cPi = charge.payment_intent;
+              return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
+            }
+            if (source.startsWith('tr_')) {
+              const transfer = await stripe!.transfers.retrieve(source);
+              const st = transfer.source_transaction as any;
+              if (st) {
+                const chargeId = typeof st === 'string' ? st : st?.id;
+                if (chargeId?.startsWith('ch_')) {
+                  const charge = await stripe!.charges.retrieve(chargeId);
+                  const cPi = charge.payment_intent;
+                  return typeof cPi === 'string' ? cPi : (cPi as any)?.id ?? null;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+        return null;
+      };
+
       const results = [];
       for (const txn of txns.data) {
         if (txn.type === 'payout') continue;
-        const source = txn.source as any;
-        console.log('🔍 PAYOUT TXN DEBUG:', JSON.stringify({
-          txnId: txn.id, txnType: txn.type, txnAmount: txn.amount,
-          sourceType: typeof source, sourceId: typeof source === 'string' ? source : source?.id,
-          sourceObject: typeof source === 'object' ? source?.object : 'N/A',
-          sourcePaymentIntent: typeof source === 'object' ? source?.payment_intent : 'N/A',
-          sourceSourceTxn: typeof source === 'object' ? (typeof source?.source_transaction === 'string' ? source?.source_transaction : source?.source_transaction?.id) : 'N/A',
-          sourceTxnPaymentIntent: typeof source === 'object' && typeof source?.source_transaction === 'object' ? source?.source_transaction?.payment_intent : 'N/A',
-        }, null, 2));
-        const paymentIntentId = source?.payment_intent ?? source?.source_transaction?.payment_intent;
+
+        const paymentIntentId = await resolvePaymentIntentId(txn.source);
 
         let orderNumber: string | null = null;
         let customerName: string | null = null;
         let orderTotal: number | null = null;
 
-        if (paymentIntentId && typeof paymentIntentId === 'string') {
+        if (paymentIntentId) {
           try {
             const order = await storage.getOrderByPaymentIntentId(paymentIntentId);
             if (order) {
