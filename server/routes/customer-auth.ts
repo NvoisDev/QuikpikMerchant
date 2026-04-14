@@ -662,13 +662,38 @@ export function registerCustomerAuthRoutes(app: Express): void {
         
         console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
 
-        // Create wholesaler-customer relationship so they appear in the Customers tab
-        await db.insert(wholesalerCustomerRelationships).values({
-          customerId: newCustomer.id,
-          wholesalerId: userId,
-          status: 'active',
-        });
-        console.log(`✅ Created wholesaler-customer relationship for ${newCustomer.id}`);
+        // Create wholesaler-customer relationship (guard against duplicates)
+        const existingRelationship = await db
+          .select()
+          .from(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, newCustomer.id),
+            eq(wholesalerCustomerRelationships.wholesalerId, userId)
+          ))
+          .limit(1);
+
+        if (existingRelationship.length > 0) {
+          // Ensure it is active (may have been deactivated previously)
+          if (existingRelationship[0].status !== 'active') {
+            await db
+              .update(wholesalerCustomerRelationships)
+              .set({ status: 'active' })
+              .where(and(
+                eq(wholesalerCustomerRelationships.customerId, newCustomer.id),
+                eq(wholesalerCustomerRelationships.wholesalerId, userId)
+              ));
+            console.log(`♻️ Reactivated existing relationship for customer ${newCustomer.id}`);
+          } else {
+            console.log(`♻️ Relationship already exists and is active for customer ${newCustomer.id}`);
+          }
+        } else {
+          await db.insert(wholesalerCustomerRelationships).values({
+            customerId: newCustomer.id,
+            wholesalerId: userId,
+            status: 'active',
+          });
+          console.log(`✅ Created wholesaler-customer relationship for ${newCustomer.id}`);
+        }
 
         if (customerGroupId && customerGroupId > 0) {
           try {

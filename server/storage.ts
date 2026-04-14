@@ -1837,19 +1837,53 @@ export class DatabaseStorage implements IStorage {
       }
 
       // CRITICAL SECURITY FIX: Multiple customers cannot have the same last 4 digits for the same wholesaler
-      // This is a fundamental authentication security issue - if multiple customers share the same last 4 digits,
-      // we cannot authenticate safely using only last 4 digits
       if (matchingCustomers.length > 1) {
-        console.error(`🚨 CRITICAL SECURITY ISSUE: Multiple customers found with same last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
-        console.error(`This represents a customer authentication security vulnerability!`);
+        // Check if all matches share the EXACT same full phone number (i.e. duplicate user records)
+        const uniquePhones = new Set(matchingCustomers.map((c: any) => c.phone));
         
-        // Log all matching customers for security audit
+        if (uniquePhones.size === 1) {
+          // All records are duplicates of the same person — pick the one with an active
+          // wholesaler_customer_relationships entry (new system) over legacy wholesaler_id match,
+          // and among those pick the most recently created (highest ID timestamp prefix).
+          console.warn(`⚠️ Duplicate user records found for phone ending ${lastFourDigits} — deduplicating`);
+          matchingCustomers.forEach((c: any, i: number) => {
+            console.warn(`  Duplicate ${i + 1}: ${c.name} (${c.customer_id})`);
+          });
+
+          const withRelationship = await db.execute(sql`
+            SELECT customer_id FROM wholesaler_customer_relationships
+            WHERE wholesaler_id = ${wholesalerId}
+              AND status = 'active'
+              AND customer_id = ANY(ARRAY[${sql.raw(matchingCustomers.map((c: any) => `'${c.customer_id}'`).join(','))}]::text[])
+            ORDER BY created_at DESC
+            LIMIT 1
+          `);
+
+          let chosen: any;
+          if (withRelationship.rows.length > 0) {
+            const chosenId = (withRelationship.rows[0] as any).customer_id;
+            chosen = matchingCustomers.find((c: any) => c.customer_id === chosenId);
+          } else {
+            // Fall back to last in array (most recently inserted tends to be last)
+            chosen = matchingCustomers[matchingCustomers.length - 1];
+          }
+
+          console.log(`✅ Resolved duplicate — using customer ${chosen.customer_id} (${chosen.name})`);
+          return {
+            id: chosen.customer_id,
+            name: chosen.name,
+            email: chosen.email,
+            phone: chosen.phone,
+            groupId: chosen.group_id,
+            groupName: chosen.group_name
+          };
+        }
+
+        // Genuinely different people sharing the same last 4 — refuse authentication
+        console.error(`🚨 CRITICAL SECURITY ISSUE: Multiple DIFFERENT customers found with same last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
         matchingCustomers.forEach((customer: any, index: number) => {
           console.error(`  Customer ${index + 1}: ${customer.name} (${customer.customer_id}) - Phone: ${customer.phone}`);
         });
-        
-        // SECURITY: Refuse authentication when multiple customers share same last 4 digits
-        // This prevents customer A from accessing customer B's data
         throw new Error(`Authentication failed: Multiple customers found with same phone number suffix. This is a security risk. Please contact support.`);
       }
 
@@ -2082,6 +2116,16 @@ export class DatabaseStorage implements IStorage {
     wholesalerId?: string;
     customerType?: string;
   }): Promise<User> {
+    // Prevent duplicates: if a user with this phone number already exists, return them
+    const existing = await db
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, customer.phoneNumber))
+      .limit(1);
+    if (existing.length > 0) {
+      console.log(`♻️ Reusing existing user ${existing[0].id} for phone ${customer.phoneNumber}`);
+      return existing[0];
+    }
     const [user] = await db
       .insert(users)
       .values({
