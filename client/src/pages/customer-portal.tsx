@@ -24,7 +24,7 @@ import {
   Building2, History, Clock, Truck, CreditCard, Palette, TrendingUp, Banknote, ChevronRight,
   Eye, ShieldCheck, ArrowLeft, ArrowRight, Heart,
   HelpCircle, Building, Star, Mail, Phone, MapPin, Filter, FileText,
-  X, Check, Loader2, Download, Share2, Lock
+  X, Check, Loader2, Download, Share2, Lock, ChevronDown
 } from "lucide-react";
 
 // Optimized imports and lazy loading
@@ -875,6 +875,7 @@ export default function CustomerPortal() {
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
   const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
+  const [showStoreSwitcher, setShowStoreSwitcher] = useState(false);
 
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
@@ -2651,6 +2652,109 @@ export default function CustomerPortal() {
         </div>
       )}
 
+      {/* Store Switcher Bottom Sheet */}
+      {showStoreSwitcher && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowStoreSwitcher(false)}
+          />
+          {/* Sheet */}
+          <div className="relative bg-white rounded-t-3xl shadow-xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Handle bar */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
+            {/* Customer header */}
+            <div className="px-5 pt-3 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-theme-secondary flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-theme-primary">
+                    {(() => {
+                      const name = authenticatedCustomer?.firstName || authenticatedCustomer?.name || '';
+                      return name.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2) || '?';
+                    })()}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {authenticatedCustomer?.firstName
+                      ? `${authenticatedCustomer.firstName}${authenticatedCustomer.lastName ? ' ' + authenticatedCustomer.lastName : ''}`
+                      : authenticatedCustomer?.name || 'My Account'}
+                  </p>
+                  <p className="text-xs text-gray-500">{authenticatedCustomer?.phone || ''}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stores list */}
+            <div className="overflow-y-auto flex-1 px-4 py-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Your Stores</p>
+              {availableWholesalers
+                .filter((w: any) => w.isAccessible)
+                .map((w: any) => {
+                  const isActive = w.id === wholesalerId;
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={async () => {
+                        if (isActive) { setShowStoreSwitcher(false); return; }
+                        setShowStoreSwitcher(false);
+                        setIsSwitchingWholesaler(true);
+                        try {
+                          await fetch('/api/customer-auth/switch-wholesaler', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ targetWholesalerId: w.id })
+                          });
+                          window.location.href = `/store/${w.id}`;
+                        } catch {
+                          setIsSwitchingWholesaler(false);
+                          window.location.href = `/store/${w.id}`;
+                        }
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-2xl mb-1 transition-colors text-left ${isActive ? 'bg-theme-secondary' : 'hover:bg-gray-50 active:bg-gray-100'}`}
+                    >
+                      <Logo
+                        size="md"
+                        variant="icon-only"
+                        className="flex-shrink-0 w-11 h-11 rounded-xl"
+                        user={{
+                          logoType: w.logoType || 'business',
+                          logoUrl: w.logoUrl,
+                          businessName: w.businessName,
+                          firstName: w.firstName,
+                          lastName: w.lastName
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-sm ${isActive ? 'text-theme-primary' : 'text-gray-900'}`}>
+                          {w.businessName || 'Business'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{w.storeTagline || 'Wholesale products'}</p>
+                      </div>
+                      {isActive && (
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-theme-primary flex items-center justify-center">
+                          <Check className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              {availableWholesalers.filter((w: any) => w.isAccessible).length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">No stores available</p>
+              )}
+            </div>
+
+            {/* Safe area bottom padding */}
+            <div className="h-6" />
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
 
         {/* Modern Tab Navigation - Only for authenticated users */}
@@ -2692,9 +2796,16 @@ export default function CustomerPortal() {
                     <h1 className="text-3xl font-extrabold mb-1 leading-tight tracking-tight">
                       Hi, {authenticatedCustomer?.firstName || (authenticatedCustomer?.name?.split(' ')[0])} 👋
                     </h1>
-                    <p className="opacity-80 text-sm">
-                      Shopping at <span className="font-semibold opacity-100">{wholesaler?.businessName}</span>
-                    </p>
+                    <button
+                      onClick={() => setShowStoreSwitcher(true)}
+                      className="flex items-center gap-1.5 mt-0.5 opacity-80 hover:opacity-100 transition-opacity text-sm text-white"
+                    >
+                      <span>Shopping at</span>
+                      <span className="font-semibold opacity-100 bg-white/20 hover:bg-white/30 transition-colors px-2 py-0.5 rounded-full flex items-center gap-1">
+                        {wholesaler?.businessName}
+                        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                      </span>
+                    </button>
                     {customerOrderStats && customerOrderStats.totalOrders > 0 && (
                       <div className="mt-3 flex items-center gap-4 text-sm opacity-90">
                         <span className="flex items-center gap-1">
