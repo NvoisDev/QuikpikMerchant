@@ -459,60 +459,6 @@ export function registerAnalyticsRoutes(app: Express): void {
     }
   });
 
-  // GET /api/advertising/analytics
-  app.get("/api/advertising/analytics", requireAuth, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-
-      // Mock analytics data
-      const analytics = {
-        totalCampaigns: 3,
-        activeCampaigns: 2,
-        totalBudget: 500.00,
-        totalSpent: 223.75,
-        totalImpressions: 21400,
-        totalClicks: 737,
-        totalConversions: 41,
-        averageCTR: 3.44,
-        averageCPC: 0.30,
-        totalROI: 285.5,
-        seoPerformance: {
-          totalPages: 12,
-          totalViews: 3420,
-          totalLeads: 28,
-          averagePageViews: 285,
-          conversionRate: 0.82
-        },
-        topPerformingCampaigns: [
-          {
-            name: "Holiday Special Products",
-            type: "featured_product",
-            spent: 89.50,
-            impressions: 12500,
-            clicks: 425,
-            conversions: 23,
-            roi: 156.2
-          },
-          {
-            name: "Fresh Produce Spotlight", 
-            type: "category_sponsor",
-            spent: 134.25,
-            impressions: 8900,
-            clicks: 312,
-            conversions: 18,
-            roi: 128.7
-          }
-        ]
-      };
-
-      res.json(analytics);
-    } catch (error) {
-      console.error("Error fetching advertising analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
-    }
-  });
-
   // GET /api/financial-health
   app.get('/api/financial-health', requireAuth, async (req: any, res) => {
     try {

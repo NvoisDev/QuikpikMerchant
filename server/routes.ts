@@ -16,7 +16,6 @@ import { registerMarketplaceRoutes } from "./routes/marketplace";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { registerCampaignRoutes } from "./routes/campaigns";
 import { registerPaymentRoutes } from "./routes/payments";
-import { registerAdvertisingRoutes } from "./routes/advertising";
 import { registerAdminRoutes } from "./routes/admin";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -45,7 +44,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAnalyticsRoutes(app);
   registerCampaignRoutes(app);
   registerPaymentRoutes(app);
-  registerAdvertisingRoutes(app);
   registerAdminRoutes(app);
 
   const httpServer = createServer(app);

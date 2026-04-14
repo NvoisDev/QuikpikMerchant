@@ -93,43 +93,6 @@ export function registerOrderRoutes(app: Express): void {
     }
   });
 
-  // GET /api/orders-light
-  app.get('/api/orders-light', requireAuth, async (req: any, res) => {
-    try {
-      // Use authenticated user's ID for proper data isolation - SECURITY FIX
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-      
-      console.log(`📦 Fetching lightweight orders for authenticated wholesaler: ${wholesalerId}`);
-      
-      // Get orders with minimal data for fast loading
-      const orderResults = await db
-        .select({
-          id: orders.id,
-          orderNumber: orders.orderNumber,
-          customerName: orders.customerName,
-          customerEmail: orders.customerEmail,
-          total: orders.total,
-          status: orders.status,
-          fulfillmentType: orders.fulfillmentType,
-          deliveryAddressId: orders.deliveryAddressId,
-          createdAt: orders.createdAt
-        })
-        .from(orders)
-        .where(eq(orders.wholesalerId, wholesalerId))
-        .orderBy(desc(orders.createdAt))
-        .limit(50); // Limit to 50 most recent orders for fast loading
-      
-      console.log(`📦 Found ${orderResults.length} lightweight orders`);
-      
-      res.json(orderResults);
-    } catch (error) {
-      console.error("❌ Error fetching lightweight orders:", error);
-      res.status(500).json({ error: "Failed to fetch orders" });
-    }
-  });
-
   // PUT /api/orders/:id/ready-for-collection
   app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
@@ -967,62 +930,6 @@ export function registerOrderRoutes(app: Express): void {
         message: "Failed to fetch order statistics",
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
       });
-    }
-  });
-
-  // GET /api/public-orders
-  app.get('/api/public-orders', requireAuth, async (req: any, res) => {
-    try {
-      const search = req.query.search; // search term
-      
-      // SECURITY FIX: Use authenticated user's ID instead of hardcoded ID
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-      
-      // Get orders for authenticated wholesaler only
-      const orders = await storage.getOrders(wholesalerId, undefined, search);
-      
-      console.log(`📦 Authenticated orders request - found ${orders.length} orders for user ${wholesalerId}`);
-      
-      // Return complete orders for authenticated user only
-      const cleanOrders = orders.map(order => ({
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        total: order.total,
-        subtotal: order.subtotal,
-        platformFee: order.platformFee,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        customerPhone: order.customerPhone,
-        deliveryAddress: order.deliveryAddress,
-        fulfillmentType: order.fulfillmentType,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-        // Limit items to first 3 to prevent massive response
-        items: order.items?.slice(0, 3).map(item => ({
-          id: item.id,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.total,
-          product: {
-            id: item.product?.id,
-            name: item.product?.name,
-            imageUrl: item.product?.imageUrl
-          }
-        })) || [],
-        itemCount: order.items?.length || 0
-      }));
-      
-      // Check response size after cleaning
-      const responseStr = JSON.stringify(cleanOrders);
-      console.log(`📦 Clean response size: ${responseStr.length} characters (${cleanOrders.length} orders)`);
-      
-      res.json(cleanOrders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
     }
   });
 
