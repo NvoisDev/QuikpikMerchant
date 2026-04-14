@@ -989,8 +989,12 @@ export default function CustomerPortal() {
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   
-  // Tab state for modern interface
-  const [activeTab, setActiveTab] = useState("home");
+  // Tab state for modern interface — reads ?tab= URL param so email "View Order" links deep-link to Orders tab
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    return tabParam === 'orders' || tabParam === 'products' || tabParam === 'account' ? tabParam : 'home';
+  });
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);

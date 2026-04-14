@@ -117,6 +117,8 @@ export interface ReadyForCollectionEmailData {
   wholesalerLogoUrl?: string | null;
   businessPhone?: string;
   businessAddress?: string;
+  deliveryAddress?: string | null;
+  fulfillmentType?: string;
   orderTotal: string;
   readyTime: string;
   orderUrl: string;
@@ -220,37 +222,73 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 }
 
 export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailData): { subject: string; html: string; text: string } {
-  const subject = 'Your Order ' + data.orderNumber + ' is Ready for Collection';
+  const isDelivery = data.fulfillmentType === 'delivery';
 
-  const body = '<div style="text-align:center;margin-bottom:16px">' + emailBadge('READY TO COLLECT', '#059669') + '</div>' +
-    '<p style="margin:0 0 16px">Dear ' + data.customerName + ', your order is ready for collection.</p>' +
+  const subject = isDelivery
+    ? 'Your Order ' + data.orderNumber + ' is Ready for Delivery'
+    : 'Your Order ' + data.orderNumber + ' is Ready for Collection';
+
+  const badgeLabel = isDelivery ? 'READY FOR DELIVERY' : 'READY TO COLLECT';
+  const badgeColor = isDelivery ? '#2563eb' : '#059669';
+  const introText = isDelivery
+    ? 'your order is ready and will be on its way shortly.'
+    : 'your order is ready for collection.';
+
+  const secondCard = isDelivery
+    ? emailCard(
+        '<p style="margin:0 0 4px"><b>Supplier:</b> ' + data.wholesalerName + '</p>' +
+        (data.deliveryAddress ? '<p style="margin:0 0 4px"><b>Delivery To:</b> ' + data.deliveryAddress + '</p>' : '') +
+        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#2563eb">' + data.businessPhone + '</a></p>' : ''),
+        { borderColor: '#bfdbfe', bgColor: '#eff6ff' }
+      )
+    : emailCard(
+        '<p style="margin:0 0 4px"><b>Collect From:</b> ' + data.wholesalerName + '</p>' +
+        (data.businessAddress ? '<p style="margin:0 0 4px"><b>Address:</b> ' + data.businessAddress + '</p>' : '') +
+        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#10b981">' + data.businessPhone + '</a></p>' : ''),
+        { borderColor: '#dbeafe', bgColor: '#eff6ff' }
+      );
+
+  const footerText = isDelivery
+    ? 'Your order will be dispatched shortly. ' + data.wholesalerName + ' will contact you to arrange delivery.'
+    : 'Please contact ' + data.wholesalerName + ' to arrange a collection time.';
+
+  const body = '<div style="text-align:center;margin-bottom:16px">' + emailBadge(badgeLabel, badgeColor) + '</div>' +
+    '<p style="margin:0 0 16px">Dear ' + data.customerName + ', ' + introText + '</p>' +
     emailCard(
       '<p style="margin:0 0 4px"><b>Order:</b> ' + data.orderNumber + '</p>' +
       '<p style="margin:0 0 4px"><b>Total:</b> <span style="color:#10b981;font-weight:bold">\u00A3' + parseFloat(data.orderTotal).toFixed(2) + '</span></p>' +
       '<p style="margin:0"><b>Ready Since:</b> ' + data.readyTime + '</p>'
     ) +
-    emailCard(
-      '<p style="margin:0 0 4px"><b>Collect From:</b> ' + data.wholesalerName + '</p>' +
-      (data.businessAddress ? '<p style="margin:0 0 4px"><b>Address:</b> ' + data.businessAddress + '</p>' : '') +
-      (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#10b981">' + data.businessPhone + '</a></p>' : ''),
-      { borderColor: '#dbeafe', bgColor: '#eff6ff' }
-    ) +
-    '<p style="margin:12px 0;font-size:14px;color:#6b7280">Please contact ' + data.wholesalerName + ' to arrange a collection time.</p>' +
+    secondCard +
+    '<p style="margin:12px 0;font-size:14px;color:#6b7280">' + footerText + '</p>' +
     emailButton('View Order', data.orderUrl);
+
+  const preheader = isDelivery
+    ? 'Order ' + data.orderNumber + ' is ready for delivery'
+    : 'Order ' + data.orderNumber + ' is ready for collection';
 
   const html = wrapCustomerEmail(body, {
     businessName: data.wholesalerName,
     logoUrl: data.wholesalerLogoUrl,
-  }, { preheader: 'Order ' + data.orderNumber + ' is ready for collection' });
+  }, { preheader });
 
-  const text = 'Order ' + data.orderNumber + ' Ready for Collection\n\n' +
-    'Dear ' + data.customerName + ',\n\nYour order is ready for collection.\n\n' +
-    'Ready Since: ' + data.readyTime + '\nOrder Total: \u00A3' + parseFloat(data.orderTotal).toFixed(2) + '\n' +
-    'Collect From: ' + data.wholesalerName + '\n' +
-    (data.businessAddress ? 'Address: ' + data.businessAddress + '\n' : '') +
-    (data.businessPhone ? 'Phone: ' + data.businessPhone + '\n' : '') +
-    '\nPlease contact ' + data.wholesalerName + ' to arrange a collection time.\n\n' +
-    'View Order: ' + data.orderUrl + '\nPowered by Quikpik';
+  const text = isDelivery
+    ? 'Order ' + data.orderNumber + ' Ready for Delivery\n\n' +
+      'Dear ' + data.customerName + ',\n\nYour order is ready and will be on its way shortly.\n\n' +
+      'Ready Since: ' + data.readyTime + '\nOrder Total: \u00A3' + parseFloat(data.orderTotal).toFixed(2) + '\n' +
+      'Supplier: ' + data.wholesalerName + '\n' +
+      (data.deliveryAddress ? 'Delivery To: ' + data.deliveryAddress + '\n' : '') +
+      (data.businessPhone ? 'Phone: ' + data.businessPhone + '\n' : '') +
+      '\nYour order will be dispatched shortly. ' + data.wholesalerName + ' will contact you to arrange delivery.\n\n' +
+      'View Order: ' + data.orderUrl + '\nPowered by Quikpik'
+    : 'Order ' + data.orderNumber + ' Ready for Collection\n\n' +
+      'Dear ' + data.customerName + ',\n\nYour order is ready for collection.\n\n' +
+      'Ready Since: ' + data.readyTime + '\nOrder Total: \u00A3' + parseFloat(data.orderTotal).toFixed(2) + '\n' +
+      'Collect From: ' + data.wholesalerName + '\n' +
+      (data.businessAddress ? 'Address: ' + data.businessAddress + '\n' : '') +
+      (data.businessPhone ? 'Phone: ' + data.businessPhone + '\n' : '') +
+      '\nPlease contact ' + data.wholesalerName + ' to arrange a collection time.\n\n' +
+      'View Order: ' + data.orderUrl + '\nPowered by Quikpik';
 
   return { subject, html, text };
 }

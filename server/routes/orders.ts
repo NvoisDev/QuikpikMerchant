@@ -212,9 +212,11 @@ export function registerOrderRoutes(app: Express): void {
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: wholesaler.businessAddress,
+            deliveryAddress: updated.deliveryAddress || null,
+            fulfillmentType: updated.fulfillmentType || 'pickup',
             orderTotal: updated.total,
             readyTime: updated.readyToCollectAt ? updated.readyToCollectAt.toLocaleString() : new Date().toLocaleString(),
-            orderUrl: `https://quikpik.app/customer-portal/${wholesaler.id}`
+            orderUrl: `https://quikpik.app/store/${wholesaler.id}?tab=orders`
           });
 
           await sendEmail({
@@ -331,9 +333,11 @@ export function registerOrderRoutes(app: Express): void {
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: wholesaler.businessAddress,
+            deliveryAddress: order.deliveryAddress || null,
+            fulfillmentType: order.fulfillmentType || 'pickup',
             orderTotal: order.total,
             readyTime: order.readyToCollectAt.toLocaleString(),
-            orderUrl: `https://quikpik.app/customer-portal/${wholesaler.id}`
+            orderUrl: `https://quikpik.app/store/${wholesaler.id}?tab=orders`
           });
 
           await sendEmail({
