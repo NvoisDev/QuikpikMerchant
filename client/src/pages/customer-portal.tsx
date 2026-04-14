@@ -53,7 +53,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Shared utilities and types
@@ -815,7 +814,6 @@ export default function CustomerPortal() {
 
   // Theme system
   const { theme, changeTheme } = useCustomerTheme();
-  const isMobile = useIsMobile();
 
   // Detect if this is preview mode (accessed via /preview-store or wholesaler viewing own store)
   const isPreviewMode = location === '/preview-store' || location.startsWith('/preview-store/');
@@ -2930,7 +2928,7 @@ export default function CustomerPortal() {
                         price={cartStats.totalValue}
                         currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
-                        size={isMobile ? "small" : "medium"}
+                        size="large"
                       />
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Cart Total</p>
