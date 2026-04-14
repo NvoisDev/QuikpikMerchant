@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,7 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
+  ChevronsUpDown,
   ArrowLeft,
   UserPlus,
   Truck,
@@ -122,6 +125,8 @@ export default function QuickQuote() {
     label: '',
   });
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -578,30 +583,70 @@ export default function QuickQuote() {
               </div>
             </CardHeader>
             <CardContent>
-              <Select
-                value={selectedCustomer?.id || ""}
-                onValueChange={(value) => {
-                  const customer = customers.find(c => c.id === value);
-                  setSelectedCustomer(customer || null);
-                  setDeliveryAddressId(null);
-                  setDeliveryAddressText('');
-                  setUseCustomAddress(false);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a customer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      <div className="flex flex-col">
-                        <span>{customer.firstName} {customer.lastName || ''}</span>
-                        <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={customerDropdownOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedCustomer ? (
+                      <span className="flex flex-col items-start text-left">
+                        <span>{selectedCustomer.firstName} {selectedCustomer.lastName || ''}</span>
+                        <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Choose a customer...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <Command>
+                    <CommandInput
+                      placeholder="Search by name or number..."
+                      value={customerSearch}
+                      onValueChange={setCustomerSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No customers found.</CommandEmpty>
+                      <CommandGroup>
+                        {customers
+                          .filter((c) => {
+                            if (!customerSearch) return true;
+                            const q = customerSearch.toLowerCase();
+                            const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
+                            const phone = (c.phoneNumber || '').toLowerCase();
+                            return name.includes(q) || phone.includes(q);
+                          })
+                          .map((customer) => (
+                            <CommandItem
+                              key={customer.id}
+                              value={`${customer.firstName} ${customer.lastName || ''} ${customer.phoneNumber}`}
+                              onSelect={() => {
+                                setSelectedCustomer(customer);
+                                setDeliveryAddressId(null);
+                                setDeliveryAddressText('');
+                                setUseCustomAddress(false);
+                                setCustomerSearch('');
+                                setCustomerDropdownOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
+                              />
+                              <div className="flex flex-col">
+                                <span>{customer.firstName} {customer.lastName || ''}</span>
+                                <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
               {selectedCustomer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
