@@ -27,6 +27,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: string;
   total: string;
+  sellingType?: 'units' | 'pallets';
   appliedOfferLabel?: string | null;
   freeItems?: number;
 }

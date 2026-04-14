@@ -21,6 +21,7 @@ interface OrderItem {
   quantity: number;
   unitPrice: string;
   total: string;
+  sellingType?: 'units' | 'pallets';
   product: {
     id: number;
     name: string;
