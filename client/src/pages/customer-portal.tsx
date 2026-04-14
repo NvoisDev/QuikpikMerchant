@@ -2897,20 +2897,20 @@ export default function CustomerPortal() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 {/* Cart Items */}
                 <div
-                  className="bg-white rounded-2xl p-2.5 sm:p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
                 >
-                  <div className="flex flex-col items-center text-center gap-1">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
-                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-theme-primary" />
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
                     </div>
-                    <p className="text-xl sm:text-2xl font-extrabold leading-none text-theme-primary">
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
                       {cart.reduce((total, item) => total + item.quantity, 0)}
                     </p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium">In Cart</p>
+                    <p className="text-[10px] text-gray-500 font-medium">In Cart</p>
                     {cart.length > 0 && (
                       <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
                     )}
@@ -2918,33 +2918,33 @@ export default function CustomerPortal() {
                 </div>
 
                 {/* Cart Value */}
-                <div className="bg-white rounded-2xl p-2.5 sm:p-4 border border-gray-100 shadow-sm">
-                  <div className="flex flex-col items-center text-center gap-1">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
-                      <Banknote className="w-4 h-4 sm:w-5 sm:h-5 text-theme-primary" />
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
                     </div>
                     <div className="font-extrabold leading-none text-theme-primary">
                       <PriceDisplay
                         price={cartStats.totalValue}
                         currency={wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
-                        size="large"
+                        size="medium"
                       />
                     </div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Cart Total</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
                   </div>
                 </div>
 
                 {/* Total Orders */}
-                <div className="bg-white rounded-2xl p-2.5 sm:p-4 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
-                  <div className="flex flex-col items-center text-center gap-1">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-theme-secondary">
-                      <History className="w-4 h-4 sm:w-5 sm:h-5 text-theme-primary" />
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
                     </div>
-                    <p className="text-xl sm:text-2xl font-extrabold leading-none text-theme-primary">
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
                       {customerOrderStats?.totalOrders || 0}
                     </p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Orders</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Orders</p>
                     {(customerOrderStats?.totalOrders || 0) > 0 && (
                       <p className="text-[10px] text-gray-400 leading-none">Tap to view</p>
                     )}
@@ -4175,6 +4175,59 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6 pb-6">
+              {/* Stats Bar */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* Cart Items */}
+                <div
+                  className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
+                >
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                      {cart.reduce((total, item) => total + item.quantity, 0)}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium">In Cart</p>
+                    {cart.length > 0 && (
+                      <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cart Value */}
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <div className="font-extrabold leading-none text-theme-primary">
+                      <PriceDisplay
+                        price={cartStats.totalValue}
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
+                        isGuestMode={false}
+                        size="medium"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
+                  </div>
+                </div>
+
+                {/* Total Orders */}
+                <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+                  <div className="flex flex-col items-center text-center gap-0.5">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                      <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+                    </div>
+                    <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                      {customerOrderStats?.totalOrders || 0}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium">Orders</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Customer Order History */}
               {authenticatedCustomer && wholesaler?.id && (
                 <Suspense fallback={<ComponentLoader />}>
