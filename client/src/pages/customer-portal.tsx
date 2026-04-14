@@ -4108,7 +4108,7 @@ export default function CustomerPortal() {
 
                                   {/* Initial add button */}
                                   {!cartItemUnits && !cartItemPallets && (
-                                    <div>
+                                    <div className="flex flex-col items-end gap-1">
                                       <Button
                                         onClick={() => {
                                           if (hasPalletPricing) {
@@ -4122,14 +4122,15 @@ export default function CustomerPortal() {
                                           }
                                         }}
                                         disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                        className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        size="sm"
+                                        className="rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
                                         style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                       >
-                                        <ShoppingCart className="h-4 w-4 mr-2" />
-                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                        <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add →' : 'Add to Cart'}
                                       </Button>
                                       {hasPalletPricing && product.stock > 0 && (
-                                        <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
+                                        <p className="text-xs text-gray-500 text-right">units or pallets</p>
                                       )}
                                     </div>
                                   )}
