@@ -2886,7 +2886,7 @@ export default function CustomerPortal() {
               </div>
 
               {/* Quick Actions strip */}
-              <div className="flex items-center justify-around bg-white rounded-2xl px-2 py-3 border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-around px-1 py-1">
                 <button
                   onClick={() => setActiveTab("products")}
                   className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
