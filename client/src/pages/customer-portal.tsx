@@ -4141,7 +4141,7 @@ export default function CustomerPortal() {
                                               style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                               aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
                                             >
-                                              {isOutOfStock ? <ShoppingCart className="h-4 w-4" /> : <Plus className="h-5 w-5" />}
+                                              <Plus className="h-5 w-5" />
                                             </button>
                                             {/* Desktop: full button */}
                                             <Button
