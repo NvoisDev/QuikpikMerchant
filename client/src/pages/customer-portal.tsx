@@ -3870,7 +3870,7 @@ export default function CustomerPortal() {
                                 </div>
                                 
                                 {/* Product Details */}
-                                <div className="space-y-2 mb-3">
+                                <div className="mb-2">
                                   <div className="flex flex-wrap gap-1 text-xs text-gray-600">
                                     {/* Product Weight/Size Tag */}
                                     {(() => {
@@ -3880,7 +3880,7 @@ export default function CustomerPortal() {
                                       
                                       if (unitSize && unitOfMeasure) {
                                         return (
-                                          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
+                                          <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-medium">
                                             {packQuantity} x {Math.round(parseFloat(unitSize))}{unitOfMeasure}
                                           </span>
                                         );
@@ -3890,42 +3890,36 @@ export default function CustomerPortal() {
                                     
                                     {/* Product Type Tags - Units or Pallets or Both */}
                                     {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) ? (
-                                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
+                                      <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-medium">
                                         Units & Pallets
                                       </span>
                                     ) : (
-                                      <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-medium">
+                                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">
                                         Individual Units
                                       </span>
                                     )}
                                     
                                     {(product as any).size && (
-                                      <span className="bg-gray-100 px-2 py-1 rounded">
+                                      <span className="bg-gray-100 px-2 py-0.5 rounded">
                                         Size: {(product as any).size}
                                       </span>
                                     )}
                                     {product.moq && product.moq > 1 && (
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
                                         Min: {product.moq} units
                                       </span>
                                     )}
                                     {product.stock && (
-                                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
                                         Stock: {product.stock}
                                       </span>
                                     )}
                                     {(product as any).brand && (
-                                      <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                      <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
                                         {(product as any).brand}
                                       </span>
                                     )}
                                   </div>
-                                  {/* MOQ Helper Message for List View */}
-                                  {product.moq && product.moq > 1 && (
-                                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
-                                      💡 Minimum {product.moq} units required
-                                    </div>
-                                  )}
                                 </div>
 
                                 {/* Price */}
@@ -3937,9 +3931,6 @@ export default function CustomerPortal() {
                                     isGuestMode={isGuestMode}
                                     size="medium"
                                   />
-                                  {product.moq && product.moq > 1 && !cartItem && (
-                                    <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
-                                  )}
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>
