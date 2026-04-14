@@ -1043,6 +1043,7 @@ export default function CustomerPortal() {
       authenticatedCustomer?.phone, 
       wholesalerSearchQuery
     ],
+    enabled: !!authenticatedCustomer?.phone,
     queryFn: async () => {
       let response;
       
@@ -2744,7 +2745,11 @@ export default function CustomerPortal() {
                     </button>
                   );
                 })}
-              {availableWholesalers.filter((w: any) => w.isAccessible).length === 0 && (
+              {wholesalersLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="w-6 h-6 rounded-full border-2 border-gray-200 border-t-gray-500 animate-spin" />
+                </div>
+              ) : availableWholesalers.filter((w: any) => w.isAccessible).length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-6">No stores available</p>
               )}
             </div>
