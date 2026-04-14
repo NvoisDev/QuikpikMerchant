@@ -996,8 +996,7 @@ export function registerPaymentRoutes(app: Express): void {
       for (const txn of txns.data) {
         if (txn.type === 'payout') continue;
         const source = txn.source as any;
-        const charge = source?.source_transaction;
-        const paymentIntentId = charge?.payment_intent;
+        const paymentIntentId = source?.payment_intent ?? source?.source_transaction?.payment_intent;
 
         let orderNumber: string | null = null;
         let customerName: string | null = null;
