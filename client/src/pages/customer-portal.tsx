@@ -4108,7 +4108,7 @@ export default function CustomerPortal() {
 
                                   {/* Initial add button */}
                                   {!cartItemUnits && !cartItemPallets && (
-                                    <div className="flex flex-col items-end gap-1">
+                                    <div className="flex flex-col items-center gap-1">
                                       <Button
                                         onClick={() => {
                                           if (hasPalletPricing) {
