@@ -925,16 +925,17 @@ export default function CustomerPortal() {
   });
   const [showHomePage, setShowHomePage] = useState(true);
   // Check if coming from CustomerLogin with auth parameter or if user wants to login
-  const urlParams = useMemo(() => new URLSearchParams(location.split('?')[1] || ''), [location]);
+  const urlParams = useMemo(() => new URLSearchParams(window.location.search), [location]);
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
   const isBrowseMode = urlParams.has('browse');
   
   const [showAuth, setShowAuth] = useState(() => {
-    const params = new URLSearchParams(location.split('?')[1] || '');
     const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
-    const isBrowseModeCheck = params.has('browse');
-    return !isPreviewModeCheck && !isBrowseModeCheck && (!hasAuthParam || forceLoginParam);
+    const isBrowseModeCheck = new URLSearchParams(window.location.search).has('browse');
+    const hasAuthParamCheck = new URLSearchParams(window.location.search).has('auth');
+    const forceLoginParamCheck = new URLSearchParams(window.location.search).has('login');
+    return !isPreviewModeCheck && !isBrowseModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
 
