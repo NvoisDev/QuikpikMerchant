@@ -2885,6 +2885,55 @@ export default function CustomerPortal() {
                 </div>
               </div>
 
+              {/* Quick Actions strip */}
+              <div className="flex items-center justify-around bg-white rounded-2xl px-2 py-3 border border-gray-100 shadow-sm">
+                <button
+                  onClick={() => setActiveTab("products")}
+                  className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary">
+                    <Store className="w-4 h-4 text-theme-primary" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">Shop</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("orders")}
+                  className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary">
+                    <History className="w-4 h-4 text-theme-primary" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">Orders</span>
+                </button>
+
+                <button
+                  onClick={async () => { if (cart.length > 0) { setShowCheckout(true); } else { setActiveTab("products"); } }}
+                  disabled={isCreatingIntent}
+                  className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 relative"
+                >
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary relative">
+                    <ShoppingCart className="w-4 h-4 text-theme-primary" />
+                    {cart.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center bg-theme-primary">
+                        {cart.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">{cart.length > 0 ? "Checkout" : "Cart"}</span>
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-red-50">
+                    <X className="w-4 h-4 text-red-400" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">Sign Out</span>
+                </button>
+              </div>
+
               {/* Recent Orders */}
               {authenticatedCustomer?.phone && wholesalerId && (
                 <RecentOrdersSection
@@ -3144,69 +3193,6 @@ export default function CustomerPortal() {
                 )}
               </div>
 
-              {/* Quick Actions */}
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {/* Browse Products */}
-                  <button
-                    onClick={() => setActiveTab("products")}
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-theme-secondary">
-                      <Store className="w-5 h-5 text-theme-primary" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Shop</span>
-                  </button>
-
-                  {/* Order History */}
-                  <button
-                    onClick={() => setActiveTab("orders")}
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-theme-secondary">
-                      <History className="w-5 h-5 text-theme-primary" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Orders</span>
-                  </button>
-
-                  {/* Checkout */}
-                  <button
-                    onClick={async () => {
-                      if (cart.length > 0) {
-                        setShowCheckout(true);
-                      } else {
-                        setActiveTab("products");
-                      }
-                    }}
-                    disabled={isCreatingIntent}
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center relative bg-theme-secondary">
-                      <ShoppingCart className="w-5 h-5 text-theme-primary" />
-                      {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center bg-theme-primary">
-                          {cart.length}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">
-                      {cart.length > 0 ? "Checkout" : "Cart"}
-                    </span>
-                  </button>
-
-                  {/* Sign Out */}
-                  <button
-                    onClick={handleLogout}
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 hover:bg-red-50 transition-colors"
-                  >
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-red-100">
-                      <X className="w-5 h-5 text-red-500" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 leading-tight text-center">Sign Out</span>
-                  </button>
-                </div>
-              </div>
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6 mb-16 pb-6">
