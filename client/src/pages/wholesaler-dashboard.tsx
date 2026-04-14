@@ -1028,7 +1028,7 @@ export default function WholesalerDashboard() {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-gray-900">Top Selling Products</CardTitle>
-                <p className="text-sm text-gray-600">Best performing items</p>
+                <p className="text-sm text-gray-600">Best performing items · Ranked by units sold</p>
               </CardHeader>
               <CardContent>
                 {productsLoading ? (

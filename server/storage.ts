@@ -2669,7 +2669,7 @@ export class DatabaseStorage implements IStorage {
         )
       ))
       .groupBy(products.id)
-      .orderBy(desc(count(orderItems.id)))
+      .orderBy(desc(sum(orderItems.quantity)))
       .limit(limit);
 
     return result.map(row => ({
