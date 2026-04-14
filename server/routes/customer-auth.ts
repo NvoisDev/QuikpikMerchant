@@ -648,19 +648,30 @@ export function registerCustomerAuthRoutes(app: Express): void {
       if (action === 'approve') {
         // Parse customer name
         const { firstName, lastName } = parseCustomerName(requestData.customerName);
-        
-        // Create customer account
-        const newCustomer = await storage.createCustomer({
-          phoneNumber: requestData.customerPhone,
-          firstName,
-          lastName,
-          email: requestData.customerEmail || undefined,
-          role: 'retailer',
-          wholesalerId: userId,
-          customerType: requestData.customerType || undefined,
-        });
-        
-        console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
+
+        // Check for an existing user with this phone number before creating a new one
+        const existingUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.phoneNumber, requestData.customerPhone))
+          .limit(1);
+
+        let newCustomer: any;
+        if (existingUsers.length > 0) {
+          newCustomer = existingUsers[0];
+          console.log(`♻️ Reusing existing user ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName}) for phone ${requestData.customerPhone}`);
+        } else {
+          newCustomer = await storage.createCustomer({
+            phoneNumber: requestData.customerPhone,
+            firstName,
+            lastName,
+            email: requestData.customerEmail || undefined,
+            role: 'retailer',
+            wholesalerId: userId,
+            customerType: requestData.customerType || undefined,
+          });
+          console.log(`✅ Created new customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
+        }
 
         // Create wholesaler-customer relationship (guard against duplicates)
         const existingRelationship = await db

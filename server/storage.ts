@@ -1850,18 +1850,21 @@ export class DatabaseStorage implements IStorage {
             console.warn(`  Duplicate ${i + 1}: ${c.name} (${c.customer_id})`);
           });
 
-          const withRelationship = await db.execute(sql`
-            SELECT customer_id FROM wholesaler_customer_relationships
-            WHERE wholesaler_id = ${wholesalerId}
-              AND status = 'active'
-              AND customer_id = ANY(ARRAY[${sql.raw(matchingCustomers.map((c: any) => `'${c.customer_id}'`).join(','))}]::text[])
-            ORDER BY created_at DESC
-            LIMIT 1
-          `);
+          const duplicateIds: string[] = matchingCustomers.map((c: any) => c.customer_id as string);
+          const withRelationship = await db
+            .select({ customerId: wholesalerCustomerRelationships.customerId })
+            .from(wholesalerCustomerRelationships)
+            .where(and(
+              eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+              eq(wholesalerCustomerRelationships.status, 'active'),
+              inArray(wholesalerCustomerRelationships.customerId, duplicateIds)
+            ))
+            .orderBy(desc(wholesalerCustomerRelationships.createdAt))
+            .limit(1);
 
           let chosen: any;
-          if (withRelationship.rows.length > 0) {
-            const chosenId = (withRelationship.rows[0] as any).customer_id;
+          if (withRelationship.length > 0) {
+            const chosenId = withRelationship[0].customerId;
             chosen = matchingCustomers.find((c: any) => c.customer_id === chosenId);
           } else {
             // Fall back to last in array (most recently inserted tends to be last)
