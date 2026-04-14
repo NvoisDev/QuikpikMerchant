@@ -5296,7 +5296,7 @@ export default function CustomerPortal() {
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
                       <h4 className="font-medium text-amber-800 mb-1">Delivery address needed</h4>
                       <p className="text-sm text-amber-700">
-                        Please select a delivery address above to continue.
+                        Please add or select a delivery address above to continue with your order.
                       </p>
                     </div>
                   ) : customerData.shippingOption ? (
