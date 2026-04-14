@@ -5291,12 +5291,12 @@ export default function CustomerPortal() {
                     </div>
                   ) : (
                   <>
-                  {/* Only show validation error if user tries to pay without address */}
-                  {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress && clientSecret ? (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                      <h4 className="font-medium text-red-800 mb-2">Delivery address required</h4>
-                      <p className="text-sm text-red-700">
-                        Please select a delivery address to continue with delivery option
+                  {/* Persistent address required banner — shows without needing clientSecret */}
+                  {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                      <h4 className="font-medium text-amber-800 mb-1">Delivery address needed</h4>
+                      <p className="text-sm text-amber-700">
+                        Please select a delivery address above to continue.
                       </p>
                     </div>
                   ) : customerData.shippingOption ? (

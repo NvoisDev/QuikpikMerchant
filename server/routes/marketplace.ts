@@ -923,13 +923,17 @@ export function registerMarketplaceRoutes(app: Express): void {
                 connectAccountStatus === 'error' ? 'Account validation failed' : 'No account'
       });
       
-      // Create stable idempotency key to prevent duplicate payment intents on simultaneous requests
+      // Create stable idempotency key to prevent duplicate payment intents on simultaneous requests.
+      // A 5-minute time window is included so that switching shipping options (pickup ↔ delivery)
+      // always generates a fresh key rather than colliding with a previous intent that had
+      // different metadata (which Stripe rejects as an idempotency violation).
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
       const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
       const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
       const shippingFlag = shippingInfo?.option === 'delivery' ? 'd' : 'p'; // Include shipping option for different payment intents
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const timeWindow = Math.floor(Date.now() / 300000); // Rotates every 5 min — allows fresh retry after switching options
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}_${timeWindow}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
@@ -1354,21 +1358,26 @@ export function registerMarketplaceRoutes(app: Express): void {
               };
               console.log(`🎯 MARKETPLACE CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
             } else {
-              console.log(`⚠️ MARKETPLACE: Customer selected address ID ${selectedDeliveryAddressId} not found, checking available addresses...`);
-              
-              // Only fallback to non-default if customer's explicit choice is not available
-              const nonDefaultAddresses = customerAddresses.filter((addr: any) => !addr.is_default && addr.id !== 1);
-              if (nonDefaultAddresses.length > 0) {
-                selectedDeliveryAddress = {
-                  id: nonDefaultAddresses[0].id,
-                  addressLine1: nonDefaultAddresses[0].address_line1 || '',
-                  addressLine2: nonDefaultAddresses[0].address_line2 || null,
-                  city: nonDefaultAddresses[0].city || '',
-                  state: nonDefaultAddresses[0].state || null,
-                  postalCode: nonDefaultAddresses[0].postal_code || '',
-                  country: nonDefaultAddresses[0].country || 'United Kingdom'
-                };
-                console.log(`🔄 MARKETPLACE FALLBACK: Using first non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+              console.warn(`⚠️ MARKETPLACE: Customer selected address ID ${selectedDeliveryAddressId} not found in database. Attempting fallback from all customer addresses...`);
+              try {
+                const allCustomerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
+                const fallbackAddr = allCustomerAddresses.find((addr: any) => !addr.is_default) || allCustomerAddresses[0];
+                if (fallbackAddr) {
+                  selectedDeliveryAddress = {
+                    id: fallbackAddr.id,
+                    addressLine1: fallbackAddr.address_line1 || '',
+                    addressLine2: fallbackAddr.address_line2 || null,
+                    city: fallbackAddr.city || '',
+                    state: fallbackAddr.state || null,
+                    postalCode: fallbackAddr.postal_code || '',
+                    country: fallbackAddr.country || 'United Kingdom'
+                  };
+                  console.log(`🔄 MARKETPLACE FALLBACK: Using customer address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+                } else {
+                  console.warn(`⚠️ MARKETPLACE: No addresses found for customer ${customer.id}. Proceeding without address snapshot.`);
+                }
+              } catch (addrErr) {
+                console.error('❌ MARKETPLACE: Failed to fetch fallback addresses:', addrErr);
               }
             }
           } catch (error) {
