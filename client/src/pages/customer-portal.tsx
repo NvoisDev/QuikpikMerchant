@@ -4118,8 +4118,9 @@ export default function CustomerPortal() {
                                   {/* Initial add button */}
                                   {!cartItemUnits && !cartItemPallets && (
                                     <div className="flex flex-col items-center gap-1">
-                                      <Button
-                                        onClick={() => {
+                                      {(() => {
+                                        const isOutOfStock = product.stock === 0 && ((product as any).palletStock || 0) === 0;
+                                        const handleAdd = () => {
                                           if (hasPalletPricing) {
                                             setSelectedProductForModal(product);
                                             setModalStep('type');
@@ -4129,15 +4130,33 @@ export default function CustomerPortal() {
                                           } else {
                                             addToCart(product, product.moq || 1, 'units');
                                           }
-                                        }}
-                                        disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
-                                        size="sm"
-                                        className="rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
-                                        style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                      >
-                                        <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                                        {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
-                                      </Button>
+                                        };
+                                        return (
+                                          <>
+                                            {/* Mobile: compact "+" circle */}
+                                            <button
+                                              onClick={handleAdd}
+                                              disabled={isOutOfStock}
+                                              className="sm:hidden w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold disabled:cursor-not-allowed flex-shrink-0"
+                                              style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                              aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                                            >
+                                              {isOutOfStock ? <ShoppingCart className="h-4 w-4" /> : <Plus className="h-5 w-5" />}
+                                            </button>
+                                            {/* Desktop: full button */}
+                                            <Button
+                                              onClick={handleAdd}
+                                              disabled={isOutOfStock}
+                                              size="sm"
+                                              className="hidden sm:flex rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
+                                              style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                            >
+                                              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                                              {isOutOfStock ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                            </Button>
+                                          </>
+                                        );
+                                      })()}
                                       {hasPalletPricing && product.stock > 0 && (
                                         <p className="text-xs text-gray-500 text-center">units or pallets</p>
                                       )}
