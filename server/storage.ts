@@ -5190,6 +5190,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteDeliveryAddress(id: number): Promise<void> {
+    // Nullify orders that reference this address before deleting (avoids FK constraint violation)
+    await db
+      .update(orders)
+      .set({ deliveryAddressId: null })
+      .where(eq(orders.deliveryAddressId, id));
+
     const result = await db
       .delete(deliveryAddresses)
       .where(eq(deliveryAddresses.id, id))
