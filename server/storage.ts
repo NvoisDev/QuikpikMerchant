@@ -392,6 +392,7 @@ export interface IStorage {
   getWholesalersForCustomerProfile(customerId: string): Promise<string[]>;
   
   // Delivery address operations
+  isCustomerOfWholesaler(customerId: string, wholesalerId: string): Promise<boolean>;
   getDeliveryAddresses(customerId: string): Promise<DeliveryAddress[]>;
   getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined>;
   getDeliveryAddressById(id: number): Promise<DeliveryAddress | undefined>;
@@ -5080,7 +5081,18 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Delivery address operations (temporary in-memory storage due to database size limits)
+  async isCustomerOfWholesaler(customerId: string, wholesalerId: string): Promise<boolean> {
+    const [rel] = await db
+      .select({ id: wholesalerCustomerRelationships.id })
+      .from(wholesalerCustomerRelationships)
+      .where(and(
+        eq(wholesalerCustomerRelationships.customerId, customerId),
+        eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+        eq(wholesalerCustomerRelationships.status, 'active')
+      ));
+    return !!rel;
+  }
+
   async getDeliveryAddresses(customerId: string): Promise<DeliveryAddress[]> {
     const addresses = await db
       .select()

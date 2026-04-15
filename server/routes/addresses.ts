@@ -4,7 +4,7 @@ import {
 } from "./shared";
 
 export function registerAddressRoutes(app: Express): void {
-  // GET /api/delivery-address/:addressId
+  // GET /api/delivery-address/:addressId (customer-facing, by session auth)
   app.get('/api/delivery-address/:addressId', async (req, res) => {
     try {
       const { addressId } = req.params;
@@ -48,9 +48,13 @@ export function registerAddressRoutes(app: Express): void {
   });
 
   // GET /api/wholesaler/delivery-address/:addressId
+  // Returns a single address by id; verifies the address owner is a customer of this wholesaler
   app.get('/api/wholesaler/delivery-address/:addressId', requireAuth, async (req: any, res) => {
     try {
       const { addressId } = req.params;
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
       
       const address = await storage.getDeliveryAddress(parseInt(addressId));
       
@@ -58,7 +62,12 @@ export function registerAddressRoutes(app: Express): void {
         return res.status(404).json({ error: "Address not found" });
       }
       
-      console.log(`🎯 Wholesaler retrieved delivery address ${addressId}: ${address.addressLine1}, ${address.city}`);
+      const belongs = await storage.isCustomerOfWholesaler(address.customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - address not associated with your customers" });
+      }
+      
+      console.log(`🎯 Wholesaler ${wholesalerId} retrieved delivery address ${addressId}: ${address.addressLine1}, ${address.city}`);
       res.json(address);
     } catch (error) {
       console.error("❌ Error fetching delivery address for wholesaler:", error);
@@ -89,7 +98,14 @@ export function registerAddressRoutes(app: Express): void {
   // GET /api/wholesaler/customers/:customerId/addresses
   app.get('/api/wholesaler/customers/:customerId/addresses', requireAuth, async (req: any, res) => {
     try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const { customerId } = req.params;
+      
+      const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - customer not associated with your account" });
+      }
+      
       const addresses = await storage.getDeliveryAddresses(customerId);
       res.json(addresses);
     } catch (error) {
@@ -107,6 +123,11 @@ export function registerAddressRoutes(app: Express): void {
 
       if (!addressLine1 || !city || !postalCode) {
         return res.status(400).json({ error: "Address line 1, city, and postal code are required" });
+      }
+
+      const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - customer not associated with your account" });
       }
 
       const address = await storage.createDeliveryAddress({
@@ -137,6 +158,11 @@ export function registerAddressRoutes(app: Express): void {
       const { customerId, addressId } = req.params;
       const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
 
+      const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - customer not associated with your account" });
+      }
+
       const existing = await storage.getDeliveryAddressForCustomer(parseInt(addressId), customerId);
       if (!existing) {
         return res.status(404).json({ error: "Address not found" });
@@ -160,6 +186,11 @@ export function registerAddressRoutes(app: Express): void {
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const { customerId, addressId } = req.params;
 
+      const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - customer not associated with your account" });
+      }
+
       const existing = await storage.getDeliveryAddressForCustomer(parseInt(addressId), customerId);
       if (!existing) {
         return res.status(404).json({ error: "Address not found" });
@@ -174,8 +205,37 @@ export function registerAddressRoutes(app: Express): void {
     }
   });
 
+  // GET /api/customer/delivery-addresses — clean endpoint (no wholesalerId in URL)
+  app.get('/api/customer/delivery-addresses', async (req, res) => {
+    try {
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const addresses = await storage.getDeliveryAddresses(customerAuth.customerId);
+      console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerAuth.customerId}`);
+      res.json(addresses);
+    } catch (error) {
+      console.error("❌ Error fetching delivery addresses:", error);
+      res.status(500).json({ error: "Failed to fetch delivery addresses" });
+    }
+  });
+
   // GET /api/customer/delivery-addresses/:wholesalerId
-  // URL keeps :wholesalerId for backward-compat but no longer filters by it
+  // Kept as backward-compat alias — wholesalerId in URL is used only for cookie validation, not filtering
   app.get('/api/customer/delivery-addresses/:wholesalerId', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
@@ -224,7 +284,7 @@ export function registerAddressRoutes(app: Express): void {
       if (!customerAuth && req.cookies?.customer_auth) {
         try {
           const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+          if (cookieData.expires > Date.now() && (!wholesalerId || cookieData.wholesalerId === wholesalerId)) {
             customerAuth = {
               customerId: cookieData.customerId,
               wholesalerId: cookieData.wholesalerId
@@ -243,7 +303,6 @@ export function registerAddressRoutes(app: Express): void {
         return res.status(400).json({ error: "Missing required address fields" });
       }
       
-      // If this is being set as default, first unset any existing default
       if (isDefault) {
         await storage.setDefaultDeliveryAddress(customerAuth.customerId, -1);
       }
@@ -408,7 +467,7 @@ export function registerAddressRoutes(app: Express): void {
   });
 
   // GET /api/customer/delivery-addresses/:wholesalerId/default
-  // URL keeps :wholesalerId for backward-compat but no longer filters by it
+  // Backward-compat URL — wholesalerId used for cookie validation only
   app.get('/api/customer/delivery-addresses/:wholesalerId/default', async (req, res) => {
     try {
       const { wholesalerId } = req.params;

@@ -48,7 +48,7 @@ export const DynamicDeliveryAddressDisplay: React.FC<DynamicDeliveryAddressDispl
       if (!addressId) return null;
       
       try {
-        const response = await apiRequest('GET', `/api/customer/delivery-addresses/${wholesalerId}`);
+        const response = await apiRequest('GET', `/api/customer/delivery-addresses`);
         const addresses = await response.json();
         return addresses.find((addr: DeliveryAddress) => addr.id === addressId) || null;
       } catch (error) {
@@ -155,9 +155,9 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
 
   // Fetch customer's delivery addresses
   const { data: addresses = [], isLoading } = useQuery({
-    queryKey: ['/api/customer/delivery-addresses', wholesalerId],
+    queryKey: ['/api/customer/delivery-addresses'],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/customer/delivery-addresses/${wholesalerId}`);
+      const response = await apiRequest('GET', `/api/customer/delivery-addresses`);
       return response.json();
     }
   });

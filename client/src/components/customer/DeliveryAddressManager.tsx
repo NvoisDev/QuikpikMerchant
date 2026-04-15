@@ -95,7 +95,7 @@ export function DeliveryAddressManager({
 
   // Fetch delivery addresses
   const { data: addresses = [], isLoading } = useQuery<DeliveryAddress[]>({
-    queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`],
+    queryKey: ['/api/customer/delivery-addresses'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -113,7 +113,7 @@ export function DeliveryAddressManager({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/delivery-addresses'] });
       setIsAddingAddress(false);
       resetForm();
       toast({
@@ -136,7 +136,7 @@ export function DeliveryAddressManager({
       return await apiRequest('PUT', `/api/customer/delivery-addresses/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/delivery-addresses'] });
       setEditingAddress(null);
       resetForm();
       toast({
@@ -159,7 +159,7 @@ export function DeliveryAddressManager({
       return await apiRequest('DELETE', `/api/customer/delivery-addresses/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/delivery-addresses'] });
       setIsDeleteDialogOpen(false);
       setAddressToDelete(null);
       toast({
@@ -182,7 +182,7 @@ export function DeliveryAddressManager({
       return await apiRequest('POST', `/api/customer/delivery-addresses/${id}/set-default`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/delivery-addresses'] });
       toast({
         title: "Default Address Updated",
         description: "Your default delivery address has been updated.",

@@ -66,7 +66,7 @@ export function AddressSelector({
 
   // Fetch delivery addresses
   const { data: addresses = [], isLoading } = useQuery<DeliveryAddress[]>({
-    queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`],
+    queryKey: ['/api/customer/delivery-addresses'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 

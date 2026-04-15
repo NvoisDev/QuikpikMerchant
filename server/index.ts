@@ -44,8 +44,13 @@ async function runStartupMigrations() {
     `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'premium' AND monthly_price != '49.99'`,
     // Task #160: Customer-owned addresses — deduplicate rows that differ only by wholesaler,
     // keep lowest-id winner per customer+address combination, then drop the wholesaler_id column.
-    `DELETE FROM delivery_addresses WHERE id NOT IN (SELECT MIN(id) FROM delivery_addresses GROUP BY customer_id, LOWER(address_line1), LOWER(city), postal_code) AND id NOT IN (SELECT DISTINCT delivery_address_id FROM orders WHERE delivery_address_id IS NOT NULL)`,
+    // Step 1: Remap any orders that reference a non-canonical (duplicate) address to the min-id canonical address
+    `UPDATE orders o SET delivery_address_id = (SELECT MIN(da.id) FROM delivery_addresses da JOIN delivery_addresses da2 ON da2.id = o.delivery_address_id WHERE da.customer_id = da2.customer_id AND LOWER(da.address_line1) = LOWER(da2.address_line1) AND LOWER(da.city) = LOWER(da2.city) AND da.postal_code = da2.postal_code) WHERE delivery_address_id IS NOT NULL AND delivery_address_id NOT IN (SELECT MIN(id) FROM delivery_addresses GROUP BY customer_id, LOWER(address_line1), LOWER(city), postal_code)`,
+    // Step 2: Delete duplicate addresses (all orders now reference canonical ids)
+    `DELETE FROM delivery_addresses WHERE id NOT IN (SELECT MIN(id) FROM delivery_addresses GROUP BY customer_id, LOWER(address_line1), LOWER(city), postal_code)`,
+    // Step 3: Fix multi-default conflicts — keep only the lowest-id default per customer
     `UPDATE delivery_addresses SET is_default = false WHERE is_default = true AND id NOT IN (SELECT MIN(id) FROM delivery_addresses WHERE is_default = true GROUP BY customer_id)`,
+    // Step 4: Drop the wholesaler_id column (now customer-owned)
     `ALTER TABLE delivery_addresses DROP COLUMN IF EXISTS wholesaler_id`,
     // Task #153: Add stripe_transfer_id for exact payout-to-order reconciliation
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_transfer_id VARCHAR`,
