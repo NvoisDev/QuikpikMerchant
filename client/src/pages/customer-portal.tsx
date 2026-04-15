@@ -809,7 +809,7 @@ console.log(`[CustomerPortal ${CUSTOMER_PORTAL_VERSION}] module loaded`);
 
 export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Theme system
@@ -2306,8 +2306,8 @@ export default function CustomerPortal() {
     );
   }
 
-  // Show authentication screen (3-step process) - but not during wholesaler switching
-  if (showAuth && !isEnhancedPreviewMode && wholesalerId && !isSwitchingWholesaler) {
+  // Show authentication screen (3-step process) - but not during wholesaler switching or session loading
+  if (showAuth && !isEnhancedPreviewMode && wholesalerId && !isSwitchingWholesaler && !sessionLoading) {
     console.log('🔐 Showing 3-step authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
@@ -2588,11 +2588,11 @@ export default function CustomerPortal() {
                           credentials: 'include',
                           body: JSON.stringify({ targetWholesalerId: wholesalerItem.id })
                         });
-                        window.location.href = `/store/${wholesalerItem.id}`;
                       } catch {
-                        setIsSwitchingWholesaler(false);
-                        window.location.href = `/store/${wholesalerItem.id}`;
+                        // continue even if switch-wholesaler fails — session check will handle auth
                       }
+                      setIsSwitchingWholesaler(false);
+                      setLocation(`/store/${wholesalerItem.id}`);
                     }
                   }}
                 >
@@ -2757,11 +2757,11 @@ export default function CustomerPortal() {
                             credentials: 'include',
                             body: JSON.stringify({ targetWholesalerId: w.id })
                           });
-                          window.location.href = `/store/${w.id}`;
                         } catch {
-                          setIsSwitchingWholesaler(false);
-                          window.location.href = `/store/${w.id}`;
+                          // continue even if switch-wholesaler fails — session check will handle auth
                         }
+                        setIsSwitchingWholesaler(false);
+                        setLocation(`/store/${w.id}`);
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-2xl mb-1 transition-colors text-left ${isActive ? 'bg-theme-secondary' : 'hover:bg-gray-50 active:bg-gray-100'}`}
                     >
