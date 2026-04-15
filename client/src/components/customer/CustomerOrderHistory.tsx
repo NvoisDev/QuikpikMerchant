@@ -265,7 +265,7 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
     <button
       onClick={handleGenerateLink}
       disabled={isLoading}
-      className="mt-3 inline-flex items-center justify-center w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+      className="mt-2 inline-flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors self-start"
     >
       {isLoading ? (
         <>
