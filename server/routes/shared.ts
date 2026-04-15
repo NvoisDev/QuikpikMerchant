@@ -574,7 +574,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     doc.roundedRect(c1, badgeY, badgeW, 15, 7).fill(psColor);
     doc.font('Helvetica-Bold').fontSize(8).fillColor('#ffffff').text(psLabel, c1, badgeY + 3, { width: badgeW, align: 'center' });
     doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('BILL TO', c2, metaY, { width: COL_W - 8 });
-    const customerBusinessName = (order.retailer as any)?.businessName as string | null | undefined;
+    const customerBusinessName = order.retailer?.businessName?.trim() || null;
     let btY: number;
     if (customerBusinessName) {
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerBusinessName, c2, metaY + 12, { width: COL_W - 8 });
