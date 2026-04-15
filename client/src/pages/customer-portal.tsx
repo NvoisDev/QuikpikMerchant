@@ -967,7 +967,7 @@ export default function CustomerPortal() {
   const [selectedModalType, setSelectedModalType] = useState<'units' | 'pallets' | null>(null);
   const [modalQuantity, setModalQuantity] = useState(1);
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
-  const [editableQuantities, setEditableQuantities] = useState<Record<number, string>>({});
+  const [editableQuantities, setEditableQuantities] = useState<Record<string, string>>({});
 
   // Payment intent creation state
   const [clientSecret, setClientSecret] = useState("");
@@ -1286,9 +1286,10 @@ export default function CustomerPortal() {
   // Sync editableQuantities map whenever cart changes (used by checkout item rows)
   useEffect(() => {
     setEditableQuantities(prev => {
-      const next: Record<number, string> = {};
+      const next: Record<string, string> = {};
       cart.forEach(i => {
-        next[i.product.id] = prev[i.product.id] !== undefined ? prev[i.product.id] : String(i.quantity);
+        const k = `${i.product.id}_${i.sellingType}`;
+        next[k] = prev[k] !== undefined ? prev[k] : String(i.quantity);
       });
       return next;
     });
@@ -4598,17 +4599,18 @@ export default function CustomerPortal() {
                         totalCost = cartPricing.totalCost;
                       }
 
-                      const moq = item.product.moq || 1;
+                      const moq = item.sellingType === 'pallets' ? ((item.product as any).palletMoq || 1) : (item.product.moq || 1);
                       const availableStock = item.sellingType === 'pallets'
                         ? ((item.product as any).palletStock || 999)
                         : (item.product.stock || 999);
-                      const currentEditVal = editableQuantities[item.product.id] ?? String(item.quantity);
+                      const eqKey = `${item.product.id}_${item.sellingType}`;
+                      const currentEditVal = editableQuantities[eqKey] ?? String(item.quantity);
 
                       const commitQty = (rawVal: string) => {
                         const parsed = parseInt(rawVal, 10);
                         const clamped = isNaN(parsed) || parsed < moq ? moq : Math.min(parsed, availableStock);
-                        setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(clamped) }));
-                        setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: clamped } : c));
+                        setEditableQuantities(prev => ({ ...prev, [eqKey]: String(clamped) }));
+                        setCart(cart.map(c => c.product.id === item.product.id && c.sellingType === item.sellingType ? { ...c, quantity: clamped } : c));
                       };
 
                       const handleShare = async () => {
@@ -4706,11 +4708,11 @@ export default function CustomerPortal() {
                                 className="h-7 w-7 p-0"
                                 onClick={() => {
                                   if (item.quantity <= moq) {
-                                    setCart(cart.filter(c => c.product.id !== item.product.id));
+                                    setCart(cart.filter(c => !(c.product.id === item.product.id && c.sellingType === item.sellingType)));
                                   } else {
                                     const next = item.quantity - 1;
-                                    setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(next) }));
-                                    setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: next } : c));
+                                    setEditableQuantities(prev => ({ ...prev, [eqKey]: String(next) }));
+                                    setCart(cart.map(c => c.product.id === item.product.id && c.sellingType === item.sellingType ? { ...c, quantity: next } : c));
                                   }
                                 }}
                               >
@@ -4730,8 +4732,8 @@ export default function CustomerPortal() {
                                 className="h-7 w-7 p-0"
                                 onClick={() => {
                                   const next = Math.min(item.quantity + 1, availableStock);
-                                  setEditableQuantities(prev => ({ ...prev, [item.product.id]: String(next) }));
-                                  setCart(cart.map(c => c.product.id === item.product.id ? { ...c, quantity: next } : c));
+                                  setEditableQuantities(prev => ({ ...prev, [eqKey]: String(next) }));
+                                  setCart(cart.map(c => c.product.id === item.product.id && c.sellingType === item.sellingType ? { ...c, quantity: next } : c));
                                 }}
                               >
                                 <Plus className="h-3 w-3" />
@@ -4743,7 +4745,7 @@ export default function CustomerPortal() {
                               size="sm"
                               variant="outline"
                               className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 h-7 text-xs px-2"
-                              onClick={() => setCart(cart.filter(c => c.product.id !== item.product.id))}
+                              onClick={() => setCart(cart.filter(c => !(c.product.id === item.product.id && c.sellingType === item.sellingType)))}
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
                               Delete
