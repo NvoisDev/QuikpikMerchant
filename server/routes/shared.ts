@@ -574,8 +574,16 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     doc.roundedRect(c1, badgeY, badgeW, 15, 7).fill(psColor);
     doc.font('Helvetica-Bold').fontSize(8).fillColor('#ffffff').text(psLabel, c1, badgeY + 3, { width: badgeW, align: 'center' });
     doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('BILL TO', c2, metaY, { width: COL_W - 8 });
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerName, c2, metaY + 12, { width: COL_W - 8 });
-    let btY = metaY + 26;
+    const customerBusinessName = (order.retailer as any)?.businessName as string | null | undefined;
+    let btY: number;
+    if (customerBusinessName) {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerBusinessName, c2, metaY + 12, { width: COL_W - 8 });
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(customerName, c2, metaY + 24, { width: COL_W - 8 });
+      btY = metaY + 38;
+    } else {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerName, c2, metaY + 12, { width: COL_W - 8 });
+      btY = metaY + 26;
+    }
     for (const line of addressLines) { doc.font('Helvetica').fontSize(9).fillColor(DARK).text(line, c2, btY, { width: COL_W - 8, lineBreak: false }); btY += 12; }
     const cPhone = order.customerPhone || order.retailer?.phoneNumber;
     if (cPhone) { doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(String(cPhone), c2, btY, { width: COL_W - 8 }); btY += 12; }
