@@ -709,13 +709,20 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {recentOrders.map((order: Order) => (
           <div key={order.id} className="border rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm">{order.orderNumber}</span>
-              <span className="text-xs text-gray-500">
-                {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : ''}
-              </span>
+            {/* Header: order number left, Pay Now + date stacked right */}
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-semibold text-sm pt-0.5">{order.orderNumber}</span>
+              <div className="flex flex-col items-end gap-1">
+                {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                  <PayBalanceButton order={order} customerPhone={customerPhone} />
+                )}
+                <span className="text-xs text-gray-400">
+                  {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : ''}
+                </span>
+              </div>
             </div>
 
+            {/* Status badges */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge className={`${getStatusColor(order.status)} text-xs`}>
                 {getStatusIcon(order.status)}
@@ -731,6 +738,7 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               </Badge>
             </div>
 
+            {/* Fulfilment info */}
             <div className="flex items-center gap-2 text-xs text-gray-600">
               {order.fulfillmentType === 'delivery' ? (
                 <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Delivery</span>
@@ -743,7 +751,8 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               )}
             </div>
 
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            {/* Secondary actions — separated by divider, Cancel Order last */}
+            <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-gray-100">
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
@@ -757,16 +766,6 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
                   customerPhone={customerPhone}
                 />
               </Dialog>
-
-              {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
-                <PayBalanceButton order={order} customerPhone={customerPhone} />
-              )}
-
-              <CancellationRequestButton
-                order={order}
-                customerPhone={customerPhone}
-                onSuccess={handleRefresh}
-              />
 
               <ReorderButton
                 order={order}
@@ -788,6 +787,12 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
                 )}
                 {downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
               </Button>
+
+              <CancellationRequestButton
+                order={order}
+                customerPhone={customerPhone}
+                onSuccess={handleRefresh}
+              />
             </div>
           </div>
         ))}
