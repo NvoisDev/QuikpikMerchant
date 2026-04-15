@@ -1410,10 +1410,12 @@ The Customer Portal is a dedicated shopping interface where your customers can b
 #### Order Status Badges
 Each order shows a combination of badges:
 - **Paid** (green) / **Part Paid** (orange) / **Unpaid** (red) — payment status
-- **Fulfilled** (blue) / **Ready** (yellow) / **Cancelled** (red) / **Pending** (grey) — fulfilment status
+- **Fulfilled** (blue) / **Ready** (yellow) / **Cancelled** (red) / **Unfulfilled** (grey) — fulfilment status
 - **Refunded** (purple) — full refund has been processed (shown alongside "Cancelled")
 - **Partially Refunded** (purple) — some items were returned but the order remains active
 - **Delivery** / **Collection** — how the order will be fulfilled
+
+> **Dashboard Recent Orders card** shows a single colour-coded badge per order reflecting its overall status: Pending (amber), Confirmed (blue), Processing (purple), Paid (green), Fulfilled (emerald), Cancelled (red), Ready for Collection (orange).
 
 #### Order Details
 Each order includes:
