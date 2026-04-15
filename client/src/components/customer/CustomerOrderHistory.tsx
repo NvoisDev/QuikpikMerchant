@@ -273,7 +273,7 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
           Generating Link...
         </>
       ) : (
-        <>💳 Pay Balance Now</>
+        <>💳 Pay Now</>
       )}
     </button>
   );
