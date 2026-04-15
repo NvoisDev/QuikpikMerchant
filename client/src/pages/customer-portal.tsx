@@ -2239,6 +2239,7 @@ export default function CustomerPortal() {
       setAuthenticatedCustomer(sessionData.customer);
       setShowAuth(false);
       setIsGuestMode(false);
+      setIsSwitchingWholesaler(false); // Clear switching state now that new store auth is confirmed
       return;
     }
     
@@ -2250,7 +2251,13 @@ export default function CustomerPortal() {
       setShowAuth(true);
       setIsGuestMode(true);
     } else {
-      console.log('🔄 Currently switching wholesaler, not showing auth screen');
+      // Session check resolved with no auth while switching — clear switching state and show auth
+      console.log('🔄 Switching wholesaler: session check resolved with no auth, clearing switch state');
+      setIsSwitchingWholesaler(false);
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(true);
+      setIsGuestMode(true);
     }
   }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
 
@@ -2591,7 +2598,8 @@ export default function CustomerPortal() {
                       } catch {
                         // continue even if switch-wholesaler fails — session check will handle auth
                       }
-                      setIsSwitchingWholesaler(false);
+                      // Keep isSwitchingWholesaler=true through navigation so the switching
+                      // screen persists until the new store session check resolves
                       setLocation(`/store/${wholesalerItem.id}`);
                     }
                   }}
@@ -2760,7 +2768,8 @@ export default function CustomerPortal() {
                         } catch {
                           // continue even if switch-wholesaler fails — session check will handle auth
                         }
-                        setIsSwitchingWholesaler(false);
+                        // Keep isSwitchingWholesaler=true through navigation so the switching
+                        // screen persists until the new store session check resolves
                         setLocation(`/store/${w.id}`);
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-2xl mb-1 transition-colors text-left ${isActive ? 'bg-theme-secondary' : 'hover:bg-gray-50 active:bg-gray-100'}`}
