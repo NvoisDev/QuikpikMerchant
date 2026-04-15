@@ -108,7 +108,6 @@ export function DeliveryAddressManager({
   const createAddressMutation = useMutation({
     mutationFn: async (addressData: Partial<AddressFormData>) => {
       return await apiRequest('POST', '/api/customer/delivery-addresses', {
-        wholesalerId,
         ...addressData,
       });
     },

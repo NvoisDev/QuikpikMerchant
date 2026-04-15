@@ -81,7 +81,6 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   const createAddressMutation = useMutation({
     mutationFn: async (addressData: AddressFormData) => {
       return await apiRequest('POST', '/api/customer/delivery-addresses', {
-        wholesalerId,
         ...addressData,
       });
     },

@@ -85,6 +85,11 @@ export function registerAddressRoutes(app: Express): void {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
+      if (!belongs) {
+        return res.status(403).json({ error: "Access denied - customer not associated with your account" });
+      }
+      
       const addresses = await storage.getDeliveryAddresses(customerId);
       console.log(`📍 Wholesaler ${wholesalerId} retrieved ${addresses.length} delivery addresses for customer ${customerId}`);
       
