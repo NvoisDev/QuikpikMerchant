@@ -15,7 +15,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 interface DeliveryAddress {
   id: number;
   customerId: string;
-  wholesalerId: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;

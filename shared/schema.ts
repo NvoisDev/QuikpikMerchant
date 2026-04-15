@@ -1460,7 +1460,6 @@ export type FinancialPerformance = typeof financialPerformance.$inferSelect;
 export const deliveryAddresses = pgTable("delivery_addresses", {
   id: serial("id").primaryKey(),
   customerId: varchar("customer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
   // Address details
   addressLine1: varchar("address_line1").notNull(),
@@ -1480,7 +1479,6 @@ export const deliveryAddresses = pgTable("delivery_addresses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   customerIdIdx: index("delivery_addresses_customer_id_idx").on(table.customerId),
-  wholesalerIdIdx: index("delivery_addresses_wholesaler_id_idx").on(table.wholesalerId),
 }));
 
 // Customer-Wholesaler Relationships Table - Support shared customers across multiple wholesalers

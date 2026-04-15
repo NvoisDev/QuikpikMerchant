@@ -392,15 +392,15 @@ export interface IStorage {
   getWholesalersForCustomerProfile(customerId: string): Promise<string[]>;
   
   // Delivery address operations
-  getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]>;
+  getDeliveryAddresses(customerId: string): Promise<DeliveryAddress[]>;
   getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined>;
   getDeliveryAddressById(id: number): Promise<DeliveryAddress | undefined>;
-  getDeliveryAddressForCustomer(id: number, customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined>;
+  getDeliveryAddressForCustomer(id: number, customerId: string): Promise<DeliveryAddress | undefined>;
   createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
   updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress>;
   deleteDeliveryAddress(id: number): Promise<void>;
-  setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void>;
-  getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined>;
+  setDefaultDeliveryAddress(customerId: string, addressId: number): Promise<void>;
+  getDefaultDeliveryAddress(customerId: string): Promise<DeliveryAddress | undefined>;
 }
 
 function resolveLivePromo(offers: any[], basePrice: string): { promoActive: boolean; promoPrice: string | null } {
@@ -5081,14 +5081,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Delivery address operations (temporary in-memory storage due to database size limits)
-  async getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]> {
+  async getDeliveryAddresses(customerId: string): Promise<DeliveryAddress[]> {
     const addresses = await db
       .select()
       .from(deliveryAddresses)
-      .where(and(
-        eq(deliveryAddresses.customerId, customerId),
-        eq(deliveryAddresses.wholesalerId, wholesalerId)
-      ))
+      .where(eq(deliveryAddresses.customerId, customerId))
       .orderBy(desc(deliveryAddresses.isDefault), desc(deliveryAddresses.createdAt));
     
     console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerId}`);
@@ -5114,17 +5111,16 @@ export class DatabaseStorage implements IStorage {
     return address;
   }
 
-  async getDeliveryAddressForCustomer(id: number, customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
+  async getDeliveryAddressForCustomer(id: number, customerId: string): Promise<DeliveryAddress | undefined> {
     const [address] = await db
       .select()
       .from(deliveryAddresses)
       .where(and(
         eq(deliveryAddresses.id, id),
-        eq(deliveryAddresses.customerId, customerId),
-        eq(deliveryAddresses.wholesalerId, wholesalerId)
+        eq(deliveryAddresses.customerId, customerId)
       ));
     
-    console.log(`🔒 SECURITY: Verified address ID ${id} belongs to customer ${customerId} for wholesaler ${wholesalerId}:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND OR ACCESS DENIED');
+    console.log(`🔒 SECURITY: Verified address ID ${id} belongs to customer ${customerId}:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND OR ACCESS DENIED');
     return address;
   }
 
@@ -5134,17 +5130,13 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(deliveryAddresses)
         .set({ isDefault: false })
-        .where(and(
-          eq(deliveryAddresses.customerId, address.customerId),
-          eq(deliveryAddresses.wholesalerId, address.wholesalerId)
-        ));
+        .where(eq(deliveryAddresses.customerId, address.customerId));
     }
     
     const [newAddress] = await db
       .insert(deliveryAddresses)
       .values({
         customerId: address.customerId,
-        wholesalerId: address.wholesalerId,
         addressLine1: address.addressLine1,
         addressLine2: address.addressLine2 || null,
         city: address.city,
@@ -5168,15 +5160,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Address with id ${id} not found`);
     }
     
-    // If setting as default, unset all others in this customer/wholesaler group
+    // If setting as default, unset all others for this customer
     if (updates.isDefault) {
       await db
         .update(deliveryAddresses)
         .set({ isDefault: false })
-        .where(and(
-          eq(deliveryAddresses.customerId, existingAddress.customerId),
-          eq(deliveryAddresses.wholesalerId, existingAddress.wholesalerId)
-        ));
+        .where(eq(deliveryAddresses.customerId, existingAddress.customerId));
     }
     
     const [updatedAddress] = await db
@@ -5201,15 +5190,12 @@ export class DatabaseStorage implements IStorage {
     console.log(`🗑️ Deleted delivery address ${id}`);
   }
 
-  async setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void> {
-    // First, unset all defaults for this customer/wholesaler
+  async setDefaultDeliveryAddress(customerId: string, addressId: number): Promise<void> {
+    // First, unset all defaults for this customer
     await db
       .update(deliveryAddresses)
       .set({ isDefault: false })
-      .where(and(
-        eq(deliveryAddresses.customerId, customerId),
-        eq(deliveryAddresses.wholesalerId, wholesalerId)
-      ));
+      .where(eq(deliveryAddresses.customerId, customerId));
     
     // Then set the specified one as default (if addressId is not -1)
     if (addressId !== -1) {
@@ -5222,13 +5208,12 @@ export class DatabaseStorage implements IStorage {
     console.log(`🎯 Set address ${addressId} as default for customer ${customerId}`);
   }
 
-  async getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
+  async getDefaultDeliveryAddress(customerId: string): Promise<DeliveryAddress | undefined> {
     const [address] = await db
       .select()
       .from(deliveryAddresses)
       .where(and(
         eq(deliveryAddresses.customerId, customerId),
-        eq(deliveryAddresses.wholesalerId, wholesalerId),
         eq(deliveryAddresses.isDefault, true)
       ));
     

@@ -28,7 +28,6 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS customer_group_members_group_id_idx ON customer_group_members (group_id)`,
     `CREATE INDEX IF NOT EXISTS broadcasts_wholesaler_id_idx ON broadcasts (wholesaler_id)`,
     `CREATE INDEX IF NOT EXISTS delivery_addresses_customer_id_idx ON delivery_addresses (customer_id)`,
-    `CREATE INDEX IF NOT EXISTS delivery_addresses_wholesaler_id_idx ON delivery_addresses (wholesaler_id)`,
     // Task #46: Security — clear stale google_id from team_member records so they cannot
     // match in the googleId-first lookup and leak another wholesaler's data.
     `UPDATE users SET google_id = NULL WHERE role = 'team_member' AND google_id IS NOT NULL`,
@@ -43,6 +42,11 @@ async function runStartupMigrations() {
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method varchar`,
     // Task #154: Update Premium plan display price to £49.99
     `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'premium' AND monthly_price != '49.99'`,
+    // Task #160: Customer-owned addresses — deduplicate rows that differ only by wholesaler,
+    // keep lowest-id winner per customer+address combination, then drop the wholesaler_id column.
+    `DELETE FROM delivery_addresses WHERE id NOT IN (SELECT MIN(id) FROM delivery_addresses GROUP BY customer_id, LOWER(address_line1), LOWER(city), postal_code) AND id NOT IN (SELECT DISTINCT delivery_address_id FROM orders WHERE delivery_address_id IS NOT NULL)`,
+    `UPDATE delivery_addresses SET is_default = false WHERE is_default = true AND id NOT IN (SELECT MIN(id) FROM delivery_addresses WHERE is_default = true GROUP BY customer_id)`,
+    `ALTER TABLE delivery_addresses DROP COLUMN IF EXISTS wholesaler_id`,
     // Task #153: Add stripe_transfer_id for exact payout-to-order reconciliation
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_transfer_id VARCHAR`,
     // Task #74: Drop any check constraint on team_members.role so 'viewer' is always valid.
