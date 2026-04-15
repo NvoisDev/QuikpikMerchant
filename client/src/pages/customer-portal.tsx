@@ -709,7 +709,6 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {recentOrders.map((order: Order) => (
           <div key={order.id} className="border rounded-lg p-3 space-y-2">
-            {/* Header: order number left, Pay Now + date stacked right */}
             <div className="flex items-start justify-between gap-2">
               <span className="font-semibold text-sm pt-0.5">{order.orderNumber}</span>
               <div className="flex flex-col items-end gap-1">
@@ -722,7 +721,6 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               </div>
             </div>
 
-            {/* Status badges */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge className={`${getStatusColor(order.status)} text-xs`}>
                 {getStatusIcon(order.status)}
@@ -738,7 +736,6 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               </Badge>
             </div>
 
-            {/* Fulfilment info */}
             <div className="flex items-center gap-2 text-xs text-gray-600">
               {order.fulfillmentType === 'delivery' ? (
                 <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Delivery</span>
@@ -751,7 +748,6 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               )}
             </div>
 
-            {/* Secondary actions — separated by divider, Cancel Order last */}
             <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-gray-100">
               <Dialog>
                 <DialogTrigger asChild>
