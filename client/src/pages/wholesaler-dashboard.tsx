@@ -1001,7 +1001,16 @@ export default function WholesalerDashboard() {
                           <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={order.status === 'paid' ? 'default' : 'secondary'}>
+                          <Badge className={({
+                            pending: 'bg-amber-100 text-amber-800 border-0',
+                            confirmed: 'bg-blue-100 text-blue-800 border-0',
+                            processing: 'bg-purple-100 text-purple-800 border-0',
+                            paid: 'bg-green-100 text-green-800 border-0',
+                            fulfilled: 'bg-emerald-100 text-emerald-800 border-0',
+                            cancelled: 'bg-red-100 text-red-800 border-0',
+                            ready_for_collection: 'bg-orange-100 text-orange-800 border-0',
+                            items_prepared: 'bg-teal-100 text-teal-800 border-0',
+                          } as Record<string, string>)[order.status] || 'bg-gray-100 text-gray-800 border-0'}>
                             {order.status.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                           </Badge>
                           <Link href={`/orders?id=${order.id}`}>
