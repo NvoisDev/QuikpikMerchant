@@ -1344,33 +1344,37 @@ export default function OrderDetail() {
               );
             })()}
 
-            <div className="flex items-start gap-2">
-              <div className={`w-2 h-2 rounded-full mt-1.5 ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div>
-                <div className={`text-xs ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'font-medium' : 'text-gray-500'}`}>
-                  {order.fulfillmentType === 'pickup' ? 'Ready for Collection' : 'Ready for Delivery'}
-                </div>
-                {order.readyToCollectAt && (
-                  <div className="text-xs text-gray-500">
-                    {new Date(order.readyToCollectAt).toLocaleDateString()} at {new Date(order.readyToCollectAt).toLocaleTimeString()}
+            {order.status !== 'cancelled' && (
+              <div className="flex items-start gap-2">
+                <div className={`w-2 h-2 rounded-full mt-1.5 ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div>
+                  <div className={`text-xs ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'font-medium' : 'text-gray-500'}`}>
+                    {order.fulfillmentType === 'pickup' ? 'Ready for Collection' : 'Ready for Delivery'}
                   </div>
-                )}
+                  {order.readyToCollectAt && (
+                    <div className="text-xs text-gray-500">
+                      {new Date(order.readyToCollectAt).toLocaleDateString()} at {new Date(order.readyToCollectAt).toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-2">
-              <div className={`w-2 h-2 rounded-full mt-1.5 ${order.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div>
-                <div className={`text-xs ${order.status === 'fulfilled' ? 'font-medium' : 'text-gray-500'}`}>
-                  {order.fulfillmentType === 'pickup' ? 'Collected' : 'Delivered'}
-                </div>
-                {order.status === 'fulfilled' && order.fulfilledAt && (
-                  <div className="text-xs text-gray-500">
-                    {new Date(order.fulfilledAt).toLocaleDateString()} at {new Date(order.fulfilledAt).toLocaleTimeString()}
+            {order.status !== 'cancelled' && (
+              <div className="flex items-start gap-2">
+                <div className={`w-2 h-2 rounded-full mt-1.5 ${order.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div>
+                  <div className={`text-xs ${order.status === 'fulfilled' ? 'font-medium' : 'text-gray-500'}`}>
+                    {order.fulfillmentType === 'pickup' ? 'Collected' : 'Delivered'}
                   </div>
-                )}
+                  {order.status === 'fulfilled' && order.fulfilledAt && (
+                    <div className="text-xs text-gray-500">
+                      {new Date(order.fulfilledAt).toLocaleDateString()} at {new Date(order.fulfilledAt).toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {order.cancellationRequest && (
               <div className="flex items-start gap-2">
