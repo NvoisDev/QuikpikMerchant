@@ -651,7 +651,7 @@ const PaymentFormContent = ({
 
 function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void; defaultCurrency?: string }) {
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
-  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
 
   const downloadInvoice = async (order: Order) => {
     setDownloadingInvoiceId(order.id);
