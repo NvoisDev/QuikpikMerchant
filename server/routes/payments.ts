@@ -1010,6 +1010,35 @@ export function registerPaymentRoutes(app: Express): void {
           if (sourceId?.startsWith('tr_')) {
             // Destination charge: source is the Stripe Transfer ID stored at order creation
             order = await storage.getOrderByTransferId(sourceId);
+
+            // Fallback: Transfer ID was never backfilled on the order (can happen when
+            // the capture step at checkout silently fails). Expand the Transfer on the
+            // platform account to retrieve source_transaction.payment_intent, then look
+            // up the order by PaymentIntent ID and backfill for future lookups.
+            if (!order) {
+              try {
+                const transfer = await stripe.transfers.retrieve(sourceId as string, {
+                  expand: ['source_transaction'],
+                });
+                const sourceTxn = transfer.source_transaction;
+                const rawPi = sourceTxn && typeof sourceTxn === 'object'
+                  ? (sourceTxn as any).payment_intent
+                  : null;
+                const piId: string | null = typeof rawPi === 'string'
+                  ? rawPi
+                  : (rawPi && typeof rawPi === 'object' ? rawPi.id : null);
+                if (piId) {
+                  order = await storage.getOrderByPaymentIntentId(piId);
+                  if (order) {
+                    // Backfill so future payout reconciliations hit the DB directly
+                    storage.updateOrder(order.id, { stripeTransferId: sourceId }).catch(() => {});
+                    console.log(`✅ Payout reconciliation fallback: matched Transfer ${sourceId} → PI ${piId} → order ${order.orderNumber}`);
+                  }
+                }
+              } catch (fallbackErr) {
+                console.warn(`⚠️ Could not expand Transfer ${sourceId} for payout reconciliation:`, fallbackErr);
+              }
+            }
           } else if (sourceId?.startsWith('pi_')) {
             // Direct charge on connected account: source is the PaymentIntent ID
             order = await storage.getOrderByPaymentIntentId(sourceId);
