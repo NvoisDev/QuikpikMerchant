@@ -2472,39 +2472,6 @@ export default function CustomerPortal() {
               {/* Theme Switcher */}
               <ThemeSwitcher currentTheme={theme} onThemeChange={changeTheme} />
 
-              {/* Cart */}
-              {!isPreviewMode && (
-                <Button
-                  onClick={async () => {
-                    if (cart.length > 0) {
-                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout - NO early payment intent');
-                      console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                      setShowCheckout(true);
-                    }
-                  }}
-                  size="sm"
-                  className="btn-theme-primary relative px-3"
-                  disabled={cart.length === 0 || isCreatingIntent}
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  {cartStats.totalItems > 0 && (
-                    <span className="ml-1.5 text-xs font-semibold">{cartStats.totalItems}</span>
-                  )}
-                </Button>
-              )}
-
-              {/* Logout */}
-              {isAuthenticated && !isPreviewMode && (
-                <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-200 text-red-500 hover:bg-red-50 text-xs px-2"
-                >
-                  <span className="hidden sm:inline">Log out</span>
-                  <X className="w-3.5 h-3.5 sm:hidden" />
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -3237,6 +3204,28 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6 mb-16 pb-6">
+              {/* Quick Actions strip */}
+              <div className="flex items-center justify-around px-1 py-1">
+                <button onClick={() => setActiveTab("products")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><Store className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Shop</span>
+                </button>
+                <button onClick={() => setActiveTab("orders")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><History className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Orders</span>
+                </button>
+                <button onClick={async () => { if (cart.length > 0) { setShowCheckout(true); } else { setActiveTab("products"); } }} disabled={isCreatingIntent} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 relative">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary relative">
+                    <ShoppingCart className="w-4 h-4 text-theme-primary" />
+                    {cart.length > 0 && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center bg-theme-primary">{cart.length}</span>}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">{cart.length > 0 ? "Checkout" : "Cart"}</span>
+                </button>
+                <button onClick={handleLogout} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-red-50"><X className="w-4 h-4 text-red-400" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Sign Out</span>
+                </button>
+              </div>
               {/* Stats Bar */}
               <div className="grid grid-cols-3 gap-2">
                 {/* Cart Items */}
@@ -4254,6 +4243,28 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6 pb-6">
+              {/* Quick Actions strip */}
+              <div className="flex items-center justify-around px-1 py-1">
+                <button onClick={() => setActiveTab("products")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><Store className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Shop</span>
+                </button>
+                <button onClick={() => setActiveTab("orders")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><History className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Orders</span>
+                </button>
+                <button onClick={async () => { if (cart.length > 0) { setShowCheckout(true); } else { setActiveTab("products"); } }} disabled={isCreatingIntent} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 relative">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary relative">
+                    <ShoppingCart className="w-4 h-4 text-theme-primary" />
+                    {cart.length > 0 && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center bg-theme-primary">{cart.length}</span>}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">{cart.length > 0 ? "Checkout" : "Cart"}</span>
+                </button>
+                <button onClick={handleLogout} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-red-50"><X className="w-4 h-4 text-red-400" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Sign Out</span>
+                </button>
+              </div>
               {/* Stats Bar */}
               <div className="grid grid-cols-3 gap-2">
                 {/* Cart Items */}
@@ -4320,6 +4331,28 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="account" className="space-y-6 pb-6">
+              {/* Quick Actions strip */}
+              <div className="flex items-center justify-around px-1 py-1">
+                <button onClick={() => setActiveTab("products")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><Store className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Shop</span>
+                </button>
+                <button onClick={() => setActiveTab("orders")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><History className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Orders</span>
+                </button>
+                <button onClick={async () => { if (cart.length > 0) { setShowCheckout(true); } else { setActiveTab("products"); } }} disabled={isCreatingIntent} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 relative">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary relative">
+                    <ShoppingCart className="w-4 h-4 text-theme-primary" />
+                    {cart.length > 0 && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center bg-theme-primary">{cart.length}</span>}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">{cart.length > 0 ? "Checkout" : "Cart"}</span>
+                </button>
+                <button onClick={handleLogout} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-red-50"><X className="w-4 h-4 text-red-400" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Sign Out</span>
+                </button>
+              </div>
               {isEnhancedPreviewMode ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                   <User className="w-12 h-12 mb-4 text-gray-300" />
@@ -4538,6 +4571,28 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="help" className="pb-6">
+              {/* Quick Actions strip */}
+              <div className="flex items-center justify-around px-1 py-1">
+                <button onClick={() => setActiveTab("products")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><Store className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Shop</span>
+                </button>
+                <button onClick={() => setActiveTab("orders")} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary"><History className="w-4 h-4 text-theme-primary" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Orders</span>
+                </button>
+                <button onClick={async () => { if (cart.length > 0) { setShowCheckout(true); } else { setActiveTab("products"); } }} disabled={isCreatingIntent} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 relative">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-theme-secondary relative">
+                    <ShoppingCart className="w-4 h-4 text-theme-primary" />
+                    {cart.length > 0 && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center bg-theme-primary">{cart.length}</span>}
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600">{cart.length > 0 ? "Checkout" : "Cart"}</span>
+                </button>
+                <button onClick={handleLogout} className="flex flex-col items-center gap-1.5 px-4 py-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-red-50"><X className="w-4 h-4 text-red-400" /></div>
+                  <span className="text-[10px] font-medium text-gray-600">Sign Out</span>
+                </button>
+              </div>
               <CustomerHelp wholesaler={wholesaler ? {
                 businessName: wholesaler.businessName,
                 phoneNumber: wholesaler.phoneNumber,
