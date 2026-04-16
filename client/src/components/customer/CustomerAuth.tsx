@@ -744,6 +744,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 <Input
                   id="lastFour"
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="••••"
                   value={lastFourDigits}
                   onChange={handleLastFourChange}
@@ -862,12 +864,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 </p>
                 <Input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="123456"
                   value={smsCode}
                   onChange={handleSMSCodeChange}
                   maxLength={6}
                   className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                 />
               </div>
             )}
@@ -904,12 +908,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 </div>
                 <Input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="123456"
                   value={emailCode}
                   onChange={handleEmailCodeChange}
                   maxLength={6}
                   className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                 />
               </div>
             )}
