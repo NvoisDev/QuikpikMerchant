@@ -5285,6 +5285,7 @@ export default function CustomerPortal() {
                             refetchProducts();
                             if (featuredProductId) refetchFeaturedProduct();
                             queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/customer-orders"] });
                             setShowCheckout(false);
                             setShowThankYou(true);
                             toast({
@@ -5425,6 +5426,7 @@ export default function CustomerPortal() {
                       
                       // Close checkout modal and show thank you page
                       queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/customer-orders"] });
                       setShowCheckout(false);
                       setShowThankYou(true);
                     }}
