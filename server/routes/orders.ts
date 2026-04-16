@@ -743,8 +743,11 @@ export function registerOrderRoutes(app: Express): void {
         // Paid = paymentStatus is paid AND not cancelled (refunded orders are cancelled)
         searchConditions.push(eq(orders.paymentStatus, 'paid'));
         searchConditions.push(sql`${orders.status} != 'cancelled'`);
+      } else if (paymentStatusParam === 'part_paid') {
+        searchConditions.push(eq(orders.paymentStatus, 'part_paid'));
       } else if (paymentStatusParam === 'unpaid') {
-        searchConditions.push(sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} NOT IN ('paid'))`);
+        // Unpaid = no payment at all (excludes part_paid)
+        searchConditions.push(sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid')`);
       }
 
       // Delivery type filter (pickup = collection, delivery = delivery)
