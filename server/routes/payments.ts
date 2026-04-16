@@ -1031,8 +1031,8 @@ export function registerPaymentRoutes(app: Express): void {
                   order = await storage.getOrderByPaymentIntentId(piId);
                   if (order) {
                     // Backfill so future payout reconciliations hit the DB directly
-                    storage.updateOrder(order.id, { stripeTransferId: sourceId }).catch(() => {});
-                    console.log(`✅ Payout reconciliation fallback: matched Transfer ${sourceId} → PI ${piId} → order ${order.orderNumber}`);
+                    storage.updateOrder(order.id, { stripeTransferId: sourceId })
+                      .catch((e) => console.warn(`⚠️ Could not backfill stripeTransferId on order ${order!.id}:`, e));
                   }
                 }
               } catch (fallbackErr) {
