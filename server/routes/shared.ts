@@ -578,7 +578,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     let btY: number;
     if (customerBusinessName) {
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerBusinessName, c2, metaY + 12, { width: COL_W - 8 });
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(customerName, c2, metaY + 24, { width: COL_W - 8 });
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Attn: ${customerName}`, c2, metaY + 24, { width: COL_W - 8 });
       btY = metaY + 38;
     } else {
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerName, c2, metaY + 12, { width: COL_W - 8 });
