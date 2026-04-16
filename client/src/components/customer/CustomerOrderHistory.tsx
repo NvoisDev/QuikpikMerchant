@@ -731,7 +731,7 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 px-3 border-theme-primary text-theme-primary hover:bg-theme-secondary">
+          <Button variant="outline" size="sm" className="h-8 px-3 border-theme-primary text-theme-primary hover-bg-theme-secondary">
             Actions <ChevronDown className="h-3 w-3 ml-1" />
           </Button>
         </DropdownMenuTrigger>
