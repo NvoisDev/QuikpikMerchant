@@ -744,8 +744,10 @@ const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, 
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={onDownloadInvoice} disabled={downloadingInvoiceId === order.id}>
-            <Download className="h-4 w-4 mr-2" />
-            {downloadingInvoiceId === order.id ? 'Generating…' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
+            {downloadingInvoiceId === order.id
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              : <Download className="h-4 w-4 mr-2" />}
+            {downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
           </DropdownMenuItem>
           {canCancel && (
             <>
