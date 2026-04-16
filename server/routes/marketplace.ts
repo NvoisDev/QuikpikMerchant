@@ -3436,10 +3436,6 @@ https://quikpik.app`;
         return res.status(403).json({ error: 'You can only reorder your own orders' });
       }
 
-      if (order.status !== 'fulfilled' && order.status !== 'completed') {
-        return res.status(400).json({ error: 'Only fulfilled or completed orders can be reordered' });
-      }
-
       const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
       
       const productIds = items.map(i => i.productId);
@@ -3499,10 +3495,6 @@ https://quikpik.app`;
       const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').slice(-10);
       if (normalizePhone(order.customerPhone || '') !== normalizePhone(customerPhone)) {
         return res.status(403).json({ error: 'You can only reorder your own orders' });
-      }
-
-      if (order.status !== 'fulfilled' && order.status !== 'completed') {
-        return res.status(400).json({ error: 'Only fulfilled or completed orders can be reordered' });
       }
 
       const originalItems = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
