@@ -1591,7 +1591,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`ROUND((${orders.subtotal}::numeric - ${orders.platformFee}::numeric), 2) = ${netAmountPounds.toFixed(2)}::numeric`,
+        sql`(ROUND((${orders.subtotal}::numeric - ${orders.platformFee}::numeric), 2) = ${netAmountPounds.toFixed(2)}::numeric OR ROUND((${orders.total}::numeric - ${orders.platformFee}::numeric), 2) = ${netAmountPounds.toFixed(2)}::numeric)`,
         sql`${orders.paymentStatus} = 'paid'`,
         sql`${orders.stripePaymentIntentId} IS NOT NULL AND ${orders.stripePaymentIntentId} != ''`,
         sql`${orders.createdAt} >= ${windowStart}`,
