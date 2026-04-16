@@ -40,9 +40,8 @@ import {
   getStatusLabel,
   getPaymentStatusColor,
   getPaymentStatusLabel,
-  ReorderButton,
-  CancellationRequestButton,
   OrderDetailsModal,
+  OrderActionsDropdown,
   PayBalanceButton,
 } from "@/components/customer/CustomerOrderHistory";
 import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressManager";
@@ -652,6 +651,7 @@ const PaymentFormContent = ({
 
 function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency }: { wholesalerId: string; customerPhone: string; onViewAllOrders: () => void; defaultCurrency?: string }) {
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
 
   const downloadInvoice = async (order: Order) => {
     setDownloadingInvoiceId(order.id);
@@ -748,51 +748,30 @@ function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, def
               )}
             </div>
 
-            <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-gray-100">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
-                    Details
-                  </Button>
-                </DialogTrigger>
-                <OrderDetailsModal
-                  order={order}
-                  wholesalerId={wholesalerId}
-                  customerPhone={customerPhone}
-                />
-              </Dialog>
-
-              <ReorderButton
+            <div className="flex justify-end pt-1.5 border-t border-gray-100">
+              <OrderActionsDropdown
                 order={order}
+                onViewDetails={() => setSelectedOrderForDetails(order)}
                 customerPhone={customerPhone}
                 onSuccess={handleRefresh}
-              />
-
-              <Button
-                variant="outline"
-                size="sm"
-                className={`h-7 px-2 text-xs ${order.status === 'cancelled' ? 'text-gray-400 border-gray-200 hover:bg-gray-50' : ''}`}
-                disabled={downloadingInvoiceId === order.id}
-                onClick={() => downloadInvoice(order)}
-              >
-                {downloadingInvoiceId === order.id ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Download className="h-3 w-3 mr-1" />
-                )}
-                {downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
-              </Button>
-
-              <CancellationRequestButton
-                order={order}
-                customerPhone={customerPhone}
-                onSuccess={handleRefresh}
+                currency={defaultCurrency || 'GBP'}
+                downloadingInvoiceId={downloadingInvoiceId}
+                onDownloadInvoice={() => downloadInvoice(order)}
               />
             </div>
           </div>
         ))}
       </div>
+
+      {selectedOrderForDetails && (
+        <Dialog open={!!selectedOrderForDetails} onOpenChange={(o) => { if (!o) setSelectedOrderForDetails(null); }}>
+          <OrderDetailsModal
+            order={selectedOrderForDetails}
+            wholesalerId={wholesalerId}
+            customerPhone={customerPhone}
+          />
+        </Dialog>
+      )}
     </div>
   );
 }
