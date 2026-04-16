@@ -309,10 +309,6 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
   const [preview, setPreview] = useState<ReorderPreview | null>(null);
   const { toast } = useToast();
 
-  if (order.status !== 'fulfilled' && order.status !== 'completed') {
-    return null;
-  }
-
   const loadPreview = async () => {
     setIsLoadingPreview(true);
     try {
@@ -378,6 +374,12 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen && !preview && !isLoadingPreview) {
+      loadPreview();
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
