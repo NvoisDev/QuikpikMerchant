@@ -1436,7 +1436,7 @@ export default function OrderDetail() {
                   <div className={`w-2 h-2 rounded-full mt-1.5 ${dotColor}`}></div>
                   <div>
                     <div className={`text-xs font-medium ${textColor}`}>
-                      {label}: {formatMoney(refundedAmt)}
+                      {label}
                     </div>
                     <div className="text-xs text-gray-500">
                       {isProcessed
