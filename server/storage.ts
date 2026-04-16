@@ -116,6 +116,7 @@ export interface IStorage {
   getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined>;
   getStripeOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   getOrderByTransferId(transferId: string): Promise<Order | undefined>;
+  getOrderByNetAmountForWholesaler(wholesalerId: string, netAmountPounds: number, aroundTimestampSeconds: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
@@ -1575,6 +1576,28 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orders)
       .where(eq(orders.stripeTransferId, transferId))
+      .limit(1);
+    return result[0];
+  }
+
+  async getOrderByNetAmountForWholesaler(wholesalerId: string, netAmountPounds: number, aroundTimestampSeconds: number): Promise<Order | undefined> {
+    // Match by exact net amount (subtotal - platformFee) for a given wholesaler.
+    // The timestamp window is ±8 days around the Stripe balance transaction created time,
+    // which is wide enough to cover payout delays while still being precise.
+    const windowStart = new Date((aroundTimestampSeconds - 8 * 86400) * 1000);
+    const windowEnd   = new Date((aroundTimestampSeconds + 1 * 86400) * 1000);
+    const result = await db
+      .select()
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`ROUND((${orders.subtotal}::numeric - ${orders.platformFee}::numeric), 2) = ${netAmountPounds.toFixed(2)}::numeric`,
+        sql`${orders.paymentStatus} = 'paid'`,
+        sql`${orders.stripePaymentIntentId} IS NOT NULL AND ${orders.stripePaymentIntentId} != ''`,
+        sql`${orders.createdAt} >= ${windowStart}`,
+        sql`${orders.createdAt} <= ${windowEnd}`,
+      ))
+      .orderBy(desc(orders.createdAt))
       .limit(1);
     return result[0];
   }

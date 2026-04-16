@@ -992,56 +992,98 @@ export function registerPaymentRoutes(app: Express): void {
         { stripeAccount: user.stripeAccountId }
       );
 
-      // On a connected account, payment/charge balance transactions have `source` = Transfer ID (tr_xxx).
-      // Refunds, fees, and the payout debit itself are excluded.
+      // Include payment, charge, and transfer types — some Connect account setups
+      // use type "transfer" for incoming destination-charge funds.
       const chargeTxns = txns.data.filter(
-        (t) => t.type === 'payment' || t.type === 'charge'
+        (t) => t.type === 'payment' || t.type === 'charge' || t.type === 'transfer'
       );
 
-      // Per-transaction order match with two complementary strategies:
-      //   - source starts with "tr_": destination charge → look up by Transfer ID (new orders)
-      //   - source starts with "pi_": direct connected-account charge → look up by PaymentIntent ID
-      // Both strategies use exact DB lookups; unmatched transactions appear with null order fields.
+      console.log(`📊 Payout ${payoutId}: ${txns.data.length} total txns, ${chargeTxns.length} payment/charge/transfer`);
+
+      // Per-transaction order match using four complementary strategies:
+      //   1. source = "tr_xxx" → DB lookup by stripeTransferId (fast path for new orders)
+      //   2. source = "tr_xxx" fallback → expand Transfer on platform to get source_transaction.payment_intent
+      //   3. source = "ch_xxx" → retrieve charge from connected account, get source_transfer, repeat above
+      //   4. source = "pi_xxx" → DB lookup by stripePaymentIntentId
+      //   5. Universal fallback → match by exact net amount + wholesaler + date window
       const transactions = await Promise.all(
         chargeTxns.map(async (t) => {
-          const sourceId = typeof t.source === 'string' ? t.source : null;
+          const sourceId = typeof t.source === 'string' ? t.source : (t.source as any)?.id ?? null;
           let order: Awaited<ReturnType<typeof storage.getOrderByTransferId>> | undefined;
 
-          if (sourceId?.startsWith('tr_')) {
-            // Destination charge: source is the Stripe Transfer ID stored at order creation
-            order = await storage.getOrderByTransferId(sourceId);
+          console.log(`  txn ${t.id}: type=${t.type} source=${sourceId} amount=${t.amount}`);
 
-            // Fallback: Transfer ID was never backfilled on the order (can happen when
-            // the capture step at checkout silently fails). Expand the Transfer on the
-            // platform account to retrieve source_transaction.payment_intent, then look
-            // up the order by PaymentIntent ID and backfill for future lookups.
-            if (!order) {
-              try {
-                const transfer = await stripe.transfers.retrieve(sourceId as string, {
-                  expand: ['source_transaction'],
-                });
-                const sourceTxn = transfer.source_transaction;
-                const rawPi = sourceTxn && typeof sourceTxn === 'object'
-                  ? (sourceTxn as any).payment_intent
-                  : null;
-                const piId: string | null = typeof rawPi === 'string'
-                  ? rawPi
-                  : (rawPi && typeof rawPi === 'object' ? rawPi.id : null);
-                if (piId) {
-                  order = await storage.getOrderByPaymentIntentId(piId);
-                  if (order) {
-                    // Backfill so future payout reconciliations hit the DB directly
-                    storage.updateOrder(order.id, { stripeTransferId: sourceId })
-                      .catch((e) => console.warn(`⚠️ Could not backfill stripeTransferId on order ${order!.id}:`, e));
-                  }
+          // Helper: try to find order via a Transfer ID (DB lookup then PI fallback)
+          const findByTransferId = async (trId: string): Promise<typeof order> => {
+            let found = await storage.getOrderByTransferId(trId);
+            if (found) return found;
+            // Transfer ID not in DB — expand Transfer on platform to get originating PI
+            try {
+              const transfer = await stripe.transfers.retrieve(trId, {
+                expand: ['source_transaction'],
+              });
+              const sourceTxn = transfer.source_transaction;
+              console.log(`    Transfer ${trId} source_transaction: ${typeof sourceTxn === 'object' && sourceTxn ? (sourceTxn as any).id : sourceTxn}`);
+              const rawPi = sourceTxn && typeof sourceTxn === 'object'
+                ? (sourceTxn as any).payment_intent
+                : null;
+              const piId: string | null = typeof rawPi === 'string'
+                ? rawPi
+                : (rawPi && typeof rawPi === 'object' ? rawPi.id : null);
+              if (piId) {
+                found = await storage.getOrderByPaymentIntentId(piId);
+                if (found) {
+                  storage.updateOrder(found.id, { stripeTransferId: trId })
+                    .catch((e) => console.warn(`⚠️ stripeTransferId backfill failed for order ${found!.id}:`, e));
                 }
-              } catch (fallbackErr) {
-                console.warn(`⚠️ Could not expand Transfer ${sourceId} for payout reconciliation:`, fallbackErr);
               }
+            } catch (e) {
+              console.warn(`⚠️ Could not expand Transfer ${trId}:`, (e as any)?.message ?? e);
+            }
+            return found;
+          };
+
+          if (sourceId?.startsWith('tr_')) {
+            order = await findByTransferId(sourceId);
+          } else if (sourceId?.startsWith('ch_')) {
+            // Destination charge on the connected account — retrieve it to get source_transfer
+            try {
+              const charge = await stripe.charges.retrieve(
+                sourceId,
+                { expand: ['source_transfer'] },
+                { stripeAccount: user.stripeAccountId ?? undefined }
+              );
+              const rawTr = charge.source_transfer;
+              const trId: string | null = typeof rawTr === 'string'
+                ? rawTr
+                : (rawTr && typeof rawTr === 'object' ? (rawTr as any).id : null);
+              console.log(`    ch_ ${sourceId} source_transfer: ${trId}`);
+              if (trId) {
+                order = await findByTransferId(trId);
+              }
+            } catch (e) {
+              console.warn(`⚠️ Could not retrieve charge ${sourceId}:`, (e as any)?.message ?? e);
             }
           } else if (sourceId?.startsWith('pi_')) {
-            // Direct charge on connected account: source is the PaymentIntent ID
             order = await storage.getOrderByPaymentIntentId(sourceId);
+          }
+
+          // Universal fallback: match by exact net amount (subtotal − platformFee) + date window.
+          // Catches cases where source_transaction is null (partial-amount destination charges)
+          // or where the Transfer ID was never stored in the DB.
+          if (!order) {
+            const netPounds = t.amount / 100;
+            order = await storage.getOrderByNetAmountForWholesaler(user.id, netPounds, t.created);
+            if (order) {
+              console.log(`  ✅ Matched txn ${t.id} → order ${order.orderNumber} via amount fallback (£${netPounds})`);
+              // Backfill Transfer ID if source was a Transfer and we now have the order
+              if (sourceId?.startsWith('tr_') && !order.stripeTransferId) {
+                storage.updateOrder(order.id, { stripeTransferId: sourceId })
+                  .catch((e) => console.warn(`⚠️ stripeTransferId backfill failed for order ${order!.id}:`, e));
+              }
+            } else {
+              console.log(`  ⚠️ No order matched for txn ${t.id} (source=${sourceId}, amount=£${netPounds})`);
+            }
           }
 
           const net = order
