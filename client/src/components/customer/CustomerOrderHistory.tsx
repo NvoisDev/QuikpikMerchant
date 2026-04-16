@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2, ArrowLeft } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2, ArrowLeft } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
@@ -297,9 +298,12 @@ interface ReorderPreview {
   total: string;
 }
 
-export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP' }: { order: Order, customerPhone: string, onSuccess?: () => void, currency?: string }) => {
+export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP', open: externalOpen, onOpenChange: externalOnOpenChange }: { order: Order, customerPhone: string, onSuccess?: () => void, currency?: string, open?: boolean, onOpenChange?: (v: boolean) => void }) => {
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? externalOpen : internalOpen;
+  const setIsOpen = (v: boolean) => { if (!isControlled) setInternalOpen(v); externalOnOpenChange?.(v); };
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<ReorderPreview | null>(null);
@@ -382,16 +386,18 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
         loadPreview();
       }
     }}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 px-3 flex-1 sm:flex-none text-green-600 border-green-200 hover:bg-green-50"
-        >
-          <ShoppingBag className="h-3 w-3 mr-1" />
-          <span className="text-xs">Reorder</span>
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-3 flex-1 sm:flex-none text-green-600 border-green-200 hover:bg-green-50"
+          >
+            <ShoppingBag className="h-3 w-3 mr-1" />
+            <span className="text-xs">Reorder</span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" style={{ zIndex: 9999 }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -507,8 +513,11 @@ const customerCancellationReasons = [
   { value: 'other', label: 'Other reason' },
 ];
 
-export const CancellationRequestButton = ({ order, customerPhone, onSuccess }: { order: Order, customerPhone: string, onSuccess?: () => void }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const CancellationRequestButton = ({ order, customerPhone, onSuccess, open: externalOpen, onOpenChange: externalOnOpenChange }: { order: Order, customerPhone: string, onSuccess?: () => void, open?: boolean, onOpenChange?: (v: boolean) => void }) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? externalOpen : internalOpen;
+  const setIsOpen = (v: boolean) => { if (!isControlled) setInternalOpen(v); externalOnOpenChange?.(v); };
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canCancel, setCanCancel] = useState<boolean | null>(null);
@@ -590,18 +599,20 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess }: {
     }
   };
 
-  if (order.status === 'cancelled' || order.status === 'fulfilled' || order.status === 'completed') {
+  if (!isControlled && (order.status === 'cancelled' || order.status === 'fulfilled' || order.status === 'completed')) {
     return null;
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50">
-          <X className="h-3 w-3 mr-1" />
-          <span className="text-xs">Cancel Order</span>
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50">
+            <X className="h-3 w-3 mr-1" />
+            <span className="text-xs">Cancel Order</span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -706,6 +717,63 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, currency, downloadingInvoiceId, onDownloadInvoice }: { order: Order, onViewDetails: () => void, customerPhone: string, onSuccess: () => void, currency: string, downloadingInvoiceId: number | null, onDownloadInvoice: () => void }) => {
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const canReorder = order.status === 'fulfilled' || order.status === 'completed';
+  const canCancel = order.status !== 'cancelled' && order.status !== 'fulfilled' && order.status !== 'completed';
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 px-3">
+            Actions <ChevronDown className="h-3 w-3 ml-1" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={onViewDetails}>
+            <Eye className="h-4 w-4 mr-2" /> View Details
+          </DropdownMenuItem>
+          {canReorder && (
+            <DropdownMenuItem onClick={() => setReorderOpen(true)}>
+              <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={onDownloadInvoice} disabled={downloadingInvoiceId === order.id}>
+            <Download className="h-4 w-4 mr-2" />
+            {downloadingInvoiceId === order.id ? 'Generating…' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}
+          </DropdownMenuItem>
+          {canCancel && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => setCancelOpen(true)}>
+                <X className="h-4 w-4 mr-2" /> Cancel Order
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ReorderButton
+        order={order}
+        customerPhone={customerPhone}
+        onSuccess={onSuccess}
+        currency={currency}
+        open={reorderOpen}
+        onOpenChange={setReorderOpen}
+      />
+      <CancellationRequestButton
+        order={order}
+        customerPhone={customerPhone}
+        onSuccess={onSuccess}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+      />
+    </>
   );
 };
 
@@ -2065,36 +2133,16 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-                      <Button variant="outline" size="sm" className="h-8 px-3 flex-1 sm:flex-none" onClick={() => setSelectedOrder(order)}>
-                        <Eye className="h-3 w-3 mr-1" />
-                        <span className="text-xs">View Details</span>
-                      </Button>
-                      <ReorderButton
+                    <div className="flex justify-end">
+                      <OrderActionsDropdown
                         order={order}
+                        onViewDetails={() => setSelectedOrder(order)}
                         customerPhone={customerPhone}
                         onSuccess={() => handleRefresh()}
                         currency={currency}
+                        downloadingInvoiceId={downloadingInvoiceId}
+                        onDownloadInvoice={() => downloadInvoice(order)}
                       />
-                      <CancellationRequestButton 
-                        order={order} 
-                        customerPhone={customerPhone} 
-                        onSuccess={() => handleRefresh()}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`h-8 px-3 flex-1 sm:flex-none ${order.status === 'cancelled' ? 'text-gray-400 border-gray-200 hover:bg-gray-50' : ''}`}
-                        disabled={downloadingInvoiceId === order.id}
-                        onClick={() => downloadInvoice(order)}
-                      >
-                        {downloadingInvoiceId === order.id ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <Download className="h-3 w-3 mr-1" />
-                        )}
-                        <span className="text-xs">{downloadingInvoiceId === order.id ? 'Generating...' : order.status === 'cancelled' ? 'Void Invoice' : 'Invoice'}</span>
-                      </Button>
                     </div>
                   </div>
                 </div>
