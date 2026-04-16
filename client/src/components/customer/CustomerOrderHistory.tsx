@@ -723,7 +723,6 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess, ope
 export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, currency, downloadingInvoiceId, onDownloadInvoice }: { order: Order, onViewDetails: () => void, customerPhone: string, onSuccess: () => void, currency: string, downloadingInvoiceId: number | null, onDownloadInvoice: () => void }) => {
   const [reorderOpen, setReorderOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const canReorder = order.status === 'fulfilled' || order.status === 'completed';
   const canCancel = order.status !== 'cancelled' && order.status !== 'fulfilled' && order.status !== 'completed';
 
   return (
@@ -734,15 +733,13 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
             Actions <ChevronDown className="h-3 w-3 ml-1" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" side="top" className="w-48">
           <DropdownMenuItem onClick={onViewDetails}>
             <Eye className="h-4 w-4 mr-2" /> View Details
           </DropdownMenuItem>
-          {canReorder && (
-            <DropdownMenuItem onClick={() => setReorderOpen(true)}>
-              <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={() => setReorderOpen(true)}>
+            <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={onDownloadInvoice} disabled={downloadingInvoiceId === order.id}>
             {downloadingInvoiceId === order.id
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -2099,27 +2096,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     <Badge variant="outline" className="text-xs px-2 py-0.5 break-words">
                       {order.wholesaler?.businessName || 'Unknown Business'}
                     </Badge>
-                  </div>
-                  
-                  {/* Items list - mobile optimized */}
-                  <div className="space-y-1">
-                    {order.items.slice(0, 2).map((item, index) => (
-                      <div key={index} className="text-xs text-gray-700 break-words">
-                        <span className="font-medium">{item.productName}</span>
-                        {item.appliedOfferLabel && (
-                          <span className="ml-1 inline-block bg-purple-100 text-purple-700 text-xs px-1.5 py-0 rounded-full">🎁 {item.appliedOfferLabel}</span>
-                        )}
-                        <span className="text-gray-500 ml-1">
-                          {item.quantity} units × {fmt(item.unitPrice)}
-                          {(item.freeItems ?? 0) > 0 && <span className="text-green-700 font-medium ml-1">+{item.freeItems} free</span>}
-                        </span>
-                      </div>
-                    ))}
-                    {order.items.length > 2 && (
-                      <div className="text-xs text-gray-500">
-                        +{order.items.length - 2} more items
-                      </div>
-                    )}
                   </div>
                   
                   {/* Mobile-friendly summary layout */}
