@@ -266,7 +266,7 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
     <button
       onClick={handleGenerateLink}
       disabled={isLoading}
-      className="mt-2 inline-flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors self-start"
+      className="mt-2 inline-flex items-center justify-center btn-theme-primary disabled:opacity-50 font-medium py-1.5 px-3 rounded-lg text-xs transition-colors self-start"
     >
       {isLoading ? (
         <>
@@ -731,7 +731,7 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 px-3">
+          <Button variant="outline" size="sm" className="h-8 px-3 border-theme-primary text-theme-primary hover:bg-theme-secondary">
             Actions <ChevronDown className="h-3 w-3 ml-1" />
           </Button>
         </DropdownMenuTrigger>
