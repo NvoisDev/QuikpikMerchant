@@ -81,6 +81,63 @@ export function registerPriceListRoutes(app: Express): void {
     }
   });
 
+  // GET /api/price-lists/customer-summary — returns { [customerId]: { count, names } }
+  // Must be registered before /:id to avoid the param swallowing "customer-summary"
+  app.get("/api/price-lists/customer-summary", requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+
+      const lists = await db
+        .select()
+        .from(priceLists)
+        .where(eq(priceLists.wholesalerId, wholesalerId));
+
+      const summary: Record<string, { count: number; names: string[]; ids: number[] }> = {};
+
+      // Fetch all assignments and group members in bulk to avoid N+1
+      const allAssignments = lists.length > 0
+        ? await db.select().from(priceListAssignments)
+            .where(inArray(priceListAssignments.priceListId, lists.map((l) => l.id)))
+        : [];
+
+      const groupIds = [...new Set(allAssignments
+        .filter((a) => a.customerGroupId !== null)
+        .map((a) => a.customerGroupId as number))];
+
+      const allGroupMembers = groupIds.length > 0
+        ? await db.select().from(customerGroupMembers)
+            .where(inArray(customerGroupMembers.groupId, groupIds))
+        : [];
+
+      for (const list of lists) {
+        const assignments = allAssignments.filter((a) => a.priceListId === list.id);
+        const customerIds = new Set<string>();
+
+        for (const a of assignments) {
+          if (a.customerId) {
+            customerIds.add(a.customerId);
+          } else if (a.customerGroupId) {
+            allGroupMembers
+              .filter((m) => m.groupId === a.customerGroupId)
+              .forEach((m) => customerIds.add(m.customerId));
+          }
+        }
+
+        for (const cid of customerIds) {
+          if (!summary[cid]) summary[cid] = { count: 0, names: [], ids: [] };
+          summary[cid].count += 1;
+          summary[cid].names.push(list.name);
+          summary[cid].ids.push(list.id);
+        }
+      }
+
+      res.json(summary);
+    } catch (err) {
+      console.error("Error fetching price list customer summary:", err);
+      res.status(500).json({ message: "Failed to fetch price list customer summary" });
+    }
+  });
+
   // GET /api/price-lists/:id — single price list with items and assignments
   app.get("/api/price-lists/:id", requireAuth, async (req: any, res) => {
     try {

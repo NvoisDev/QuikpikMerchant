@@ -229,7 +229,8 @@ export default function Customers() {
   // Get tab from URL parameter or default to "groups"
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
-  const defaultTab = tabFromUrl && ['groups', 'address-book'].includes(tabFromUrl) ? tabFromUrl : 'groups';
+  const defaultTab = tabFromUrl && ['groups', 'address-book', 'price-lists'].includes(tabFromUrl) ? tabFromUrl : 'groups';
+  const [activeTab, setActiveTab] = useState(defaultTab);
   
   // Group management state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -733,6 +734,12 @@ export default function Customers() {
     queryKey: ['/api/price-lists'],
   });
 
+  const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[] }>>({
+    queryKey: ['/api/price-lists/customer-summary'],
+  });
+
+  const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
+
   const { data: productsForPL = [] } = useQuery<PLProduct[]>({
     queryKey: ['/api/products'],
   });
@@ -741,6 +748,7 @@ export default function Customers() {
     mutationFn: (data: any) => apiRequest('POST', '/api/price-lists', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setIsPriceListModalOpen(false);
       setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
       toast({ title: "Created", description: "Price list created successfully!" });
@@ -752,6 +760,7 @@ export default function Customers() {
     mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PATCH', `/api/price-lists/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setIsPriceListModalOpen(false);
       setEditingPriceList(null);
       toast({ title: "Updated", description: "Price list updated!" });
@@ -763,6 +772,7 @@ export default function Customers() {
     mutationFn: (id: number) => apiRequest('DELETE', `/api/price-lists/${id}`),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setPriceListDetailCache(prev => { const next = { ...prev }; delete next[id]; return next; });
       setExpandedPriceLists(prev => { const next = { ...prev }; delete next[id]; return next; });
       toast({ title: "Deleted", description: "Price list deleted." });
@@ -774,6 +784,7 @@ export default function Customers() {
     mutationFn: ({ id, items }: { id: number; items: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
       toast({ title: "Saved", description: "Products updated!" });
     },
@@ -784,6 +795,7 @@ export default function Customers() {
     mutationFn: ({ id, assignments }: { id: number; assignments: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/assignments`, assignments),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
       toast({ title: "Saved", description: "Assignments updated!" });
     },
@@ -1253,7 +1265,7 @@ export default function Customers() {
           </Dialog>
 
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      <Tabs defaultValue="address-book" className="space-y-4 sm:space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
             <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1641,7 +1653,7 @@ export default function Customers() {
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-semibold text-gray-900 truncate">
                         {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                       </h3>
@@ -1653,6 +1665,24 @@ export default function Customers() {
                             </Badge>
                           ))}
                         </div>
+                      )}
+                      {customer?.id && priceListCustomerSummary[customer.id] && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] py-0 px-1.5 cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPriceListFilterCustomer({
+                              id: customer.id,
+                              name: `${customer.firstName || 'Unknown'} ${customer.lastName || ''}`.trim(),
+                            });
+                            setActiveTab('price-lists');
+                          }}
+                          title={priceListCustomerSummary[customer.id].names.join(', ')}
+                        >
+                          <Tag className="h-2.5 w-2.5 mr-0.5" />
+                          {priceListCustomerSummary[customer.id].count} {priceListCustomerSummary[customer.id].count === 1 ? 'price list' : 'price lists'}
+                        </Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
@@ -1873,6 +1903,22 @@ export default function Customers() {
             </Button>
           </div>
 
+          {priceListFilterCustomer && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <Tag className="h-4 w-4 shrink-0" />
+              <span className="flex-1">Showing price lists for <strong>{priceListFilterCustomer.name}</strong></span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-blue-700 hover:bg-blue-100"
+                onClick={() => setPriceListFilterCustomer(null)}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear filter
+              </Button>
+            </div>
+          )}
+
           {isLoadingPriceLists ? (
             <div className="text-center py-10 text-muted-foreground">Loading price lists...</div>
           ) : fetchedPriceLists.length === 0 ? (
@@ -1893,7 +1939,12 @@ export default function Customers() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {fetchedPriceLists.map((list) => (
+              {(priceListFilterCustomer
+                ? fetchedPriceLists.filter((list) =>
+                    (priceListCustomerSummary[priceListFilterCustomer.id]?.ids ?? []).includes(list.id)
+                  )
+                : fetchedPriceLists
+              ).map((list) => (
                 <Card key={list.id} className="relative">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
