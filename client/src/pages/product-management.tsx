@@ -2406,11 +2406,11 @@ export default function ProductManagement() {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9"
+                className="pl-10 h-9 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 h-9">
+              <SelectTrigger className="w-32 h-9 border-slate-200 rounded-lg">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>

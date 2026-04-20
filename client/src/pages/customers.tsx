@@ -1362,16 +1362,16 @@ export default function Customers() {
 
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-3 h-auto">
-          <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+        <TabsList className="grid w-full grid-cols-3 h-auto bg-slate-100 p-1 rounded-xl">
+          <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
             <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Directory</span>
           </TabsTrigger>
-          <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+          <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
             <Users className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Groups</span>
           </TabsTrigger>
-          <TabsTrigger value="price-lists" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+          <TabsTrigger value="price-lists" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
             <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Price Lists</span>
           </TabsTrigger>
@@ -1491,17 +1491,17 @@ export default function Customers() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {customerGroups.map((group) => (
-                <Card key={group.id} className="hover:shadow-md transition-shadow">
+                <Card key={group.id} className="hover:shadow-md transition-shadow border-slate-200">
                   <CardHeader className="pb-3 p-4 sm:p-6">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm sm:text-base md:text-lg truncate">{group.name}</CardTitle>
+                        <CardTitle className="text-sm sm:text-base md:text-lg truncate font-semibold text-slate-900">{group.name}</CardTitle>
                         {group.description && (
-                          <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{group.description}</p>
+                          <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-2">{group.description}</p>
                         )}
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                        <Badge variant="secondary" className="text-xs font-medium px-2 py-1">
+                        <Badge className="text-xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 border-0 rounded-full">
                           {group.memberCount || 0}
                         </Badge>
                         <Button
