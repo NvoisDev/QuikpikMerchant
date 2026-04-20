@@ -840,22 +840,26 @@ export default function Customers() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const sharePriceListMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('POST', `/api/price-lists/${id}/share`, {}),
-    onSuccess: (data: any) => {
-      toast({ title: "Shared!", description: data.message || "Price list shared successfully." });
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
   const [sharingListId, setSharingListId] = useState<number | null>(null);
 
   const handleNativeShare = async (listId: number, listName: string) => {
+    const portalUrl = `${window.location.origin}/customer/${user.id}`;
+
+    // If the Web Share API is completely absent, trigger a direct anchor download
+    // immediately without any async fetch (avoids popup-blocker and wasted round-trip).
+    if (typeof navigator.share !== "function") {
+      const a = document.createElement("a");
+      a.href = `/api/price-lists/${listId}/export`;
+      a.download = `${listName} - Price List.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
     setSharingListId(listId);
     try {
-      const portalUrl = `${window.location.origin}/customer/${user.id}`;
-
-      // Fetch the Excel file
+      // Fetch the Excel file so we can pass it to the share sheet
       const response = await fetch(`/api/price-lists/${listId}/export`);
       if (!response.ok) throw new Error("Failed to fetch price list");
       const blob = await response.blob();
@@ -864,26 +868,23 @@ export default function Customers() {
       });
 
       if (navigator.canShare?.({ files: [file] })) {
-        // Full file share (iOS, Android)
+        // Full file share — iOS Safari 15+, Android Chrome
         await navigator.share({
           title: listName,
-          text: `Your exclusive price list from us — shop at the link below.`,
+          text: "Your exclusive price list — shop at the link below.",
           url: portalUrl,
           files: [file],
         });
-      } else if (typeof navigator.share === "function") {
-        // URL-only share (some desktop browsers)
+      } else {
+        // Share API present but file sharing not supported — share URL only
         await navigator.share({
           title: listName,
-          text: `Your exclusive price list — shop at the link below.`,
+          text: "Your exclusive price list — shop at the link below.",
           url: portalUrl,
         });
-      } else {
-        // No share API — fall back to download
-        window.open(`/api/price-lists/${listId}/export`, "_blank");
       }
     } catch (err: any) {
-      // User cancelled share (AbortError) — ignore silently
+      // AbortError means the user dismissed the share sheet — ignore silently
       if (err?.name !== "AbortError") {
         toast({ title: "Could not share", description: err?.message || "Something went wrong.", variant: "destructive" });
       }
