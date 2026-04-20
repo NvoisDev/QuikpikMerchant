@@ -47,6 +47,8 @@ import {
   Share2,
   Bell,
   Tag,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -399,6 +401,73 @@ export default function CustomerDetail() {
 
   const customerPriceLists = customerId ? priceListCustomerSummary[customerId] : null;
 
+  interface PriceListDetailItem {
+    productId: number;
+    customPrice: string | null;
+    discountPercentage: string | null;
+    product: { id: number; name: string; price: string } | null;
+  }
+  interface PriceListDetail { id: number; items: PriceListDetailItem[]; }
+
+  const [priceBreakdownExpanded, setPriceBreakdownExpanded] = useState(false);
+  const [priceBreakdownCache, setPriceBreakdownCache] = useState<Record<number, PriceListDetail>>({});
+  const [priceBreakdownLoading, setPriceBreakdownLoading] = useState(false);
+
+  const togglePriceBreakdown = async () => {
+    if (!customerPriceLists || customerPriceLists.count === 0) return;
+    if (!priceBreakdownExpanded) {
+      const missingIds = customerPriceLists.ids.filter((id) => !priceBreakdownCache[id]);
+      if (missingIds.length > 0) {
+        setPriceBreakdownLoading(true);
+        try {
+          const results = await Promise.all(
+            missingIds.map((id) => fetch(`/api/price-lists/${id}`, { credentials: 'include' }).then((r) => r.json() as Promise<PriceListDetail>))
+          );
+          setPriceBreakdownCache((prev) => {
+            const next = { ...prev };
+            results.forEach((detail) => { next[detail.id] = detail; });
+            return next;
+          });
+        } catch {
+          toast({ title: 'Could not load pricing', variant: 'destructive' });
+        } finally {
+          setPriceBreakdownLoading(false);
+        }
+      }
+    }
+    setPriceBreakdownExpanded((v) => !v);
+  };
+
+  const computeEffectivePrice = (item: PriceListDetailItem): number | null => {
+    if (!item.product) return null;
+    const base = parseFloat(item.product.price || '0');
+    if (item.customPrice) return parseFloat(item.customPrice);
+    if (item.discountPercentage) return parseFloat((base * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2));
+    return null;
+  };
+
+  const priceBreakdownRows = (() => {
+    if (!customerPriceLists) return [];
+    const byProduct: Record<number, { name: string; standardPrice: number; best: number; listCount: number }> = {};
+    customerPriceLists.ids.forEach((id) => {
+      const detail = priceBreakdownCache[id];
+      if (!detail) return;
+      detail.items.forEach((item) => {
+        if (!item.product) return;
+        const effective = computeEffectivePrice(item);
+        if (effective === null) return;
+        const standard = parseFloat(item.product.price || '0');
+        if (byProduct[item.productId]) {
+          byProduct[item.productId].listCount += 1;
+          if (effective < byProduct[item.productId].best) byProduct[item.productId].best = effective;
+        } else {
+          byProduct[item.productId] = { name: item.product.name, standardPrice: standard, best: effective, listCount: 1 };
+        }
+      });
+    });
+    return Object.values(byProduct).sort((a, b) => a.name.localeCompare(b.name));
+  })();
+
   const hasPortalAccess = !!customer?.email;
 
   const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
@@ -715,26 +784,78 @@ export default function CustomerDetail() {
           </div>
         </div>
         {customerPriceLists && customerPriceLists.count > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {customerPriceLists.names.map((name, i) => (
-              <Badge
-                key={customerPriceLists.ids[i]}
-                variant="secondary"
-                className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2 flex items-center gap-1"
-                onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
-              >
-                <Tag className="h-3 w-3" />
-                {name}
-                <button
-                  className="ml-1 hover:text-red-500 transition-colors"
-                  disabled={removeFromPriceListMutation.isPending}
-                  onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
-                  aria-label={`Remove from ${name}`}
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {customerPriceLists.names.map((name, i) => (
+                <Badge
+                  key={customerPriceLists.ids[i]}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2 flex items-center gap-1"
+                  onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
+                  <Tag className="h-3 w-3" />
+                  {name}
+                  <button
+                    className="ml-1 hover:text-red-500 transition-colors"
+                    disabled={removeFromPriceListMutation.isPending}
+                    onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
+                    aria-label={`Remove from ${name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+
+            <button
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              onClick={togglePriceBreakdown}
+            >
+              {priceBreakdownExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {priceBreakdownExpanded ? 'Hide their prices' : 'View their prices'}
+            </button>
+
+            {priceBreakdownExpanded && (
+              <div className="rounded-md border bg-muted/30 overflow-hidden">
+                {priceBreakdownLoading ? (
+                  <p className="text-xs text-muted-foreground p-3">Loading prices…</p>
+                ) : priceBreakdownRows.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">No product pricing found in these price lists.</p>
+                ) : (
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left font-medium text-muted-foreground px-3 py-2">Product</th>
+                        <th className="text-right font-medium text-muted-foreground px-3 py-2">Their price</th>
+                        <th className="text-right font-medium text-muted-foreground px-3 py-2 hidden sm:table-cell">Standard</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priceBreakdownRows.map((row, i) => (
+                        <tr key={i} className={i % 2 === 0 ? '' : 'bg-muted/20'}>
+                          <td className="px-3 py-2 text-left">
+                            <span className="font-medium">{row.name}</span>
+                            {row.listCount > 1 && (
+                              <span className="ml-1 text-muted-foreground">(best of {row.listCount} lists)</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-green-700">
+                            {formatMoney(row.best)}
+                          </td>
+                          <td className="px-3 py-2 text-right hidden sm:table-cell">
+                            {row.best < row.standardPrice ? (
+                              <span className="line-through text-muted-foreground">{formatMoney(row.standardPrice)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No price lists assigned</p>
