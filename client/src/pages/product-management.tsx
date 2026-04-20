@@ -1465,6 +1465,12 @@ export default function ProductManagement() {
               </div>
               
               {!isViewer && (
+              <div className="flex items-center space-x-2">
+                <ContextualHelpBubble
+                  topic="Products"
+                  title="Managing Your Products"
+                  steps={helpContent.productManagement.steps}
+                />
               <Button 
                 size="sm"
                 variant="outline"
@@ -1501,6 +1507,7 @@ export default function ProductManagement() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
+              </div>
               )}
             </div>
 

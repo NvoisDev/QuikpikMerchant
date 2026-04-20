@@ -591,6 +591,11 @@ export default function Campaigns() {
         </div>
         <div className="flex items-center gap-3">
           {/* AI components removed as requested by user */}
+          <ContextualHelpBubble
+            topic="Campaigns"
+            title="Creating Effective Campaigns"
+            steps={helpContent.campaigns.steps}
+          />
           {!isViewer && (
           <Button 
             className="flex items-center space-x-2"
