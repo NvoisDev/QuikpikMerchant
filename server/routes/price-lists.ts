@@ -289,7 +289,14 @@ export function registerPriceListRoutes(app: Express): void {
         z.object({
           customerId: z.string().optional().nullable(),
           customerGroupId: z.number().optional().nullable(),
-        }),
+        }).refine(
+          (a) => {
+            const hasCustomer = !!a.customerId;
+            const hasGroup = a.customerGroupId !== null && a.customerGroupId !== undefined;
+            return hasCustomer !== hasGroup; // exactly one must be set (XOR)
+          },
+          { message: "Each assignment must target exactly one of: customerId or customerGroupId" },
+        ),
       );
       const assignments = schema.parse(req.body);
 

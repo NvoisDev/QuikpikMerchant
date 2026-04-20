@@ -8,12 +8,95 @@ import {
   parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, stripe, sum, users, validatePhoneNumber,
   whatsAppBusinessService, wrapCustomerEmail,
-  priceLists, priceListItems, priceListAssignments,
+  priceLists, priceListItems, priceListAssignments, customerGroupMembers,
 } from "./shared";
 
-// ── Shared helper: resolve a customer's custom price for a product ─────────
-// Returns null if no active price list override applies; otherwise returns
-// { customPrice, standardPrice } ready to merge into the product response.
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+/** Compute effective price from a price list item row (lowest price wins). */
+function computeEffectivePrice(
+  base: number,
+  item: { customPrice: string | null; discountPercentage: string | null },
+): number {
+  if (item.customPrice) return parseFloat(item.customPrice);
+  if (item.discountPercentage) {
+    const pct = parseFloat(item.discountPercentage);
+    return Math.round(base * (1 - pct / 100) * 100) / 100;
+  }
+  return base;
+}
+
+/**
+ * Resolve active price list IDs for a customer/wholesaler pair.
+ * Uses Drizzle ORM queries — no raw SQL string interpolation.
+ */
+async function resolveActivePriceListIds(
+  wholesalerId: string,
+  customerId: string,
+): Promise<number[]> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Find groups this customer belongs to
+  const memberRows = await db
+    .select({ groupId: customerGroupMembers.groupId })
+    .from(customerGroupMembers)
+    .where(eq(customerGroupMembers.customerId, customerId));
+  const groupIds = memberRows.map((r) => r.groupId);
+
+  // Find direct customer assignments + group assignments in one query set
+  // Active lists where this wholesaler owns them and dates are in range
+  const directRows = await db
+    .select({ id: priceLists.id })
+    .from(priceLists)
+    .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
+    .where(
+      and(
+        eq(priceLists.wholesalerId, wholesalerId),
+        eq(priceLists.isActive, true),
+        or(
+          sql`${priceLists.startDate} IS NULL`,
+          sql`${priceLists.startDate} <= ${today}`,
+        ),
+        or(
+          sql`${priceLists.endDate} IS NULL`,
+          sql`${priceLists.endDate} >= ${today}`,
+        ),
+        eq(priceListAssignments.customerId, customerId),
+      ),
+    );
+
+  let groupRows: Array<{ id: number }> = [];
+  if (groupIds.length > 0) {
+    groupRows = await db
+      .select({ id: priceLists.id })
+      .from(priceLists)
+      .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
+      .where(
+        and(
+          eq(priceLists.wholesalerId, wholesalerId),
+          eq(priceLists.isActive, true),
+          or(
+            sql`${priceLists.startDate} IS NULL`,
+            sql`${priceLists.startDate} <= ${today}`,
+          ),
+          or(
+            sql`${priceLists.endDate} IS NULL`,
+            sql`${priceLists.endDate} >= ${today}`,
+          ),
+          inArray(priceListAssignments.customerGroupId, groupIds),
+        ),
+      );
+  }
+
+  const allIds = [...new Set([...directRows, ...groupRows].map((r) => r.id))];
+  return allIds;
+}
+
+/**
+ * Resolve a customer's best (lowest) custom price for a single product.
+ * Returns null when no active price list override applies.
+ * Consistent "lowest price wins" strategy — identical to the list endpoint.
+ */
 async function resolveCustomerProductPrice(opts: {
   wholesalerId: string;
   customerId: string;
@@ -21,47 +104,30 @@ async function resolveCustomerProductPrice(opts: {
   standardPrice: string;
 }): Promise<{ customPrice: string; standardPrice: string; hasPriceList: true } | null> {
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    // Find active price list IDs for this wholesaler/customer combination
-    const result = await db.execute(sql`
-      SELECT DISTINCT pl.id
-      FROM price_lists pl
-      JOIN price_list_assignments pla ON pla.price_list_id = pl.id
-      LEFT JOIN customer_group_members cgm
-        ON cgm.group_id = pla.customer_group_id
-       AND cgm.customer_id = ${opts.customerId}
-      WHERE pl.wholesaler_id = ${opts.wholesalerId}
-        AND pl.is_active = TRUE
-        AND (pl.start_date IS NULL OR pl.start_date <= ${today})
-        AND (pl.end_date IS NULL OR pl.end_date >= ${today})
-        AND (pla.customer_id = ${opts.customerId} OR cgm.customer_id = ${opts.customerId})
-    `);
-    const listIds = (result.rows as Array<{ id: number }>).map((r) => r.id);
+    const listIds = await resolveActivePriceListIds(opts.wholesalerId, opts.customerId);
     if (listIds.length === 0) return null;
 
-    // Find the item record for this product across all matching lists
-    const itemResult = await db.execute(sql`
-      SELECT pli.custom_price, pli.discount_percentage
-      FROM price_list_items pli
-      WHERE pli.price_list_id = ANY(ARRAY[${sql.raw(listIds.join(','))}]::int[])
-        AND pli.product_id = ${opts.productId}
-      LIMIT 1
-    `);
-    if (itemResult.rows.length === 0) return null;
+    const itemRows = await db
+      .select({ customPrice: priceListItems.customPrice, discountPercentage: priceListItems.discountPercentage })
+      .from(priceListItems)
+      .where(
+        and(
+          inArray(priceListItems.priceListId, listIds),
+          eq(priceListItems.productId, opts.productId),
+        ),
+      );
+    if (itemRows.length === 0) return null;
 
-    const row = itemResult.rows[0] as { custom_price: string | null; discount_percentage: string | null };
     const base = parseFloat(opts.standardPrice || '0');
-    let effectivePrice = base;
-    if (row.custom_price) {
-      effectivePrice = parseFloat(row.custom_price);
-    } else if (row.discount_percentage) {
-      effectivePrice = Math.round(base * (1 - parseFloat(row.discount_percentage) / 100) * 100) / 100;
-    } else {
-      return null; // no override configured
-    }
+    const bestPrice = itemRows.reduce<number>((best, row) => {
+      const effective = computeEffectivePrice(base, row);
+      return effective < best ? effective : best;
+    }, Infinity);
+
+    if (bestPrice === Infinity || bestPrice === base) return null;
 
     return {
-      customPrice: effectivePrice.toFixed(2),
+      customPrice: bestPrice.toFixed(2),
       standardPrice: base.toFixed(2),
       hasPriceList: true,
     };
@@ -70,7 +136,7 @@ async function resolveCustomerProductPrice(opts: {
     return null;
   }
 }
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/customer-orders/:wholesalerId/:phoneNumber
@@ -2562,47 +2628,36 @@ export function registerMarketplaceRoutes(app: Express): void {
         try {
           const customerId = (req.session as any)?.customerAuth?.customerId;
           if (customerId) {
-            // Find active price lists for this wholesaler assigned to this customer
-            const today = new Date().toISOString().slice(0, 10);
-            const priceListsResult = await db.execute(sql`
-              SELECT pl.id
-              FROM price_lists pl
-              JOIN price_list_assignments pla ON pla.price_list_id = pl.id
-              LEFT JOIN customer_group_members cgm ON cgm.group_id = pla.customer_group_id AND cgm.customer_id = ${customerId}
-              WHERE pl.wholesaler_id = ${wholesalerId}
-                AND pl.is_active = TRUE
-                AND (pl.start_date IS NULL OR pl.start_date <= ${today})
-                AND (pl.end_date IS NULL OR pl.end_date >= ${today})
-                AND (pla.customer_id = ${customerId} OR cgm.customer_id = ${customerId})
-            `);
-            const listIds = (priceListsResult.rows as any[]).map(r => r.id);
-
+            const listIds = await resolveActivePriceListIds(wholesalerId, customerId);
             if (listIds.length > 0) {
-              // Build a map of productId -> best custom price
-              const itemsResult = await db.execute(sql`
-                SELECT pli.product_id, pli.custom_price, pli.discount_percentage
-                FROM price_list_items pli
-                WHERE pli.price_list_id = ANY(ARRAY[${sql.raw(listIds.join(','))}]::int[])
-              `);
+              // Fetch all price list items for these lists via parameterised query
+              const itemRows = await db
+                .select({
+                  productId: priceListItems.productId,
+                  customPrice: priceListItems.customPrice,
+                  discountPercentage: priceListItems.discountPercentage,
+                })
+                .from(priceListItems)
+                .where(inArray(priceListItems.priceListId, listIds));
+
+              // Build productId -> lowest effective price map (consistent "lowest price wins" strategy)
               const priceOverrides: Record<number, number> = {};
-              for (const row of itemsResult.rows as any[]) {
-                const productId = row.product_id;
+              for (const row of itemRows) {
+                const productId = row.productId;
+                if (productId === null) continue;
                 const baseProduct = formattedProducts.find((p: any) => p.id === productId);
                 if (!baseProduct) continue;
                 const base = parseFloat(baseProduct.price || '0');
-                let effectivePrice = base;
-                if (row.custom_price) effectivePrice = parseFloat(row.custom_price);
-                else if (row.discount_percentage) {
-                  effectivePrice = Math.round(base * (1 - parseFloat(row.discount_percentage) / 100) * 100) / 100;
-                }
-                if (!priceOverrides[productId] || effectivePrice < priceOverrides[productId]) {
-                  priceOverrides[productId] = effectivePrice;
+                const effective = computeEffectivePrice(base, row);
+                if (priceOverrides[productId] === undefined || effective < priceOverrides[productId]) {
+                  priceOverrides[productId] = effective;
                 }
               }
-              // Inject custom price into products
+
               for (const product of formattedProducts as any[]) {
-                if (priceOverrides[product.id] !== undefined) {
-                  product.customPrice = String(priceOverrides[product.id].toFixed(2));
+                const override = priceOverrides[product.id];
+                if (override !== undefined && override !== parseFloat(product.price || '0')) {
+                  product.customPrice = override.toFixed(2);
                   product.standardPrice = product.price;
                   product.hasPriceList = true;
                 }
