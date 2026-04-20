@@ -884,8 +884,18 @@ export default function Customers() {
         });
       }
     } catch (err: any) {
-      // AbortError means the user dismissed the share sheet — ignore silently
-      if (err?.name !== "AbortError") {
+      // AbortError  — user dismissed the share sheet: ignore silently
+      // NotAllowedError — desktop Chrome blocks file sharing: fall back to download
+      if (err?.name === "AbortError") {
+        // nothing to do
+      } else if (err?.name === "NotAllowedError") {
+        const a = document.createElement("a");
+        a.href = `/api/price-lists/${listId}/export`;
+        a.download = `${listName} - Price List.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
         toast({ title: "Could not share", description: err?.message || "Something went wrong.", variant: "destructive" });
       }
     } finally {
