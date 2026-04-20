@@ -2190,24 +2190,30 @@ export default function Customers() {
                         onClick={() => handleNativeShare(list.id, list.name)}
                         disabled={sharingListId === list.id}
                         title="Share"
+                        aria-label="Share price list"
                       >
-                        <Share2 className="h-3 w-3 sm:mr-1" />
+                        <Share2 className="h-3 w-3 sm:mr-1" aria-hidden="true" />
                         <span className="hidden sm:inline">
                           {sharingListId === list.id ? "…" : "Share"}
                         </span>
+                        <span className="sm:hidden sr-only">Share</span>
                       </Button>
                       <Button size="sm" variant="outline" className="text-xs px-2"
                         onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
                         title="Download Excel"
+                        aria-label="Download Excel price list"
                       >
-                        <Download className="h-3 w-3 sm:mr-1" />
+                        <Download className="h-3 w-3 sm:mr-1" aria-hidden="true" />
                         <span className="hidden sm:inline">Excel</span>
+                        <span className="sm:hidden sr-only">Download Excel</span>
                       </Button>
                       <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2"
                         onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
-                        title="Delete"
+                        title="Delete price list"
+                        aria-label="Delete price list"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" aria-hidden="true" />
+                        <span className="sr-only">Delete</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -2512,19 +2518,23 @@ export default function Customers() {
                   onClick={() => managingPriceList && window.open(`/api/price-lists/${managingPriceList.id}/export`, '_blank')}
                   disabled={!managingPriceList}
                   title="Download Excel"
+                  aria-label="Download Excel price list"
                 >
-                  <Download className="h-4 w-4 sm:mr-2" />
+                  <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
                   <span className="hidden sm:inline">Download Excel</span>
+                  <span className="sm:hidden sr-only">Download Excel</span>
                 </Button>
                 <Button variant="outline" className="shrink-0 text-green-700 border-green-200 hover:bg-green-50"
                   disabled={sharingListId === managingPriceList?.id || !managingPriceList}
                   onClick={() => managingPriceList && handleNativeShare(managingPriceList.id, managingPriceList.name)}
                   title="Share Now"
+                  aria-label="Share price list"
                 >
-                  <Share2 className="h-4 w-4 sm:mr-2" />
+                  <Share2 className="h-4 w-4 sm:mr-2" aria-hidden="true" />
                   <span className="hidden sm:inline">
                     {sharingListId === managingPriceList?.id ? "Preparing…" : "Share Now"}
                   </span>
+                  <span className="sm:hidden sr-only">Share Now</span>
                 </Button>
               </div>
             </TabsContent>
