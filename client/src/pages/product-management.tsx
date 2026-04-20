@@ -23,7 +23,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen, Tag } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { Product } from "@shared/schema";
+import type { Product, PromotionalOffer } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
@@ -2534,28 +2534,23 @@ export default function ProductManagement() {
                                         </span>
                                         {(() => {
                                           const now = new Date();
-                                          const activePromos = Array.isArray(product.promotionalOffers)
-                                            ? product.promotionalOffers.filter((o: any) => {
+                                          const activePromos: PromotionalOffer[] = Array.isArray(product.promotionalOffers)
+                                            ? product.promotionalOffers.filter((o: PromotionalOffer) => {
                                                 if (!o.isActive) return false;
                                                 if (o.startDate && new Date(o.startDate) > now) return false;
                                                 if (o.endDate && new Date(o.endDate) < now) return false;
                                                 return true;
                                               })
                                             : [];
-                                          if (activePromos.length === 0) {
-                                            return (
-                                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
-                                                🏷 Promo
-                                              </Badge>
-                                            );
-                                          }
+                                          if (activePromos.length === 0) return null;
                                           return (
                                             <>
-                                              {activePromos.map((promo: any, i: number) => {
-                                                let label = "Promo";
+                                              {activePromos.map((promo: PromotionalOffer, i: number) => {
+                                                let label: string;
                                                 switch (promo.type) {
                                                   case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
-                                                  case "fixed_price": case "clearance": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                                  case "fixed_price": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                                  case "clearance": label = `Clearance £${Number(promo.fixedPrice).toFixed(2)}`; break;
                                                   case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
                                                   case "bundle_deal": label = `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`; break;
                                                   default: label = promo.name || "Promo";

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cleanAIDescription } from "@shared/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import type { PromotionalOffer } from "@shared/schema";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -58,10 +59,10 @@ interface Product {
   palletStock?: number;
   palletWeight?: number;
   expiryDate?: string | null;
-  promotionalOffers?: any[];
+  promotionalOffers?: PromotionalOffer[];
 }
 
-function getActivePromos(offers: any[]): any[] {
+function getActivePromos(offers: PromotionalOffer[]): PromotionalOffer[] {
   if (!Array.isArray(offers)) return [];
   const now = new Date();
   return offers.filter((o) => {
@@ -72,13 +73,14 @@ function getActivePromos(offers: any[]): any[] {
   });
 }
 
-function formatPromoLabel(promo: any): string {
+function formatPromoLabel(promo: PromotionalOffer): string {
   switch (promo.type) {
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-    case "clearance":
       return `Now £${Number(promo.fixedPrice).toFixed(2)}`;
+    case "clearance":
+      return `Clearance £${Number(promo.fixedPrice).toFixed(2)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
