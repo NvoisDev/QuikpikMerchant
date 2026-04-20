@@ -50,6 +50,7 @@ import {
   ContactRound,
   Check,
   ChevronDown,
+  ChevronUp,
   Send,
   Shield,
   ShieldX,
@@ -277,6 +278,8 @@ export default function Customers() {
   const [priceListForm, setPriceListForm] = useState({
     name: "", description: "", startDate: "", endDate: "", isActive: true,
   });
+  const [expandedPriceLists, setExpandedPriceLists] = useState<Record<number, boolean>>({});
+  const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -813,6 +816,19 @@ export default function Customers() {
       toast({ title: "Could not load price list", description: "Please close and try again.", variant: "destructive" });
     }
     setIsManagePriceListOpen(true);
+  };
+
+  const togglePriceListExpanded = async (list: PriceListSummary) => {
+    const isOpen = expandedPriceLists[list.id];
+    setExpandedPriceLists(prev => ({ ...prev, [list.id]: !isOpen }));
+    if (!isOpen && !priceListDetailCache[list.id]) {
+      try {
+        const detail: PriceListDetail = await apiRequest('GET', `/api/price-lists/${list.id}`);
+        setPriceListDetailCache(prev => ({ ...prev, [list.id]: detail }));
+      } catch {
+        // silently ignore — counts still visible on the card
+      }
+    }
   };
 
   const addProductToPL = (product: { id: number; name: string; price: string }) => {
@@ -1872,10 +1888,92 @@ export default function Customers() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {list.itemCount || 0} products</span>
-                      <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {list.assignmentCount || 0} assigned</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {list.itemCount || 0} products</span>
+                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {list.assignmentCount || 0} assigned</span>
+                      </div>
+                      <button
+                        onClick={() => togglePriceListExpanded(list)}
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                      >
+                        {expandedPriceLists[list.id] ? (
+                          <><ChevronUp className="h-3 w-3" /> Hide</>
+                        ) : (
+                          <><ChevronDown className="h-3 w-3" /> Details</>
+                        )}
+                      </button>
                     </div>
+
+                    {expandedPriceLists[list.id] && (() => {
+                      const detail = priceListDetailCache[list.id];
+                      return (
+                        <div className="border rounded-md bg-gray-50 p-3 space-y-3 text-xs">
+                          {/* Products */}
+                          <div>
+                            <p className="font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                              <Package className="h-3 w-3" /> Products
+                            </p>
+                            {!detail ? (
+                              <p className="text-muted-foreground italic">Loading…</p>
+                            ) : detail.items.length === 0 ? (
+                              <p className="text-muted-foreground italic">No products added.</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {detail.items.map(item => {
+                                  const base = parseFloat(item.product?.price || "0");
+                                  const hasFixed = !!(item.customPrice && parseFloat(item.customPrice) > 0);
+                                  const hasPct = !!(item.discountPercentage && parseFloat(item.discountPercentage) > 0);
+                                  return (
+                                    <div key={item.productId} className="flex items-center justify-between">
+                                      <span className="text-gray-700 truncate max-w-[55%]">{item.product?.name || "Unknown"}</span>
+                                      {hasFixed && (
+                                        <span className="text-green-700 font-medium">£{parseFloat(item.customPrice).toFixed(2)}</span>
+                                      )}
+                                      {hasPct && !hasFixed && (
+                                        <span className="text-green-700 font-medium">
+                                          {parseFloat(item.discountPercentage).toFixed(0)}% off → £{(base * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2)}
+                                        </span>
+                                      )}
+                                      {!hasFixed && !hasPct && (
+                                        <span className="text-muted-foreground italic">no price set</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Assigned to */}
+                          <div>
+                            <p className="font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                              <Users className="h-3 w-3" /> Assigned to
+                            </p>
+                            {!detail ? (
+                              <p className="text-muted-foreground italic">Loading…</p>
+                            ) : detail.assignments.length === 0 ? (
+                              <p className="text-muted-foreground italic">No one assigned yet.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {detail.assignments.map((a, idx) => {
+                                  if (a.customerId) {
+                                    const c = customers.find(x => x.id === a.customerId);
+                                    const name = c ? `${c.firstName} ${c.lastName || ""}`.trim() : a.customerId;
+                                    return <Badge key={idx} variant="secondary" className="text-xs">{name}</Badge>;
+                                  }
+                                  if (a.customerGroupId) {
+                                    const g = customerGroups.find(x => x.id === a.customerGroupId);
+                                    return <Badge key={idx} variant="outline" className="text-xs border-primary/40 text-primary">{g?.name || `Group ${a.customerGroupId}`}</Badge>;
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {(list.startDate || list.endDate) && (
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
