@@ -1986,17 +1986,24 @@ export default function Customers() {
               <h2 className="text-lg sm:text-xl font-semibold">Price Lists</h2>
               <p className="text-sm text-muted-foreground">Create custom prices for specific customers or groups</p>
             </div>
-            <Button
-              onClick={() => {
-                setEditingPriceList(null);
-                setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
-                setIsPriceListModalOpen(true);
-              }}
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Price List
-            </Button>
+            <div className="flex items-center space-x-2">
+              <ContextualHelpBubble
+                topic="Price Lists"
+                title="Managing Price Lists"
+                steps={helpContent.priceLists.steps}
+              />
+              <Button
+                onClick={() => {
+                  setEditingPriceList(null);
+                  setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
+                  setIsPriceListModalOpen(true);
+                }}
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Price List
+              </Button>
+            </div>
           </div>
 
           {priceListFilterCustomer && (
