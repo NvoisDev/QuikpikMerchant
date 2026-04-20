@@ -1,14 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { log } from "./vite";
 
-// Global safety nets — log unexpected errors without killing the process.
-// These complement the pool.on('error') handler in db.ts and catch anything
-// that slips through individual try/catch blocks.
+// Global safety nets — ensure unexpected errors are always visible in logs.
+// pool.on('error') in db.ts handles the common Neon idle-connection drop case.
+// uncaughtException exits so the process manager (deployment platform) can
+// perform a clean restart; unhandledRejection logs but stays alive because
+// promise rejections are typically non-fatal and recoverable.
 process.on('uncaughtException', (err) => {
-  console.error('🔴 Uncaught exception (process kept alive):', err);
+  console.error('🔴 Uncaught exception — exiting for clean restart:', err);
+  process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('🔴 Unhandled promise rejection (process kept alive):', reason);
+  console.error('🔴 Unhandled promise rejection (non-fatal, process kept alive):', reason);
 });
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
