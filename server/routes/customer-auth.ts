@@ -887,10 +887,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
     try {
       const { customerId, email, code, wholesalerId } = req.body;
       
-      if (!customerId || !email || !code) {
+      if (!customerId || !email || !code || !wholesalerId) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Customer ID, email, and verification code are required' 
+          message: 'Customer ID, email, verification code, and wholesaler ID are required' 
         });
       }
       
@@ -912,15 +912,35 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       const customerName = `${customerRecord.firstName || ''} ${customerRecord.lastName || ''}`.trim() || customerRecord.businessName || 'Customer';
 
+      // Look up group membership for this wholesaler (same join as findCustomerByLastFourDigits)
+      let groupId: string | null = null;
+      let groupName = '';
+      try {
+        const groupRows = await db.execute(sql`
+          SELECT cgm.group_id as group_id, cg.name as group_name
+          FROM customer_group_members cgm
+          INNER JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
+          WHERE cgm.customer_id = ${customerId}
+          LIMIT 1
+        `);
+        if (groupRows.rows.length > 0) {
+          const row = groupRows.rows[0] as any;
+          groupId = row.group_id ? String(row.group_id) : null;
+          groupName = row.group_name || '';
+        }
+      } catch (groupErr) {
+        console.warn('⚠️ Could not fetch group info for email-verified customer:', groupErr);
+      }
+
       // Build session identical to SMS verification route
       const sessionData = {
         customerId: customerRecord.id,
-        wholesalerId: wholesalerId || '',
+        wholesalerId,
         name: customerName,
         email: customerRecord.email || email,
         phone: customerRecord.phoneNumber || '',
-        groupId: null as string | null,
-        groupName: '',
+        groupId,
+        groupName,
         authenticatedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       };
@@ -959,12 +979,12 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Set fallback cookie identical to SMS route
       const customerToken = Buffer.from(JSON.stringify({
         customerId: customerRecord.id,
-        wholesalerId: wholesalerId || '',
+        wholesalerId,
         name: customerName,
         email: customerRecord.email || email,
         phone: customerRecord.phoneNumber || '',
-        groupId: null,
-        groupName: '',
+        groupId,
+        groupName,
         timestamp: Date.now(),
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000
       })).toString('base64');
@@ -986,8 +1006,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
           name: customerName,
           email: customerRecord.email || email,
           phone: customerRecord.phoneNumber || '',
-          groupId: null,
-          groupName: ''
+          groupId,
+          groupName
         }
       });
       
