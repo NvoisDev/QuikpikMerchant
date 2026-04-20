@@ -1491,17 +1491,17 @@ export default function Customers() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {customerGroups.map((group) => (
-                <Card key={group.id} className="hover:shadow-md transition-shadow border-slate-200">
+                <Card key={group.id} className="hover:shadow-lg transition-shadow border-slate-200">
                   <CardHeader className="pb-3 p-4 sm:p-6">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm sm:text-base md:text-lg truncate font-semibold text-slate-900">{group.name}</CardTitle>
+                        <CardTitle className="text-base sm:text-lg md:text-xl truncate font-bold text-slate-900">{group.name}</CardTitle>
                         {group.description && (
                           <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-2">{group.description}</p>
                         )}
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                        <Badge className="text-xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 border-0 rounded-full">
+                        <Badge className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-700 border-0 rounded-full">
                           {group.memberCount || 0}
                         </Badge>
                         <Button
@@ -2073,15 +2073,15 @@ export default function Customers() {
             return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPriceLists.map((list) => (
-                <Card key={list.id} className="relative">
+                <Card key={list.id} className="relative hover:shadow-lg transition-shadow border-slate-200">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{list.name}</h3>
-                        {list.description && <p className="text-xs text-muted-foreground line-clamp-2">{list.description}</p>}
+                        <h3 className="text-base font-bold text-slate-900 truncate">{list.name}</h3>
+                        {list.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{list.description}</p>}
                       </div>
                       <div className="flex items-center gap-1 ml-2 shrink-0">
-                        <Badge variant={list.isActive ? "default" : "secondary"} className={list.isActive ? "bg-green-100 text-green-800 text-xs" : "text-xs"}>
+                        <Badge variant={list.isActive ? "default" : "secondary"} className={list.isActive ? "bg-emerald-100 text-emerald-700 border-0 rounded-full font-semibold text-xs px-2.5 py-1" : "text-xs rounded-full px-2.5 py-1"}>
                           {list.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </div>
