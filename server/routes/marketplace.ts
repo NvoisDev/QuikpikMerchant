@@ -2636,11 +2636,12 @@ export function registerMarketplaceRoutes(app: Express): void {
                   productId: priceListItems.productId,
                   customPrice: priceListItems.customPrice,
                   discountPercentage: priceListItems.discountPercentage,
+                  customPalletPrice: priceListItems.customPalletPrice,
                 })
                 .from(priceListItems)
                 .where(inArray(priceListItems.priceListId, listIds));
 
-              // Build productId -> lowest effective price map (consistent "lowest price wins" strategy)
+              // Build productId -> lowest effective unit price map
               const priceOverrides: Record<number, number> = {};
               for (const row of itemRows) {
                 const productId = row.productId;
@@ -2654,12 +2655,27 @@ export function registerMarketplaceRoutes(app: Express): void {
                 }
               }
 
+              // Build productId -> lowest custom pallet price map
+              const palletPriceOverrides: Record<number, number> = {};
+              for (const row of itemRows) {
+                const productId = row.productId;
+                if (productId === null || row.customPalletPrice == null) continue;
+                const effective = parseFloat(String(row.customPalletPrice));
+                if (palletPriceOverrides[productId] === undefined || effective < palletPriceOverrides[productId]) {
+                  palletPriceOverrides[productId] = effective;
+                }
+              }
+
               for (const product of formattedProducts as any[]) {
                 const override = priceOverrides[product.id];
                 if (override !== undefined && override !== parseFloat(product.price || '0')) {
                   product.customPrice = override.toFixed(2);
                   product.standardPrice = product.price;
                   product.hasPriceList = true;
+                }
+                const palletOverride = palletPriceOverrides[product.id];
+                if (palletOverride !== undefined) {
+                  product.palletPrice = palletOverride.toFixed(2);
                 }
               }
             }
