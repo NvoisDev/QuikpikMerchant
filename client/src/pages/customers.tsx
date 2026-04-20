@@ -801,11 +801,16 @@ export default function Customers() {
     });
     try {
       const detail: PriceListDetail = await apiRequest('GET', `/api/price-lists/${list.id}`);
-      setPriceListItems(detail.items || []);
+      setPriceListItems((detail.items || []).map(item => ({
+        ...item,
+        customPrice: item.customPrice ?? "",
+        discountPercentage: item.discountPercentage ?? "",
+      })));
       setPriceListAssignments(detail.assignments || []);
     } catch {
       setPriceListItems([]);
       setPriceListAssignments([]);
+      toast({ title: "Could not load price list", description: "Please close and try again.", variant: "destructive" });
     }
     setIsManagePriceListOpen(true);
   };
