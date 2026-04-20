@@ -274,6 +274,7 @@ export default function Customers() {
   const [managingPriceList, setManagingPriceList] = useState<PriceListSummary | null>(null);
   const [plProductSearch, setPlProductSearch] = useState("");
   const [priceListItems, setPriceListItems] = useState<PriceListItemForm[]>([]);
+  const [incompletePLItems, setIncompletePLItems] = useState<Set<number>>(new Set());
   const [priceListAssignments, setPriceListAssignments] = useState<PriceListAssignmentForm[]>([]);
   const [priceListForm, setPriceListForm] = useState({
     name: "", description: "", startDate: "", endDate: "", isActive: true,
@@ -798,6 +799,7 @@ export default function Customers() {
   });
 
   const openManagePriceList = async (list: PriceListSummary) => {
+    setIncompletePLItems(new Set());
     setManagingPriceList(list);
     setPriceListForm({
       name: list.name,
@@ -844,10 +846,22 @@ export default function Customers() {
 
   const removeProductFromPL = (productId: number) => {
     setPriceListItems(prev => prev.filter(i => i.productId !== productId));
+    setIncompletePLItems(prev => {
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
   };
 
   const updatePLItemPrice = (productId: number, field: 'customPrice' | 'discountPercentage', value: string) => {
     setPriceListItems(prev => prev.map(i => i.productId === productId ? { ...i, [field]: value } : i));
+    if (value) {
+      setIncompletePLItems(prev => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+    }
   };
 
   const togglePLCustomerAssignment = (customerId: string) => {
@@ -2078,7 +2092,7 @@ export default function Customers() {
       </Dialog>
 
       {/* ── Manage Price List Modal (Products + Assignments) ──────────── */}
-      <Dialog open={isManagePriceListOpen} onOpenChange={setIsManagePriceListOpen}>
+      <Dialog open={isManagePriceListOpen} onOpenChange={(open) => { if (!open) setIncompletePLItems(new Set()); setIsManagePriceListOpen(open); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2182,7 +2196,7 @@ export default function Customers() {
                     const product = item.product;
                     const standardPrice = parseFloat(product?.price || "0");
                     return (
-                      <div key={item.productId} className="border rounded-lg p-3 bg-gray-50">
+                      <div key={item.productId} className={`border rounded-lg p-3 bg-gray-50 ${incompletePLItems.has(item.productId) ? "border-red-500 bg-red-50" : ""}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">{product?.name}</span>
                           <div className="flex items-center gap-2">
@@ -2225,6 +2239,19 @@ export default function Customers() {
               <Button className="w-full bg-green-600 hover:bg-green-700"
                 disabled={savePLItemsMutation.isPending || !managingPriceList}
                 onClick={() => {
+                  const incomplete = priceListItems
+                    .filter(i => !i.customPrice?.trim() && !i.discountPercentage?.trim())
+                    .map(i => i.productId);
+                  if (incomplete.length > 0) {
+                    setIncompletePLItems(new Set(incomplete));
+                    toast({
+                      title: "Pricing required",
+                      description: `${incomplete.length} product${incomplete.length > 1 ? "s" : ""} ${incomplete.length > 1 ? "are" : "is"} missing a fixed price or discount. Please complete pricing before saving.`,
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setIncompletePLItems(new Set());
                   const items = priceListItems.map(i => ({
                     productId: i.productId,
                     customPrice: i.customPrice || null,
