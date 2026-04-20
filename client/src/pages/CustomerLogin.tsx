@@ -529,7 +529,18 @@ export default function CustomerLogin() {
                     </div>
                   </form>
 
-                  <div className="border-t pt-4">
+                  <div className="border-t pt-4 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(1);
+                        setLastFourDigits("");
+                      }}
+                      className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Change store
+                    </button>
                     <button
                       type="button"
                       onClick={() => setShowEnquiryForm(true)}
