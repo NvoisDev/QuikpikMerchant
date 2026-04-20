@@ -760,8 +760,10 @@ export default function Customers() {
 
   const deletePriceListMutation = useMutation({
     mutationFn: (id: number) => apiRequest('DELETE', `/api/price-lists/${id}`),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      setPriceListDetailCache(prev => { const next = { ...prev }; delete next[id]; return next; });
+      setExpandedPriceLists(prev => { const next = { ...prev }; delete next[id]; return next; });
       toast({ title: "Deleted", description: "Price list deleted." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -769,8 +771,9 @@ export default function Customers() {
 
   const savePLItemsMutation = useMutation({
     mutationFn: ({ id, items }: { id: number; items: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
       toast({ title: "Saved", description: "Products updated!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -778,8 +781,9 @@ export default function Customers() {
 
   const savePLAssignmentsMutation = useMutation({
     mutationFn: ({ id, assignments }: { id: number; assignments: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/assignments`, assignments),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
       toast({ title: "Saved", description: "Assignments updated!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -1900,9 +1904,9 @@ export default function Customers() {
                         className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
                       >
                         {expandedPriceLists[list.id] ? (
-                          <><ChevronUp className="h-3 w-3" /> Hide</>
+                          <><ChevronUp className="h-3 w-3" /> Hide details</>
                         ) : (
-                          <><ChevronDown className="h-3 w-3" /> Details</>
+                          <><ChevronDown className="h-3 w-3" /> View details</>
                         )}
                       </button>
                     </div>
