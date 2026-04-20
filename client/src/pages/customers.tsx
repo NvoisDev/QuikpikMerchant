@@ -780,12 +780,25 @@ export default function Customers() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const refreshPriceListDetail = async (id: number) => {
+    try {
+      const res = await apiRequest('GET', `/api/price-lists/${id}`);
+      const detail = await res.json() as PriceListDetail;
+      setPriceListDetailCache(prev => ({ ...prev, [id]: detail }));
+    } catch {
+      // silently ignore — summary panel will remain empty
+    }
+  };
+
   const savePLItemsMutation = useMutation({
     mutationFn: ({ id, items }: { id: number; items: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
+      if (expandedPriceLists[variables.id]) {
+        refreshPriceListDetail(variables.id);
+      }
       toast({ title: "Saved", description: "Products updated!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -797,6 +810,9 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
       setPriceListDetailCache(prev => { const next = { ...prev }; delete next[variables.id]; return next; });
+      if (expandedPriceLists[variables.id]) {
+        refreshPriceListDetail(variables.id);
+      }
       toast({ title: "Saved", description: "Assignments updated!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
