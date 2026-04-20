@@ -1157,21 +1157,21 @@ export default function OrdersFresh() {
                             } else if (order.status === 'cancelled' && paidAmt === 0) {
                               return null;
                             } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
-                              return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
+                              return <Badge className="bg-emerald-100 text-emerald-800 text-xs">Paid</Badge>;
                             } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
-                              return <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>;
+                              return <Badge className="bg-amber-100 text-amber-800 text-xs">Part Paid</Badge>;
                             } else {
-                              return <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>;
+                              return <Badge className="bg-red-100 text-red-700 text-xs">Unpaid</Badge>;
                             }
                           })()}
                           {order.status === 'fulfilled' ? (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-800 text-xs">Fulfilled</Badge>
                           ) : order.status === 'ready_for_collection' ? (
-                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                            <Badge className="bg-amber-100 text-amber-800 text-xs">Ready</Badge>
                           ) : order.status === 'cancelled' ? (
-                            <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                            <Badge className="bg-red-100 text-red-700 text-xs">Cancelled</Badge>
                           ) : (
-                            <Badge className="bg-gray-100 text-gray-800 text-xs">Unfulfilled</Badge>
+                            <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                           )}
                           {order.isQuote ? (
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
@@ -1314,23 +1314,23 @@ export default function OrdersFresh() {
                           } else if (order.status === 'cancelled' && paidAmt === 0) {
                             return null;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
-                            return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
+                            return <Badge className="bg-emerald-100 text-emerald-800 text-xs">Paid</Badge>;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'part_paid') {
-                            return <Badge className="bg-orange-100 text-orange-800 text-xs">Part Paid</Badge>;
+                            return <Badge className="bg-amber-100 text-amber-800 text-xs">Part Paid</Badge>;
                           } else {
-                            return <Badge className="bg-red-100 text-red-800 text-xs">Unpaid</Badge>;
+                            return <Badge className="bg-red-100 text-red-700 text-xs">Unpaid</Badge>;
                           }
                         })()}
                         {order.status === 'fulfilled' ? (
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">Fulfilled</Badge>
+                          <Badge className="bg-emerald-100 text-emerald-800 text-xs">Fulfilled</Badge>
                         ) : order.status === 'ready_for_collection' ? (
-                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Ready</Badge>
+                          <Badge className="bg-amber-100 text-amber-800 text-xs">Ready</Badge>
                         ) : order.status === 'cancelled' ? (
-                          <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>
+                          <Badge className="bg-red-100 text-red-700 text-xs">Cancelled</Badge>
                         ) : order.status === 'paid' ? (
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">Confirmed</Badge>
+                          <Badge className="bg-slate-100 text-slate-700 text-xs">Confirmed</Badge>
                         ) : (
-                          <Badge className="bg-gray-100 text-gray-800 text-xs">Unfulfilled</Badge>
+                          <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                         )}
                         {order.isQuote ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
