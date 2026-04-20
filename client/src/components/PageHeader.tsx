@@ -92,15 +92,15 @@ export default function PageHeader({ title, description, children }: PageHeaderP
             className="relative hover:bg-slate-100 text-slate-500 hover:text-slate-700"
             onClick={handleShareStore}
           >
-            <Share2 className="h-4.5 w-4.5" />
+            <Share2 className="h-[18px] w-[18px]" />
           </Button>
 
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="relative hover:bg-slate-100 text-slate-500 hover:text-slate-700">
-                <Bell className="h-4.5 w-4.5" />
+                <Bell className="h-[18px] w-[18px]" />
                 {total > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4.5 w-4.5 flex items-center justify-center font-semibold">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-semibold">
                     {total > 99 ? "99+" : total}
                   </span>
                 )}
