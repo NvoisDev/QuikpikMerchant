@@ -421,7 +421,11 @@ export default function CustomerDetail() {
         setPriceBreakdownLoading(true);
         try {
           const results = await Promise.all(
-            missingIds.map((id) => fetch(`/api/price-lists/${id}`, { credentials: 'include' }).then((r) => r.json() as Promise<PriceListDetail>))
+            missingIds.map(async (id) => {
+              const r = await fetch(`/api/price-lists/${id}`, { credentials: 'include' });
+              if (!r.ok) throw new Error(`Failed to fetch price list ${id}`);
+              return r.json() as Promise<PriceListDetail>;
+            })
           );
           setPriceBreakdownCache((prev) => {
             const next = { ...prev };
@@ -843,11 +847,9 @@ export default function CustomerDetail() {
                             {formatMoney(row.best)}
                           </td>
                           <td className="px-3 py-2 text-right hidden sm:table-cell">
-                            {row.best < row.standardPrice ? (
-                              <span className="line-through text-muted-foreground">{formatMoney(row.standardPrice)}</span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
+                            <span className={row.best < row.standardPrice ? 'line-through text-muted-foreground' : 'text-muted-foreground'}>
+                              {formatMoney(row.standardPrice)}
+                            </span>
                           </td>
                         </tr>
                       ))}
