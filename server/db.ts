@@ -12,4 +12,12 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Prevent the process from crashing when Neon terminates an idle connection.
+// The pool automatically replaces the dropped client on the next query, so
+// swallowing the error here is safe and intentional.
+pool.on('error', (err) => {
+  console.error('PG Pool error (connection dropped by server):', err.message);
+});
+
 export const db = drizzle({ client: pool, schema });

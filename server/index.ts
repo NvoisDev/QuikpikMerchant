@@ -1,5 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { log } from "./vite";
+
+// Global safety nets — log unexpected errors without killing the process.
+// These complement the pool.on('error') handler in db.ts and catch anything
+// that slips through individual try/catch blocks.
+process.on('uncaughtException', (err) => {
+  console.error('🔴 Uncaught exception (process kept alive):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('🔴 Unhandled promise rejection (process kept alive):', reason);
+});
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
