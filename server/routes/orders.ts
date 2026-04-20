@@ -7,8 +7,9 @@ import {
   orderNotificationService, orderPhotoUpload, orders, parcel2goService, products,
   refundAcrossPaymentIntents, requireAuth, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
-  wrapCustomerEmail, z
+  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus
 } from "./shared";
+import type { CancellationRefundType } from "./shared";
 
 export function registerOrderRoutes(app: Express): void {
   // PUT /api/orders/:orderId/change-delivery-address
@@ -1422,9 +1423,10 @@ export function registerOrderRoutes(app: Express): void {
                 ? `Order ${order.orderNumber} Cancelled - ${businessName}`
                 : `Partial Return Processed - Order ${order.orderNumber}`;
 
-              const emailRefundStatus: 'processed' | 'pending' | 'none' = stripeRefundTotalPounds > 0
-                ? 'processed'
-                : (actualRefundAmount > 0 ? 'pending' : 'none');
+              const emailRefundType: CancellationRefundType = stripeRefundTotalPounds > 0
+                ? 'card'
+                : (actualRefundAmount > 0 ? 'later' : 'none');
+              const emailRefundStatus = cancellationRefundTypeToEmailStatus(emailRefundType);
 
               const emailBody = buildItemisedRefundEmail({
                 customerName: customer.firstName || 'there',
@@ -1751,10 +1753,11 @@ export function registerOrderRoutes(app: Express): void {
             const actualRefundAmt = custCancelStripeRefunded > 0
               ? custCancelStripeRefunded
               : custCancelAmountPaid;
-            const custRefundStatus: 'processed' | 'pending' | 'none' =
-              custCancelStripeRefunded > 0 ? 'processed'
-              : custCancelAmountPaid > 0 ? 'pending'
+            const custRefundType: CancellationRefundType = custCancelStripeRefunded > 0
+              ? 'card'
+              : custCancelAmountPaid > 0 ? 'later'
               : 'none';
+            const custRefundStatus = cancellationRefundTypeToEmailStatus(custRefundType);
             
             const approvedEmailBody = buildItemisedRefundEmail({
               customerName,

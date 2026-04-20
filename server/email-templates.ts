@@ -1,4 +1,5 @@
 import { formatDeliveryAddress, formatDeliveryAddressHTML } from '../shared/utils/address-formatter';
+import type { EmailRefundStatus } from '../shared/schema';
 
 function formatDeliveryAddressForEmail(address: string): string {
   if (!address) return '';
@@ -308,7 +309,7 @@ export function buildItemisedRefundEmail(options: {
   retainedItems?: RefundLineItem[];
   refundAmount: number;
   deliveryRefunded?: number;
-  refundStatus?: 'processed' | 'pending' | 'none';
+  refundStatus?: EmailRefundStatus;
   refundTimeline?: string;
   businessName: string;
   businessPhone?: string;

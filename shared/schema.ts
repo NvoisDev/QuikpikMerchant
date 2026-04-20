@@ -685,6 +685,25 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   requestedAtIdx: index("registration_requests_requested_at_idx").on(table.requestedAt),
 }));
 
+// Cancellation refund types — stored in the DB and used to derive email status
+export type CancellationRefundType = 'card' | 'later' | 'none';
+
+// Email refund status — what the customer sees in the cancellation/refund email
+export type EmailRefundStatus = 'processed' | 'pending' | 'none';
+
+/**
+ * Maps the stored DB `refundType` to the email-facing `refundStatus`.
+ * This is the single source of truth for that translation so the two
+ * representations can never silently diverge.
+ */
+export function cancellationRefundTypeToEmailStatus(
+  refundType: CancellationRefundType | null | undefined,
+): EmailRefundStatus {
+  if (refundType === 'card') return 'processed';
+  if (refundType === 'later') return 'pending';
+  return 'none';
+}
+
 // Order cancellation requests (customer-initiated, within 24hr window)
 export const orderCancellationRequests = pgTable("order_cancellation_requests", {
   id: serial("id").primaryKey(),
@@ -698,7 +717,7 @@ export const orderCancellationRequests = pgTable("order_cancellation_requests", 
   respondedAt: timestamp("responded_at"),
   respondedBy: varchar("responded_by").references(() => users.id),
   responseMessage: text("response_message"),
-  refundType: varchar("refund_type").$type<'card' | 'later' | 'none'>(),
+  refundType: varchar("refund_type").$type<CancellationRefundType>(),
   refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
 }, (table) => ({
   orderIdIdx: index("cancellation_requests_order_id_idx").on(table.orderId),

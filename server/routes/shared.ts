@@ -22,7 +22,9 @@ import {
   userSubscriptions, stockMovements, orderCancellationRequests,
   wholesalerCustomerRelationships, teamMembers,
   priceLists, priceListItems, priceListAssignments,
+  cancellationRefundTypeToEmailStatus,
 } from "@shared/schema";
+import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 import { generateProductDescription, generateProductImage } from "../ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "../ai-taglines";
@@ -80,6 +82,7 @@ export {
   userSubscriptions, stockMovements, orderCancellationRequests,
   wholesalerCustomerRelationships, teamMembers,
   priceLists, priceListItems, priceListAssignments,
+  cancellationRefundTypeToEmailStatus,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,
@@ -110,7 +113,7 @@ export {
   multer, sharp, compression, cookieParser,
   eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull, like,
 };
-export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, RefundLineItem };
+export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, RefundLineItem, CancellationRefundType, EmailRefundStatus };
 
 // ─── Singletons ───────────────────────────────────────────────────────────────
 if (!process.env.STRIPE_SECRET_KEY) {
