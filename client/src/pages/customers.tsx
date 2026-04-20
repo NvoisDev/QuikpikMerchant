@@ -848,6 +848,50 @@ export default function Customers() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const [sharingListId, setSharingListId] = useState<number | null>(null);
+
+  const handleNativeShare = async (listId: number, listName: string) => {
+    setSharingListId(listId);
+    try {
+      const portalUrl = `${window.location.origin}/customer/${user.id}`;
+
+      // Fetch the Excel file
+      const response = await fetch(`/api/price-lists/${listId}/export`);
+      if (!response.ok) throw new Error("Failed to fetch price list");
+      const blob = await response.blob();
+      const file = new File([blob], `${listName} - Price List.xlsx`, {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        // Full file share (iOS, Android)
+        await navigator.share({
+          title: listName,
+          text: `Your exclusive price list from us — shop at the link below.`,
+          url: portalUrl,
+          files: [file],
+        });
+      } else if (typeof navigator.share === "function") {
+        // URL-only share (some desktop browsers)
+        await navigator.share({
+          title: listName,
+          text: `Your exclusive price list — shop at the link below.`,
+          url: portalUrl,
+        });
+      } else {
+        // No share API — fall back to download
+        window.open(`/api/price-lists/${listId}/export`, "_blank");
+      }
+    } catch (err: any) {
+      // User cancelled share (AbortError) — ignore silently
+      if (err?.name !== "AbortError") {
+        toast({ title: "Could not share", description: err?.message || "Something went wrong.", variant: "destructive" });
+      }
+    } finally {
+      setSharingListId(null);
+    }
+  };
+
   const openManagePriceList = async (list: PriceListSummary) => {
     setIncompletePLItems(new Set());
     setManagingPriceList(list);
@@ -2132,10 +2176,11 @@ export default function Customers() {
                         <Edit3 className="h-3 w-3 mr-1" /> Manage
                       </Button>
                       <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50"
-                        onClick={() => sharePriceListMutation.mutate(list.id)}
-                        disabled={sharePriceListMutation.isPending}
+                        onClick={() => handleNativeShare(list.id, list.name)}
+                        disabled={sharingListId === list.id}
                       >
-                        <Share2 className="h-3 w-3 mr-1" /> Share
+                        <Share2 className="h-3 w-3 mr-1" />
+                        {sharingListId === list.id ? "…" : "Share"}
                       </Button>
                       <Button size="sm" variant="outline" className="text-xs"
                         onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
@@ -2453,10 +2498,10 @@ export default function Customers() {
                   <Download className="h-4 w-4 mr-2" /> Download Excel
                 </Button>
                 <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50"
-                  disabled={sharePriceListMutation.isPending || !managingPriceList}
-                  onClick={() => managingPriceList && sharePriceListMutation.mutate(managingPriceList.id)}>
+                  disabled={sharingListId === managingPriceList?.id || !managingPriceList}
+                  onClick={() => managingPriceList && handleNativeShare(managingPriceList.id, managingPriceList.name)}>
                   <Share2 className="h-4 w-4 mr-2" />
-                  {sharePriceListMutation.isPending ? "Sharing..." : "Share Now"}
+                  {sharingListId === managingPriceList?.id ? "Preparing…" : "Share Now"}
                 </Button>
               </div>
             </TabsContent>
