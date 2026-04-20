@@ -885,7 +885,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   // POST /api/customer-email-verification/verify
   app.post('/api/customer-email-verification/verify', async (req, res) => {
     try {
-      const { customerId, email, code } = req.body;
+      const { customerId, email, code, wholesalerId } = req.body;
       
       if (!customerId || !email || !code) {
         return res.status(400).json({ 
@@ -897,17 +897,99 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Verify the email code
       const isVerified = await verifyEmailCode(customerId, email, code);
       
-      if (isVerified) {
-        res.json({ 
-          success: true, 
-          message: 'Email verified successfully' 
-        });
-      } else {
-        res.status(400).json({ 
+      if (!isVerified) {
+        return res.status(400).json({ 
           success: false, 
           message: 'Invalid or expired verification code' 
         });
       }
+
+      // Look up full customer record to build session
+      const customerRecord = await storage.getUser(customerId);
+      if (!customerRecord) {
+        return res.status(404).json({ success: false, message: 'Customer not found' });
+      }
+
+      const customerName = `${customerRecord.firstName || ''} ${customerRecord.lastName || ''}`.trim() || customerRecord.businessName || 'Customer';
+
+      // Build session identical to SMS verification route
+      const sessionData = {
+        customerId: customerRecord.id,
+        wholesalerId: wholesalerId || '',
+        name: customerName,
+        email: customerRecord.email || email,
+        phone: customerRecord.phoneNumber || '',
+        groupId: null as string | null,
+        groupName: '',
+        authenticatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      console.log('🔧 Email Verification - Session data created:', sessionData);
+
+      // Ensure session exists and store customer session
+      if (!req.session) {
+        req.session = {} as any;
+      }
+      (req.session as any).customerAuth = sessionData;
+
+      console.log(`🔐 Customer session created for ${customerName} (email) - expires in 30 days`);
+
+      // Force session save
+      const saveSession = () => new Promise<void>((resolve, reject) => {
+        if (req.session && typeof req.session.save === 'function') {
+          const timeout = setTimeout(() => reject(new Error('Session save timeout')), 3000);
+          req.session.save((err) => {
+            clearTimeout(timeout);
+            if (err) { console.error('❌ Session save error:', err); reject(err); }
+            else { console.log('✅ Customer session saved successfully'); resolve(); }
+          });
+        } else {
+          console.log('⚠️ Session save method not available');
+          resolve();
+        }
+      });
+
+      try {
+        await saveSession();
+      } catch (err) {
+        console.error('Session save failed:', err);
+      }
+
+      // Set fallback cookie identical to SMS route
+      const customerToken = Buffer.from(JSON.stringify({
+        customerId: customerRecord.id,
+        wholesalerId: wholesalerId || '',
+        name: customerName,
+        email: customerRecord.email || email,
+        phone: customerRecord.phoneNumber || '',
+        groupId: null,
+        groupName: '',
+        timestamp: Date.now(),
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+      })).toString('base64');
+
+      res.cookie('customer_auth', customerToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+      });
+
+      console.log('✅ Sending email verification success response');
+
+      res.json({ 
+        success: true, 
+        message: 'Email verified successfully',
+        customer: {
+          id: customerRecord.id,
+          name: customerName,
+          email: customerRecord.email || email,
+          phone: customerRecord.phoneNumber || '',
+          groupId: null,
+          groupName: ''
+        }
+      });
       
     } catch (error) {
       console.error('Email verification verify error:', error);

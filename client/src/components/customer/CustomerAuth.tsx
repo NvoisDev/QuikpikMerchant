@@ -595,13 +595,15 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     try {
       const response = await fetch('/api/customer-email-verification/verify', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           customerId: customerData.id,
           email: customerData.email,
-          code: emailCode.trim()
+          code: emailCode.trim(),
+          wholesalerId
         }),
       });
 
@@ -612,7 +614,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           title: "Email Verification Successful!",
           description: `Welcome ${customerData.name}, you're now securely logged in.`,
         });
-        onAuthSuccess(customerData);
+        onAuthSuccess(data.customer || customerData);
       } else {
         setError(data.message || "Invalid email verification code. Please try again.");
       }
