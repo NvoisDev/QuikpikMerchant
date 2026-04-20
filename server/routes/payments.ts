@@ -1554,7 +1554,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       // Calculate totals
       // Customer pays: productSubtotal + deliveryCharge + transaction fee (5.5% + £0.50)
-      // Wholesaler pays: platform fee (3.3% of productSubtotal only) - internal
+      // Wholesaler pays: platform fee (5% of productSubtotal only) - internal
       const productSubtotal = items.reduce((sum: number, item: any) => 
         sum + (item.customPrice * item.quantity), 0
       );
@@ -1568,7 +1568,7 @@ export function registerPaymentRoutes(app: Express): void {
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
       const customerTransactionFee = isOffline ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      const platformFee = isOffline ? 0 : subtotal * 0.033; // 3.3% platform fee on products + delivery
+      const platformFee = isOffline ? 0 : subtotal * 0.05; // 5% platform fee on products + delivery
       const total = subtotal + customerTransactionFee;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
@@ -1748,7 +1748,7 @@ export function registerPaymentRoutes(app: Express): void {
             }
           }
 
-          // Wholesaler receives subtotal minus 3.3% platform fee; proportional to deposit
+          // Wholesaler receives subtotal minus 5% platform fee; proportional to deposit
           const wholesalerTotal = subtotal - platformFee;
           const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
 

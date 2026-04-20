@@ -651,7 +651,7 @@ export default function OrdersFresh() {
     const deliveryCost = parseFloat(order.deliveryCost || '0');
     if (!isStripePayment(order)) return subtotal + deliveryCost;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.05;
     return (subtotal + deliveryCost) - feeToDeduct;
   };
 

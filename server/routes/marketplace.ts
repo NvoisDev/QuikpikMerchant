@@ -164,7 +164,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         const total = parseFloat(order.total || "0");
         // Calculate proper fees based on current fee structure:
         // Customer pays: Product subtotal + Transaction fee (5.5% + £0.50)
-        // Wholesaler pays: Platform fee (3.3% of product subtotal)
+        // Wholesaler pays: Platform fee (5% of product subtotal)
         
         // CRITICAL FIX: Always use stored subtotal from database - never calculate
         const subtotal = parseFloat(order.subtotal || "0");
@@ -193,8 +193,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         const deliveryCost = parseFloat(order.deliveryCost || '0');
         const correctedTotal = isOnline ? total : (subtotal + deliveryCost);
         
-        // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
-        const platformFee = subtotal * 0.033;
+        // Platform fee paid by wholesaler: 5% of product subtotal (not shown to customers but calculated for completeness)
+        const platformFee = subtotal * 0.05;
         
         return {
           id: order.id,
@@ -817,8 +817,8 @@ export function registerMarketplaceRoutes(app: Express): void {
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
-      // Wholesaler Platform Fee: 3.3% of products + delivery (deducted from what they receive)
-      const wholesalerPlatformFee = amountBeforeFees * 0.033;
+      // Wholesaler Platform Fee: 5% of products + delivery (deducted from what they receive)
+      const wholesalerPlatformFee = amountBeforeFees * 0.05;
       const wholesalerReceives = amountBeforeFees - wholesalerPlatformFee;
 
       // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
@@ -1436,7 +1436,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               customerEmail, // Store customer email
               customerPhone, // Store customer phone
               subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
-              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
+              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 5% platform fee
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
@@ -3345,7 +3345,7 @@ https://quikpik.app`;
         }
       }
 
-      // Wholesaler's proportional cut of this payment (subtotal - 3.3% platform fee, pro-rated)
+      // Wholesaler's proportional cut of this payment (subtotal - 5% platform fee, pro-rated)
       const customerBalanceOrderTotal = parseFloat(order.total || '0');
       const customerBalanceWholesalerTotal = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
       const customerBalanceTransferAmount = customerBalanceOrderTotal > 0
@@ -3543,7 +3543,7 @@ https://quikpik.app`;
       });
 
       const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
-      const platformFeeRate = 0.033;
+      const platformFeeRate = 0.05;
       const platformFee = subtotal * platformFeeRate;
       const customerTransactionFee = (subtotal * 0.055) + 0.50;
       const deliveryCost = parseFloat(order.deliveryCost || '0');

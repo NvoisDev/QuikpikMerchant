@@ -880,7 +880,7 @@ export default function SuperAdmin() {
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2.5">
                   <Row label="Buyer fees (5.5% + £0.50)"  value={fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
-                  <Row label="Merchant fees (3.3%)"        value={fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
+                  <Row label="Merchant fees (5%)"          value={fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
                   <Row label="Subscription MRR"            value={fmt(subMRR)}                           color={PURPLE} />
                   <div className="pt-1.5 border-t border-gray-100">
                     <Row label="Total earned (fees + MRR)" value={fmt((revenueTotals.totalGrossRevenue || 0) + subMRR)} color={GREEN} bold />
@@ -992,7 +992,7 @@ export default function SuperAdmin() {
           <TabsContent value="revenue" className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <StatCard label="Buyer Fees"    value={fmt(revenueTotals.totalCustomerFees)}  sub="5.5% + £0.50 per order" icon={<TrendingUp className="h-4 w-4" />}   color={BLUE} />
-              <StatCard label="Merchant Fees" value={fmt(revenueTotals.totalPlatformFees)}  sub="3.3% per order"         icon={<TrendingUp className="h-4 w-4" />}   color={AMBER} />
+              <StatCard label="Merchant Fees" value={fmt(revenueTotals.totalPlatformFees)}  sub="5% per order"           icon={<TrendingUp className="h-4 w-4" />}   color={AMBER} />
               <StatCard label="Order Revenue" value={fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />}   color={GREEN} />
               <StatCard label="Sub. MRR"      value={fmt(subMRR)}                           sub="Monthly recurring"      icon={<LayoutDashboard className="h-4 w-4" />} color={PURPLE} />
             </div>

@@ -201,7 +201,7 @@ const calculateNetAmount = (order: Order) => {
   // Offline payments: no platform fee deducted — wholesaler keeps the full amount
   if (!isStripePayment(order)) return subtotal + deliveryCost;
   const actualPlatformFee = parseFloat(order.platformFee || '0');
-  const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.033;
+  const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.05;
   return (subtotal + deliveryCost) - feeToDeduct;
 };
 
@@ -1006,8 +1006,8 @@ export default function OrderDetail() {
             )}
             {isStripePayment(order) && (
               <div className="flex justify-between text-red-600">
-                <span>Platform Fee (3.3%):</span>
-                <span>-{formatMoney(parseFloat(order.platformFee || '0') || (parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')) * 0.033)}</span>
+                <span>Platform Fee (5%):</span>
+                <span>-{formatMoney(parseFloat(order.platformFee || '0') || (parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')) * 0.05)}</span>
               </div>
             )}
             {parseFloat(order.amountRefunded || '0') > 0 && (() => {
