@@ -803,7 +803,8 @@ export default function Customers() {
       isActive: list.isActive,
     });
     try {
-      const detail: PriceListDetail = await apiRequest('GET', `/api/price-lists/${list.id}`);
+      const res = await apiRequest('GET', `/api/price-lists/${list.id}`);
+      const detail = await res.json() as PriceListDetail;
       setPriceListItems((detail.items || []).map(item => ({
         ...item,
         customPrice: item.customPrice ?? "",
@@ -823,7 +824,8 @@ export default function Customers() {
     setExpandedPriceLists(prev => ({ ...prev, [list.id]: !isOpen }));
     if (!isOpen && !priceListDetailCache[list.id]) {
       try {
-        const detail: PriceListDetail = await apiRequest('GET', `/api/price-lists/${list.id}`);
+        const res = await apiRequest('GET', `/api/price-lists/${list.id}`);
+        const detail = await res.json() as PriceListDetail;
         setPriceListDetailCache(prev => ({ ...prev, [list.id]: detail }));
       } catch {
         // silently ignore — counts still visible on the card
@@ -1964,7 +1966,11 @@ export default function Customers() {
                                   }
                                   if (a.customerGroupId) {
                                     const g = customerGroups.find(x => x.id === a.customerGroupId);
-                                    return <Badge key={idx} variant="outline" className="text-xs border-primary/40 text-primary">{g?.name || `Group ${a.customerGroupId}`}</Badge>;
+                                    return (
+                                      <Badge key={idx} variant="outline" className="text-xs border-primary/40 text-primary flex items-center gap-0.5">
+                                        <Users className="h-2.5 w-2.5" />{g?.name || `Group ${a.customerGroupId}`}
+                                      </Badge>
+                                    );
                                   }
                                   return null;
                                 })}
