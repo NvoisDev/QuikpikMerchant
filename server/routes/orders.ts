@@ -1105,7 +1105,7 @@ export function registerOrderRoutes(app: Express): void {
         : req.user.id;
       const { reason, reasonCategory, returnedItems, processRefund, refundType, refundDelivery } = req.body;
       // returnedItems: Array<{ productId: number, quantity: number, sellingType: 'units' | 'pallets' }>
-      // refundType: 'card' | 'credit' - determines if refund goes to original payment or store credit
+      // refundType: 'card' | 'later' - determines if refund goes to original payment or processed separately
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -1686,7 +1686,7 @@ export function registerOrderRoutes(app: Express): void {
           await db.update(orders)
             .set({
               status: 'cancelled',
-              amountRefunded: custCancelStripeRefunded > 0 ? custCancelStripeRefunded.toFixed(2) : (refundType === 'credit' || refundType === 'later') ? custCancelAmountPaid.toFixed(2) : '0.00',
+              amountRefunded: custCancelStripeRefunded > 0 ? custCancelStripeRefunded.toFixed(2) : refundType === 'later' ? custCancelAmountPaid.toFixed(2) : '0.00',
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
               notes: order.notes 
@@ -1731,8 +1731,6 @@ export function registerOrderRoutes(app: Express): void {
             const totalCancelledQty = cancelledLineItems.reduce((sum, i) => sum + i.quantity, 0);
             if (refundType === 'card' && custCancelStripeRefunded > 0) {
               message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelStripeRefunded.toFixed(2)} processed — allow 5-10 business days.`;
-            } else if (refundType === 'credit' && custCancelAmountPaid > 0) {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Store credit of £${custCancelAmountPaid.toFixed(2)} applied.`;
             } else if (refundType === 'card' && custCancelAmountPaid > 0) {
               message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelAmountPaid.toFixed(2)} pending.`;
             } else {
@@ -1752,10 +1750,9 @@ export function registerOrderRoutes(app: Express): void {
             const custCancelDeliveryCost = parseFloat(order.deliveryCost || '0');
             const actualRefundAmt = custCancelStripeRefunded > 0
               ? custCancelStripeRefunded
-              : (refundType === 'credit' ? custCancelAmountPaid : custCancelAmountPaid);
-            const custRefundStatus: 'processed' | 'pending' | 'credit' | 'none' =
-              refundType === 'credit' ? 'credit'
-              : custCancelStripeRefunded > 0 ? 'processed'
+              : custCancelAmountPaid;
+            const custRefundStatus: 'processed' | 'pending' | 'none' =
+              custCancelStripeRefunded > 0 ? 'processed'
               : custCancelAmountPaid > 0 ? 'pending'
               : 'none';
             

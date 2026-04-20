@@ -1614,7 +1614,7 @@ When "Send notification" is ticked, the customer automatically receives a detail
 - A table of every returned item with quantity and unit value
 - A delivery refund row (if delivery was included in the refund)
 - A "Retained items" section listing any items still on the order (for partial returns)
-- Refund status: **Processed** (card refund sent), **Pending** (later/manual), or **Credit note** (store credit)
+- Refund status: **Processed** (card refund sent) or **Pending** (later/manual)
 
 The wholesaler also receives a copy of this notification.
 

@@ -223,7 +223,7 @@ export default function OrderDetail() {
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [processRefund, setProcessRefund] = useState(true);
-  const [refundType, setRefundType] = useState<'card' | 'credit' | 'later'>('card');
+  const [refundType, setRefundType] = useState<'card' | 'later'>('card');
   const [restockInventory, setRestockInventory] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
   const [staffNote, setStaffNote] = useState('');
@@ -458,9 +458,7 @@ export default function OrderDetail() {
           });
         } else {
           const refundMessage = processRefund && refundType !== 'later'
-            ? refundType === 'card'
-              ? ' A refund has been initiated.'
-              : ' Store credit applied.'
+            ? ' A refund has been initiated.'
             : refundType === 'later' ? ' Refund will be processed separately.' : '';
           toast({
             title: "Order Cancelled",

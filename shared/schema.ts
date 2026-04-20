@@ -698,7 +698,7 @@ export const orderCancellationRequests = pgTable("order_cancellation_requests", 
   respondedAt: timestamp("responded_at"),
   respondedBy: varchar("responded_by").references(() => users.id),
   responseMessage: text("response_message"),
-  refundType: varchar("refund_type").$type<'card' | 'credit' | 'none'>(),
+  refundType: varchar("refund_type").$type<'card' | 'later' | 'none'>(),
   refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
 }, (table) => ({
   orderIdIdx: index("cancellation_requests_order_id_idx").on(table.orderId),

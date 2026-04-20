@@ -308,7 +308,7 @@ export function buildItemisedRefundEmail(options: {
   retainedItems?: RefundLineItem[];
   refundAmount: number;
   deliveryRefunded?: number;
-  refundStatus?: 'processed' | 'pending' | 'credit' | 'none';
+  refundStatus?: 'processed' | 'pending' | 'none';
   refundTimeline?: string;
   businessName: string;
   businessPhone?: string;
@@ -386,12 +386,6 @@ export function buildItemisedRefundEmail(options: {
       emailHeading('Refund Pending', { size: '16px', color: '#EA580C' }) +
       '<p style="margin:0;color:#EA580C">Your refund is being arranged and will be processed shortly. You will be notified once it has been completed.</p>',
       { borderColor: '#FED7AA', bgColor: '#FFF7ED' }
-    );
-  } else if (refundStatus === 'credit') {
-    processingNote = emailCard(
-      emailHeading('Store Credit Applied', { size: '16px', color: '#059669' }) +
-      '<p style="margin:0;color:#059669">Store credit of \u00A3' + refundAmount.toFixed(2) + ' has been applied to your account for future orders.</p>',
-      { borderColor: '#A7F3D0', bgColor: '#ECFDF5' }
     );
   } else {
     processingNote = emailCard(
