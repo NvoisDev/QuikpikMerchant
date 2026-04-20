@@ -111,7 +111,6 @@ export default function Sidebar() {
             dc ? "lg:translate-x-0 lg:w-14" : "lg:translate-x-0 lg:w-64"
           )}
         >
-          {/* ── Header ── */}
           <div className={cn(
             "border-b border-slate-700/60 flex-shrink-0",
             dc ? "lg:px-2 lg:py-4 px-5 py-5" : "px-5 py-5"
@@ -154,7 +153,6 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* ── Navigation ── */}
           <nav className="flex-1 py-3 overflow-y-auto">
             <div className={cn("space-y-0.5", dc ? "lg:px-1 px-3" : "px-3")}>
               {navigation.map((item) => {
@@ -247,7 +245,6 @@ export default function Sidebar() {
             </div>
           </nav>
 
-          {/* ── User profile & actions ── */}
           <div className={cn(
             "flex-shrink-0 border-t border-slate-700/60 space-y-2",
             dc ? "lg:p-2 p-4" : "p-4"
