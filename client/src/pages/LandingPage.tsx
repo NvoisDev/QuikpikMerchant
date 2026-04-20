@@ -53,8 +53,9 @@ export default function LandingPage() {
       <nav className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <span className="text-lg sm:text-2xl font-bold text-gray-900">Quikpik Merchant</span>
+            <div className="flex items-center gap-2">
+              <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
+              <span className="text-lg sm:text-2xl font-bold text-gray-900">Quikpik</span>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Button 

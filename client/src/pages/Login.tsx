@@ -158,9 +158,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] flex-col justify-between bg-slate-900 px-12 py-16 flex-shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-16">
-            <div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <span className="text-white font-bold text-base">Q</span>
-            </div>
+            <img src="/quikpik-logo.png" alt="Quikpik" className="h-9 w-9 object-contain" />
             <span className="text-white font-semibold text-lg tracking-tight">Quikpik</span>
           </div>
           <h2 className="text-3xl font-bold text-white leading-snug mb-4">
@@ -189,9 +187,7 @@ export default function Login() {
         <div className="w-full max-w-md space-y-6">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="mx-auto h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center mb-4">
-              <span className="text-white font-bold text-lg">Q</span>
-            </div>
+            <img src="/quikpik-logo.png" alt="Quikpik" className="mx-auto h-12 w-12 object-contain mb-4" />
             <h1 className="text-2xl font-bold text-slate-900">Quikpik</h1>
           </div>
 
