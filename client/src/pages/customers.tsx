@@ -1958,22 +1958,6 @@ export default function Customers() {
 
           {isLoadingPriceLists ? (
             <div className="text-center py-10 text-muted-foreground">Loading price lists...</div>
-          ) : fetchedPriceLists.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Tag className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="font-medium text-lg mb-2">No price lists yet</h3>
-                <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
-                  Create a price list to offer custom prices or discounts to specific customers or groups.
-                </p>
-                <Button
-                  onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Create First Price List
-                </Button>
-              </CardContent>
-            </Card>
           ) : (() => {
             const filteredPriceLists = priceListFilterCustomer
               ? fetchedPriceLists.filter((list) =>
@@ -2002,6 +1986,26 @@ export default function Customers() {
                         <Plus className="h-4 w-4 mr-2" /> Create price list
                       </Button>
                     </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            if (fetchedPriceLists.length === 0) {
+              return (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Tag className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                    <h3 className="font-medium text-lg mb-2">No price lists yet</h3>
+                    <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
+                      Create a price list to offer custom prices or discounts to specific customers or groups.
+                    </p>
+                    <Button
+                      onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Create First Price List
+                    </Button>
                   </CardContent>
                 </Card>
               );
