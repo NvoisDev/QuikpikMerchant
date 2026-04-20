@@ -4006,6 +4006,7 @@ export default function CustomerPortal() {
                                     currency={wholesaler?.defaultCurrency || 'GBP'}
                                     isGuestMode={isGuestMode}
                                     size="medium"
+                                    showStrikethrough={true}
                                   />
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
