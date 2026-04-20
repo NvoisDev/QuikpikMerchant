@@ -5567,6 +5567,11 @@ export default function CustomerPortal() {
                               ` • Minimum: ${(selectedProductForModal as any).palletMoq} pallets`
                             }
                           </p>
+                          {selectedProductForModal.hasPriceList && !isGuestMode && (
+                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                              🏷️ Your price
+                            </span>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-semibold text-blue-600">
@@ -5686,6 +5691,11 @@ export default function CustomerPortal() {
                           return null;
                         })()}
                         {selectedModalType === 'units' && selectedProductForModal.hasPriceList && !isGuestMode && (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                            🏷️ Your price
+                          </span>
+                        )}
+                        {selectedModalType === 'pallets' && selectedProductForModal.hasPriceList && !isGuestMode && (
                           <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
                             🏷️ Your price
                           </span>
