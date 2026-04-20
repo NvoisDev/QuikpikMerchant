@@ -5485,9 +5485,8 @@ export default function CustomerPortal() {
                     {/* Individual Units Option */}
                     {(() => {
                       const moq = selectedProductForModal.moq || 1;
-                      const originalUnitPrice = parseFloat(selectedProductForModal.price);
                       const promoPricing = calculatePromotionalPricing(selectedProductForModal as any, moq);
-                      const hasPromo = promoPricing.effectivePrice !== promoPricing.originalPrice;
+                      const hasDiscount = promoPricing.effectivePrice !== promoPricing.originalPrice;
                       return (
                     <div 
                       className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-emerald-500 bg-emerald-50"
@@ -5503,18 +5502,23 @@ export default function CustomerPortal() {
                         <div>
                           <h4 className="font-medium text-gray-900">Individual Units</h4>
                           <p className="text-sm text-gray-600">
-                            {hasPromo ? (
+                            {hasDiscount ? (
                               <>
-                                <span className="line-through text-gray-400 mr-1">£{originalUnitPrice.toFixed(2)}</span>
+                                <span className="line-through text-gray-400 mr-1">£{promoPricing.originalPrice.toFixed(2)}</span>
                                 <span className="text-emerald-600 font-semibold">£{promoPricing.effectivePrice.toFixed(2)}</span> per unit
                               </>
                             ) : (
-                              <>£{originalUnitPrice.toFixed(2)} per unit</>
+                              <>£{promoPricing.effectivePrice.toFixed(2)} per unit</>
                             )}
                           </p>
-                          {hasPromo && promoPricing.promoLabel && (
+                          {hasDiscount && promoPricing.promoLabel && (
                             <span className="inline-block text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
                               {promoPricing.promoLabel}
+                            </span>
+                          )}
+                          {selectedProductForModal.hasPriceList && !isGuestMode && (
+                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                              🏷️ Your price
                             </span>
                           )}
                           <p className="text-xs text-gray-500 mt-1">
@@ -5522,9 +5526,9 @@ export default function CustomerPortal() {
                           </p>
                         </div>
                         <div className="text-right">
-                          {hasPromo && (
+                          {hasDiscount && (
                             <div className="text-xs text-gray-400 line-through">
-                              £{(originalUnitPrice * moq).toFixed(2)}
+                              £{(promoPricing.originalPrice * moq).toFixed(2)}
                             </div>
                           )}
                           <div className="text-lg font-semibold text-emerald-600">
@@ -5665,7 +5669,7 @@ export default function CustomerPortal() {
                                     </>
                                   );
                                 }
-                                return `£${qtyPricing.originalPrice.toFixed(2)} per unit`;
+                                return `£${qtyPricing.effectivePrice.toFixed(2)} per unit`;
                               })()
                             : `£${parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0').toFixed(2)} per pallet`
                           }
@@ -5681,6 +5685,11 @@ export default function CustomerPortal() {
                           }
                           return null;
                         })()}
+                        {selectedModalType === 'units' && selectedProductForModal.hasPriceList && !isGuestMode && (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                            🏷️ Your price
+                          </span>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 mb-1">
