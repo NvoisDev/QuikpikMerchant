@@ -1778,9 +1778,9 @@ export default function Customers() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                      <span>{customer?.phoneNumber || 'No phone'}</span>
-                      {customer?.email && <span className="hidden sm:inline truncate">{customer.email}</span>}
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5 overflow-hidden">
+                      <span className="shrink-0">{customer?.phoneNumber || 'No phone'}</span>
+                      {customer?.email && <span className="hidden sm:inline truncate overflow-hidden text-ellipsis">{customer.email}</span>}
                     </div>
                   </div>
                   
