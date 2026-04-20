@@ -1745,9 +1745,9 @@ export default function Customers() {
                     </AvatarFallback>
                   </Avatar>
                   
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate max-w-full">
                         {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                       </h3>
                       {customer?.groupNames && customer.groupNames.length > 0 && (
