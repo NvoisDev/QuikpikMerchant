@@ -590,19 +590,14 @@ export function registerPriceListRoutes(app: Express): void {
       const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
 
       // Build Excel attachment once — same file for all assigned customers
-      let xlsxAttachment: { content: string; type: string; filename: string; disposition: 'attachment' } | null = null;
-      try {
-        const { wb, filename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
-        const xlsxBase64: string = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
-        xlsxAttachment = {
-          content: xlsxBase64,
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          filename,
-          disposition: "attachment",
-        };
-      } catch (xlsxErr) {
-        console.error("⚠️ Excel generation failed (non-fatal, continuing without attachment):", xlsxErr);
-      }
+      const { wb, filename: xlsxFilename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
+      const xlsxBase64: string = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+      const xlsxAttachment = {
+        content: xlsxBase64,
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename: xlsxFilename,
+        disposition: "attachment" as const,
+      };
 
       let emailsSent = 0;
       let whatsappSent = 0;
@@ -664,7 +659,7 @@ export function registerPriceListRoutes(app: Express): void {
               from: "hello@quikpik.co",
               subject: `Your Exclusive Price List: ${list.name} — ${businessName}`,
               html,
-              ...(xlsxAttachment ? { attachments: [xlsxAttachment] } : {}),
+              attachments: [xlsxAttachment],
             });
             if (sent) emailsSent++;
           } catch (e) {
