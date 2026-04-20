@@ -7,8 +7,70 @@ import {
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders, parcel2goService,
   parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, stripe, sum, users, validatePhoneNumber,
-  whatsAppBusinessService, wrapCustomerEmail
+  whatsAppBusinessService, wrapCustomerEmail,
+  priceLists, priceListItems, priceListAssignments,
 } from "./shared";
+
+// ── Shared helper: resolve a customer's custom price for a product ─────────
+// Returns null if no active price list override applies; otherwise returns
+// { customPrice, standardPrice } ready to merge into the product response.
+async function resolveCustomerProductPrice(opts: {
+  wholesalerId: string;
+  customerId: string;
+  productId: number;
+  standardPrice: string;
+}): Promise<{ customPrice: string; standardPrice: string; hasPriceList: true } | null> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // Find active price list IDs for this wholesaler/customer combination
+    const result = await db.execute(sql`
+      SELECT DISTINCT pl.id
+      FROM price_lists pl
+      JOIN price_list_assignments pla ON pla.price_list_id = pl.id
+      LEFT JOIN customer_group_members cgm
+        ON cgm.group_id = pla.customer_group_id
+       AND cgm.customer_id = ${opts.customerId}
+      WHERE pl.wholesaler_id = ${opts.wholesalerId}
+        AND pl.is_active = TRUE
+        AND (pl.start_date IS NULL OR pl.start_date <= ${today})
+        AND (pl.end_date IS NULL OR pl.end_date >= ${today})
+        AND (pla.customer_id = ${opts.customerId} OR cgm.customer_id = ${opts.customerId})
+    `);
+    const listIds = (result.rows as Array<{ id: number }>).map((r) => r.id);
+    if (listIds.length === 0) return null;
+
+    // Find the item record for this product across all matching lists
+    const itemResult = await db.execute(sql`
+      SELECT pli.custom_price, pli.discount_percentage
+      FROM price_list_items pli
+      WHERE pli.price_list_id = ANY(ARRAY[${sql.raw(listIds.join(','))}]::int[])
+        AND pli.product_id = ${opts.productId}
+      LIMIT 1
+    `);
+    if (itemResult.rows.length === 0) return null;
+
+    const row = itemResult.rows[0] as { custom_price: string | null; discount_percentage: string | null };
+    const base = parseFloat(opts.standardPrice || '0');
+    let effectivePrice = base;
+    if (row.custom_price) {
+      effectivePrice = parseFloat(row.custom_price);
+    } else if (row.discount_percentage) {
+      effectivePrice = Math.round(base * (1 - parseFloat(row.discount_percentage) / 100) * 100) / 100;
+    } else {
+      return null; // no override configured
+    }
+
+    return {
+      customPrice: effectivePrice.toFixed(2),
+      standardPrice: base.toFixed(2),
+      hasPriceList: true,
+    };
+  } catch (err) {
+    console.error('⚠️ resolveCustomerProductPrice failed (non-fatal):', err);
+    return null;
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/customer-orders/:wholesalerId/:phoneNumber
@@ -2691,6 +2753,18 @@ export function registerMarketplaceRoutes(app: Express): void {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
+      // Resolve custom price list pricing if customer is authenticated
+      const detailCustomerId = (req.session as any)?.customerAuth?.customerId;
+      let customPriceOverride: { customPrice: string; standardPrice: string; hasPriceList: true } | null = null;
+      if (detailCustomerId) {
+        customPriceOverride = await resolveCustomerProductPrice({
+          wholesalerId: product.wholesalerId,
+          customerId: detailCustomerId,
+          productId: product.id,
+          standardPrice: product.price || '0',
+        });
+      }
+
       // SEPARATE STOCK TRACKING: Use actual stock fields directly
       // Return product with actual separate stock values and wholesaler information
       res.json({
@@ -2701,6 +2775,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Legacy compatibility fields
         availablePacks: product.stock || 0, // For display purposes, show units as "packs"
         availablePallets: product.palletStock || 0, // Show actual pallet stock
+        // Custom price list pricing (null spreads cleanly)
+        ...(customPriceOverride ?? {}),
         wholesaler: {
           id: wholesaler.id,
           businessName: wholesaler.businessName || 'Business',
