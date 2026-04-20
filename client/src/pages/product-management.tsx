@@ -2532,9 +2532,43 @@ export default function ProductManagement() {
                                         <span className="text-gray-500 line-through text-xs">
                                           {formatMoney(parseFloat(product.price))}
                                         </span>
-                                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                                          PROMO
-                                        </Badge>
+                                        {(() => {
+                                          const now = new Date();
+                                          const activePromos = Array.isArray(product.promotionalOffers)
+                                            ? product.promotionalOffers.filter((o: any) => {
+                                                if (!o.isActive) return false;
+                                                if (o.startDate && new Date(o.startDate) > now) return false;
+                                                if (o.endDate && new Date(o.endDate) < now) return false;
+                                                return true;
+                                              })
+                                            : [];
+                                          if (activePromos.length === 0) {
+                                            return (
+                                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                                                🏷 Promo
+                                              </Badge>
+                                            );
+                                          }
+                                          return (
+                                            <>
+                                              {activePromos.map((promo: any, i: number) => {
+                                                let label = "Promo";
+                                                switch (promo.type) {
+                                                  case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
+                                                  case "fixed_price": case "clearance": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                                  case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
+                                                  case "bundle_deal": label = `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`; break;
+                                                  default: label = promo.name || "Promo";
+                                                }
+                                                return (
+                                                  <Badge key={i} variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                                                    🏷 {label}
+                                                  </Badge>
+                                                );
+                                              })}
+                                            </>
+                                          );
+                                        })()}
                                       </>
                                     ) : (
                                       formatMoney(parseFloat(product.price))

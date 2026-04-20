@@ -58,6 +58,34 @@ interface Product {
   palletStock?: number;
   palletWeight?: number;
   expiryDate?: string | null;
+  promotionalOffers?: any[];
+}
+
+function getActivePromos(offers: any[]): any[] {
+  if (!Array.isArray(offers)) return [];
+  const now = new Date();
+  return offers.filter((o) => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+    return true;
+  });
+}
+
+function formatPromoLabel(promo: any): string {
+  switch (promo.type) {
+    case "percentage_discount":
+      return `${promo.discountPercentage}% off`;
+    case "fixed_price":
+    case "clearance":
+      return `Now £${Number(promo.fixedPrice).toFixed(2)}`;
+    case "buy_x_get_y_free":
+      return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
+    case "bundle_deal":
+      return `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`;
+    default:
+      return promo.name || "Promotion";
+  }
 }
 
 interface ProductCardProps {
@@ -425,6 +453,13 @@ export default function ProductCard({
               Price Hidden
             </Badge>
           )}
+
+          {/* Active promotion tags */}
+          {getActivePromos(product.promotionalOffers || []).map((promo, i) => (
+            <Badge key={i} className="text-xs bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
+              🏷 {formatPromoLabel(promo)}
+            </Badge>
+          ))}
         </div>
 
         {/* Actions Row — all actions visible as icon buttons */}
