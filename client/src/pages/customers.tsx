@@ -87,9 +87,10 @@ interface PriceListSummary {
 
 interface PriceListItemForm {
   productId: number;
-  product: { id: number; name: string; price: string } | undefined;
+  product: { id: number; name: string; price: string; palletPrice?: string | null } | undefined;
   customPrice: string;
   discountPercentage: string;
+  customPalletPrice: string;
 }
 
 interface PriceListAssignmentForm {
@@ -106,6 +107,7 @@ interface PLProduct {
   id: number;
   name: string;
   price: string;
+  palletPrice?: string | null;
 }
 
 // Form Schemas
@@ -920,6 +922,7 @@ export default function Customers() {
         ...item,
         customPrice: item.customPrice ?? "",
         discountPercentage: item.discountPercentage ?? "",
+        customPalletPrice: (item as any).customPalletPrice ?? "",
       })));
       setPriceListAssignments(detail.assignments || []);
     } catch {
@@ -944,9 +947,9 @@ export default function Customers() {
     }
   };
 
-  const addProductToPL = (product: { id: number; name: string; price: string }) => {
+  const addProductToPL = (product: { id: number; name: string; price: string; palletPrice?: string | null }) => {
     if (priceListItems.some(i => i.productId === product.id)) return;
-    setPriceListItems(prev => [...prev, { productId: product.id, product, customPrice: "", discountPercentage: "" }]);
+    setPriceListItems(prev => [...prev, { productId: product.id, product, customPrice: "", discountPercentage: "", customPalletPrice: "" }]);
   };
 
   const removeProductFromPL = (productId: number) => {
@@ -958,7 +961,7 @@ export default function Customers() {
     });
   };
 
-  const updatePLItemPrice = (productId: number, field: 'customPrice' | 'discountPercentage', value: string) => {
+  const updatePLItemPrice = (productId: number, field: 'customPrice' | 'discountPercentage' | 'customPalletPrice', value: string) => {
     setPriceListItems(prev => prev.map(i => i.productId === productId ? { ...i, [field]: value } : i));
     if (value) {
       setIncompletePLItems(prev => {
@@ -2402,6 +2405,7 @@ export default function Customers() {
                             </Button>
                           </div>
                         </div>
+                        <p className="text-[10px] text-muted-foreground mb-1.5">Unit price</p>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <Label className="text-xs">Fixed Price (£)</Label>
@@ -2424,6 +2428,24 @@ export default function Customers() {
                                 : (standardPrice * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2)
                             }
                           </p>
+                        )}
+                        {product?.palletPrice != null && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="text-[10px] text-muted-foreground mb-1.5">
+                              Pallet price <span className="text-gray-400">(standard: £{parseFloat(product.palletPrice).toFixed(2)})</span>
+                            </p>
+                            <div className="w-1/2 pr-1">
+                              <Label className="text-xs">Custom Pallet Price (£)</Label>
+                              <Input className="h-7 text-xs mt-0.5" placeholder={parseFloat(product.palletPrice).toFixed(2)}
+                                value={item.customPalletPrice}
+                                onChange={e => updatePLItemPrice(item.productId, 'customPalletPrice', e.target.value)} />
+                            </div>
+                            {item.customPalletPrice && (
+                              <p className="text-xs text-green-700 mt-1">
+                                Pallet price: £{parseFloat(item.customPalletPrice).toFixed(2)}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -2451,6 +2473,7 @@ export default function Customers() {
                     productId: i.productId,
                     customPrice: i.customPrice || null,
                     discountPercentage: i.discountPercentage || null,
+                    customPalletPrice: i.customPalletPrice || null,
                   }));
                   savePLItemsMutation.mutate({ id: managingPriceList.id, items });
                 }}>

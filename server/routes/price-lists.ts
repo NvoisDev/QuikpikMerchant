@@ -61,16 +61,20 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
     .from(priceListItems)
     .where(eq(priceListItems.priceListId, listId));
 
-  const priceListMap = new Map<number, number>();
+  const priceListMap = new Map<number, { unitPrice: number; customPalletPrice: number | null }>();
   for (const item of rawItems) {
     if (item.productId === null) continue;
     const product = await storage.getProduct(item.productId);
     if (!product) continue;
-    const effective = resolveCustomPrice(product.price, {
+    const unitPrice = resolveCustomPrice(product.price, {
       customPrice: item.customPrice,
       discountPercentage: item.discountPercentage,
     });
-    priceListMap.set(item.productId, effective);
+    const customPalletPrice =
+      (item as any).customPalletPrice != null
+        ? parseFloat((item as any).customPalletPrice)
+        : null;
+    priceListMap.set(item.productId, { unitPrice, customPalletPrice });
   }
 
   const allProducts = ((await storage.getProducts(wholesalerId)) as any[])
@@ -78,17 +82,19 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   const buildRow = (p: any) => {
-    const hasPallets = p.sellingFormat === "pallets" || p.sellingFormat === "both";
+    const hasPallets = p.palletPrice != null;
     const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
     const packSize = packParts.length > 0 ? packParts.join(" x ") : "—";
-    const customerPrice = priceListMap.get(p.id);
+    const listEntry = priceListMap.get(p.id);
+    const unitPrice = listEntry !== undefined ? listEntry.unitPrice : parseFloat(p.price || "0");
+    const palletPrice = hasPallets
+      ? (listEntry?.customPalletPrice ?? parseFloat(p.palletPrice))
+      : "";
     return {
       "Product Name": p.name || "—",
       "Pack Size / Unit": packSize,
-      "Standard Unit Price": parseFloat(p.price || "0"),
-      "Customer Unit Price": customerPrice !== undefined ? customerPrice : "",
-      "Standard Pallet Price":
-        hasPallets && p.palletPrice != null ? parseFloat(p.palletPrice) : "",
+      "Unit Price": unitPrice,
+      "Standard Pallet Price": palletPrice,
       "Units per Pallet": hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : "",
     };
   };
@@ -102,8 +108,7 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
     header: [
       "Product Name",
       "Pack Size / Unit",
-      "Standard Unit Price",
-      "Customer Unit Price",
+      "Unit Price",
       "Standard Pallet Price",
       "Units per Pallet",
     ],
@@ -111,7 +116,6 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
   ws["!cols"] = [
     { wch: 35 },
     { wch: 18 },
-    { wch: 20 },
     { wch: 20 },
     { wch: 22 },
     { wch: 16 },
@@ -380,6 +384,7 @@ export function registerPriceListRoutes(app: Express): void {
           productId: z.number(),
           customPrice: z.string().optional().nullable(),
           discountPercentage: z.string().optional().nullable(),
+          customPalletPrice: z.string().optional().nullable(),
         }),
       );
       const items = schema.parse(req.body);
@@ -413,6 +418,7 @@ export function registerPriceListRoutes(app: Express): void {
             productId: item.productId,
             customPrice: item.customPrice ?? null,
             discountPercentage: item.discountPercentage ?? null,
+            customPalletPrice: item.customPalletPrice ?? null,
           })),
         );
       }

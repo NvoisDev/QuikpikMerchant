@@ -1536,6 +1536,7 @@ export const priceListItems = pgTable("price_list_items", {
   productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   customPrice: decimal("custom_price", { precision: 10, scale: 2 }),
   discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
+  customPalletPrice: decimal("custom_pallet_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   priceListIdIdx: index("price_list_items_list_id_idx").on(table.priceListId),
