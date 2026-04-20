@@ -1736,9 +1736,9 @@ export default function Customers() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-x-hidden">
               {sortedCustomers.map((customer) => (
-                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
                   <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
                       {getInitials(customer?.firstName || '', customer?.lastName)}
@@ -1989,7 +1989,7 @@ export default function Customers() {
                 setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
                 setIsPriceListModalOpen(true);
               }}
-              className="bg-green-600 hover:bg-green-700"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Price List
@@ -2182,24 +2182,30 @@ export default function Customers() {
                       </div>
                     )}
 
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex gap-1.5 pt-1">
                       <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => openManagePriceList(list)}>
                         <Edit3 className="h-3 w-3 mr-1" /> Manage
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50"
+                      <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50 px-2"
                         onClick={() => handleNativeShare(list.id, list.name)}
                         disabled={sharingListId === list.id}
+                        title="Share"
                       >
-                        <Share2 className="h-3 w-3 mr-1" />
-                        {sharingListId === list.id ? "…" : "Share"}
+                        <Share2 className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">
+                          {sharingListId === list.id ? "…" : "Share"}
+                        </span>
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs"
+                      <Button size="sm" variant="outline" className="text-xs px-2"
                         onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
+                        title="Download Excel"
                       >
-                        <Download className="h-3 w-3 mr-1" /> Excel
+                        <Download className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Excel</span>
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                      <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2"
                         onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
+                        title="Delete"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -2276,7 +2282,7 @@ export default function Customers() {
 
       {/* ── Manage Price List Modal (Products + Assignments) ──────────── */}
       <Dialog open={isManagePriceListOpen} onOpenChange={(open) => { if (!open) setIncompletePLItems(new Set()); setIsManagePriceListOpen(open); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-green-600" />
@@ -2496,23 +2502,29 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button className="flex-1 bg-green-600 hover:bg-green-700"
+              <div className="flex flex-wrap gap-2">
+                <Button className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700"
                   disabled={savePLAssignmentsMutation.isPending || !managingPriceList}
                   onClick={() => savePLAssignmentsMutation.mutate({ id: managingPriceList.id, assignments: priceListAssignments })}>
                   {savePLAssignmentsMutation.isPending ? "Saving..." : "Save Assignments"}
                 </Button>
-                <Button variant="outline"
+                <Button variant="outline" className="shrink-0"
                   onClick={() => managingPriceList && window.open(`/api/price-lists/${managingPriceList.id}/export`, '_blank')}
                   disabled={!managingPriceList}
+                  title="Download Excel"
                 >
-                  <Download className="h-4 w-4 mr-2" /> Download Excel
+                  <Download className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Download Excel</span>
                 </Button>
-                <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50"
+                <Button variant="outline" className="shrink-0 text-green-700 border-green-200 hover:bg-green-50"
                   disabled={sharingListId === managingPriceList?.id || !managingPriceList}
-                  onClick={() => managingPriceList && handleNativeShare(managingPriceList.id, managingPriceList.name)}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {sharingListId === managingPriceList?.id ? "Preparing…" : "Share Now"}
+                  onClick={() => managingPriceList && handleNativeShare(managingPriceList.id, managingPriceList.name)}
+                  title="Share Now"
+                >
+                  <Share2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">
+                    {sharingListId === managingPriceList?.id ? "Preparing…" : "Share Now"}
+                  </span>
                 </Button>
               </div>
             </TabsContent>
