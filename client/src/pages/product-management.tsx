@@ -2515,6 +2515,39 @@ export default function ProductManagement() {
                               </Badge>
                             )}
                           </div>
+                          {/* Row 3: active promotion tags — independent of promoPrice */}
+                          {(() => {
+                            const now = new Date();
+                            const activePromos: PromotionalOffer[] = Array.isArray(product.promotionalOffers)
+                              ? product.promotionalOffers.filter((o: PromotionalOffer) => {
+                                  if (!o.isActive) return false;
+                                  if (o.startDate && new Date(o.startDate) > now) return false;
+                                  if (o.endDate && new Date(o.endDate) < now) return false;
+                                  return true;
+                                })
+                              : [];
+                            if (activePromos.length === 0) return null;
+                            return (
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                {activePromos.map((promo: PromotionalOffer, i: number) => {
+                                  let label: string;
+                                  switch (promo.type) {
+                                    case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
+                                    case "fixed_price": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                    case "clearance": label = `Clearance £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                    case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
+                                    case "bundle_deal": label = `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`; break;
+                                    default: label = promo.name || "Promo";
+                                  }
+                                  return (
+                                    <Badge key={i} className="text-xs bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
+                                      🏷 {label}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                           {product.description && (
                             <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
                           )}
@@ -2532,38 +2565,6 @@ export default function ProductManagement() {
                                         <span className="text-gray-500 line-through text-xs">
                                           {formatMoney(parseFloat(product.price))}
                                         </span>
-                                        {(() => {
-                                          const now = new Date();
-                                          const activePromos: PromotionalOffer[] = Array.isArray(product.promotionalOffers)
-                                            ? product.promotionalOffers.filter((o: PromotionalOffer) => {
-                                                if (!o.isActive) return false;
-                                                if (o.startDate && new Date(o.startDate) > now) return false;
-                                                if (o.endDate && new Date(o.endDate) < now) return false;
-                                                return true;
-                                              })
-                                            : [];
-                                          if (activePromos.length === 0) return null;
-                                          return (
-                                            <>
-                                              {activePromos.map((promo: PromotionalOffer, i: number) => {
-                                                let label: string;
-                                                switch (promo.type) {
-                                                  case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
-                                                  case "fixed_price": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
-                                                  case "clearance": label = `Clearance £${Number(promo.fixedPrice).toFixed(2)}`; break;
-                                                  case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
-                                                  case "bundle_deal": label = `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`; break;
-                                                  default: label = promo.name || "Promo";
-                                                }
-                                                return (
-                                                  <Badge key={i} variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
-                                                    🏷 {label}
-                                                  </Badge>
-                                                );
-                                              })}
-                                            </>
-                                          );
-                                        })()}
                                       </>
                                     ) : (
                                       formatMoney(parseFloat(product.price))
