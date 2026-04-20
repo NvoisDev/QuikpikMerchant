@@ -22,6 +22,7 @@ export type PromotionalOfferType =
   | 'fixed_discount'         // £5 off (alternative name)
   | 'fixed_amount_discount'  // £5 off
   | 'fixed_price'            // Set fixed promotional price
+  | 'clearance'              // Clearance sale at a fixed price
   | 'bogo'                   // Buy one get one free
   | 'buy_x_get_y_free'       // Buy 2 get 1 free, Buy 3 get 2 free, etc.
   | 'multi_buy'              // Volume discount for multiple purchases
