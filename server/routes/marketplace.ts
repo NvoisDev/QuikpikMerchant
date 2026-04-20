@@ -3668,8 +3668,11 @@ https://quikpik.app`;
               if (!baseProduct) continue;
               const base = parseFloat(baseProduct.price || '0');
               const effective = computeEffectivePrice(base, row);
-              if (priceOverrides[row.productId] === undefined || effective < priceOverrides[row.productId]) {
-                priceOverrides[row.productId] = effective;
+              // Only apply unit override when there is a real discount/custom price (lower than base)
+              if (effective < base) {
+                if (priceOverrides[row.productId] === undefined || effective < priceOverrides[row.productId]) {
+                  priceOverrides[row.productId] = effective;
+                }
               }
               if (row.customPalletPrice != null) {
                 const palletEffective = parseFloat(String(row.customPalletPrice));
@@ -3789,8 +3792,11 @@ https://quikpik.app`;
               if (!baseProduct) continue;
               const base = parseFloat(baseProduct.price || '0');
               const effective = computeEffectivePrice(base, row);
-              if (reorderPriceOverrides[row.productId] === undefined || effective < reorderPriceOverrides[row.productId]) {
-                reorderPriceOverrides[row.productId] = effective;
+              // Only apply unit override when there is a real discount/custom price (lower than base)
+              if (effective < base) {
+                if (reorderPriceOverrides[row.productId] === undefined || effective < reorderPriceOverrides[row.productId]) {
+                  reorderPriceOverrides[row.productId] = effective;
+                }
               }
               if (row.customPalletPrice != null) {
                 const palletEffective = parseFloat(String(row.customPalletPrice));
