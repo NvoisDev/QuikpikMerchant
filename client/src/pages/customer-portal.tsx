@@ -1406,11 +1406,12 @@ export default function CustomerPortal() {
         result.promoLabel = `${offer.discountPercentage}% OFF`;
         break;
       } else if (offer.type === 'fixed_price' && offer.fixedPrice) {
-        result.effectivePrice = offer.fixedPrice;
-        result.totalCost = offer.fixedPrice * quantity;
-        result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
-        result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        const fixedDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        const effectiveFixed = Math.min(offer.fixedPrice, basePrice);
+        result.effectivePrice = effectiveFixed;
+        result.totalCost = effectiveFixed * quantity;
+        result.totalDiscount = (basePrice - effectiveFixed) * quantity;
+        result.discountPercentage = Math.round(((basePrice - effectiveFixed) / basePrice) * 100);
+        const fixedDetail = `£${effectiveFixed.toFixed(2)} each`;
         result.appliedOffers.push(offer.name ? `${offer.name} - ${fixedDetail}` : fixedDetail);
         result.promoType = 'fixed_price';
         result.promoLabel = 'SPECIAL PRICE';
@@ -1428,11 +1429,12 @@ export default function CustomerPortal() {
         break;
       } else if (offer.type === 'bundle_deal' && offer.minQuantity && offer.fixedPrice) {
         if (quantity >= offer.minQuantity) {
-          result.effectivePrice = offer.fixedPrice;
-          result.totalCost = offer.fixedPrice * quantity;
-          result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
-          result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-          const bundleDetail = `${offer.minQuantity}+ for £${offer.fixedPrice.toFixed(2)} each`;
+          const effectiveBundle = Math.min(offer.fixedPrice, basePrice);
+          result.effectivePrice = effectiveBundle;
+          result.totalCost = effectiveBundle * quantity;
+          result.totalDiscount = (basePrice - effectiveBundle) * quantity;
+          result.discountPercentage = Math.round(((basePrice - effectiveBundle) / basePrice) * 100);
+          const bundleDetail = `${offer.minQuantity}+ for £${effectiveBundle.toFixed(2)} each`;
           result.appliedOffers.push(offer.name ? `${offer.name} - ${bundleDetail}` : bundleDetail);
           result.promoType = 'bundle_deal';
           result.promoLabel = `${offer.minQuantity}+ DEAL`;
@@ -1440,11 +1442,12 @@ export default function CustomerPortal() {
         }
         continue;
       } else if (offer.type === 'clearance' && offer.fixedPrice) {
-        result.effectivePrice = offer.fixedPrice;
-        result.totalCost = offer.fixedPrice * quantity;
-        result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
-        result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        const clearanceDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        const effectiveClearance = Math.min(offer.fixedPrice, basePrice);
+        result.effectivePrice = effectiveClearance;
+        result.totalCost = effectiveClearance * quantity;
+        result.totalDiscount = (basePrice - effectiveClearance) * quantity;
+        result.discountPercentage = Math.round(((basePrice - effectiveClearance) / basePrice) * 100);
+        const clearanceDetail = `£${effectiveClearance.toFixed(2)} each`;
         result.appliedOffers.push(offer.name ? `${offer.name} - ${clearanceDetail}` : `Clearance - ${clearanceDetail}`);
         result.promoType = 'clearance';
         result.promoLabel = 'CLEARANCE';
@@ -4002,11 +4005,6 @@ export default function CustomerPortal() {
                                     isGuestMode={isGuestMode}
                                     size="medium"
                                   />
-                                  {product.hasPriceList && !isGuestMode && (
-                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full mt-0.5">
-                                      🏷️ Your price
-                                    </span>
-                                  )}
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>
@@ -5516,11 +5514,6 @@ export default function CustomerPortal() {
                               {promoPricing.promoLabel}
                             </span>
                           )}
-                          {selectedProductForModal.hasPriceList && !isGuestMode && (
-                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                              🏷️ Your price
-                            </span>
-                          )}
                           <p className="text-xs text-gray-500 mt-1">
                             Minimum: {moq} units
                           </p>
@@ -5567,11 +5560,6 @@ export default function CustomerPortal() {
                               ` • Minimum: ${(selectedProductForModal as any).palletMoq} pallets`
                             }
                           </p>
-                          {selectedProductForModal.hasPriceList && !isGuestMode && (
-                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                              🏷️ Your price
-                            </span>
-                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-semibold text-blue-600">
@@ -5605,11 +5593,6 @@ export default function CustomerPortal() {
                           <p className="text-xs text-gray-500 mt-1">
                             {selectedProductForModal.moq || 1} units + {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
                           </p>
-                          {selectedProductForModal.hasPriceList && !isGuestMode && (
-                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                              🏷️ Your price
-                            </span>
-                          )}
                         </div>
                         <div className="text-purple-600 text-2xl">+</div>
                       </div>
@@ -5695,16 +5678,6 @@ export default function CustomerPortal() {
                           }
                           return null;
                         })()}
-                        {selectedModalType === 'units' && selectedProductForModal.hasPriceList && !isGuestMode && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                            🏷️ Your price
-                          </span>
-                        )}
-                        {selectedModalType === 'pallets' && selectedProductForModal.hasPriceList && !isGuestMode && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
-                            🏷️ Your price
-                          </span>
-                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 mb-1">
