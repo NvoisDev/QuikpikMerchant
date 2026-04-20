@@ -42,7 +42,7 @@ export function createResetExpiration(): Date {
  * @param firstName - User's first name for personalization
  */
 export async function sendPasswordResetEmail(email: string, token: string, firstName?: string, branding?: { businessName?: string; logoUrl?: string | null }): Promise<void> {
-  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${token}`;
+  const resetUrl = `${process.env.APP_URL || 'https://quikpik.app'}/reset-password?token=${token}`;
   
   const resetBody = `${emailHeading('Reset Your Password', { size: '22px' })}${firstName ? `<p style="font-size:16px;margin:0 0 8px">Hi ${firstName},</p>` : ''}<p style="margin:0 0 20px">We received a request to reset your password for your Quikpik account. Click the button below to create a new password:</p>${emailButton('Reset Password', resetUrl)}${emailCard(`<p style="margin:0;color:#6b7280;font-size:14px">This link will expire in 1 hour for security purposes. If you didn't request this password reset, you can safely ignore this email.</p>`)}${emailDivider()}<p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">If you're having trouble clicking the button, copy and paste this URL into your browser:<br><span style="word-break:break-all">${resetUrl}</span></p>`;
 

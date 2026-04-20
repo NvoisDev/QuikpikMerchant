@@ -155,7 +155,7 @@ export class MultiWholesalerService {
 
         if (wholesaler[0]) {
           // Send welcome notification to existing customer
-          const portalUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}/customer-portal`;
+          const portalUrl = `${process.env.APP_URL || 'https://quikpik.app'}/customer-portal`;
           
           const welcomeResult = await sendWelcomeMessages({
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Customer',
@@ -270,7 +270,7 @@ export class MultiWholesalerService {
 
       if (wholesaler[0]) {
         // Send welcome notification to new customer
-        const portalUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}/customer-portal`;
+        const portalUrl = `${process.env.APP_URL || 'https://quikpik.app'}/customer-portal`;
         const customerName = `${customerData.firstName || invitation[0].firstName || ''} ${customerData.lastName || invitation[0].lastName || ''}`.trim() || customerData.email || invitation[0].email || 'Customer';
         
         const welcomeResult = await sendWelcomeMessages({
