@@ -376,6 +376,22 @@ export default function CustomerDetail() {
     onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to add to price list', variant: 'destructive' }),
   });
 
+  const removeFromPriceListMutation = useMutation({
+    mutationFn: async (priceListId: number) => {
+      const res = await fetch(`/api/price-lists/${priceListId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch price list');
+      const priceList = await res.json();
+      const existing: { customerId?: string | null; customerGroupId?: number | null }[] = priceList.assignments || [];
+      const updated = existing.filter((a) => a.customerId !== customerId);
+      await apiRequest('PUT', `/api/price-lists/${priceListId}/assignments`, updated);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
+      toast({ title: 'Removed from price list' });
+    },
+    onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to remove from price list', variant: 'destructive' }),
+  });
+
   const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[] }>>({
     queryKey: ['/api/price-lists/customer-summary'],
     enabled: !!customerId,
@@ -704,11 +720,19 @@ export default function CustomerDetail() {
               <Badge
                 key={customerPriceLists.ids[i]}
                 variant="secondary"
-                className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2"
+                className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2 flex items-center gap-1"
                 onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
               >
-                <Tag className="h-3 w-3 mr-1" />
+                <Tag className="h-3 w-3" />
                 {name}
+                <button
+                  className="ml-1 hover:text-red-500 transition-colors"
+                  disabled={removeFromPriceListMutation.isPending}
+                  onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
+                  aria-label={`Remove from ${name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </Badge>
             ))}
           </div>
@@ -1077,9 +1101,17 @@ export default function CustomerDetail() {
                 <Label className="text-xs text-muted-foreground">Already assigned to</Label>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {customerPriceLists.names.map((name, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">
-                      <Tag className="h-3 w-3 mr-1" />
+                    <Badge key={i} variant="outline" className="text-xs flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
                       {name}
+                      <button
+                        className="ml-1 hover:text-red-500 transition-colors"
+                        disabled={removeFromPriceListMutation.isPending}
+                        onClick={() => removeFromPriceListMutation.mutate(customerPriceLists.ids[i])}
+                        aria-label={`Remove from ${name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
