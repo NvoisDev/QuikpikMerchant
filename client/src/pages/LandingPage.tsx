@@ -327,7 +327,7 @@ export default function LandingPage() {
               🔄 Why Wholesalers Are Switching
             </Badge>
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Traditional platforms cost a fortune. Quikpik doesn't.
+              Why Wholesalers Are Switching to Quikpik
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Everything you need to run your wholesale business — without the unnecessary fees.
