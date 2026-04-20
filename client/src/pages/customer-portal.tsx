@@ -2137,6 +2137,11 @@ export default function CustomerPortal() {
     
     // Refetch session to confirm it's saved
     refetchSession();
+    // Re-fetch products with the now-active session so the backend can inject
+    // price list prices (customPrice / customPalletPrice). Without this, the
+    // product list served before login has no customPrice, causing
+    // calculatePromotionalPricing to fall through to the promo price instead.
+    refetchProducts();
     
     toast({
       title: "Welcome!",
