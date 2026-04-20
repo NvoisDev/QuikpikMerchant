@@ -55,8 +55,16 @@ import {
   ShieldX,
   UserX,
   MoreHorizontal,
-  Clock
+  Clock,
+  Tag,
+  Percent,
+  Share2,
+  Package,
+  ListTodo,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
@@ -223,6 +231,18 @@ export default function Customers() {
   
   // Multi-wholesaler invitation state
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
+
+  // Price List state
+  const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
+  const [editingPriceList, setEditingPriceList] = useState<any>(null);
+  const [isManagePriceListOpen, setIsManagePriceListOpen] = useState(false);
+  const [managingPriceList, setManagingPriceList] = useState<any>(null);
+  const [plProductSearch, setPlProductSearch] = useState("");
+  const [priceListItems, setPriceListItems] = useState<any[]>([]);
+  const [priceListAssignments, setPriceListAssignments] = useState<any[]>([]);
+  const [priceListForm, setPriceListForm] = useState({
+    name: "", description: "", startDate: "", endDate: "", isActive: true,
+  });
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -670,6 +690,116 @@ export default function Customers() {
     },
   });
 
+  // ──── Price List queries & mutations ────────────────────────────────────
+  const { data: fetchedPriceLists = [], isLoading: isLoadingPriceLists } = useQuery<any[]>({
+    queryKey: ['/api/price-lists'],
+  });
+
+  const { data: productsForPL = [] } = useQuery<any[]>({
+    queryKey: ['/api/products'],
+  });
+
+  const createPriceListMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/price-lists', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      setIsPriceListModalOpen(false);
+      setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
+      toast({ title: "Created", description: "Price list created successfully!" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updatePriceListMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PATCH', `/api/price-lists/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      setIsPriceListModalOpen(false);
+      setEditingPriceList(null);
+      toast({ title: "Updated", description: "Price list updated!" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deletePriceListMutation = useMutation({
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/price-lists/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      toast({ title: "Deleted", description: "Price list deleted." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const savePLItemsMutation = useMutation({
+    mutationFn: ({ id, items }: { id: number; items: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      toast({ title: "Saved", description: "Products updated!" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const savePLAssignmentsMutation = useMutation({
+    mutationFn: ({ id, assignments }: { id: number; assignments: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/assignments`, assignments),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
+      toast({ title: "Saved", description: "Assignments updated!" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const sharePriceListMutation = useMutation({
+    mutationFn: (id: number) => apiRequest('POST', `/api/price-lists/${id}/share`, {}),
+    onSuccess: (data: any) => {
+      toast({ title: "Shared!", description: data.message || "Price list shared successfully." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const openManagePriceList = async (list: any) => {
+    setManagingPriceList(list);
+    // Fetch full detail
+    try {
+      const detail = await apiRequest('GET', `/api/price-lists/${list.id}`);
+      setPriceListItems(detail.items || []);
+      setPriceListAssignments(detail.assignments || []);
+    } catch {
+      setPriceListItems([]);
+      setPriceListAssignments([]);
+    }
+    setIsManagePriceListOpen(true);
+  };
+
+  const addProductToPL = (product: any) => {
+    if (priceListItems.some(i => i.productId === product.id)) return;
+    setPriceListItems(prev => [...prev, { productId: product.id, product, customPrice: "", discountPercentage: "" }]);
+  };
+
+  const removeProductFromPL = (productId: number) => {
+    setPriceListItems(prev => prev.filter(i => i.productId !== productId));
+  };
+
+  const updatePLItemPrice = (productId: number, field: 'customPrice' | 'discountPercentage', value: string) => {
+    setPriceListItems(prev => prev.map(i => i.productId === productId ? { ...i, [field]: value } : i));
+  };
+
+  const togglePLCustomerAssignment = (customerId: string) => {
+    setPriceListAssignments(prev => {
+      const has = prev.some(a => a.customerId === customerId);
+      if (has) return prev.filter(a => a.customerId !== customerId);
+      return [...prev, { customerId, customerGroupId: null }];
+    });
+  };
+
+  const togglePLGroupAssignment = (groupId: number) => {
+    setPriceListAssignments(prev => {
+      const has = prev.some(a => a.customerGroupId === groupId);
+      if (has) return prev.filter(a => a.customerGroupId !== groupId);
+      return [...prev, { customerId: null, customerGroupId: groupId }];
+    });
+  };
+  // ──────────────────────────────────────────────────────────────────────
+
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -1043,7 +1173,7 @@ export default function Customers() {
 
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <Tabs defaultValue="address-book" className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
             <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Directory</span>
@@ -1051,6 +1181,10 @@ export default function Customers() {
           <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
             <Users className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Groups</span>
+          </TabsTrigger>
+          <TabsTrigger value="price-lists" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+            <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Price Lists</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1637,7 +1771,335 @@ export default function Customers() {
             </div>
           )}
         </TabsContent>
+
+        {/* Price Lists Tab */}
+        <TabsContent value="price-lists" className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold">Price Lists</h2>
+              <p className="text-sm text-muted-foreground">Create custom prices for specific customers or groups</p>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingPriceList(null);
+                setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
+                setIsPriceListModalOpen(true);
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Price List
+            </Button>
+          </div>
+
+          {isLoadingPriceLists ? (
+            <div className="text-center py-10 text-muted-foreground">Loading price lists...</div>
+          ) : fetchedPriceLists.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Tag className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="font-medium text-lg mb-2">No price lists yet</h3>
+                <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
+                  Create a price list to offer custom prices or discounts to specific customers or groups.
+                </p>
+                <Button
+                  onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Create First Price List
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {fetchedPriceLists.map((list: any) => (
+                <Card key={list.id} className="relative">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate">{list.name}</h3>
+                        {list.description && <p className="text-xs text-muted-foreground line-clamp-2">{list.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        <Badge variant={list.isActive ? "default" : "secondary"} className={list.isActive ? "bg-green-100 text-green-800 text-xs" : "text-xs"}>
+                          {list.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {list.itemCount || 0} products</span>
+                      <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {list.assignmentCount || 0} assigned</span>
+                    </div>
+
+                    {(list.startDate || list.endDate) && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {list.startDate || "Now"} – {list.endDate || "Ongoing"}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => openManagePriceList(list)}>
+                        <Edit3 className="h-3 w-3 mr-1" /> Manage
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => sharePriceListMutation.mutate(list.id)}
+                        disabled={sharePriceListMutation.isPending}
+                      >
+                        <Share2 className="h-3 w-3 mr-1" /> Share
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* ── Create / Edit Price List Modal ─────────────────────────────── */}
+      <Dialog open={isPriceListModalOpen} onOpenChange={(open) => { setIsPriceListModalOpen(open); if (!open) setEditingPriceList(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingPriceList ? "Edit Price List" : "Create Price List"}</DialogTitle>
+            <DialogDescription>Set up a named price list for your customers.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Name *</Label>
+              <Input placeholder="e.g. VIP Customers Q2" value={priceListForm.name}
+                onChange={e => setPriceListForm(prev => ({ ...prev, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea placeholder="Optional notes about this price list..." value={priceListForm.description}
+                onChange={e => setPriceListForm(prev => ({ ...prev, description: e.target.value }))} rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={priceListForm.startDate}
+                  onChange={e => setPriceListForm(prev => ({ ...prev, startDate: e.target.value }))} />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input type="date" value={priceListForm.endDate}
+                  onChange={e => setPriceListForm(prev => ({ ...prev, endDate: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Active</Label>
+              <Switch checked={priceListForm.isActive}
+                onCheckedChange={val => setPriceListForm(prev => ({ ...prev, isActive: val }))} />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setIsPriceListModalOpen(false)}>Cancel</Button>
+            <Button className="bg-green-600 hover:bg-green-700"
+              disabled={!priceListForm.name || createPriceListMutation.isPending || updatePriceListMutation.isPending}
+              onClick={() => {
+                const payload = {
+                  name: priceListForm.name,
+                  description: priceListForm.description || null,
+                  startDate: priceListForm.startDate || null,
+                  endDate: priceListForm.endDate || null,
+                  isActive: priceListForm.isActive,
+                };
+                if (editingPriceList) {
+                  updatePriceListMutation.mutate({ id: editingPriceList.id, data: payload });
+                } else {
+                  createPriceListMutation.mutate(payload);
+                }
+              }}
+            >
+              {createPriceListMutation.isPending || updatePriceListMutation.isPending ? "Saving..." : (editingPriceList ? "Update" : "Create")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Manage Price List Modal (Products + Assignments) ──────────── */}
+      <Dialog open={isManagePriceListOpen} onOpenChange={setIsManagePriceListOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-green-600" />
+              Manage: {managingPriceList?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Add products with custom prices, then assign to customers or groups.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="products" className="mt-2">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" />Products</TabsTrigger>
+              <TabsTrigger value="assign"><Users className="h-4 w-4 mr-2" />Assign</TabsTrigger>
+            </TabsList>
+
+            {/* Products Tab */}
+            <TabsContent value="products" className="space-y-4 pt-4">
+              {/* Search to add products */}
+              <div>
+                <Label className="text-sm font-medium">Add Products</Label>
+                <Input placeholder="Search products..." value={plProductSearch}
+                  onChange={e => setPlProductSearch(e.target.value)} className="mt-1" />
+                {plProductSearch && (
+                  <div className="border rounded-md mt-1 max-h-40 overflow-y-auto bg-white shadow-sm">
+                    {(productsForPL as any[])
+                      .filter((p: any) => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id))
+                      .slice(0, 8)
+                      .map((p: any) => (
+                        <div key={p.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                          onClick={() => { addProductToPL(p); setPlProductSearch(""); }}>
+                          <span>{p.name}</span>
+                          <span className="text-muted-foreground">£{parseFloat(p.price || "0").toFixed(2)}</span>
+                        </div>
+                      ))}
+                    {(productsForPL as any[]).filter((p: any) => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id)).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No more products to add</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Product list with pricing */}
+              {priceListItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No products added yet. Search above to add products.</div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Set a fixed price OR a % discount for each product (not both).</p>
+                  {priceListItems.map((item: any) => {
+                    const product = item.product;
+                    const standardPrice = parseFloat(product?.price || "0");
+                    return (
+                      <div key={item.productId} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{product?.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Standard: £{standardPrice.toFixed(2)}</span>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500"
+                              onClick={() => removeProductFromPL(item.productId)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Fixed Price (£)</Label>
+                            <Input className="h-7 text-xs mt-0.5" placeholder="e.g. 14.99" value={item.customPrice}
+                              onChange={e => updatePLItemPrice(item.productId, 'customPrice', e.target.value)}
+                              disabled={!!item.discountPercentage} />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Discount (%)</Label>
+                            <Input className="h-7 text-xs mt-0.5" placeholder="e.g. 10" value={item.discountPercentage}
+                              onChange={e => updatePLItemPrice(item.productId, 'discountPercentage', e.target.value)}
+                              disabled={!!item.customPrice} />
+                          </div>
+                        </div>
+                        {(item.customPrice || item.discountPercentage) && (
+                          <p className="text-xs text-green-700 mt-1">
+                            Customer price: £{
+                              item.customPrice
+                                ? parseFloat(item.customPrice).toFixed(2)
+                                : (standardPrice * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2)
+                            }
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Button className="w-full bg-green-600 hover:bg-green-700"
+                disabled={savePLItemsMutation.isPending || !managingPriceList}
+                onClick={() => {
+                  const items = priceListItems.map(i => ({
+                    productId: i.productId,
+                    customPrice: i.customPrice || null,
+                    discountPercentage: i.discountPercentage || null,
+                  }));
+                  savePLItemsMutation.mutate({ id: managingPriceList.id, items });
+                }}>
+                {savePLItemsMutation.isPending ? "Saving..." : "Save Products"}
+              </Button>
+            </TabsContent>
+
+            {/* Assign Tab */}
+            <TabsContent value="assign" className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground">Select which customers or groups get this price list.</p>
+
+              {/* Customer Groups */}
+              {(customerGroups as any[]).length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Customer Groups</Label>
+                  <div className="space-y-1 max-h-36 overflow-y-auto border rounded-md p-2">
+                    {(customerGroups as any[]).map((group: any) => {
+                      const assigned = priceListAssignments.some(a => a.customerGroupId === group.id);
+                      return (
+                        <div key={group.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                          onClick={() => togglePLGroupAssignment(group.id)}>
+                          <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${assigned ? "bg-green-600 border-green-600" : "border-gray-300"}`}>
+                            {assigned && <Check className="h-2.5 w-2.5 text-white" />}
+                          </div>
+                          <span className="text-sm">{group.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Individual customers */}
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Individual Customers</Label>
+                <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                  {(customers as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No customers yet</p>
+                  ) : (
+                    (customers as any[]).map((cust: any) => {
+                      const assigned = priceListAssignments.some(a => a.customerId === cust.id);
+                      const name = `${cust.firstName || ""} ${cust.lastName || ""}`.trim() || cust.phoneNumber;
+                      return (
+                        <div key={cust.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                          onClick={() => togglePLCustomerAssignment(cust.id)}>
+                          <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${assigned ? "bg-green-600 border-green-600" : "border-gray-300"}`}>
+                            {assigned && <Check className="h-2.5 w-2.5 text-white" />}
+                          </div>
+                          <span className="text-sm">{name}</span>
+                          {cust.businessName && <span className="text-xs text-muted-foreground">· {cust.businessName}</span>}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={savePLAssignmentsMutation.isPending || !managingPriceList}
+                  onClick={() => savePLAssignmentsMutation.mutate({ id: managingPriceList.id, assignments: priceListAssignments })}>
+                  {savePLAssignmentsMutation.isPending ? "Saving..." : "Save Assignments"}
+                </Button>
+                <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50"
+                  disabled={sharePriceListMutation.isPending || !managingPriceList}
+                  onClick={() => managingPriceList && sharePriceListMutation.mutate(managingPriceList.id)}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  {sharePriceListMutation.isPending ? "Sharing..." : "Share Now"}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Member Dialog */}
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>

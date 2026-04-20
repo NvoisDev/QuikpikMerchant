@@ -1358,9 +1358,16 @@ export default function CustomerPortal() {
   });
 
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
-    const basePrice = parseFloat(product.price) || 0;
+    // Use custom price list price if the customer has one assigned
+    const hasCustomPrice = !!(product as any).customPrice;
+    const basePrice = hasCustomPrice
+      ? parseFloat((product as any).customPrice) || 0
+      : parseFloat(product.price) || 0;
+    const standardPrice = hasCustomPrice
+      ? parseFloat((product as any).standardPrice || product.price) || 0
+      : basePrice;
     const result = {
-      originalPrice: basePrice,
+      originalPrice: standardPrice,
       effectivePrice: basePrice,
       totalCost: basePrice * quantity,
       totalDiscount: 0,
@@ -3990,6 +3997,11 @@ export default function CustomerPortal() {
                                     isGuestMode={isGuestMode}
                                     size="medium"
                                   />
+                                  {(product as any).hasPriceList && !isGuestMode && (
+                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full mt-0.5">
+                                      🏷️ Your price
+                                    </span>
+                                  )}
                                   {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <span>🚛</span>

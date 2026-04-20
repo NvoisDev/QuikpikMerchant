@@ -30,7 +30,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Schema Management**: Drizzle migrations.
 - **Connection Pooling**: Neon serverless connection pooling.
 - **Session Storage**: PostgreSQL-based.
-- **Additional Tables**: `customerRegistrationRequests` for managing access requests.
+- **Additional Tables**: `customerRegistrationRequests` for managing access requests. `priceLists`, `priceListItems`, `priceListAssignments` for customer price list system.
 
 ## External Dependencies
 - **Payment Processing**: Stripe Connect (marketplace payments with Express accounts, application fees).

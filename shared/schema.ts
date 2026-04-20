@@ -1500,6 +1500,55 @@ export const customerWholesalerRelationships = pgTable("customer_wholesaler_rela
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Price Lists feature
+export const priceLists = pgTable("price_lists", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  wholesalerIdIdx: index("price_lists_wholesaler_id_idx").on(table.wholesalerId),
+}));
+
+export const priceListItems = pgTable("price_list_items", {
+  id: serial("id").primaryKey(),
+  priceListId: integer("price_list_id").notNull().references(() => priceLists.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  customPrice: decimal("custom_price", { precision: 10, scale: 2 }),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  priceListIdIdx: index("price_list_items_list_id_idx").on(table.priceListId),
+  productIdIdx: index("price_list_items_product_id_idx").on(table.productId),
+}));
+
+export const priceListAssignments = pgTable("price_list_assignments", {
+  id: serial("id").primaryKey(),
+  priceListId: integer("price_list_id").notNull().references(() => priceLists.id, { onDelete: "cascade" }),
+  customerId: varchar("customer_id").references(() => users.id, { onDelete: "cascade" }),
+  customerGroupId: integer("customer_group_id").references(() => customerGroups.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  priceListIdIdx: index("price_list_assignments_list_id_idx").on(table.priceListId),
+}));
+
+export const insertPriceListSchema = createInsertSchema(priceLists).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPriceList = z.infer<typeof insertPriceListSchema>;
+export type PriceList = typeof priceLists.$inferSelect;
+
+export const insertPriceListItemSchema = createInsertSchema(priceListItems).omit({ id: true, createdAt: true });
+export type InsertPriceListItem = z.infer<typeof insertPriceListItemSchema>;
+export type PriceListItem = typeof priceListItems.$inferSelect;
+
+export const insertPriceListAssignmentSchema = createInsertSchema(priceListAssignments).omit({ id: true, createdAt: true });
+export type InsertPriceListAssignment = z.infer<typeof insertPriceListAssignmentSchema>;
+export type PriceListAssignment = typeof priceListAssignments.$inferSelect;
+
 // Tab permissions types
 export const insertTabPermissionSchema = createInsertSchema(tabPermissions).omit({
   id: true,
