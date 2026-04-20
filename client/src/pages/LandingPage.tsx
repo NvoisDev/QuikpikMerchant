@@ -366,12 +366,7 @@ export default function LandingPage() {
 
             {/* Right card — Quikpik */}
             <div className="bg-white rounded-2xl border-2 border-primary shadow-lg overflow-hidden relative">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
-                <span className="bg-primary text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
-                  Most Popular Choice
-                </span>
-              </div>
-              <div className="p-6 sm:p-8 pt-8">
+              <div className="p-6 sm:p-8 pt-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-6">Quikpik</h3>
                 <div className="space-y-0 divide-y divide-gray-100">
                   {[
