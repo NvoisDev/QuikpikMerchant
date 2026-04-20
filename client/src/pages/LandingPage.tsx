@@ -319,113 +319,91 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing & Fees Section */}
-      <section className="py-12 sm:py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12">
+      {/* Comparison Section */}
+      <section className="py-12 sm:py-16 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10 sm:mb-14">
             <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs sm:text-sm px-3 sm:px-4 py-2 mb-4">
-              💰 Simple, Transparent Pricing
+              🔄 Why Wholesalers Are Switching
             </Badge>
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              No Hidden Costs. Ever.
+              Traditional platforms cost a fortune. Quikpik doesn't.
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              A flat 4.6% platform fee on card payments — that's it. No setup fees, no monthly surprises beyond your plan.
+              Everything you need to run your wholesale business — without the unnecessary fees.
             </p>
           </div>
 
-          {/* Pricing Plans */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <Card className="p-6 border-2 border-gray-200 hover:border-primary/40 transition-all duration-300 hover:shadow-lg">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Free</h3>
-                <div className="text-3xl font-bold text-gray-900 mb-1">£0<span className="text-base font-normal text-gray-500">/mo</span></div>
-                <p className="text-sm text-gray-500 mb-4">Up to 10 products</p>
-                <ul className="text-sm text-gray-600 space-y-2 text-left mb-6">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />10 products</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />WhatsApp messaging</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
-                </ul>
-                <Button onClick={handleGetStarted} variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">Start Free</Button>
-              </div>
-            </Card>
+          <div className="grid md:grid-cols-2 gap-6 items-start">
 
-            <Card className="p-6 border-2 border-primary shadow-lg relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-primary text-white text-xs px-3 py-1">Most Popular</Badge>
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Standard</h3>
-                <div className="text-3xl font-bold text-gray-900 mb-1">£19.99<span className="text-base font-normal text-gray-500">/mo</span></div>
-                <p className="text-sm text-gray-500 mb-4">Up to 50 products</p>
-                <ul className="text-sm text-gray-600 space-y-2 text-left mb-6">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />50 products</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />WhatsApp campaigns</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Advanced analytics</li>
-                </ul>
-                <Button onClick={handleGetStarted} className="w-full bg-primary hover:bg-primary/90">Get Started</Button>
-              </div>
-            </Card>
-
-            <Card className="p-6 border-2 border-gray-200 hover:border-primary/40 transition-all duration-300 hover:shadow-lg">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Premium</h3>
-                <div className="text-3xl font-bold text-gray-900 mb-1">£49.99<span className="text-base font-normal text-gray-500">/mo</span></div>
-                <p className="text-sm text-gray-500 mb-4">Unlimited products</p>
-                <ul className="text-sm text-gray-600 space-y-2 text-left mb-6">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited products</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />AI-powered tools</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Priority support</li>
-                </ul>
-                <Button onClick={handleGetStarted} variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">Go Premium</Button>
-              </div>
-            </Card>
-          </div>
-
-          {/* Fee Transparency Box */}
-          <div className="bg-gradient-to-r from-primary/5 to-green-50 border border-primary/20 rounded-2xl p-6 sm:p-8">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">How Our Fees Work</h3>
-                <div className="space-y-3 text-sm text-gray-600">
-                  <div className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <div><strong className="text-gray-800">No fee on offline/cash orders</strong> — only card payments attract a platform fee</div>
-                  </div>
-                  <div className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <div><strong className="text-gray-800">4.6% platform fee</strong> — deducted automatically from card payments, nothing to collect manually</div>
-                  </div>
-                  <div className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <div><strong className="text-gray-800">Funds paid directly to your bank</strong> — via your connected Stripe account, next business day</div>
-                  </div>
+            {/* Left card — Traditional Wholesale Platform */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-6 sm:p-8">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Traditional Wholesale Platform</h3>
+                <div className="space-y-0 divide-y divide-gray-100">
+                  {[
+                    { title: "£200–£500+/month fees", sub: "Just to list your products" },
+                    { title: "Annual contracts", sub: "Locked in, no flexibility" },
+                    { title: "No customer messaging", sub: "Can't reach your buyers directly" },
+                    { title: "Manual order tracking", sub: "Spreadsheets and chasing payments" },
+                    { title: "High setup costs", sub: "Fees before you've sold a thing" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 py-4">
+                      <span className="text-red-500 font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">—</span>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">{item.sub}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                <h4 className="font-semibold text-gray-800 mb-4 text-sm">Example: £500 Order</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Order subtotal</span>
-                    <span className="font-medium">£500.00</span>
-                  </div>
-                  <div className="flex justify-between text-red-500">
-                    <span>Platform fee (4.6%)</span>
-                    <span className="font-medium">-£23.00</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-2 flex justify-between text-green-700 font-bold">
-                    <span>You receive</span>
-                    <span>£477.00</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-3">Stripe card processing fees apply separately. Offline orders: you keep 100%.</p>
+              <div className="bg-red-50 border-t border-red-100 px-6 sm:px-8 py-5">
+                <p className="text-sm text-red-700 font-medium mb-1">Traditional Platform Cost:</p>
+                <p className="text-2xl font-bold text-red-600 line-through">£200–£500+/month</p>
               </div>
             </div>
+
+            {/* Right card — Quikpik */}
+            <div className="bg-white rounded-2xl border-2 border-primary shadow-lg overflow-hidden relative">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+                <span className="bg-primary text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
+                  Most Popular Choice
+                </span>
+              </div>
+              <div className="p-6 sm:p-8 pt-8">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Quikpik</h3>
+                <div className="space-y-0 divide-y divide-gray-100">
+                  {[
+                    { title: "Free plan available", sub: "Start selling with £0/month" },
+                    { title: "Cancel anytime, 1 click", sub: "Zero risk, full control" },
+                    { title: "WhatsApp messaging built in", sub: "Reach customers where they already are" },
+                    { title: "Automated order management", sub: "Orders, payments and tracking in one place" },
+                    { title: "4.6% on card orders only", sub: "Cash/offline orders: you keep 100%" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 py-4">
+                      <span className="text-primary font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">✓</span>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">{item.sub}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-green-50 border-t border-green-100 px-6 sm:px-8 py-5">
+                <p className="text-sm text-green-700 font-medium mb-1">Quikpik Cost:</p>
+                <p className="text-2xl font-bold text-primary">Start free — only 4.6% on card orders</p>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="text-center mt-8">
+            <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-white px-10 py-3 text-base font-semibold rounded-xl shadow-md">
+              Get Started Free
+            </Button>
+            <p className="text-xs text-gray-400 mt-3">No credit card required · Cancel anytime</p>
           </div>
         </div>
       </section>
