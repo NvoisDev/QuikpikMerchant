@@ -3645,18 +3645,58 @@ https://quikpik.app`;
       const productResults = await db.select().from(products).where(inArray(products.id, productIds));
       const productMap = new Map(productResults.map(p => [p.id, p]));
 
+      // Resolve price list overrides for this customer
+      const priceOverrides: Record<number, number> = {};
+      const palletPriceOverrides: Record<number, number> = {};
+      const previewCustomerId = order.retailerId;
+      if (previewCustomerId) {
+        try {
+          const listIds = await resolveActivePriceListIds(order.wholesalerId, previewCustomerId);
+          if (listIds.length > 0) {
+            const plItems = await db
+              .select({
+                productId: priceListItems.productId,
+                customPrice: priceListItems.customPrice,
+                discountPercentage: priceListItems.discountPercentage,
+                customPalletPrice: priceListItems.customPalletPrice,
+              })
+              .from(priceListItems)
+              .where(and(inArray(priceListItems.priceListId, listIds), inArray(priceListItems.productId, productIds)));
+            for (const row of plItems) {
+              if (row.productId === null) continue;
+              const baseProduct = productMap.get(row.productId);
+              if (!baseProduct) continue;
+              const base = parseFloat(baseProduct.price || '0');
+              const effective = computeEffectivePrice(base, row);
+              if (priceOverrides[row.productId] === undefined || effective < priceOverrides[row.productId]) {
+                priceOverrides[row.productId] = effective;
+              }
+              if (row.customPalletPrice != null) {
+                const palletEffective = parseFloat(String(row.customPalletPrice));
+                if (palletPriceOverrides[row.productId] === undefined || palletEffective < palletPriceOverrides[row.productId]) {
+                  palletPriceOverrides[row.productId] = palletEffective;
+                }
+              }
+            }
+          }
+        } catch (plErr) {
+          console.warn('⚠️ Could not fetch price list overrides for reorder preview:', plErr);
+        }
+      }
+
       const previewItems = items.map(item => {
         const product = productMap.get(item.productId);
         let currentUnitPrice: number;
         if (!product) {
           currentUnitPrice = parseFloat(item.unitPrice);
         } else if (item.sellingType === 'pallets') {
-          currentUnitPrice = parseFloat(product.palletPrice || product.price);
+          currentUnitPrice = palletPriceOverrides[item.productId] ?? parseFloat(product.palletPrice || product.price);
         } else if (item.sellingType === 'packs') {
           const packSize = product.quantityInPack || 1;
-          currentUnitPrice = parseFloat(product.promoPrice || product.price) * packSize;
+          const unitPrice = priceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
+          currentUnitPrice = unitPrice * packSize;
         } else {
-          currentUnitPrice = parseFloat(product.promoPrice || product.price);
+          currentUnitPrice = priceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
         }
         const currentTotal = currentUnitPrice * item.quantity;
         return {
@@ -3726,21 +3766,61 @@ https://quikpik.app`;
       const reorderProductResults = await db.select().from(products).where(inArray(products.id, reorderProductIds));
       const reorderProductMap = new Map(reorderProductResults.map(p => [p.id, p]));
 
+      // Resolve price list overrides for this customer
+      const reorderPriceOverrides: Record<number, number> = {};
+      const reorderPalletPriceOverrides: Record<number, number> = {};
+      const reorderCustomerId = order.retailerId;
+      if (reorderCustomerId) {
+        try {
+          const listIds = await resolveActivePriceListIds(order.wholesalerId, reorderCustomerId);
+          if (listIds.length > 0) {
+            const plItems = await db
+              .select({
+                productId: priceListItems.productId,
+                customPrice: priceListItems.customPrice,
+                discountPercentage: priceListItems.discountPercentage,
+                customPalletPrice: priceListItems.customPalletPrice,
+              })
+              .from(priceListItems)
+              .where(and(inArray(priceListItems.priceListId, listIds), inArray(priceListItems.productId, reorderProductIds)));
+            for (const row of plItems) {
+              if (row.productId === null) continue;
+              const baseProduct = reorderProductMap.get(row.productId);
+              if (!baseProduct) continue;
+              const base = parseFloat(baseProduct.price || '0');
+              const effective = computeEffectivePrice(base, row);
+              if (reorderPriceOverrides[row.productId] === undefined || effective < reorderPriceOverrides[row.productId]) {
+                reorderPriceOverrides[row.productId] = effective;
+              }
+              if (row.customPalletPrice != null) {
+                const palletEffective = parseFloat(String(row.customPalletPrice));
+                if (reorderPalletPriceOverrides[row.productId] === undefined || palletEffective < reorderPalletPriceOverrides[row.productId]) {
+                  reorderPalletPriceOverrides[row.productId] = palletEffective;
+                }
+              }
+            }
+          }
+        } catch (plErr) {
+          console.warn('⚠️ Could not fetch price list overrides for reorder create:', plErr);
+        }
+      }
+
       const newOrderNumber = await generateOrderNumber(order.wholesalerId);
 
-      // Recalculate each item at current prices
+      // Recalculate each item at current prices (price list takes priority over catalog price)
       const pricedItems = originalItems.map(item => {
         const product = reorderProductMap.get(item.productId);
         let currentUnitPrice: number;
         if (!product) {
           currentUnitPrice = parseFloat(item.unitPrice);
         } else if (item.sellingType === 'pallets') {
-          currentUnitPrice = parseFloat(product.palletPrice || product.price);
+          currentUnitPrice = reorderPalletPriceOverrides[item.productId] ?? parseFloat(product.palletPrice || product.price);
         } else if (item.sellingType === 'packs') {
           const packSize = product.quantityInPack || 1;
-          currentUnitPrice = parseFloat(product.promoPrice || product.price) * packSize;
+          const unitPrice = reorderPriceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
+          currentUnitPrice = unitPrice * packSize;
         } else {
-          currentUnitPrice = parseFloat(product.promoPrice || product.price);
+          currentUnitPrice = reorderPriceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
         }
         return { ...item, currentUnitPrice, currentTotal: currentUnitPrice * item.quantity };
       });
