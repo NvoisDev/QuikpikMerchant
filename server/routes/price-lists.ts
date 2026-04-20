@@ -88,8 +88,8 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
       "Standard Unit Price": parseFloat(p.price || "0"),
       "Customer Unit Price": customerPrice !== undefined ? customerPrice : "",
       "Standard Pallet Price":
-        hasPallets && p.palletPrice ? parseFloat(p.palletPrice) : "",
-      "Units per Pallet": hasPallets && p.unitsPerPallet ? p.unitsPerPallet : "",
+        hasPallets && p.palletPrice != null ? parseFloat(p.palletPrice) : "",
+      "Units per Pallet": hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : "",
     };
   };
 
