@@ -1079,10 +1079,6 @@ export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
   }),
 }));
 
-// Schema types
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
-
 // User Badges types
 export const insertUserBadgeSchema = createInsertSchema(userBadges);
 export type InsertUserBadge = typeof userBadges.$inferInsert;
