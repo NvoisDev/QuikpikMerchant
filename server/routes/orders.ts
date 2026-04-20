@@ -979,7 +979,7 @@ export function registerOrderRoutes(app: Express): void {
         });
       }
 
-      const platformFee = subtotal * 0.05; // 5% platform fee (wholesaler cost)
+      const platformFee = subtotal * 0.046; // 4.6% platform fee (wholesaler cost)
       const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 (customer pays)
       const total = subtotal + customerTransactionFee; // total = what the customer pays
 
@@ -2804,7 +2804,7 @@ export function registerOrderRoutes(app: Express): void {
         }
       }
 
-      // Wholesaler's proportional cut of this payment (subtotal - 5% platform fee, pro-rated)
+      // Wholesaler's proportional cut of this payment (subtotal - 4.6% platform fee, pro-rated)
       const balanceLinkWholesalerTotal = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
       const balanceLinkTransferAmount = orderTotal > 0
         ? Math.round(paymentAmount * (balanceLinkWholesalerTotal / orderTotal) * 100)

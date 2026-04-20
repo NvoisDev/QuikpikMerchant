@@ -74,7 +74,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - **Standard Plan**: Up to 50 products, unlimited editing (£19.99/month)
 - **Premium Plan**: Unlimited products, unlimited editing (£49.99/month)
 
-All plans include a 5% platform fee on successful orders with automatic revenue collection.
+All plans include a 4.6% platform fee on successful orders with automatic revenue collection.
         `
       },
       {
@@ -218,7 +218,7 @@ The bell icon in the top-right of every page shows everything that needs your at
 
 #### Pricing Strategy
 - Research competitor pricing in your category
-- Consider your margins and platform fee (5% on sales)
+- Consider your margins and platform fee (4.6% on sales)
 - Use price visibility settings strategically
 
 #### Product Organization
@@ -1030,7 +1030,7 @@ When customers place orders for collection/pickup, the platform **automatically 
 Each order shows:
 - Customer details and delivery address
 - Order items with quantities and prices
-- Subtotal, platform fee (5%), and total
+- Subtotal, platform fee (4.6%), and total
 - Payment status
 - Order date and tracking
 
@@ -1059,7 +1059,7 @@ To receive payments from customers, you must set up Stripe Connect.
 #### Payment Flow
 When customers pay:
 1. Customer pays the full order amount (including Quikpik's platform fee)
-2. Quikpik automatically collects a 5% platform fee
+2. Quikpik automatically collects a 4.6% platform fee
 3. You receive the remaining amount directly to your bank account
 4. Order status updates to "Processing"
 
@@ -1069,7 +1069,7 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **Platform Fee**: 5% to Quikpik for platform services
+- **Platform Fee**: 4.6% to Quikpik for platform services
 - **You Keep**: The remaining order value after the platform fee
 
 #### Bank Transfers
@@ -1352,9 +1352,9 @@ The Analytics dashboard provides insights into your business performance.
 
 #### Transaction Fees
 Regardless of subscription plan:
-- **Platform Fee**: 5% on all successful orders
+- **Platform Fee**: 4.6% on all successful orders
 - **Payment Processing**: Handled by Stripe
-- **Your Revenue**: Order value minus the 5% platform fee
+- **Your Revenue**: Order value minus the 4.6% platform fee
         `
       }
     ]
@@ -1422,7 +1422,7 @@ Each order includes:
 - Customer contact information and delivery address
 - Product details with quantities and pricing
 - Payment information and Stripe transaction ID
-- Platform fee calculation (5% automatically collected)
+- Platform fee calculation (4.6% automatically collected)
 - Order timeline with colour-coded status entries
 - Payment summary showing order total, platform fee, any refunds, and your net amount
 
@@ -1436,7 +1436,7 @@ The timeline tracks every stage of an order:
 
 #### Payment Summary
 The payment summary in each order shows:
-- Order total and platform fee (5%)
+- Order total and platform fee (4.6%)
 - A **Refunded** or **Partial Refund** row in purple when a refund has been recorded
 - **Your Net Amount** — adjusted to reflect any refunds issued
 
@@ -1455,7 +1455,7 @@ The payment summary in each order shows:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Platform Fee**: 5% automatically deducted for Quikpik
+2. **Platform Fee**: 4.6% automatically deducted for Quikpik
 3. **Wholesaler Payment**: Remaining amount transferred to your Stripe account after fees
 4. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
 
@@ -1695,7 +1695,7 @@ A: Check that your Stripe account can accept payments. Contact Stripe support if
 A: Stripe invoices are automatically sent after successful payments. Check customer email addresses are correct and check their spam folder.
 
 **Q: Platform fee not being collected**
-A: Platform fees are automatically calculated (5%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
+A: Platform fees are automatically calculated (4.6%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
 
 #### Order Management Issues
 
@@ -1950,7 +1950,7 @@ Click any row in the payout table to open the **Payout breakdown** panel on the 
 
 #### How the Amount Is Calculated
 
-The amount shown per transaction is what you actually received — after Quikpik's **5% platform fee** has been deducted. For example, if a customer paid £100, your share is approximately £96.70.
+The amount shown per transaction is what you actually received — after Quikpik's **4.6% platform fee** has been deducted. For example, if a customer paid £100, your share is approximately £95.40.
 
 #### Older Transactions Without an Order Link
 

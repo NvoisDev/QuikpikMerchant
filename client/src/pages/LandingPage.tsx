@@ -111,8 +111,8 @@ export default function LandingPage() {
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">Only 5% per order</span>
-                  <span className="sm:hidden">5% per order</span>
+                  <span className="hidden sm:inline">Only 4.6% per order</span>
+                  <span className="sm:hidden">4.6% per order</span>
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -330,7 +330,7 @@ export default function LandingPage() {
               No Hidden Costs. Ever.
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              A flat 5% platform fee on card payments — that's it. No setup fees, no monthly surprises beyond your plan.
+              A flat 4.6% platform fee on card payments — that's it. No setup fees, no monthly surprises beyond your plan.
             </p>
           </div>
 
@@ -345,7 +345,7 @@ export default function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />10 products</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />WhatsApp messaging</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />5% fee on card orders</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
                 </ul>
                 <Button onClick={handleGetStarted} variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">Start Free</Button>
               </div>
@@ -363,7 +363,7 @@ export default function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />50 products</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />WhatsApp campaigns</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />5% fee on card orders</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Advanced analytics</li>
                 </ul>
                 <Button onClick={handleGetStarted} className="w-full bg-primary hover:bg-primary/90">Get Started</Button>
@@ -379,7 +379,7 @@ export default function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited products</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Unlimited customers</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />AI-powered tools</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />5% fee on card orders</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />4.6% fee on card orders</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />Priority support</li>
                 </ul>
                 <Button onClick={handleGetStarted} variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">Go Premium</Button>
@@ -399,7 +399,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <div><strong className="text-gray-800">5% platform fee</strong> — deducted automatically from card payments, nothing to collect manually</div>
+                    <div><strong className="text-gray-800">4.6% platform fee</strong> — deducted automatically from card payments, nothing to collect manually</div>
                   </div>
                   <div className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
@@ -415,12 +415,12 @@ export default function LandingPage() {
                     <span className="font-medium">£500.00</span>
                   </div>
                   <div className="flex justify-between text-red-500">
-                    <span>Platform fee (5%)</span>
-                    <span className="font-medium">-£25.00</span>
+                    <span>Platform fee (4.6%)</span>
+                    <span className="font-medium">-£23.00</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 flex justify-between text-green-700 font-bold">
                     <span>You receive</span>
-                    <span>£475.00</span>
+                    <span>£477.00</span>
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">Stripe card processing fees apply separately. Offline orders: you keep 100%.</p>

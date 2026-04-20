@@ -318,7 +318,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     subtotal: productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
       ? parseFloat(productSubtotal).toFixed(2) 
       : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2),
-    platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 5% platform fee
+    platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 4.6% platform fee
     customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
     total: correctTotal, // Total = subtotal + customer transaction fee
     status: 'paid',
