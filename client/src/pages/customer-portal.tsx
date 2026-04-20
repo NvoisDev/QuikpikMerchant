@@ -243,6 +243,11 @@ interface Product {
   
   // Promotional offers
   promotionalOffers?: any[];
+
+  // Price list custom pricing (injected by server when customer has active price list)
+  customPrice?: string;
+  standardPrice?: string;
+  hasPriceList?: boolean;
   
   wholesaler: {
     id: string;
@@ -1359,12 +1364,12 @@ export default function CustomerPortal() {
 
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
     // Use custom price list price if the customer has one assigned
-    const hasCustomPrice = !!(product as any).customPrice;
+    const hasCustomPrice = !!product.customPrice;
     const basePrice = hasCustomPrice
-      ? parseFloat((product as any).customPrice) || 0
+      ? parseFloat(product.customPrice!) || 0
       : parseFloat(product.price) || 0;
     const standardPrice = hasCustomPrice
-      ? parseFloat((product as any).standardPrice || product.price) || 0
+      ? parseFloat(product.standardPrice || product.price) || 0
       : basePrice;
     const result = {
       originalPrice: standardPrice,
@@ -3997,7 +4002,7 @@ export default function CustomerPortal() {
                                     isGuestMode={isGuestMode}
                                     size="medium"
                                   />
-                                  {(product as any).hasPriceList && !isGuestMode && (
+                                  {product.hasPriceList && !isGuestMode && (
                                     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full mt-0.5">
                                       🏷️ Your price
                                     </span>

@@ -21,6 +21,7 @@ import {
   insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans,
   userSubscriptions, stockMovements, orderCancellationRequests,
   wholesalerCustomerRelationships, teamMembers,
+  priceLists, priceListItems, priceListAssignments,
 } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 import { generateProductDescription, generateProductImage } from "../ai";
@@ -78,6 +79,7 @@ export {
   insertCustomerRegistrationRequestSchema, campaignOrders, subscriptionPlans,
   userSubscriptions, stockMovements, orderCancellationRequests,
   wholesalerCustomerRelationships, teamMembers,
+  priceLists, priceListItems, priceListAssignments,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,

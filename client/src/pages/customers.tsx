@@ -57,12 +57,8 @@ import {
   MoreHorizontal,
   Clock,
   Tag,
-  Percent,
   Share2,
-  Package,
-  ListTodo,
-  ToggleLeft,
-  ToggleRight
+  Package
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
@@ -71,6 +67,44 @@ import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import CustomerInvitationModal from "@/components/CustomerInvitationModal";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
+
+// ── Price List Types ───────────────────────────────────────────────────────
+interface PriceListSummary {
+  id: number;
+  wholesalerId: string;
+  name: string;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  assignmentCount: number;
+}
+
+interface PriceListItemForm {
+  productId: number;
+  product: { id: number; name: string; price: string } | undefined;
+  customPrice: string;
+  discountPercentage: string;
+}
+
+interface PriceListAssignmentForm {
+  customerId: string | null;
+  customerGroupId: number | null;
+}
+
+interface PriceListDetail extends PriceListSummary {
+  items: PriceListItemForm[];
+  assignments: PriceListAssignmentForm[];
+}
+
+interface PLProduct {
+  id: number;
+  name: string;
+  price: string;
+}
 
 // Form Schemas
 const customerGroupFormSchema = z.object({
@@ -234,12 +268,12 @@ export default function Customers() {
 
   // Price List state
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
-  const [editingPriceList, setEditingPriceList] = useState<any>(null);
+  const [editingPriceList, setEditingPriceList] = useState<PriceListSummary | null>(null);
   const [isManagePriceListOpen, setIsManagePriceListOpen] = useState(false);
-  const [managingPriceList, setManagingPriceList] = useState<any>(null);
+  const [managingPriceList, setManagingPriceList] = useState<PriceListSummary | null>(null);
   const [plProductSearch, setPlProductSearch] = useState("");
-  const [priceListItems, setPriceListItems] = useState<any[]>([]);
-  const [priceListAssignments, setPriceListAssignments] = useState<any[]>([]);
+  const [priceListItems, setPriceListItems] = useState<PriceListItemForm[]>([]);
+  const [priceListAssignments, setPriceListAssignments] = useState<PriceListAssignmentForm[]>([]);
   const [priceListForm, setPriceListForm] = useState({
     name: "", description: "", startDate: "", endDate: "", isActive: true,
   });
@@ -691,11 +725,11 @@ export default function Customers() {
   });
 
   // ──── Price List queries & mutations ────────────────────────────────────
-  const { data: fetchedPriceLists = [], isLoading: isLoadingPriceLists } = useQuery<any[]>({
+  const { data: fetchedPriceLists = [], isLoading: isLoadingPriceLists } = useQuery<PriceListSummary[]>({
     queryKey: ['/api/price-lists'],
   });
 
-  const { data: productsForPL = [] } = useQuery<any[]>({
+  const { data: productsForPL = [] } = useQuery<PLProduct[]>({
     queryKey: ['/api/products'],
   });
 
@@ -756,11 +790,17 @@ export default function Customers() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const openManagePriceList = async (list: any) => {
+  const openManagePriceList = async (list: PriceListSummary) => {
     setManagingPriceList(list);
-    // Fetch full detail
+    setPriceListForm({
+      name: list.name,
+      description: list.description || "",
+      startDate: list.startDate || "",
+      endDate: list.endDate || "",
+      isActive: list.isActive,
+    });
     try {
-      const detail = await apiRequest('GET', `/api/price-lists/${list.id}`);
+      const detail: PriceListDetail = await apiRequest('GET', `/api/price-lists/${list.id}`);
       setPriceListItems(detail.items || []);
       setPriceListAssignments(detail.assignments || []);
     } catch {
@@ -770,7 +810,7 @@ export default function Customers() {
     setIsManagePriceListOpen(true);
   };
 
-  const addProductToPL = (product: any) => {
+  const addProductToPL = (product: { id: number; name: string; price: string }) => {
     if (priceListItems.some(i => i.productId === product.id)) return;
     setPriceListItems(prev => [...prev, { productId: product.id, product, customPrice: "", discountPercentage: "" }]);
   };
@@ -1812,7 +1852,7 @@ export default function Customers() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {fetchedPriceLists.map((list: any) => (
+              {fetchedPriceLists.map((list) => (
                 <Card key={list.id} className="relative">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
@@ -1938,10 +1978,60 @@ export default function Customers() {
           </DialogHeader>
 
           <Tabs defaultValue="products" className="mt-2">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" />Products</TabsTrigger>
-              <TabsTrigger value="assign"><Users className="h-4 w-4 mr-2" />Assign</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="details"><Edit3 className="h-4 w-4 mr-1" />Details</TabsTrigger>
+              <TabsTrigger value="products"><Package className="h-4 w-4 mr-1" />Products</TabsTrigger>
+              <TabsTrigger value="assign"><Users className="h-4 w-4 mr-1" />Assign</TabsTrigger>
             </TabsList>
+
+            {/* Details Tab — edit name/description/dates/active */}
+            <TabsContent value="details" className="space-y-4 pt-4">
+              <div>
+                <Label>Name *</Label>
+                <Input placeholder="e.g. VIP Customers Q2" value={priceListForm.name}
+                  onChange={e => setPriceListForm(prev => ({ ...prev, name: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea placeholder="Optional notes..." value={priceListForm.description}
+                  onChange={e => setPriceListForm(prev => ({ ...prev, description: e.target.value }))} rows={2} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Start Date</Label>
+                  <Input type="date" value={priceListForm.startDate}
+                    onChange={e => setPriceListForm(prev => ({ ...prev, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input type="date" value={priceListForm.endDate}
+                    onChange={e => setPriceListForm(prev => ({ ...prev, endDate: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Active</Label>
+                <Switch checked={priceListForm.isActive}
+                  onCheckedChange={val => setPriceListForm(prev => ({ ...prev, isActive: val }))} />
+              </div>
+              <Button className="w-full bg-green-600 hover:bg-green-700"
+                disabled={!priceListForm.name || updatePriceListMutation.isPending || !managingPriceList}
+                onClick={() => {
+                  if (!managingPriceList) return;
+                  updatePriceListMutation.mutate({
+                    id: managingPriceList.id,
+                    data: {
+                      name: priceListForm.name,
+                      description: priceListForm.description || null,
+                      startDate: priceListForm.startDate || null,
+                      endDate: priceListForm.endDate || null,
+                      isActive: priceListForm.isActive,
+                    },
+                  });
+                  setIsManagePriceListOpen(false);
+                }}>
+                {updatePriceListMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </TabsContent>
 
             {/* Products Tab */}
             <TabsContent value="products" className="space-y-4 pt-4">
@@ -1952,17 +2042,17 @@ export default function Customers() {
                   onChange={e => setPlProductSearch(e.target.value)} className="mt-1" />
                 {plProductSearch && (
                   <div className="border rounded-md mt-1 max-h-40 overflow-y-auto bg-white shadow-sm">
-                    {(productsForPL as any[])
-                      .filter((p: any) => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id))
+                    {productsForPL
+                      .filter(p => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id))
                       .slice(0, 8)
-                      .map((p: any) => (
+                      .map(p => (
                         <div key={p.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
                           onClick={() => { addProductToPL(p); setPlProductSearch(""); }}>
                           <span>{p.name}</span>
                           <span className="text-muted-foreground">£{parseFloat(p.price || "0").toFixed(2)}</span>
                         </div>
                       ))}
-                    {(productsForPL as any[]).filter((p: any) => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id)).length === 0 && (
+                    {productsForPL.filter(p => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id)).length === 0 && (
                       <div className="px-3 py-2 text-sm text-muted-foreground">No more products to add</div>
                     )}
                   </div>
@@ -1975,7 +2065,7 @@ export default function Customers() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">Set a fixed price OR a % discount for each product (not both).</p>
-                  {priceListItems.map((item: any) => {
+                  {priceListItems.map((item) => {
                     const product = item.product;
                     const standardPrice = parseFloat(product?.price || "0");
                     return (
@@ -2038,11 +2128,11 @@ export default function Customers() {
               <p className="text-sm text-muted-foreground">Select which customers or groups get this price list.</p>
 
               {/* Customer Groups */}
-              {(customerGroups as any[]).length > 0 && (
+              {customerGroups.length > 0 && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Customer Groups</Label>
                   <div className="space-y-1 max-h-36 overflow-y-auto border rounded-md p-2">
-                    {(customerGroups as any[]).map((group: any) => {
+                    {customerGroups.map((group) => {
                       const assigned = priceListAssignments.some(a => a.customerGroupId === group.id);
                       return (
                         <div key={group.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer"
@@ -2062,10 +2152,10 @@ export default function Customers() {
               <div>
                 <Label className="text-sm font-medium mb-2 block">Individual Customers</Label>
                 <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
-                  {(customers as any[]).length === 0 ? (
+                  {customers.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">No customers yet</p>
                   ) : (
-                    (customers as any[]).map((cust: any) => {
+                    customers.map((cust) => {
                       const assigned = priceListAssignments.some(a => a.customerId === cust.id);
                       const name = `${cust.firstName || ""} ${cust.lastName || ""}`.trim() || cust.phoneNumber;
                       return (
