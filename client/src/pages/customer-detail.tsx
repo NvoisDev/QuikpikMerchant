@@ -350,6 +350,32 @@ export default function CustomerDetail() {
     queryKey: ['/api/customer-groups'],
   });
 
+  const [isAddToPriceListOpen, setIsAddToPriceListOpen] = useState(false);
+  const [selectedPriceListId, setSelectedPriceListId] = useState<number>(0);
+
+  interface PriceListSummary { id: number; name: string; }
+  const { data: allPriceLists = [] } = useQuery<PriceListSummary[]>({
+    queryKey: ['/api/price-lists'],
+  });
+
+  const addToPriceListMutation = useMutation({
+    mutationFn: async (priceListId: number) => {
+      const res = await fetch(`/api/price-lists/${priceListId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch price list');
+      const priceList = await res.json();
+      const existing: { customerId?: string | null; customerGroupId?: number | null }[] = priceList.assignments || [];
+      const newAssignments = [...existing, { customerId }];
+      await apiRequest('PUT', `/api/price-lists/${priceListId}/assignments`, newAssignments);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
+      toast({ title: 'Added to price list' });
+      setIsAddToPriceListOpen(false);
+      setSelectedPriceListId(0);
+    },
+    onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to add to price list', variant: 'destructive' }),
+  });
+
   const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[] }>>({
     queryKey: ['/api/price-lists/customer-summary'],
     enabled: !!customerId,
@@ -426,6 +452,10 @@ export default function CustomerDetail() {
             <DropdownMenuItem onClick={() => setIsAddToGroupOpen(true)}>
               <Users className="h-4 w-4 mr-2" />
               Add to Group
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsAddToPriceListOpen(true)}>
+              <Tag className="h-4 w-4 mr-2" />
+              Add to Price List
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={openEditContact}>
@@ -643,11 +673,11 @@ export default function CustomerDetail() {
 
       <Separator />
 
-      {customerPriceLists && customerPriceLists.count > 0 && (
-        <>
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-muted-foreground">Price lists</h2>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">Price lists</h2>
+          <div className="flex items-center gap-2">
+            {customerPriceLists && customerPriceLists.count > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -656,25 +686,38 @@ export default function CustomerDetail() {
               >
                 View all
               </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {customerPriceLists.names.map((name, i) => (
-                <Badge
-                  key={customerPriceLists.ids[i]}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2"
-                  onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
-                >
-                  <Tag className="h-3 w-3 mr-1" />
-                  {name}
-                </Badge>
-              ))}
-            </div>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-green-600 h-auto p-0"
+              onClick={() => setIsAddToPriceListOpen(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </Button>
           </div>
+        </div>
+        {customerPriceLists && customerPriceLists.count > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {customerPriceLists.names.map((name, i) => (
+              <Badge
+                key={customerPriceLists.ids[i]}
+                variant="secondary"
+                className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2"
+                onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
+              >
+                <Tag className="h-3 w-3 mr-1" />
+                {name}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No price lists assigned</p>
+        )}
+      </div>
 
-          <Separator />
-        </>
-      )}
+      <Separator />
 
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -1017,6 +1060,55 @@ export default function CustomerDetail() {
                 onClick={() => addCustomerToGroupMutation.mutate({ groupId: selectedGroupId, customerId })}
               >
                 {addCustomerToGroupMutation.isPending ? "Adding..." : "Add to Group"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddToPriceListOpen} onOpenChange={(open) => { setIsAddToPriceListOpen(open); if (!open) setSelectedPriceListId(0); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add to Price List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {customerPriceLists && customerPriceLists.count > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Already assigned to</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {customerPriceLists.names.map((name, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      <Tag className="h-3 w-3 mr-1" />
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">Select price list</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={selectedPriceListId}
+                onChange={(e) => setSelectedPriceListId(Number(e.target.value))}
+              >
+                <option value={0}>Choose a price list...</option>
+                {allPriceLists
+                  .filter((pl) => !customerPriceLists?.ids.includes(pl.id))
+                  .map((pl) => (
+                    <option key={pl.id} value={pl.id}>{pl.name}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setIsAddToPriceListOpen(false); setSelectedPriceListId(0); }}>Cancel</Button>
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!selectedPriceListId || addToPriceListMutation.isPending}
+                onClick={() => addToPriceListMutation.mutate(selectedPriceListId)}
+              >
+                {addToPriceListMutation.isPending ? "Adding..." : "Add to Price List"}
               </Button>
             </div>
           </div>
