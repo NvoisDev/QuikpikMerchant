@@ -3444,17 +3444,29 @@ https://quikpik.app`;
 
       const previewItems = items.map(item => {
         const product = productMap.get(item.productId);
+        let currentUnitPrice: number;
+        if (!product) {
+          currentUnitPrice = parseFloat(item.unitPrice);
+        } else if (item.sellingType === 'pallets') {
+          currentUnitPrice = parseFloat(product.palletPrice || product.price);
+        } else if (item.sellingType === 'packs') {
+          const packSize = product.quantityInPack || 1;
+          currentUnitPrice = parseFloat(product.promoPrice || product.price) * packSize;
+        } else {
+          currentUnitPrice = parseFloat(product.promoPrice || product.price);
+        }
+        const currentTotal = currentUnitPrice * item.quantity;
         return {
           productName: product?.name || 'Unknown Product',
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.total,
+          unitPrice: currentUnitPrice.toFixed(2),
+          total: currentTotal.toFixed(2),
           sellingType: item.sellingType || 'units',
           inStock: product ? (product.stock || 0) >= item.quantity : false,
         };
       });
 
-      const subtotal = items.reduce((sum, item) => sum + parseFloat(item.total), 0);
+      const subtotal = previewItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
       const customerTransactionFee = (subtotal * 0.055) + 0.50;
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
@@ -3506,9 +3518,31 @@ https://quikpik.app`;
         return res.status(500).json({ error: 'Payment service not available' });
       }
 
+      // Fetch current product prices
+      const reorderProductIds = originalItems.map(i => i.productId);
+      const reorderProductResults = await db.select().from(products).where(inArray(products.id, reorderProductIds));
+      const reorderProductMap = new Map(reorderProductResults.map(p => [p.id, p]));
+
       const newOrderNumber = await generateOrderNumber(order.wholesalerId);
 
-      const subtotal = originalItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
+      // Recalculate each item at current prices
+      const pricedItems = originalItems.map(item => {
+        const product = reorderProductMap.get(item.productId);
+        let currentUnitPrice: number;
+        if (!product) {
+          currentUnitPrice = parseFloat(item.unitPrice);
+        } else if (item.sellingType === 'pallets') {
+          currentUnitPrice = parseFloat(product.palletPrice || product.price);
+        } else if (item.sellingType === 'packs') {
+          const packSize = product.quantityInPack || 1;
+          currentUnitPrice = parseFloat(product.promoPrice || product.price) * packSize;
+        } else {
+          currentUnitPrice = parseFloat(product.promoPrice || product.price);
+        }
+        return { ...item, currentUnitPrice, currentTotal: currentUnitPrice * item.quantity };
+      });
+
+      const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
       const platformFeeRate = 0.033;
       const platformFee = subtotal * platformFeeRate;
       const customerTransactionFee = (subtotal * 0.055) + 0.50;
@@ -3543,14 +3577,14 @@ https://quikpik.app`;
         paymentStatus: 'unpaid',
       };
 
-      const newOrderItems = originalItems.map(item => ({
+      const newOrderItems = pricedItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.total,
+        unitPrice: item.currentUnitPrice.toFixed(2),
+        total: item.currentTotal.toFixed(2),
         sellingType: item.sellingType || 'units',
-        appliedOfferLabel: (item as any).appliedOfferLabel || null,
-        freeItems: (item as any).freeItems || 0,
+        appliedOfferLabel: null,
+        freeItems: 0,
       }));
 
       const createdOrder = await storage.createOrderWithTransaction(
