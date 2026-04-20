@@ -1322,10 +1322,9 @@ export default function CustomerPortal() {
       return data;
     },
     enabled: !!featuredProductId,
-    refetchInterval: false, // Disable auto-refresh
+    refetchInterval: false,
     refetchIntervalInBackground: false,
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000
+    staleTime: 0,
   });
 
   // Fetch all products for the wholesaler with controlled refresh
