@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
@@ -282,6 +282,8 @@ export default function Customers() {
   });
   const [expandedPriceLists, setExpandedPriceLists] = useState<Record<number, boolean>>({});
   const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
+  const priceListIdFromUrl = Number(urlParams.get('priceListId')) || null;
+  const autoExpandedRef = useRef(false);
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -739,6 +741,25 @@ export default function Customers() {
   });
 
   const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!priceListIdFromUrl || autoExpandedRef.current || isLoadingPriceLists) return;
+    const target = fetchedPriceLists.find((pl) => pl.id === priceListIdFromUrl);
+    if (!target) return;
+    autoExpandedRef.current = true;
+    setActiveTab('price-lists');
+    setExpandedPriceLists((prev) => ({ ...prev, [priceListIdFromUrl]: true }));
+    if (!priceListDetailCache[priceListIdFromUrl]) {
+      apiRequest('GET', `/api/price-lists/${priceListIdFromUrl}`)
+        .then((res) => res.json())
+        .then((detail: PriceListDetail) => {
+          setPriceListDetailCache((prev) => ({ ...prev, [priceListIdFromUrl]: detail }));
+        })
+        .catch(() => {});
+    }
+  // priceListDetailCache intentionally omitted: autoExpandedRef guards against re-runs after cache updates
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceListIdFromUrl, fetchedPriceLists, isLoadingPriceLists]);
 
   const { data: productsForPL = [] } = useQuery<PLProduct[]>({
     queryKey: ['/api/products'],

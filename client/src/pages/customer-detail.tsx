@@ -46,6 +46,7 @@ import {
   Users,
   Share2,
   Bell,
+  Tag,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -349,6 +350,13 @@ export default function CustomerDetail() {
     queryKey: ['/api/customer-groups'],
   });
 
+  const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[] }>>({
+    queryKey: ['/api/price-lists/customer-summary'],
+    enabled: !!customerId,
+  });
+
+  const customerPriceLists = customerId ? priceListCustomerSummary[customerId] : null;
+
   const hasPortalAccess = !!customer?.email;
 
   const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
@@ -634,6 +642,39 @@ export default function CustomerDetail() {
       </div>
 
       <Separator />
+
+      {customerPriceLists && customerPriceLists.count > 0 && (
+        <>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground">Price lists</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-blue-600 h-auto p-0"
+                onClick={() => navigate(`/customers?tab=price-lists&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
+              >
+                View all
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {customerPriceLists.names.map((name, i) => (
+                <Badge
+                  key={customerPriceLists.ids[i]}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2"
+                  onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
+                >
+                  <Tag className="h-3 w-3 mr-1" />
+                  {name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+        </>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-3">
