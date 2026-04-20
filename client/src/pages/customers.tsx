@@ -59,6 +59,7 @@ import {
   Clock,
   Tag,
   Share2,
+  Download,
   Package
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -2136,6 +2137,11 @@ export default function Customers() {
                       >
                         <Share2 className="h-3 w-3 mr-1" /> Share
                       </Button>
+                      <Button size="sm" variant="outline" className="text-xs"
+                        onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
+                      >
+                        <Download className="h-3 w-3 mr-1" /> Excel
+                      </Button>
                       <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
                       >
@@ -2439,6 +2445,12 @@ export default function Customers() {
                   disabled={savePLAssignmentsMutation.isPending || !managingPriceList}
                   onClick={() => savePLAssignmentsMutation.mutate({ id: managingPriceList.id, assignments: priceListAssignments })}>
                   {savePLAssignmentsMutation.isPending ? "Saving..." : "Save Assignments"}
+                </Button>
+                <Button variant="outline"
+                  onClick={() => managingPriceList && window.open(`/api/price-lists/${managingPriceList.id}/export`, '_blank')}
+                  disabled={!managingPriceList}
+                >
+                  <Download className="h-4 w-4 mr-2" /> Download Excel
                 </Button>
                 <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50"
                   disabled={sharePriceListMutation.isPending || !managingPriceList}

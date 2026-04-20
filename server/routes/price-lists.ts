@@ -47,6 +47,83 @@ function getWholesalerId(req: any): string {
     : req.user.id;
 }
 
+// ── Excel workbook builder ───────────────────────────────────────────────────
+
+async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
+  const [list] = await db
+    .select()
+    .from(priceLists)
+    .where(and(eq(priceLists.id, listId), eq(priceLists.wholesalerId, wholesalerId)));
+  if (!list) throw new Error("Price list not found");
+
+  const rawItems = await db
+    .select()
+    .from(priceListItems)
+    .where(eq(priceListItems.priceListId, listId));
+
+  const priceListMap = new Map<number, number>();
+  for (const item of rawItems) {
+    if (item.productId === null) continue;
+    const product = await storage.getProduct(item.productId);
+    if (!product) continue;
+    const effective = resolveCustomPrice(product.price, {
+      customPrice: item.customPrice,
+      discountPercentage: item.discountPercentage,
+    });
+    priceListMap.set(item.productId, effective);
+  }
+
+  const allProducts = ((await storage.getProducts(wholesalerId)) as any[])
+    .filter((p) => p.status === "active")
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  const buildRow = (p: any) => {
+    const hasPallets = p.sellingFormat === "pallets" || p.sellingFormat === "both";
+    const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
+    const packSize = packParts.length > 0 ? packParts.join(" x ") : "—";
+    const customerPrice = priceListMap.get(p.id);
+    return {
+      "Product Name": p.name || "—",
+      "Pack Size / Unit": packSize,
+      "Standard Unit Price": parseFloat(p.price || "0"),
+      "Customer Unit Price": customerPrice !== undefined ? customerPrice : "",
+      "Standard Pallet Price":
+        hasPallets && p.palletPrice ? parseFloat(p.palletPrice) : "",
+      "Units per Pallet": hasPallets && p.unitsPerPallet ? p.unitsPerPallet : "",
+    };
+  };
+
+  const priceListRows = allProducts.filter((p) => priceListMap.has(p.id)).map(buildRow);
+  const standardRows = allProducts.filter((p) => !priceListMap.has(p.id)).map(buildRow);
+  const rows = [...priceListRows, ...standardRows];
+
+  const XLSX = await import("xlsx");
+  const ws = XLSX.utils.json_to_sheet(rows, {
+    header: [
+      "Product Name",
+      "Pack Size / Unit",
+      "Standard Unit Price",
+      "Customer Unit Price",
+      "Standard Pallet Price",
+      "Units per Pallet",
+    ],
+  });
+  ws["!cols"] = [
+    { wch: 35 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 22 },
+    { wch: 16 },
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Price List");
+
+  const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
+  const filename = `${safeName} - Price List.xlsx`;
+  return { wb, filename, XLSX };
+}
+
 // ── Route registration ──────────────────────────────────────────────────────
 
 export function registerPriceListRoutes(app: Express): void {
@@ -135,6 +212,31 @@ export function registerPriceListRoutes(app: Express): void {
     } catch (err) {
       console.error("Error fetching price list customer summary:", err);
       res.status(500).json({ message: "Failed to fetch price list customer summary" });
+    }
+  });
+
+  // GET /api/price-lists/:id/export — download full product catalogue as XLSX
+  // Must be registered before /:id to avoid param clash
+  app.get("/api/price-lists/:id/export", requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid price list ID" });
+
+      const { wb, filename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
+      const buf: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (err: any) {
+      console.error("Error exporting price list:", err);
+      res.status(err.message === "Price list not found" ? 404 : 500).json({
+        message: err.message || "Failed to export price list",
+      });
     }
   });
 
@@ -487,6 +589,21 @@ export function registerPriceListRoutes(app: Express): void {
       const businessName = wholesaler.businessName || "Your Supplier";
       const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
 
+      // Build Excel attachment once — same file for all assigned customers
+      let xlsxAttachment: { content: string; type: string; filename: string; disposition: 'attachment' } | null = null;
+      try {
+        const { wb, filename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
+        const xlsxBase64: string = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+        xlsxAttachment = {
+          content: xlsxBase64,
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          filename,
+          disposition: "attachment",
+        };
+      } catch (xlsxErr) {
+        console.error("⚠️ Excel generation failed (non-fatal, continuing without attachment):", xlsxErr);
+      }
+
       let emailsSent = 0;
       let whatsappSent = 0;
       let errors = 0;
@@ -547,6 +664,7 @@ export function registerPriceListRoutes(app: Express): void {
               from: "hello@quikpik.co",
               subject: `Your Exclusive Price List: ${list.name} — ${businessName}`,
               html,
+              ...(xlsxAttachment ? { attachments: [xlsxAttachment] } : {}),
             });
             if (sent) emailsSent++;
           } catch (e) {
