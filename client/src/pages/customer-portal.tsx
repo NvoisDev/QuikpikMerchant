@@ -5605,6 +5605,11 @@ export default function CustomerPortal() {
                           <p className="text-xs text-gray-500 mt-1">
                             {selectedProductForModal.moq || 1} units + {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
                           </p>
+                          {selectedProductForModal.hasPriceList && !isGuestMode && (
+                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">
+                              🏷️ Your price
+                            </span>
+                          )}
                         </div>
                         <div className="text-purple-600 text-2xl">+</div>
                       </div>
