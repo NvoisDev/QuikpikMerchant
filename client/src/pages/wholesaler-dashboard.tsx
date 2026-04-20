@@ -305,10 +305,10 @@ export default function WholesalerDashboard() {
   };
 
   return (
-    <div className="bg-white min-h-screen" data-onboarding="dashboard">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
-        <div className="backdrop-blur-sm bg-white/80 border-gray-200/50 border-b px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="backdrop-blur-sm bg-white/90 border-slate-200/70 border-b px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-row items-start justify-between gap-4">
               <div className="space-y-2" data-onboarding="dashboard-header">
@@ -353,7 +353,7 @@ export default function WholesalerDashboard() {
                     ) : (
                       <div className="divide-y divide-gray-100">
                         {(notifCounts?.registrationRequests ?? 0) > 0 && (
-                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/customer-registration-requests"); }}>
+                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/customer-registration-requests"); }}>
                             <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center">
                               <Users className="h-4 w-4 text-purple-600" />
                             </div>
@@ -365,7 +365,7 @@ export default function WholesalerDashboard() {
                           </div>
                         )}
                         {(notifCounts?.stockAlerts ?? 0) > 0 && (
-                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/stock-alerts"); }}>
+                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => { setNotifOpen(false); navigate("/stock-alerts"); }}>
                             <div className="flex-shrink-0 w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
                               <AlertTriangle className="h-4 w-4 text-amber-600" />
                             </div>
@@ -649,7 +649,7 @@ export default function WholesalerDashboard() {
 
           {/* Top Selling Product Section */}
           <div className="mb-8">
-            <Card className="bg-white border-gray-200 shadow-lg">
+            <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
                   <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
@@ -728,7 +728,7 @@ export default function WholesalerDashboard() {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Sales Performance Chart */}
-            <Card className="bg-white border-gray-200 shadow-lg">
+            <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader className="flex flex-col gap-3">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
@@ -803,7 +803,7 @@ export default function WholesalerDashboard() {
             </Card>
 
             {/* Orders Chart */}
-            <Card className="bg-white border-gray-200 shadow-lg">
+            <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader className="flex flex-col gap-3">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
@@ -870,7 +870,7 @@ export default function WholesalerDashboard() {
           {/* Top Customers */}
           <div className="mb-8">
             {/* Top Customers */}
-            <Card className="bg-white border-gray-200 shadow-lg">
+            <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
                   <Users className="w-6 h-6 text-blue-500 mr-2" />
@@ -886,7 +886,7 @@ export default function WholesalerDashboard() {
                 ) : customerInsights && (customerInsights as any).topCustomers?.length > 0 ? (
                   <div className="space-y-3">
                     {((customerInsights as any).topCustomers || []).slice(0, 5).map((customer: any, index: number) => (
-                      <div key={customer.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={customer.id || index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-400' : 'bg-blue-400'}`}>
                             {index + 1}
@@ -917,7 +917,7 @@ export default function WholesalerDashboard() {
           {/* Active Promotions */}
           {activePromotions.length > 0 && (
             <div className="mb-8">
-              <Card className="bg-white border-gray-200 shadow-lg">
+              <Card className="bg-white border-slate-200 shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -950,7 +950,7 @@ export default function WholesalerDashboard() {
                         clearance: 'bg-orange-100 text-orange-700',
                       };
                       return (
-                        <div key={promo.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div key={promo.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 text-sm truncate">{promo.productName}</p>
                             <Badge className={`text-xs ${typeColors[promo.type] || 'bg-gray-100 text-gray-700'}`}>
@@ -982,19 +982,19 @@ export default function WholesalerDashboard() {
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="animate-pulse flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gray-300 rounded-lg"></div>
+                        <div className="w-12 h-12 bg-slate-200 rounded-lg"></div>
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                          <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                          <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-slate-200 rounded w-1/2"></div>
                         </div>
-                        <div className="w-16 h-4 bg-gray-300 rounded"></div>
+                        <div className="w-16 h-4 bg-slate-200 rounded"></div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {((orders as any) || []).slice(0, 5).map((order: any) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div key={order.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                         <div>
                           <p className="font-medium text-blue-600">{order.orderNumber || `#${order.id}`}</p>
                           <p className="text-sm text-gray-600">{order.customerName}</p>
@@ -1044,12 +1044,12 @@ export default function WholesalerDashboard() {
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="animate-pulse flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gray-300 rounded-lg"></div>
+                        <div className="w-12 h-12 bg-slate-200 rounded-lg"></div>
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                          <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                          <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-slate-200 rounded w-1/2"></div>
                         </div>
-                        <div className="w-16 h-4 bg-gray-300 rounded"></div>
+                        <div className="w-16 h-4 bg-slate-200 rounded"></div>
                       </div>
                     ))}
                   </div>

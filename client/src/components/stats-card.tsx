@@ -21,7 +21,7 @@ export default function StatsCard({
   title,
   value,
   change,
-  changeColor = "text-green-600",
+  changeColor = "text-emerald-600",
   icon: Icon,
   iconColor = "text-blue-600",
   iconBg = "bg-blue-100",
@@ -33,24 +33,25 @@ export default function StatsCard({
   
   // Theme-aware styling
   const cardBg = currentTheme === 'dark' 
-    ? 'bg-gray-800 border-gray-700'
+    ? 'bg-slate-800 border-slate-700'
     : currentTheme === 'minimal'
-    ? 'bg-white border-gray-200 shadow-lg'
-    : 'bg-gradient-to-br from-blue-500 to-purple-600 border-0 text-white';
+    ? 'bg-white border-slate-200 shadow-sm'
+    : 'bg-white border-slate-200 shadow-sm';
 
-  const textColor = currentTheme === 'minimal' ? 'text-gray-900' : 'text-white';
-  const subtextColor = currentTheme === 'minimal' ? 'text-gray-600' : 'text-white/80';
+  const textColor = currentTheme === 'dark' ? 'text-white' : 'text-slate-900';
+  const subtextColor = currentTheme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+
   if (loading) {
     return (
       <Card className={cn("animate-pulse", className)}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <div className="h-4 bg-gray-300 rounded w-3/4 mb-3"></div>
-              <div className="h-8 bg-gray-300 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+              <div className="h-4 bg-slate-200 rounded w-3/4 mb-3"></div>
+              <div className="h-8 bg-slate-200 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-slate-200 rounded w-2/3"></div>
             </div>
-            <div className={cn("w-12 h-12 rounded-lg bg-gray-300")}></div>
+            <div className="w-12 h-12 rounded-xl bg-slate-200"></div>
           </div>
         </CardContent>
       </Card>
@@ -59,22 +60,21 @@ export default function StatsCard({
 
   return (
     <Card className={cn(
-      "group cursor-pointer transform transition-all duration-300 ease-out", 
-      "hover:shadow-xl hover:-translate-y-1 hover:scale-105",
+      "group cursor-pointer transition-shadow duration-200 hover:shadow-md",
       cardBg,
       className
     )}>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-center justify-between">
-          <div className="flex-1 transition-colors duration-300">
-            <p className={cn("text-sm font-medium mb-1 transition-colors duration-300", subtextColor)}>
+          <div className="flex-1">
+            <p className={cn("text-xs font-medium uppercase tracking-wide mb-1.5", subtextColor)}>
               {title}
             </p>
-            <p className={cn("text-2xl font-bold mb-1 transition-colors duration-300", textColor)}>
+            <p className={cn("text-2xl font-bold mb-1 tracking-tight", textColor)}>
               {value}
             </p>
             {change && (
-              <p className={cn("text-sm transition-colors duration-300", changeColor, "group-hover:opacity-80")}>
+              <p className={cn("text-xs font-medium", changeColor)}>
                 {change}
               </p>
             )}
@@ -84,13 +84,11 @@ export default function StatsCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className={cn(
-                    "w-12 h-12 rounded-lg flex items-center justify-center cursor-help",
-                    "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
-                    "group-hover:shadow-lg",
-                    currentTheme === 'minimal' ? iconBg : 'bg-white/20'
+                    "w-11 h-11 rounded-xl flex items-center justify-center cursor-help flex-shrink-0",
+                    currentTheme === 'dark' ? 'bg-slate-700' : iconBg
                   )}>
-                    <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", 
-                      currentTheme === 'minimal' ? iconColor : 'text-white')} />
+                    <Icon className={cn("h-5 w-5",
+                      currentTheme === 'dark' ? 'text-slate-300' : iconColor)} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -100,13 +98,11 @@ export default function StatsCard({
             </TooltipProvider>
           ) : (
             <div className={cn(
-              "w-12 h-12 rounded-lg flex items-center justify-center",
-              "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
-              "group-hover:shadow-lg",
-              currentTheme === 'minimal' ? iconBg : 'bg-white/20'
+              "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0",
+              currentTheme === 'dark' ? 'bg-slate-700' : iconBg
             )}>
-              <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", 
-                currentTheme === 'minimal' ? iconColor : 'text-white')} />
+              <Icon className={cn("h-5 w-5",
+                currentTheme === 'dark' ? 'text-slate-300' : iconColor)} />
             </div>
           )}
         </div>

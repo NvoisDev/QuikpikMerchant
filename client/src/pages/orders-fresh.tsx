@@ -774,7 +774,7 @@ export default function OrdersFresh() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <PageHeader title="Orders" description="View and manage all your customer orders">
       <span className="text-xs text-gray-500 whitespace-nowrap hidden sm:inline">
         {statusFilter ? (
@@ -799,45 +799,45 @@ export default function OrdersFresh() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
       {/* Archive Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-slate-200">
         {customerIdFilter && (
           <button
             onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               archiveTab === 'all'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-emerald-600 text-emerald-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
             All Orders
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">
               {orderStats ? (orderStats.activeCount + orderStats.archivedCount) : '...'}
             </span>
           </button>
         )}
         <button
           onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
-              ? 'border-green-600 text-green-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
           Active Orders
-          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700">
             {orderStats?.activeCount ?? '...'}
           </span>
         </button>
         <button
           onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
-              ? 'border-green-600 text-green-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
           Archived
-          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">
             {orderStats?.archivedCount ?? '...'}
           </span>
         </button>
@@ -858,7 +858,7 @@ export default function OrdersFresh() {
                 loadOrders(1, searchQuery).finally(() => setIsSearching(false));
               }
             }}
-            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white pr-8"
           />
           {isSearching && (
             <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500 animate-spin" />
@@ -866,7 +866,7 @@ export default function OrdersFresh() {
         </div>
         <div className="flex flex-wrap gap-2">
           <select 
-            className="flex-1 min-w-[120px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 min-w-[120px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
             value={statusFilter}
             onChange={(e) => handleStatusFilter(e.target.value)}
           >
@@ -885,7 +885,7 @@ export default function OrdersFresh() {
           </select>
           
           <select 
-            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
             value={paymentStatusFilter}
             onChange={(e) => { paymentStatusRef.current = e.target.value; setPaymentStatusFilter(e.target.value); loadOrders(1, searchQuery); }}
           >
@@ -896,7 +896,7 @@ export default function OrdersFresh() {
           </select>
           
           <select 
-            className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 min-w-[100px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
             value={deliveryTypeFilter}
             onChange={(e) => { deliveryTypeRef.current = e.target.value; setDeliveryTypeFilter(e.target.value); loadOrders(1, searchQuery); }}
           >
@@ -906,7 +906,7 @@ export default function OrdersFresh() {
           </select>
           
           <select 
-            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 min-w-[110px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
             value={dateRangeFilter}
             onChange={(e) => setDateRangeFilter(e.target.value)}
           >
@@ -1123,13 +1123,13 @@ export default function OrdersFresh() {
                     return (
                       <Fragment key={order.id}>
                         {showSeparator && (
-                          <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableRow className="bg-slate-50 hover:bg-slate-50">
                             <TableCell colSpan={5} className="py-2 px-4">
                               <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
                             </TableCell>
                           </TableRow>
                         )}
-                    <TableRow className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
+                    <TableRow className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
                       </TableCell>

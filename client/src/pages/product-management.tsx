@@ -1288,7 +1288,7 @@ export default function ProductManagement() {
 
   return (
     <>
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Products" description="Manage your inventory, pricing, and product details.">
         {(alertsData as any)?.count > 0 && (
           <Link href="/stock-alerts">

@@ -1239,7 +1239,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Customers" description="View and manage your wholesale customers">
         <Link href="/customer-registration-requests">
           <Button variant="ghost" size="sm" className="text-xs sm:text-sm">

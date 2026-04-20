@@ -207,22 +207,52 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-4 hover:opacity-80 transition-opacity">
-            <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-xl">Q</span>
-              </div>
+    <div className="min-h-screen flex bg-slate-50">
+      {/* Left branding panel — hidden on small screens */}
+      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] flex-col justify-between bg-slate-900 px-12 py-16 flex-shrink-0">
+        <div>
+          <div className="flex items-center gap-3 mb-16">
+            <div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <span className="text-white font-bold text-base">Q</span>
             </div>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Join Quikpik</h1>
-          <p className="text-gray-600 mt-2">Start your wholesale business journey</p>
-          <p className="mt-1 text-sm text-gray-500">
-            <Link href="/" className="text-primary hover:underline">
-              ← Back to Home
-            </Link>
+            <span className="text-white font-semibold text-lg tracking-tight">Quikpik</span>
+          </div>
+          <h2 className="text-3xl font-bold text-white leading-snug mb-4">
+            The wholesale platform built for growth
+          </h2>
+          <p className="text-slate-400 text-base leading-relaxed">
+            Manage orders, customers, and products. Broadcast campaigns. Track your revenue — all in one place.
+          </p>
+        </div>
+        <div className="space-y-4">
+          {[
+            { label: "Platform fee", value: "4.6% per order" },
+            { label: "WhatsApp integrated", value: "Built-in" },
+            { label: "Price lists", value: "Per customer" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between border-t border-slate-800 pt-4">
+              <span className="text-slate-400 text-sm">{item.label}</span>
+              <span className="text-emerald-400 text-sm font-medium">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex items-start justify-center px-4 py-12 overflow-y-auto">
+      <div className="w-full max-w-md space-y-6">
+        {/* Mobile logo */}
+        <div className="lg:hidden text-center mb-4">
+          <div className="mx-auto h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center mb-3">
+            <span className="text-white font-bold text-lg">Q</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Quikpik</h1>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900 mb-1">Create your account</h2>
+          <p className="text-slate-500 text-sm">
+            <Link href="/" className="text-emerald-600 hover:underline">← Back to Home</Link>
           </p>
         </div>
 
@@ -659,6 +689,7 @@ export default function Signup() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

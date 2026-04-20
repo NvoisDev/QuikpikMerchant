@@ -153,38 +153,67 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-white to-green-50">
-      <div className="w-full max-w-md space-y-8 px-4">
-        {/* Header */}
-        <div className="text-center">
-          <Link href="/" className="inline-block mb-4 hover:opacity-80 transition-opacity">
-            <div className="mx-auto h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-xl">Q</span>
-              </div>
+    <div className="min-h-screen flex bg-slate-50">
+      {/* Left branding panel — hidden on small screens */}
+      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] flex-col justify-between bg-slate-900 px-12 py-16 flex-shrink-0">
+        <div>
+          <div className="flex items-center gap-3 mb-16">
+            <div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <span className="text-white font-bold text-base">Q</span>
             </div>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome to Quikpik
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Your B2B wholesale marketplace platform
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            <button 
-              onClick={handleBackToHome}
-              className="text-primary hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit"
-            >
-              ← Back to Home
-            </button>
+            <span className="text-white font-semibold text-lg tracking-tight">Quikpik</span>
+          </div>
+          <h2 className="text-3xl font-bold text-white leading-snug mb-4">
+            The wholesale platform built for growth
+          </h2>
+          <p className="text-slate-400 text-base leading-relaxed">
+            Manage orders, customers, and products. Broadcast campaigns. Track your revenue — all in one place.
           </p>
         </div>
+        <div className="space-y-4">
+          {[
+            { label: "Platform fee", value: "4.6% per order" },
+            { label: "WhatsApp integrated", value: "Built-in" },
+            { label: "Price lists", value: "Per customer" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between border-t border-slate-800 pt-4">
+              <span className="text-slate-400 text-sm">{item.label}</span>
+              <span className="text-emerald-400 text-sm font-medium">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md space-y-6">
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="mx-auto h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center mb-4">
+              <span className="text-white font-bold text-lg">Q</span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Quikpik</h1>
+          </div>
+
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Welcome back</h1>
+            <p className="mt-1 text-slate-500 text-sm">
+              Sign in to your account to continue.{" "}
+              <button 
+                onClick={handleBackToHome}
+                className="text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-sm"
+              >
+                ← Back to Home
+              </button>
+            </p>
+          </div>
 
         {/* Login Card */}
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl">Sign In</CardTitle>
-            <CardDescription>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-lg font-semibold text-slate-900">Sign In</CardTitle>
+            <CardDescription className="text-slate-500">
               Choose your login method to get started
             </CardDescription>
           </CardHeader>
@@ -365,14 +394,14 @@ export default function Login() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center space-y-3">
-          <p className="text-sm text-gray-600">
+        <div className="text-center space-y-3 pt-2">
+          <p className="text-sm text-slate-600">
             Don't have an account?{" "}
             <Link href="/signup" className="text-primary hover:underline font-medium">
               Sign up for free
             </Link>
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-400">
             By signing in, you agree to our{" "}
             <a href="#" className="text-primary hover:underline">
               terms of service
@@ -383,6 +412,7 @@ export default function Login() {
             </a>
             .
           </p>
+        </div>
         </div>
       </div>
     </div>

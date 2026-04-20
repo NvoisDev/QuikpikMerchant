@@ -78,66 +78,66 @@ export default function PageHeader({ title, description, children }: PageHeaderP
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
+    <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{title}</h1>
-          {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 truncate">{title}</h1>
+          {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {children}
           <Button
             variant="ghost"
             size="icon"
-            className="relative hover:bg-gray-100"
+            className="relative hover:bg-slate-100 text-slate-500 hover:text-slate-700"
             onClick={handleShareStore}
           >
-            <Share2 className="h-5 w-5" />
+            <Share2 className="h-4.5 w-4.5" />
           </Button>
 
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
-                <Bell className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+                <Bell className="h-4.5 w-4.5" />
                 {total > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4.5 w-4.5 flex items-center justify-center font-semibold">
                     {total > 99 ? "99+" : total}
                   </span>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0">
-              <div className="border-b border-gray-100 px-4 py-3">
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
+            <PopoverContent align="end" className="w-80 p-0 shadow-lg border-slate-200">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <h3 className="font-semibold text-slate-900">Notifications</h3>
                 {total > 0 && (
-                  <p className="text-xs text-gray-500 mt-0.5">{total} item{total !== 1 ? "s" : ""} need your attention</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{total} item{total !== 1 ? "s" : ""} need your attention</p>
                 )}
               </div>
 
               {total === 0 ? (
                 <div className="px-4 py-8 text-center">
-                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-700">You're all caught up!</p>
-                  <p className="text-xs text-gray-500 mt-1">No pending items right now</p>
+                  <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-slate-700">You're all caught up!</p>
+                  <p className="text-xs text-slate-400 mt-1">No pending items right now</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-slate-100">
                   {registrationRequests > 0 && (
                     <div
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
                       onClick={() => {
                         setOpen(false);
                         navigate("/customer-registration-requests");
                       }}
                     >
-                      <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center">
+                      <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center">
                         <Users className="h-4 w-4 text-purple-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-slate-900">
                           {registrationRequests} customer{registrationRequests !== 1 ? "s" : ""} waiting for approval
                         </p>
-                        <p className="text-xs text-gray-500">Review and approve or decline requests</p>
+                        <p className="text-xs text-slate-500">Review and approve or decline requests</p>
                       </div>
                       <span className="flex-shrink-0 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full px-2 py-0.5">
                         {registrationRequests}
@@ -147,20 +147,20 @@ export default function PageHeader({ title, description, children }: PageHeaderP
 
                   {stockAlerts > 0 && (
                     <div
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
                       onClick={() => {
                         setOpen(false);
                         navigate("/stock-alerts");
                       }}
                     >
-                      <div className="flex-shrink-0 w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
+                      <div className="flex-shrink-0 w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-slate-900">
                           {stockAlerts} product{stockAlerts !== 1 ? "s" : ""} low on stock
                         </p>
-                        <p className="text-xs text-gray-500">Review stock levels and restock as needed</p>
+                        <p className="text-xs text-slate-500">Review stock levels and restock as needed</p>
                       </div>
                       <span className="flex-shrink-0 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full px-2 py-0.5">
                         {stockAlerts}
@@ -170,8 +170,8 @@ export default function PageHeader({ title, description, children }: PageHeaderP
                 </div>
               )}
 
-              <div className="border-t border-gray-100 px-4 py-2">
-                <p className="text-xs text-gray-400">Checks every 60 seconds · Stock alerts sent daily at 8 AM</p>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <p className="text-xs text-slate-400">Checks every 60 seconds · Stock alerts sent daily at 8 AM</p>
               </div>
             </PopoverContent>
           </Popover>
