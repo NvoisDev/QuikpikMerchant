@@ -1356,10 +1356,9 @@ export default function CustomerPortal() {
     refetchIntervalInBackground: false,
     retry: 3,
     retryDelay: 1000,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
   });
 
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
