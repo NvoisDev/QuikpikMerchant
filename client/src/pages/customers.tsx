@@ -1974,14 +1974,42 @@ export default function Customers() {
                 </Button>
               </CardContent>
             </Card>
-          ) : (
+          ) : (() => {
+            const filteredPriceLists = priceListFilterCustomer
+              ? fetchedPriceLists.filter((list) =>
+                  (priceListCustomerSummary[priceListFilterCustomer.id]?.ids ?? []).includes(list.id)
+                )
+              : fetchedPriceLists;
+
+            if (filteredPriceLists.length === 0 && priceListFilterCustomer) {
+              return (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Tag className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                    <h3 className="font-medium text-lg mb-2">No price lists for {priceListFilterCustomer.name}</h3>
+                    <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
+                      This customer is not assigned to any price lists yet. Clear the filter to see all lists, or create a new one.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setPriceListFilterCustomer(null)}>
+                        <X className="h-4 w-4 mr-2" /> Clear filter
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> Create price list
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(priceListFilterCustomer
-                ? fetchedPriceLists.filter((list) =>
-                    (priceListCustomerSummary[priceListFilterCustomer.id]?.ids ?? []).includes(list.id)
-                  )
-                : fetchedPriceLists
-              ).map((list) => (
+              {filteredPriceLists.map((list) => (
                 <Card key={list.id} className="relative">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
@@ -2114,7 +2142,8 @@ export default function Customers() {
                 </Card>
               ))}
             </div>
-          )}
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
