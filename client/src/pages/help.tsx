@@ -42,7 +42,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - Manage inventory and products with AI-powered descriptions
 - Connect with retail customers through customer portal
 - Process orders and payments with automatic invoicing
-- Prepare customer groups for WhatsApp broadcasts coming soon
+- Organise customer groups for price lists, communications, and targeted broadcasts when available
 - Track business analytics and financial health
 - Accept online payments with automatic platform fee collection
 - Generate professional Stripe invoices for customers
@@ -53,16 +53,17 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 1. **Complete Your Profile** - Add business information in Settings → Business Settings
 2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments for direct customer payments
 3. **Add Your Products** - Create your product catalog with images and AI descriptions in Product Management
-4. **Create Customer Groups** - Organize your customers now so you're ready for targeted WhatsApp broadcasts when they launch
+4. **Create Customer Groups** - Organise your customers into groups for price lists, communications, and targeted broadcasts when available
 5. **Configure WhatsApp** - Set up Twilio integration for customer notifications in Settings → WhatsApp
 6. **Preview Your Store** - Use "Preview Store" to see how customers view your products
 7. **Start Selling** - Share customer portal links and begin receiving orders with automatic invoicing
 
 ### Key Features
 
-- **Customer Portal**: Customers can browse products, place orders, and make payments without registration
+- **Customer Portal**: Customers can browse your catalogue, request access, and place orders once approved
 - **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
-- **WhatsApp Integration**: Receive order notifications now; product broadcasts are coming soon
+- **WhatsApp Messaging**: Send supported customer notifications now and prepare groups for future broadcast campaigns
+- **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports
 - **Order Management**: Complete order lifecycle with status tracking and refund processing
 - **Product Negotiation**: Enable custom pricing requests with minimum bid price controls
 - **Real-time Analytics**: Track sales, revenue, and business performance
@@ -587,6 +588,65 @@ The merge system handles all foreign key constraints automatically, ensuring you
     ]
   },
   {
+    id: "price-lists",
+    title: "Price Lists",
+    icon: FileText,
+    description: "Create custom pricing for specific customers or customer groups",
+    articles: [
+      {
+        title: "Creating and Managing Price Lists",
+        content: `
+### What Are Price Lists?
+
+Price Lists let you offer different prices to selected customers or customer groups without changing your main product prices. Use them for trade accounts, loyal customers, regional pricing, contract rates, or limited-time negotiated deals.
+
+#### How to Create a Price List
+1. Go to **Customers** in the sidebar
+2. Open the **Price Lists** tab
+3. Click **New Price List**
+4. Add a clear name, optional description, and optional start/end dates
+5. Save the price list
+
+#### Adding Products
+After creating a price list:
+1. Open the price list and choose **Manage**
+2. Search for products to add
+3. Set either:
+   - **Custom price**: a fixed special price for that product
+   - **Discount percentage**: a percentage reduction from the normal price
+4. Save your changes
+
+Each product can have its own price rule, so one price list can mix fixed prices and percentage discounts.
+
+#### Assigning a Price List
+Use the **Assign** tab to choose who receives the price list:
+- **Individual customers**: for account-specific pricing
+- **Customer groups**: for pricing that applies to every customer in that group
+
+You can also assign a customer to a price list from the customer's detail page.
+
+#### Customer Experience
+When an assigned customer signs in to your customer portal:
+- They see their special price automatically
+- Special prices are shown with a **Your Price** badge
+- Cart and checkout use the assigned price list price
+- Customers who are not assigned to that price list continue seeing your normal pricing
+
+#### Sharing and Exporting
+Each price list includes sharing and export options:
+- **Share**: send customers a direct link to their price list
+- **Excel**: download the price list as an Excel file for offline sharing or record keeping
+
+#### Best Practices
+- Use clear names such as "Gold Retailers 2026" or "North London Trade Pricing"
+- Add date ranges for seasonal or temporary negotiated prices
+- Review assignments when customers move between groups
+- Keep your main product prices as your standard baseline and use price lists only for exceptions
+        `
+      }
+    ]
+  },
+  {
     id: "whatsapp-broadcasts",
     title: "WhatsApp Messaging & Broadcasts",
     icon: MessageSquare,
@@ -1041,8 +1101,8 @@ To receive payments from customers, you must set up Stripe Connect.
 
 #### Payment Flow
 When customers pay:
-1. Customer pays the full order amount (including Quikpik's platform fee)
-2. Quikpik automatically collects a 4.6% platform fee
+1. Customer pays the order total through Stripe
+2. Quikpik automatically collects a 4.6% platform fee from eligible online orders
 3. You receive the remaining amount directly to your bank account
 4. Order status updates to "Processing"
 
@@ -1052,8 +1112,9 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **Platform Fee**: 4.6% to Quikpik for platform services
-- **You Keep**: The remaining order value after the platform fee
+- **Platform Fee**: 4.6% to Quikpik for platform services on eligible online orders
+- **You Keep**: The order subtotal after the platform fee
+- **Offline / Pay Later Orders**: No platform fee is collected until an online payment is made
 
 #### Bank Transfers
 - Funds are transferred to your bank account automatically
@@ -1096,86 +1157,30 @@ Payment emails include a duplicate-check so that if Stripe sends the same webhoo
     id: "marketplace",
     title: "Marketplace",
     icon: Star,
-    description: "How customers discover and purchase your products",
+    description: "B2B wholesale marketplace — coming soon",
     articles: [
       {
         title: "Marketplace Overview",
         content: `
-### Understanding the Marketplace
+### Marketplace Status
 
-The Quikpik Marketplace is where customers discover and purchase products from all wholesalers.
+The Quikpik B2B wholesale marketplace is **coming soon**. It is not currently a live customer browsing or checkout experience.
 
-#### How It Works
-- **Product Discovery**: Customers browse all active products
-- **Wholesaler Profiles**: Your business appears with products
-- **Search & Filters**: Customers can search by product, category, or location
-- **Order Placement**: Customers add items to cart and checkout
+#### What It Will Support
+When launched, the marketplace is planned to help:
+- Wholesalers discover products from other verified suppliers
+- Suppliers list their own wholesale products for wider B2B visibility
+- Businesses build new supplier relationships through Quikpik
 
-#### Your Marketplace Presence
-Your products appear in the marketplace when they're set to "Active" status.
+#### Where to Find It
+Use the **Marketplace** page in the sidebar to view the current marketplace area and future updates.
 
-#### Product Display
-Each product card shows:
-- Product image and name
-- Price (if visible)
-- MOQ requirement
-- Your business name and logo (top right corner)
-- "View Details" button
-
-#### Customer Journey
-1. Customer browses marketplace
-2. Finds your products
-3. Views product details
-4. Adds to cart (respecting MOQ)
-5. Proceeds to checkout
-6. Completes payment via Stripe
-7. You receive order notification
-
-#### Improving Visibility
-- Use high-quality product images
-- Write detailed, keyword-rich descriptions
-- Price competitively
-- Maintain good stock levels
-- Respond quickly to orders
-        `
-      },
-      {
-        title: "Customer Experience",
-        content: `
-### What Customers See
-
-#### Product Discovery
-Customers can find your products through:
-- **Browse All Products**: Main marketplace view
-- **Search**: By product name or description
-- **Categories**: Filter by product type
-- **Wholesaler Profiles**: View all products from specific sellers
-
-#### Product Information
-Customers see:
-- Product name and description
-- Price (if you've made it visible)
-- Minimum order quantity (MOQ)
-- Stock availability
-- Your business information
-- Product images
-
-#### Shopping Cart
-- Customers add products respecting MOQ requirements
-- Cart shows total cost including platform fee
-- Order summary with delivery address
-
-#### Checkout Process
-- Secure payment via Stripe
-- Order confirmation email
-- Tracking information
-- Direct contact with you for updates
-
-#### After Purchase
-- Order status updates
-- Delivery tracking
-- Ability to contact you directly
-- Order history and receipts
+#### What You Can Do Now
+Until marketplace browsing launches:
+- Share your own customer portal link directly with approved customers
+- Keep product names, images, descriptions, MOQ, and stock levels up to date
+- Use customer groups and price lists to manage customer-specific selling terms
+- Use the Marketplace page to follow the feature as it develops
         `
       }
     ]
@@ -1215,9 +1220,10 @@ The Analytics dashboard provides insights into your business performance.
 - **Geographic Distribution**: Where your customers are located
 
 #### Broadcast Analytics (coming soon)
-- **Total Broadcasts**: Planned count of campaigns sent
-- **Recipients Reached**: Planned total customers contacted
-- **Engagement Rates**: Planned response and conversion rates
+Broadcast performance reporting will become available when broadcast campaigns launch. Planned metrics include:
+- **Total Broadcasts**: count of campaigns sent
+- **Recipients Reached**: total customers contacted
+- **Engagement Rates**: response and conversion rates
         `
       },
       {
@@ -1335,9 +1341,10 @@ The Analytics dashboard provides insights into your business performance.
 
 #### Transaction Fees
 Regardless of subscription plan:
-- **Platform Fee**: 4.6% on all successful orders
+- **Platform Fee**: 4.6% on eligible online orders
 - **Payment Processing**: Handled by Stripe
-- **Your Revenue**: Order value minus the 4.6% platform fee
+- **Your Revenue**: Order subtotal minus the 4.6% platform fee
+- **Offline / Pay Later Orders**: No platform fee is collected until an online payment is made
         `
       }
     ]
@@ -1353,10 +1360,10 @@ Regardless of subscription plan:
         content: `
 ### Understanding the Customer Portal
 
-The Customer Portal is a dedicated shopping interface where your customers can browse products, place orders, and make payments without needing to register or create accounts.
+The Customer Portal is a dedicated shopping interface where approved customers can browse products, place orders, and make payments. Guests can browse your catalogue when guest browsing is enabled, but prices and ordering require customer access.
 
 #### Key Features
-- **No Registration Required**: Customers can shop immediately without signup
+- **Simple Customer Access**: Approved customers sign in with SMS verification instead of a password
 - **Mobile Responsive**: Perfect experience on phones, tablets, and desktop
 - **Secure Payments**: Stripe-powered checkout with card processing
 - **Automatic Invoicing**: Professional invoices emailed after purchase
@@ -1444,7 +1451,7 @@ The payment summary in each order shows:
 
 #### Invoice Features
 - **Detailed Line Items**: Shows each product, quantity, and unit price
-- **Platform Fee Disclosure**: Transparent fee breakdown
+- **Clear Totals**: Shows product line items, quantities, and order totals
 - **Professional Format**: Branded with your business information
 - **Email Delivery**: Automatically sent to customer's email
 - **Payment Status**: Marked as paid since payment was already processed
@@ -1655,13 +1662,13 @@ A: Check your subscription plan's product limit. Free plan allows 10 products, S
 **Q: My product images won't upload**
 A: Ensure images are under 500KB and max 800x600px. Supported formats: JPG, PNG, GIF.
 
-**Q: Products not appearing in marketplace**
-A: Make sure product status is set to "Active" and you have stock available.
+**Q: Products not appearing in my customer portal**
+A: Make sure product status is set to "Active" and you have stock available. Marketplace product discovery is coming soon.
 
 #### WhatsApp Messaging Issues
 
 **Q: Why can't I send WhatsApp broadcasts yet?**
-A: Broadcast campaigns are marked as coming soon. For supported WhatsApp messages, verify your WhatsApp Business API credentials in Settings → WhatsApp Integration and ensure your access token is valid.
+A: Broadcast campaigns are marked as coming soon. Check the **Broadcast** page in the sidebar for launch status. For supported WhatsApp messages, verify your WhatsApp Business API credentials in Settings → WhatsApp Integration and ensure your access token is valid.
 
 **Q: Messages showing as failed**
 A: Check recipient phone numbers are valid and have WhatsApp. Verify your business phone number is active.
@@ -1751,26 +1758,25 @@ For technical problems:
   },
   {
     id: "marketplace-registration",
-    title: "Customer Registration & Marketplace",
+    title: "Customer Access & Registration",
     icon: Users,
-    description: "Understanding customer registration requirements and marketplace functionality",
+    description: "Understanding customer access, per-wholesaler registration, and SMS authentication",
     articles: [
       {
         title: "Customer Registration Requirements",
         content: `
-### How Customer Registration Works in Quikpik Marketplace
+### How Customer Registration Works in Quikpik
 
 #### Multi-Wholesaler Platform Overview
-Quikpik operates as a **multi-wholesaler marketplace** where:
+Quikpik supports multiple independent wholesalers, each with their own customer access controls:
 - Multiple independent wholesalers run their own stores
-- Customers can discover and browse all wholesaler stores
 - Each wholesaler maintains their own customer database
 - Registration is required **per wholesaler** before purchasing
 
 #### Customer Registration Requirements
 
 **Browsing vs Purchasing**:
-- ✅ **Browse freely**: Customers can view any wholesaler's products (prices visible after registration)
+- ✅ **Guest browsing**: Customers can view your catalogue when guest browsing is enabled, but prices and ordering stay locked until registration
 - ❌ **Purchase requires registration**: Customers must be registered with each specific wholesaler
 
 #### Why Per-Wholesaler Registration?
@@ -1786,15 +1792,15 @@ This approach maintains the **B2B wholesale model** because:
 
 **Discovery Methods**:
 1. **Direct Link**: You share your store URL directly with customers
-2. **"Find Seller" Feature**: Customers use the marketplace search to discover new wholesalers
-3. **Customer Referrals**: Existing customers recommend your store to others
+2. **Customer Referrals**: Existing customers recommend your store to others
+3. **Future Marketplace Updates**: Broader marketplace discovery is coming soon
 
 **Customer Journey**:
-1. Customer discovers your store (via link or marketplace search)
-2. Customer can browse all your products and see pricing
+1. Customer opens your store link
+2. Customer can browse your catalogue where guest browsing is available
 3. When ready to purchase, they must be registered in your customer database
-4. If not registered, they see "Contact Wholesaler to Register" message
-5. You approve their registration and add them to your customer groups
+4. If not registered, they can request access or contact you to register
+5. You approve their registration and add them to customer groups or price lists as needed
 6. Customer can then purchase from your store using SMS verification
 
 ### Managing Customer Registration
@@ -1838,18 +1844,18 @@ Once registered, customers access your store using:
 - **No Re-verification**: Customers don't need new SMS codes when switching between stores
 - **Secure Isolation**: Customers only see stores where they're registered
 
-### Marketplace Benefits
+### Access Management Benefits
 
 #### For Wholesalers:
-- **Customer Discovery**: Reach new customers through marketplace search
 - **Relationship Control**: Maintain approval process for new customers
 - **Data Isolation**: Your customer data remains private and separate
-- **Competitive Advantage**: Customers can compare but relationships matter
+- **Customer-Specific Pricing**: Use customer groups and price lists for agreed terms
+- **Secure Ordering**: Only approved customers can place orders
 
 #### For Customers:
-- **Easy Discovery**: Find new suppliers using "Find Seller" feature
-- **Simplified Shopping**: Browse multiple stores with single authentication
-- **Comparison Shopping**: Compare products and prices across wholesalers
+- **Simple Sign-In**: Use SMS verification instead of a password
+- **Registered Store Access**: Access stores where they have been approved
+- **Special Pricing**: See assigned price list prices where applicable
 - **Trusted Platform**: Secure payment processing and order management
 
 ### Common Questions
@@ -1861,7 +1867,7 @@ A: No, customer data is completely isolated between wholesalers.
 A: No, registration with each wholesaler is required before purchasing.
 
 **Q: How do customers know they need registration?**
-A: When unregistered customers try to purchase, they see clear messaging directing them to contact the wholesaler.
+A: When unregistered customers try to purchase, they see clear messaging to request access or contact the wholesaler.
 
 **Q: Can I set different terms for different customers?**
 A: Yes, organize customers into groups with different pricing or terms as needed.
@@ -1869,7 +1875,7 @@ A: Yes, organize customers into groups with different pricing or terms as needed
 **Q: What happens if a customer is registered with multiple wholesalers?**
 A: They can access all their registered stores with a single SMS authentication session.
 
-This system balances marketplace discovery with traditional B2B relationship management, giving you the best of both worlds.
+This system keeps customer access simple while preserving traditional B2B relationship management.
         `
       }
     ]
