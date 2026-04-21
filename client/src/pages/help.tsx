@@ -176,7 +176,7 @@ The **Team Management** page (accessible from the sidebar) lets you invite colle
 
 Products have three status options:
 - **Active** (Green): Available for purchase
-- **Inactive** (Gray): Hidden from marketplace
+- **Inactive** (Gray): Hidden from your customer portal and future marketplace listings
 - **Out of Stock** (Red): Visible but not purchasable
 
 Click the status badge on any product card to quickly change status.
