@@ -70,7 +70,7 @@ import {
   type InsertWholesalerCustomerRelationship,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 import { InventoryCalculator } from "../shared/inventory-calculator.js";
 

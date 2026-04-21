@@ -18,29 +18,33 @@ const sourceBetween = (source: string, start: string, end: string) => {
 };
 
 describe('guest browsing regression coverage', () => {
-  it('keeps Browse products as guest available on the initial phone verification screen', () => {
-    const phoneStep = sourceBetween(customerAuthSource, "{authStep === 'step2' && (", "{authStep === 'step3'");
-    const guestButton = sourceBetween(phoneStep, '{onSkipAuth && error !== "CUSTOMER_NOT_FOUND" && (', '</button>');
+  it('keeps Browse products as guest available on the initial phone step screen', () => {
+    // New flow: step === 'phone'
+    const phoneStep = sourceBetween(customerAuthSource, "{step === 'phone' && (", "{step === 'otp' && (");
 
-    expect(phoneStep).toContain('Phone Verification');
-    expect(phoneStep).toContain('Enter the last 4 digits of your phone number');
-    expect(guestButton).toContain('onClick={onSkipAuth}');
-    expect(guestButton).toContain('Browse products as guest');
-    expect(guestButton).not.toContain('lastFourDigits.length');
-    expect(guestButton).not.toContain('disabled=');
+    // Guest button: only shown on phone step
+    expect(phoneStep).toContain('Browse products as guest');
+    expect(phoneStep).toContain('onClick={onSkipAuth}');
+    // Should not be disabled (no conditionally disabled attribute)
+    expect(phoneStep).not.toContain("disabled={isLoading || otpCode");
+
+    // Guest button is absent from the no-account step
+    const noAccountStep = sourceBetween(customerAuthSource, "{step === 'no-account' && (", "{/* Registration request dialog */}");
+    expect(noAccountStep).not.toContain('Browse products as guest');
   });
 
   it('keeps the not-registered phone state focused on access request actions', () => {
-    const customerNotFoundAlert = sourceBetween(
-      customerAuthSource,
-      'error === "CUSTOMER_NOT_FOUND" ? (',
-      ') : error.includes("SMS failed")',
-    );
+    // New flow: step === 'no-account'
+    const noAccountStep = sourceBetween(customerAuthSource, "{step === 'no-account' && (", "{/* Registration request dialog */}");
 
-    expect(customerNotFoundAlert).toContain('Not registered yet?');
-    expect(customerNotFoundAlert.indexOf('Request Access')).toBeLessThan(customerNotFoundAlert.indexOf('Try Different Number'));
-    expect(customerNotFoundAlert).not.toContain('Browse products as guest');
-    expect(customerAuthSource).toContain('{onSkipAuth && error !== "CUSTOMER_NOT_FOUND" && (');
+    expect(noAccountStep).toContain('Not registered yet?');
+    expect(noAccountStep).toContain('Request Access');
+    // "Browse products as guest" must not appear here
+    expect(noAccountStep).not.toContain('Browse products as guest');
+    // Back button to try different number
+    expect(noAccountStep).toContain('Try a different number');
+    // Request Access comes before Try a different number
+    expect(noAccountStep.indexOf('Request Access')).toBeLessThan(noAccountStep.indexOf('Try a different number'));
   });
 
   it('keeps guest catalogue pricing hidden while showing format and safe stock labels', () => {

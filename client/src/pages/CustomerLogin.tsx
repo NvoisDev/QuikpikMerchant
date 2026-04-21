@@ -1,624 +1,573 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
-import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users, UserPlus, Send } from "lucide-react";
+import { useLocation } from "wouter";
+import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, User, Send, ShieldCheck, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Command, CommandInput, CommandItem, CommandList, CommandEmpty, CommandGroup } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
-interface Wholesaler {
-  id: string;
+interface WholesalerOption {
+  customerId: string;
+  wholesalerId: string;
   businessName: string;
-  email: string;
-  logoUrl?: string;
-  logoType?: string;
+  logoUrl: string | null;
+  logoType: string | null;
 }
 
-// Dynamic welcome message generator
-const getWelcomeMessage = () => {
-  const hour = new Date().getHours();
-  const day = new Date().getDay();
-  const month = new Date().getMonth();
-  const date = new Date().getDate();
+type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
 
-  // Special occasions
-  if (month === 11 && date >= 20) return "🎄 Holiday shopping made easy";
-  if (month === 0 && date <= 7) return "🎊 New Year, new deals";
-  if (day === 5) return "🎉 Friday deals await";
-  if (day === 1) return "💪 Monday motivation shopping";
+const COUNTRY_CODE = '+44';
 
-  // Time-based
-  if (hour >= 5 && hour < 12) return "🌅 Early bird shopping";
-  if (hour >= 12 && hour < 17) return "☀️ Afternoon marketplace";
-  if (hour >= 17 && hour < 21) return "🌆 Evening shopping time";
-  return "🌙 Late night deals";
-};
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
 
-// Floating animated icons component
-const FloatingIcons = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Floating business icons */}
-      <div className="absolute top-1/4 left-1/4 animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}>
-        <ShoppingBag className="h-8 w-8 text-white/30" />
-      </div>
-      <div className="absolute top-1/3 right-1/4 animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}>
-        <Package className="h-6 w-6 text-white/25" />
-      </div>
-      <div className="absolute bottom-1/3 left-1/3 animate-bounce" style={{ animationDelay: '2s', animationDuration: '5s' }}>
-        <TrendingUp className="h-7 w-7 text-white/20" />
-      </div>
-      <div className="absolute top-1/2 right-1/3 animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.5s' }}>
-        <Star className="h-5 w-5 text-white/30" />
-      </div>
-      <div className="absolute bottom-1/4 right-1/2 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '4.5s' }}>
-        <Users className="h-6 w-6 text-white/25" />
-      </div>
-      <div className="absolute top-3/4 left-1/2 animate-bounce" style={{ animationDelay: '2.5s', animationDuration: '3.8s' }}>
-        <Clock className="h-5 w-5 text-white/20" />
-      </div>
-      
-      {/* Pulsing geometric shapes */}
-      <div className="absolute top-1/5 right-1/5 w-16 h-16 bg-white/10 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-      <div className="absolute bottom-1/5 left-1/5 w-12 h-12 bg-white/15 rounded-lg rotate-45 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute top-2/3 right-2/3 w-8 h-8 bg-white/20 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+function formatCountdown(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+const FloatingIcons = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute top-1/4 left-1/4 animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}>
+      <ShoppingBag className="h-8 w-8 text-white/30" />
     </div>
-  );
-};
+    <div className="absolute top-1/3 right-1/4 animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}>
+      <Package className="h-6 w-6 text-white/25" />
+    </div>
+    <div className="absolute bottom-1/3 left-1/3 animate-bounce" style={{ animationDelay: '2s', animationDuration: '5s' }}>
+      <TrendingUp className="h-7 w-7 text-white/20" />
+    </div>
+    <div className="absolute top-1/2 right-1/3 animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.5s' }}>
+      <Star className="h-5 w-5 text-white/30" />
+    </div>
+    <div className="absolute bottom-1/4 right-1/2 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '4.5s' }}>
+      <Users className="h-6 w-6 text-white/25" />
+    </div>
+    <div className="absolute top-3/4 left-1/2 animate-bounce" style={{ animationDelay: '2.5s', animationDuration: '3.8s' }}>
+      <Clock className="h-5 w-5 text-white/20" />
+    </div>
+    <div className="absolute top-1/5 right-1/5 w-16 h-16 bg-white/10 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+    <div className="absolute bottom-1/5 left-1/5 w-12 h-12 bg-white/15 rounded-lg rotate-45 animate-pulse" style={{ animationDelay: '2s' }} />
+  </div>
+);
 
 export default function CustomerLogin() {
-  const [location, setLocation] = useLocation();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [selectedWholesaler, setSelectedWholesaler] = useState<Wholesaler | null>(null);
-  const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [lastFourDigits, setLastFourDigits] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingWholesalers, setIsLoadingWholesalers] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [showEnquiryForm, setShowEnquiryForm] = useState(false);
-  const [enquiryName, setEnquiryName] = useState("");
-  const [enquiryPhone, setEnquiryPhone] = useState("");
-  const [enquiryEmail, setEnquiryEmail] = useState("");
-  const [enquiryBusiness, setEnquiryBusiness] = useState("");
-  const [enquiryMessage, setEnquiryMessage] = useState("");
-  const [enquiryProducts, setEnquiryProducts] = useState("");
-  const [enquiryOrderFrequency, setEnquiryOrderFrequency] = useState("");
-  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { backToHome } = useAuth();
 
-  const handleBackToHome = () => {
-    // Clear any existing session and go to landing page
-    backToHome();
-  };
-  
-  // Extract wholesaler ID from URL if accessing directly via /customer/:id
-  const wholesalerIdFromUrl = location.includes('/customer/') ? location.split('/customer/')[1]?.split('?')[0] : null;
+  const [step, setStep] = useState<LoginStep>('phone');
+  const [phoneLocal, setPhoneLocal] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
+  const [selectedWholesaler, setSelectedWholesaler] = useState<WholesalerOption | null>(null);
 
-  // Brand green theme colors
-  const getThemeColors = () => {
-    return "bg-green-500";
-  };
+  // Enquiry form state
+  const [enquiryName, setEnquiryName] = useState('');
+  const [enquiryEmail, setEnquiryEmail] = useState('');
+  const [enquiryBusiness, setEnquiryBusiness] = useState('');
+  const [enquiryMessage, setEnquiryMessage] = useState('');
+  const [enquiryProducts, setEnquiryProducts] = useState('');
+  const [enquiryFrequency, setEnquiryFrequency] = useState('');
+  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
 
-  // Load wholesalers and handle direct URL access
+  const otpRef = useRef<HTMLInputElement>(null);
+
+  const fullPhone = COUNTRY_CODE + phoneLocal.replace(/^0/, '');
+
+  // Countdown timer
   useEffect(() => {
-    const loadWholesalers = async () => {
-      setIsLoadingWholesalers(true);
-      try {
-        const response = await fetch('/api/wholesalers/all');
-        if (response.ok) {
-          const data = await response.json();
-          // Remove duplicates by business name and ID
-          const uniqueWholesalers = data.filter((wholesaler: Wholesaler, index: number, array: Wholesaler[]) => 
-            array.findIndex(w => w.id === wholesaler.id || w.businessName === wholesaler.businessName) === index
-          );
-          setWholesalers(uniqueWholesalers);
-          
-          // If accessing via direct URL, automatically select wholesaler and go to step 2
-          if (wholesalerIdFromUrl) {
-            const targetWholesaler = data.find((w: Wholesaler) => w.id === wholesalerIdFromUrl);
-            if (targetWholesaler) {
-              setSelectedWholesaler(targetWholesaler);
-              setStep(2); // Skip to the beautiful welcome screen
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load wholesalers:", error);
-      } finally {
-        setIsLoadingWholesalers(false);
-      }
-    };
-    
-    loadWholesalers();
-  }, [wholesalerIdFromUrl]);
+    if (countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
 
-  const filteredWholesalers = wholesalers.filter(wholesaler =>
-    wholesaler.businessName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleWholesalerSelect = (wholesaler: Wholesaler) => {
-    setSelectedWholesaler(wholesaler);
-    setOpen(false);
-    setShowEnquiryForm(false);
-    setEnquiryName("");
-    setEnquiryPhone("");
-    setEnquiryEmail("");
-    setEnquiryBusiness("");
-    setEnquiryMessage("");
-    setEnquiryProducts("");
-    setEnquiryOrderFrequency("");
-    setStep(2);
-  };
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!lastFourDigits.trim() || lastFourDigits.length !== 4) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter the last 4 digits of your phone number",
-        variant: "destructive"
-      });
+  const handleSendOtp = async (resend = false) => {
+    const digits = phoneLocal.replace(/\D/g, '');
+    if (digits.length < 7) {
+      setError('Please enter a valid phone number');
       return;
     }
 
-    if (!selectedWholesaler) {
-      toast({
-        title: "No Wholesaler Selected",
-        description: "Please select a wholesaler first",
-        variant: "destructive"
+    if (resend) setIsResending(true);
+    else setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/customer-auth/request-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: fullPhone }),
       });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification code');
+        return;
+      }
+
+      if (data.throttled) {
+        toast({ title: 'Already sent', description: 'A code was sent recently. Please check your messages.' });
+      } else if (resend) {
+        toast({ title: 'Code resent!', description: 'A new verification code has been sent to your phone.' });
+      }
+
+      setCountdown(120);
+      setOtpCode('');
+      setStep('otp');
+      setTimeout(() => otpRef.current?.focus(), 100);
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsResending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      setError('Please enter the complete 6-digit code');
       return;
     }
 
     setIsLoading(true);
-    
+    setError('');
+
     try {
-      // Use Wouter's setLocation for proper client-side navigation
-      setLocation(`/store/${selectedWholesaler.id}?auth=${lastFourDigits}`);
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: "Unable to connect to server. Please check your internet connection.",
-        variant: "destructive"
+      const res = await fetch('/api/customer-auth/verify-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode }),
       });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Invalid verification code');
+        return;
+      }
+
+      if (data.noWholesalers) {
+        setStep('no-account');
+        return;
+      }
+
+      const options: WholesalerOption[] = data.wholesalers;
+
+      if (options.length === 1) {
+        await completeLogin(options[0]);
+        return;
+      }
+
+      setWholesalerOptions(options);
+      setStep('select');
+    } catch {
+      setError('Connection error. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBack = () => {
-    setStep(1);
-    setLastFourDigits("");
-    setShowEnquiryForm(false);
+  const completeLogin = async (opt: WholesalerOption) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/customer-auth/complete-phone-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phoneNumber: fullPhone, wholesalerId: opt.wholesalerId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+
+      toast({ title: 'Welcome!', description: `You're now logged in, ${data.customer.name}.` });
+      setLocation(`/store/${opt.wholesalerId}`);
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEnquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedWholesaler || !enquiryName.trim() || !enquiryPhone.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in your name and phone number",
-        variant: "destructive"
-      });
+    if (!enquiryName.trim()) {
+      toast({ title: 'Missing Information', description: 'Please fill in your name.', variant: 'destructive' });
       return;
     }
 
     setIsSubmittingEnquiry(true);
     try {
-      const response = await fetch('/api/customer/request-wholesaler-access', {
+      const res = await fetch('/api/customer/request-wholesaler-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          wholesalerId: selectedWholesaler.id,
+          wholesalerId: selectedWholesaler?.wholesalerId,
           customerName: enquiryName.trim(),
-          customerPhone: enquiryPhone.trim(),
+          customerPhone: fullPhone,
           customerEmail: enquiryEmail.trim() || undefined,
           businessName: enquiryBusiness.trim() || undefined,
           requestMessage: enquiryMessage.trim() || undefined,
           productsInterested: enquiryProducts.trim() || undefined,
-          orderFrequency: enquiryOrderFrequency.trim() || undefined,
+          orderFrequency: enquiryFrequency.trim() || undefined,
         }),
       });
 
-      if (response.ok) {
-        toast({
-          title: "Request Sent!",
-          description: `Your request has been sent to ${selectedWholesaler.businessName}. They'll review it and get back to you.`,
-        });
-        setShowEnquiryForm(false);
-        setEnquiryName("");
-        setEnquiryPhone("");
-        setEnquiryEmail("");
-        setEnquiryBusiness("");
-        setEnquiryMessage("");
-        setEnquiryProducts("");
-        setEnquiryOrderFrequency("");
+      if (res.ok) {
+        toast({ title: 'Request Sent!', description: "Your request has been sent. We'll review it and get back to you." });
+        setStep('phone');
+        setEnquiryName('');
+        setEnquiryEmail('');
+        setEnquiryBusiness('');
+        setEnquiryMessage('');
+        setEnquiryProducts('');
+        setEnquiryFrequency('');
       } else {
-        const data = await response.json();
-        toast({
-          title: "Request Failed",
-          description: data.error || "Something went wrong. Please try again.",
-          variant: "destructive"
-        });
+        const data = await res.json();
+        toast({ title: 'Request Failed', description: data.error || 'Something went wrong.', variant: 'destructive' });
       }
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: "Unable to send request. Please check your connection.",
-        variant: "destructive"
-      });
+    } catch {
+      toast({ title: 'Connection Error', description: 'Unable to send request. Please check your connection.', variant: 'destructive' });
     } finally {
       setIsSubmittingEnquiry(false);
     }
   };
 
-  const getBusinessInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .filter(Boolean)
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
+  const stepTitle = {
+    phone: 'Sign in',
+    otp: 'Verify your number',
+    select: 'Choose your store',
+    'no-account': 'No account found',
+    enquiry: 'Request Access',
+  }[step];
+
+  const stepSubtitle = {
+    phone: 'Enter your mobile number to continue',
+    otp: `We sent a 6-digit code to ${COUNTRY_CODE} ${phoneLocal}`,
+    select: 'You have access to multiple stores',
+    'no-account': `${COUNTRY_CODE} ${phoneLocal} isn't linked to any store`,
+    enquiry: 'Tell us about yourself',
+  }[step];
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Authentication form */}
-      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md mx-auto">
-          {/* Logo and welcome */}
-          <div className="text-center mb-8">
-            {step === 2 && selectedWholesaler?.logoUrl ? (
-              <img
-                src={selectedWholesaler.logoUrl}
-                alt={selectedWholesaler.businessName}
-                className="mx-auto h-20 w-20 rounded-2xl object-cover mb-6 shadow-lg"
-              />
-            ) : step === 2 && selectedWholesaler ? (
-              <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6 shadow-lg">
-                <span className="text-2xl font-bold text-white">{getBusinessInitials(selectedWholesaler.businessName)}</span>
-              </div>
-            ) : (
-              <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6 shadow-lg">
-                <Store className="h-10 w-10 text-white" />
-              </div>
-            )}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {step === 1 ? "Find Your Store" : showEnquiryForm ? "Request Access" : "Welcome Back"}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              {step === 1 ? "Search for your wholesaler to access their products" : showEnquiryForm ? `Send a request to ${selectedWholesaler?.businessName}` : `Accessing ${selectedWholesaler?.businessName}`}
-            </p>
-          </div>
-
-          {/* Form Card */}
-          <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center pb-2">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className={`h-3 w-3 rounded-full transition-all duration-300 ${step >= 1 ? 'bg-primary' : 'bg-gray-200'}`}></div>
-                <div className={`h-0.5 w-8 transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
-                <div className={`h-3 w-3 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
-              </div>
-              <p className="text-sm text-gray-500">{showEnquiryForm ? "Wholesale Enquiry" : `Step ${step} of 3`}</p>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {step === 1 ? (
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="wholesaler-search" className="text-base font-medium">Find Your Wholesaler</Label>
-                    <Popover open={open} onOpenChange={setOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={open}
-                          className="w-full justify-between h-12 text-left font-normal border-2 hover:border-primary/50 focus:border-primary"
-                          disabled={isLoadingWholesalers}
-                        >
-                          {selectedWholesaler ? (
-                            <div className="flex items-center">
-                              <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center mr-3">
-                                <Store className="h-3 w-3 text-primary" />
-                              </div>
-                              {selectedWholesaler.businessName}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">
-                              {isLoadingWholesalers ? "Loading wholesalers..." : "Select your wholesaler..."}
-                            </span>
-                          )}
-                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput
-                            placeholder="Search by business name..."
-                            value={searchTerm}
-                            onValueChange={setSearchTerm}
-                            className="border-0"
-                          />
-                          <CommandList>
-                            <CommandEmpty>No wholesaler found with that name.</CommandEmpty>
-                            <CommandGroup>
-                              {filteredWholesalers.map((wholesaler) => (
-                                <CommandItem
-                                  key={wholesaler.id}
-                                  onSelect={() => handleWholesalerSelect(wholesaler)}
-                                  className="flex items-center py-3"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedWholesaler?.id === wholesaler.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <div className="flex items-center">
-                                    <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center mr-3">
-                                      <Store className="h-3 w-3 text-primary" />
-                                    </div>
-                                    {wholesaler.businessName}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-700 text-center">
-                      💡 Can't find your wholesaler? Contact them directly for assistance accessing their store.
-                    </p>
-                  </div>
-                </div>
-              ) : showEnquiryForm ? (
-                <form onSubmit={handleEnquirySubmit} className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-name" className="text-sm font-medium">Your Name *</Label>
-                      <Input
-                        id="enquiry-name"
-                        type="text"
-                        placeholder="Full name"
-                        value={enquiryName}
-                        onChange={(e) => setEnquiryName(e.target.value)}
-                        className="h-11 border-2 focus:border-primary"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-phone" className="text-sm font-medium">Phone Number *</Label>
-                      <Input
-                        id="enquiry-phone"
-                        type="tel"
-                        placeholder="+44 7xxx xxx xxx"
-                        value={enquiryPhone}
-                        onChange={(e) => setEnquiryPhone(e.target.value)}
-                        className="h-11 border-2 focus:border-primary"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-email" className="text-sm font-medium">Email</Label>
-                      <Input
-                        id="enquiry-email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={enquiryEmail}
-                        onChange={(e) => setEnquiryEmail(e.target.value)}
-                        className="h-11 border-2 focus:border-primary"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-business" className="text-sm font-medium">Business Name</Label>
-                      <Input
-                        id="enquiry-business"
-                        type="text"
-                        placeholder="Your business name"
-                        value={enquiryBusiness}
-                        onChange={(e) => setEnquiryBusiness(e.target.value)}
-                        className="h-11 border-2 focus:border-primary"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-products" className="text-sm font-medium">Products you're interested in</Label>
-                      <textarea
-                        id="enquiry-products"
-                        placeholder="e.g. 10x 10kg rice, frozen fish, palm oil, malt drinks..."
-                        value={enquiryProducts}
-                        onChange={(e) => setEnquiryProducts(e.target.value)}
-                        className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus:border-primary resize-none"
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="enquiry-frequency" className="text-sm font-medium">Estimated order quantity / frequency</Label>
-                      <Input
-                        id="enquiry-frequency"
-                        type="text"
-                        placeholder="e.g. Weekly pallet, monthly mixed order"
-                        value={enquiryOrderFrequency}
-                        onChange={(e) => setEnquiryOrderFrequency(e.target.value)}
-                        className="h-11 border-2 focus:border-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowEnquiryForm(false)}
-                      disabled={isSubmittingEnquiry}
-                      className="flex-1 h-12"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Login
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-                      disabled={isSubmittingEnquiry || !enquiryName.trim() || !enquiryPhone.trim()}
-                    >
-                      {isSubmittingEnquiry ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send Request
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  <form onSubmit={handlePhoneSubmit} className="space-y-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="phone" className="text-base font-medium">Phone Verification</Label>
-                      <div className="text-center mb-4">
-                        <p className="text-sm text-gray-600">Enter the last 4 digits of your phone number</p>
-                      </div>
-                      <Input
-                        id="phone"
-                        type="text"
-                        placeholder="••••"
-                        value={lastFourDigits}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                          setLastFourDigits(value);
-                        }}
-                        className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-primary"
-                        disabled={isLoading}
-                        maxLength={4}
-                        autoComplete="off"
-                      />
-                    </div>
-                    
-                    <div className="flex space-x-3">
-                      <Button 
-                        type="submit" 
-                        className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
-                        disabled={isLoading || lastFourDigits.length !== 4}
-                      >
-                        {isLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Verifying...
-                          </>
-                        ) : (
-                          "Access Store"
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-
-                  <div className="border-t pt-4 space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep(1);
-                        setLastFourDigits("");
-                      }}
-                      className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Change store
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowEnquiryForm(true)}
-                      className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors py-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Not a customer yet? Request wholesale access
-                    </button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Left panel — hero */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-emerald-700 relative flex-col justify-center px-12 text-white">
+        <FloatingIcons />
+        <div className="relative z-10">
+          <h2 className="text-5xl font-bold mb-4 leading-tight">Welcome to<br />Quikpik</h2>
+          <p className="text-xl text-green-100 mb-6 font-medium">"Wholesale made simple"</p>
+          <p className="text-green-200 text-base leading-relaxed max-w-sm">
+            Access your wholesale account, browse products, and place orders — all in one place.
+          </p>
+        </div>
+        <div className="absolute bottom-6 left-12 right-12 text-green-300/60 text-xs">
+          © {new Date().getFullYear()} Quikpik. All rights reserved.
         </div>
       </div>
 
-      {/* Right side - Animated background with retail owner photo */}
-      <div className={`hidden lg:flex lg:w-1/2 ${getThemeColors()} relative overflow-hidden`}>
-        {/* Background retail owner image overlay */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cdefs%3E%3Cpattern id='retail' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='2' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23retail)'/%3E%3C/svg%3E")`
-          }}
-        ></div>
+      {/* Right panel — form */}
+      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-8 lg:px-12">
+        <div className="w-full max-w-md mx-auto">
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/40"></div>
-        
-        {/* Floating icons */}
-        <FloatingIcons />
-        
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-12 text-white">
-          <div className="space-y-8">
-            {/* Welcome message */}
-            <div className="space-y-4">
-              <h2 className="text-4xl font-bold leading-tight">
-                {getWelcomeMessage()}
-              </h2>
-              <p className="text-xl opacity-90">
-                Access exclusive wholesale products and special pricing from your trusted suppliers.
-              </p>
-            </div>
+          {/* Back button (mobile only) */}
+          <button
+            onClick={() => backToHome()}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-8 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
 
-            {/* Feature highlights */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Package className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Wholesale Pricing</h3>
-                  <p className="text-sm opacity-80">Get better prices on bulk orders</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Growing Selection</h3>
-                  <p className="text-sm opacity-80">New products added regularly</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Users className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Trusted Network</h3>
-                  <p className="text-sm opacity-80">Connect with verified suppliers</p>
-                </div>
-              </div>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">{stepTitle}</h1>
+            <p className="text-gray-500 text-base">{stepSubtitle}</p>
           </div>
+
+          <Card className="border-0 shadow-none">
+            <CardContent className="px-0 pt-0 space-y-6">
+
+              {/* ── Phone entry ── */}
+              {step === 'phone' && (
+                <form onSubmit={e => { e.preventDefault(); handleSendOtp(); }} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="font-medium flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4" /> Mobile Number
+                    </Label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium select-none whitespace-nowrap">
+                        🇬🇧 {COUNTRY_CODE}
+                      </span>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="7700 900000"
+                        value={phoneLocal}
+                        onChange={e => {
+                          setPhoneLocal(e.target.value.replace(/[^\d\s]/g, ''));
+                          setError('');
+                        }}
+                        className="rounded-l-none h-12 text-base border-gray-300 focus:border-green-600"
+                        autoComplete="tel"
+                        disabled={isLoading}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive" className="border-0 bg-red-50">
+                      <AlertDescription className="text-sm">{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold text-base"
+                    disabled={isLoading || phoneLocal.replace(/\D/g, '').length < 7}
+                  >
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending code…</> : 'Continue'}
+                  </Button>
+
+                  <p className="text-xs text-gray-400 text-center">
+                    By continuing, you agree to our Terms of Service and Privacy Policy.
+                  </p>
+                </form>
+              )}
+
+              {/* ── OTP entry ── */}
+              {step === 'otp' && (
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="otp" className="font-medium flex items-center gap-2 text-sm">
+                      <ShieldCheck className="h-4 w-4" /> Verification Code
+                    </Label>
+                    <Input
+                      ref={otpRef}
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="123456"
+                      value={otpCode}
+                      onChange={e => {
+                        setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        setError('');
+                      }}
+                      maxLength={6}
+                      className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
+                      autoComplete="one-time-code"
+                      disabled={isLoading}
+                    />
+                    {countdown > 0 && (
+                      <p className="text-xs text-blue-600 text-center">{formatCountdown(countdown)} remaining</p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive" className="border-0 bg-red-50">
+                      <AlertDescription className="text-sm text-center">{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    onClick={handleVerifyOtp}
+                    className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                    disabled={isLoading || otpCode.length !== 6}
+                  >
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying…</> : 'Verify'}
+                  </Button>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => { setStep('phone'); setOtpCode(''); setError(''); }}
+                      className="flex-1 h-11 border-2"
+                      disabled={isLoading}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSendOtp(true)}
+                      disabled={isResending || countdown > 60}
+                      className="flex-1 h-11 border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                    >
+                      {isResending
+                        ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</>
+                        : countdown > 60
+                          ? `Wait ${formatCountdown(countdown - 60)}`
+                          : 'Resend Code'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Wholesaler selection ── */}
+              {step === 'select' && (
+                <div className="space-y-3">
+                  {wholesalerOptions.map(opt => (
+                    <button
+                      key={opt.wholesalerId}
+                      onClick={() => completeLogin(opt)}
+                      disabled={isLoading}
+                      className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-colors text-left"
+                    >
+                      {opt.logoUrl ? (
+                        <img src={opt.logoUrl} alt={opt.businessName} className="h-12 w-12 rounded-xl object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-sm">{getInitials(opt.businessName)}</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">{opt.businessName}</p>
+                        <p className="text-sm text-gray-500">Tap to enter this store</p>
+                      </div>
+                      {isLoading && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
+                    </button>
+                  ))}
+
+                  {error && (
+                    <Alert variant="destructive" className="border-0 bg-red-50">
+                      <AlertDescription className="text-sm text-center">{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    onClick={() => { setStep('phone'); setError(''); }}
+                    className="w-full h-11 border-2"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                  </Button>
+                </div>
+              )}
+
+              {/* ── No account ── */}
+              {step === 'no-account' && (
+                <div className="space-y-5">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center space-y-3">
+                    <Building2 className="h-8 w-8 text-blue-500 mx-auto" />
+                    <p className="text-blue-800 font-semibold text-sm">Not registered yet?</p>
+                    <p className="text-blue-700 text-sm">
+                      Your number isn't linked to any wholesale account. Submit a request and a wholesaler will get back to you.
+                    </p>
+                    <Button
+                      onClick={() => setStep('enquiry')}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
+                    >
+                      <User className="h-4 w-4 mr-2" /> Request Access
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setStep('phone'); setError(''); }}
+                    className="w-full h-11 border-2"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Try a different number
+                  </Button>
+                </div>
+              )}
+
+              {/* ── Enquiry form ── */}
+              {step === 'enquiry' && (
+                <form onSubmit={handleEnquirySubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="enq-name" className="text-sm font-medium">Your Name *</Label>
+                    <Input
+                      id="enq-name"
+                      type="text"
+                      placeholder="Full name"
+                      value={enquiryName}
+                      onChange={e => setEnquiryName(e.target.value)}
+                      className="h-11 border-2 focus:border-primary"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="enq-email" className="text-sm font-medium">Email</Label>
+                    <Input
+                      id="enq-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={enquiryEmail}
+                      onChange={e => setEnquiryEmail(e.target.value)}
+                      className="h-11 border-2 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="enq-business" className="text-sm font-medium">Business Name</Label>
+                    <Input
+                      id="enq-business"
+                      type="text"
+                      placeholder="Your business name"
+                      value={enquiryBusiness}
+                      onChange={e => setEnquiryBusiness(e.target.value)}
+                      className="h-11 border-2 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="enq-products" className="text-sm font-medium">Products interested in</Label>
+                    <textarea
+                      id="enq-products"
+                      placeholder="e.g. rice, oil, drinks…"
+                      value={enquiryProducts}
+                      onChange={e => setEnquiryProducts(e.target.value)}
+                      className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm focus:border-primary outline-none resize-none"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="enq-message" className="text-sm font-medium">Message</Label>
+                    <textarea
+                      id="enq-message"
+                      placeholder="Anything else you'd like us to know…"
+                      value={enquiryMessage}
+                      onChange={e => setEnquiryMessage(e.target.value)}
+                      className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm focus:border-primary outline-none resize-none"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStep('no-account')}
+                      disabled={isSubmittingEnquiry}
+                      className="flex-1 h-12 border-2"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={isSubmittingEnquiry || !enquiryName.trim()}
+                    >
+                      {isSubmittingEnquiry
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
+                        : <><Send className="h-4 w-4 mr-2" /> Send Request</>}
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
