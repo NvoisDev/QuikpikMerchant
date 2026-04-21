@@ -47,7 +47,7 @@ describe('guest browsing regression coverage', () => {
     const guestPriceBranch = sourceBetween(customerPortalSource, 'if (isGuestMode) {', '\n  return (\n    <div className="flex items-center gap-2 flex-wrap">');
     const guestCatalogue = sourceBetween(
       customerPortalSource,
-      '{isGuestMode && !isEnhancedPreviewMode && (',
+      '{isTrueGuestMode && (',
       '{/* Modern Tab Navigation - Only for authenticated users */}',
     );
     const guestStripBlock = sourceBetween(
@@ -64,6 +64,35 @@ describe('guest browsing regression coverage', () => {
     expect(guestCatalogue).toContain('PriceDisplay price={null}');
     expect(guestCatalogue).toContain('isGuestMode={true}');
     expect(guestStripBlock).toContain('stripGuestPricingDataFromProducts(formattedProducts as any[])');
+  });
+
+  it('allows confirmed customer sessions to add products without guest prompt state', () => {
+    const addToCartBlock = sourceBetween(
+      customerPortalSource,
+      'const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {',
+      '// Simple payment intent creation',
+    );
+    const authSuccessBlock = sourceBetween(
+      customerPortalSource,
+      'const handleAuthSuccess = (customer: any) => {',
+      '// Handle guest browse - skip authentication',
+    );
+    const sessionSuccessBlock = sourceBetween(
+      customerPortalSource,
+      'if (sessionData?.authenticated && sessionData?.customer) {',
+      'if (forceGuestParam) {',
+    );
+
+    expect(customerPortalSource).toContain('const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;');
+    expect(customerPortalSource).toContain('const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;');
+    expect(addToCartBlock).toContain('if (!hasCustomerSession) {');
+    expect(addToCartBlock).toContain('setShowGuestSignInModal(true);');
+    expect(addToCartBlock).toContain('}, [toast, isEnhancedPreviewMode, hasCustomerSession]);');
+    expect(addToCartBlock).not.toContain('if (isGuestMode) {');
+    expect(authSuccessBlock).toContain('setShowGuestSignInModal(false);');
+    expect(sessionSuccessBlock).toContain('setShowGuestSignInModal(false);');
+    expect(customerPortalSource).toContain('{showGuestSignInModal && !hasCustomerSession && (');
+    expect(customerPortalSource).toContain("const guestParam = isTrueGuestMode ? '?guest=true' : '';");
   });
 
   it('formats guest catalogue selling format and safe stock rows', () => {

@@ -929,6 +929,8 @@ export default function CustomerPortal() {
   const [isGuestMode, setIsGuestMode] = useState(true);
   const [showGuestSignInModal, setShowGuestSignInModal] = useState(false);
   const [openRequestAccessOnAuth, setOpenRequestAccessOnAuth] = useState(false);
+  const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;
+  const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1323,12 +1325,12 @@ export default function CustomerPortal() {
 
   // Fetch all products for the wholesaler with controlled refresh
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
-    queryKey: ['wholesaler-products', wholesalerId, isAuthenticated],
+    queryKey: ['wholesaler-products', wholesalerId, hasCustomerSession, isTrueGuestMode],
     queryFn: async () => {
       console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
       console.log(`🌐 Current domain: ${window.location.origin}`);
       console.log(`🔍 Fetching products for wholesaler: ${wholesalerId}`);
-      const guestParam = !isAuthenticated && !isEnhancedPreviewMode ? '?guest=true' : '';
+      const guestParam = isTrueGuestMode ? '?guest=true' : '';
       const response = await fetch(`/api/customer-products/${wholesalerId}${guestParam}`);
       console.log(`📡 API Response status: ${response.status}`);
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
@@ -1599,16 +1601,16 @@ export default function CustomerPortal() {
   }, [isEnhancedPreviewMode, toast]);
 
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
-    if (isGuestMode) {
-      setShowGuestSignInModal(true);
-      return;
-    }
     if (isEnhancedPreviewMode) {
       toast({
         title: "Preview Mode",
         description: "Cart functionality is disabled in preview mode.",
         variant: "destructive",
       });
+      return;
+    }
+    if (!hasCustomerSession) {
+      setShowGuestSignInModal(true);
       return;
     }
     
@@ -1647,7 +1649,7 @@ export default function CustomerPortal() {
       title: "Added to Cart",
       description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
     });
-  }, [toast, isPreviewMode]);
+  }, [toast, isEnhancedPreviewMode, hasCustomerSession]);
 
   // Simple payment intent creation - use explicit shipping option from radio buttons
   const createPaymentIntentForCheckout = useCallback(async (explicitShippingOption?: 'pickup' | 'delivery') => {
@@ -2133,6 +2135,7 @@ export default function CustomerPortal() {
     console.log("🎉 handleAuthSuccess called with customer:", customer);
     clearGuestParam();
     setOpenRequestAccessOnAuth(false);
+    setShowGuestSignInModal(false);
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
@@ -2288,6 +2291,7 @@ export default function CustomerPortal() {
       setAuthenticatedCustomer(sessionData.customer);
       setShowAuth(false);
       setIsGuestMode(false);
+      setShowGuestSignInModal(false);
       setIsSwitchingWholesaler(false); // Clear switching state now that new store auth is confirmed
       clearGuestParam();
       return;
@@ -2521,7 +2525,7 @@ export default function CustomerPortal() {
             {/* Right — Action buttons */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {/* Guest: Back to Quikpik */}
-              {isGuestMode && (
+              {isTrueGuestMode && (
                 <Button
                   onClick={async () => {
                     try {
@@ -2558,7 +2562,7 @@ export default function CustomerPortal() {
       </div>
 
       {/* Guest browse conversion banner */}
-      {isGuestMode && !isEnhancedPreviewMode && (
+      {isTrueGuestMode && (
         <div className="sticky top-0 z-30 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-sm font-medium truncate">
@@ -2870,7 +2874,7 @@ export default function CustomerPortal() {
 
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
 
-        {isGuestMode && !isEnhancedPreviewMode && (
+        {isTrueGuestMode && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7 overflow-hidden relative">
               <div className="absolute -top-12 -right-12 w-36 h-36 bg-green-50 rounded-full" />
@@ -2996,7 +3000,7 @@ export default function CustomerPortal() {
         )}
 
         {/* Modern Tab Navigation - Only for authenticated users */}
-        {isAuthenticated && !isGuestMode && (
+        {hasCustomerSession && !isTrueGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Fixed bottom navigation bar */}
             <TabsList className="bottom-nav-list fixed bottom-0 inset-x-0 z-40 grid grid-cols-5 h-16 border-t border-gray-100 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
@@ -3223,7 +3227,7 @@ export default function CustomerPortal() {
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                       currency={wholesaler?.defaultCurrency || 'GBP'}
-                                      isGuestMode={isGuestMode}
+                                      isGuestMode={isTrueGuestMode}
                                       size="medium"
                                       showStrikethrough={true}
                                     />
@@ -3844,7 +3848,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={'GBP'}
-                                    isGuestMode={isGuestMode}
+                                    isGuestMode={isTrueGuestMode}
                                     size="medium"
                                     showStrikethrough={true}
                                   />
@@ -4217,7 +4221,7 @@ export default function CustomerPortal() {
                                     price={pricing.effectivePrice}
                                     originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency={wholesaler?.defaultCurrency || 'GBP'}
-                                    isGuestMode={isGuestMode}
+                                    isGuestMode={isTrueGuestMode}
                                     size="medium"
                                     showStrikethrough={true}
                                   />
@@ -6206,7 +6210,7 @@ export default function CustomerPortal() {
         )}
 
         {/* Guest sign-in modal — triggered when guest tries to add to cart */}
-        {showGuestSignInModal && (
+        {showGuestSignInModal && !hasCustomerSession && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
               <div className="text-center space-y-2">
@@ -6249,7 +6253,7 @@ export default function CustomerPortal() {
         )}
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
-        {isAuthenticated && !isGuestMode && cart.length > 0 && (
+        {hasCustomerSession && !isTrueGuestMode && cart.length > 0 && (
           <div className="fixed bottom-20 right-4 z-50">
             <Button
               onClick={() => setShowCheckout(true)}
