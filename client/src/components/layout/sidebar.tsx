@@ -208,9 +208,9 @@ export default function Sidebar() {
                               isActive ? "text-emerald-400" : (isLocked || isComingSoon) ? "text-slate-600" : "text-slate-500"
                             )}
                           />
-                          {/* Dot indicator — desktop icon-rail only when collapsed */}
+                          {/* Dot indicator — collapsed mode (desktop icon-rail + mobile when sidebar is icon-only) */}
                           {showOrderBadge && dc && (
-                            <span className="hidden lg:block absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
                           )}
                         </span>
                         {/* Label: always visible on mobile, hidden on desktop when collapsed */}

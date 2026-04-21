@@ -1,0 +1,69 @@
+🔐 Customer Login Flow Refactor (Phone OTP + Wholesaler Selection)
+
+Refactor the customer authentication flow to use phone number + OTP verification, followed by wholesaler selection, without breaking existing functionality or data.
+
+⚠️ Constraints
+Do NOT change core customer, wholesaler, or order data models unless required
+Do NOT break existing sessions, permissions, or APIs
+Do NOT expose customer data across wholesalers
+Replace the old login flow cleanly (no parallel flows left active)
+Preserve all existing post-login behaviour
+🎯 New Login Flow
+1. Phone Number Entry
+Customer enters telephone number
+Validate format (UK + international support if needed)
+2. OTP Verification
+Send one-time verification code (OTP) via SMS
+Customer enters code to verify identity
+Handle:
+Expiry
+Retry/resend
+Rate limiting
+3. Wholesaler Selection
+After verification, fetch all wholesalers linked to that phone number
+If:
+1 wholesaler → auto-select and continue
+Multiple wholesalers → show selection screen
+No wholesalers → redirect to registration flow
+4. Session Creation
+Log customer in under the selected wholesaler context
+Ensure:
+Customer only sees data for that wholesaler
+Pricing, orders, and products are scoped correctly
+🧱 Functional Requirements
+Introduce customer–wholesaler relationship mapping (if not already present)
+Ensure all queries are scoped by:
+customer_id
+wholesaler_id
+Persist selected wholesaler in session/token
+🔐 Security Requirements
+OTP must be:
+Time-limited
+Single-use
+Prevent brute force attempts
+Never expose other wholesalers’ data
+Validate access on every request (backend, not just frontend)
+🧹 Cleanup (Important)
+Fully remove old login flow:
+Email/password (if unused)
+Any legacy endpoints
+Refactor safely:
+Ensure no broken references
+Update all auth dependencies
+If unsure, deprecate first before removal
+🧪 Validation
+
+Before completing:
+
+Test login for:
+Single wholesaler customer
+Multi-wholesaler customer
+New/unregistered customer
+Confirm:
+Orders, pricing, and dashboards load correctly
+No cross-wholesaler data leakage
+📊 Output
+Show updated auth flow diagram
+List impacted files/components
+Provide updated routes/endpoints
+Confirm no breaking changes
