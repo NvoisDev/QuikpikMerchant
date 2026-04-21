@@ -99,6 +99,25 @@ describe('guest browsing regression coverage', () => {
     expect(customerPortalSource).toContain("const guestParam = shouldFetchGuestSafeProducts ? '?guest=true' : '';");
   });
 
+  it('returns seller-selection guest browsing back to seller selection instead of homepage', () => {
+    const guestBackButton = sourceBetween(
+      customerPortalSource,
+      '{isTrueGuestMode && (',
+      '{/* Explore pill */}',
+    );
+    const sellerGuestButton = sourceBetween(
+      customerPortalSource,
+      '{wholesalerItem.canRequestAccess ? (',
+      ') : wholesalerItem.isAccessible ?',
+    );
+
+    expect(sellerGuestButton).toContain('guest=true&guestFrom=selection');
+    expect(guestBackButton).toContain("guestParams.get('guestFrom') === 'selection'");
+    expect(guestBackButton).toContain('setShowWholesalerSearch(true)');
+    expect(guestBackButton).toContain('setWholesalerSearchQuery("")');
+    expect(guestBackButton.indexOf("guestParams.get('guestFrom') === 'selection'")).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));
+  });
+
   it('formats guest catalogue selling format and safe stock rows', () => {
     expect(getSellingFormatLabel('both')).toBe('Units & Pallets');
     expect(getSellingFormatLabel('pallets')).toBe('Full Pallets');

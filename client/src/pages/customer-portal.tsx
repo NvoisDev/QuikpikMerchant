@@ -2521,10 +2521,16 @@ export default function CustomerPortal() {
 
             {/* Right — Action buttons */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Guest: Back to Quikpik */}
+              {/* Guest: Back */}
               {isTrueGuestMode && (
                 <Button
                   onClick={async () => {
+                    const guestParams = new URLSearchParams(window.location.search);
+                    if (guestParams.get('guestFrom') === 'selection') {
+                      setWholesalerSearchQuery("");
+                      setShowWholesalerSearch(true);
+                      return;
+                    }
                     try {
                       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
                       setTimeout(() => { window.location.href = '/landing'; }, 100);
@@ -2700,7 +2706,7 @@ export default function CustomerPortal() {
                             setShowWholesalerSearch(false);
                             setWholesalerSearchQuery("");
                             handleSkipAuth();
-                            setLocation(`/store/${wholesalerItem.id}?guest=true`);
+                            setLocation(`/store/${wholesalerItem.id}?guest=true&guestFrom=selection`);
                           }}
                         >
                           View as Guest
