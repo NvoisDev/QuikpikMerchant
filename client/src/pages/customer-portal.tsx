@@ -2614,8 +2614,8 @@ export default function CustomerPortal() {
             </div>
           </div>
 
-          {/* Results area */}
-          <div className="flex-1 overflow-y-auto px-4 pb-28">
+          {/* Results area — pb-40 accounts for the taller two-button sticky footer */}
+          <div className="flex-1 overflow-y-auto px-4 pb-40">
             {wholesalersLoading ? (
               <div className="space-y-3 mt-2">
                 {[...Array(4)].map((_, i) => (
@@ -2746,7 +2746,7 @@ export default function CustomerPortal() {
           </div>
 
           {/* Sticky search button */}
-          <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white border-t border-gray-100">
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white border-t border-gray-100 space-y-2">
             <button
               className="w-full py-4 btn-theme-primary rounded-2xl text-base font-semibold"
               onClick={() => {
@@ -2756,6 +2756,16 @@ export default function CustomerPortal() {
               }}
             >
               Search
+            </button>
+            <button
+              className="w-full py-3 rounded-2xl text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                setShowWholesalerSearch(false);
+                setWholesalerSearchQuery('');
+                handleSkipAuth();
+              }}
+            >
+              View as Guest
             </button>
           </div>
 
