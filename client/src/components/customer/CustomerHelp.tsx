@@ -192,7 +192,7 @@ const helpSections: HelpSection[] = [
     faqs: [
       {
         question: "How do I log in?",
-        answer: "Enter the last 4 digits of your registered phone number. You'll receive a 6-digit verification code by SMS — enter that to log in. No password needed."
+        answer: "Enter your full registered phone number, including country code when needed. You'll receive a 6-digit verification code by SMS — enter that to log in. No password needed."
       },
       {
         question: "My verification code isn't arriving — what should I do?",

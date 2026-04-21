@@ -5,6 +5,9 @@ import { stripGuestPricingData } from '../server/utils/guest-products';
 
 const customerAuthSource = readFileSync('client/src/components/customer/CustomerAuth.tsx', 'utf8');
 const customerPortalSource = readFileSync('client/src/pages/customer-portal.tsx', 'utf8');
+const customerHelpSource = readFileSync('client/src/components/customer/CustomerHelp.tsx', 'utf8');
+const landingPageSource = readFileSync('client/src/pages/LandingPage.tsx', 'utf8');
+const helpPageSource = readFileSync('client/src/pages/help.tsx', 'utf8');
 const marketplaceRoutesSource = readFileSync('server/routes/marketplace.ts', 'utf8');
 
 const sourceBetween = (source: string, start: string, end: string) => {
@@ -68,6 +71,20 @@ describe('guest browsing regression coverage', () => {
     expect(guestCatalogue).toContain('PriceDisplay price={null}');
     expect(guestCatalogue).toContain('isGuestMode={true}');
     expect(guestStripBlock).toContain('stripGuestPricingDataFromProducts(formattedProducts as any[])');
+  });
+
+  it('keeps public help copy aligned with guest browsing, OTP, and fee rules', () => {
+    expect(landingPageSource).toContain('prices and ordering stay locked until the seller approves them');
+    expect(landingPageSource).not.toContain("products and prices without registration");
+    expect(customerHelpSource).toContain('Enter your full registered phone number');
+    expect(customerHelpSource).not.toContain('Enter the last 4 digits');
+    expect(helpPageSource).toContain('prices and ordering require approved customer access');
+    expect(helpPageSource).toContain('Quikpik now supports seller discovery for customers');
+    expect(helpPageSource).toContain('Customer Transaction Fee**: 5.5% + £0.50');
+    expect(helpPageSource).toContain('the customer transaction fee is not wholesaler revenue');
+    expect(helpPageSource).toContain('No platform fee or customer transaction fee is collected unless an online payment is made later');
+    expect(helpPageSource).not.toContain('The Quikpik B2B wholesale marketplace is **coming soon**');
+    expect(helpPageSource).not.toContain('Last 4 digits of their registered phone number');
   });
 
   it('allows confirmed customer sessions to add products without guest prompt state', () => {

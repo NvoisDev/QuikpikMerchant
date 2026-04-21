@@ -102,7 +102,7 @@ export default function LandingPage() {
               <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
                 The modern B2B marketplace designed for wholesale businesses. 
                 Streamline your operations, reach more retailers, and grow your business 
-                with automated communication and instant payments.
+                with automated communication and secure online payments.
               </p>
               
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-6 text-sm text-gray-600">
@@ -112,8 +112,8 @@ export default function LandingPage() {
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">Only 4.6% per order</span>
-                  <span className="sm:hidden">4.6% per order</span>
+                  <span className="hidden sm:inline">4.6% on online orders</span>
+                  <span className="sm:hidden">Online order fees</span>
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -152,7 +152,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center bg-gradient-to-r from-yellow-50 to-yellow-100 px-3 sm:px-4 py-2 rounded-full border border-yellow-200">
                   <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mr-2" />
-                  <span className="font-semibold text-yellow-700">Instant payments</span>
+                  <span className="font-semibold text-yellow-700">Secure card payments</span>
                 </div>
               </div>
             </div>
@@ -177,10 +177,10 @@ export default function LandingPage() {
                     <div className="bg-gradient-to-br from-sky-50 to-sky-100 p-3 sm:p-4 rounded-lg border border-sky-200">
                       <div className="flex items-center mb-2">
                         <Users className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500 mr-1 sm:mr-2" />
-                        <span className="text-xs sm:text-sm font-medium text-sky-700">Customers</span>
+                        <span className="text-xs sm:text-sm font-medium text-sky-700">Customer Lists</span>
                       </div>
-                      <div className="text-lg sm:text-2xl font-bold text-sky-800">156</div>
-                      <div className="text-xs sm:text-sm text-sky-600">Active retailers</div>
+                      <div className="text-lg sm:text-2xl font-bold text-sky-800">Organised</div>
+                      <div className="text-xs sm:text-sm text-sky-600">Approved retailers</div>
                     </div>
                   </div>
                   
@@ -211,8 +211,8 @@ export default function LandingPage() {
               <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 bg-white rounded-lg shadow-lg p-2 sm:p-4 border">
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-current" />
-                  <span className="font-semibold text-sm sm:text-base">4.9/5</span>
-                  <span className="text-xs sm:text-sm text-gray-600">rating</span>
+                  <span className="font-semibold text-sm sm:text-base">Store</span>
+                  <span className="text-xs sm:text-sm text-gray-600">preview</span>
                 </div>
               </div>
             </div>
@@ -272,7 +272,7 @@ export default function LandingPage() {
               <div>
                 <h4 className="font-bold text-amber-800 mb-2">Important: Customer Registration Requirements</h4>
                 <div className="text-amber-700 text-sm space-y-2">
-                  <p><strong>Browsing is free:</strong> Customers can view any wholesaler's products and prices without registration</p>
+                  <p><strong>Browsing is free:</strong> Guests can browse products where enabled, but prices and ordering stay locked until the seller approves them</p>
                   <p><strong>Purchasing requires registration:</strong> Each wholesaler maintains their own customer database. Customers must be approved by each wholesaler before making purchases</p>
                   <p><strong>Why this approach?</strong> This maintains B2B relationships where wholesalers control credit terms, pricing agreements, and business compliance requirements</p>
                 </div>
@@ -303,7 +303,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-yellow-800">Secure Payments</h3>
               <p className="text-yellow-700 text-sm font-medium">
-                Get paid instantly with integrated payment processing
+                Take secure card payments with integrated payment processing
               </p>
             </Card>
             
@@ -412,11 +412,11 @@ export default function LandingPage() {
               💬 Premium Support Included
             </Badge>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
-              Free In-Person Support & Training
+              Support & Training Options
             </h2>
             <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-              Get personalized help from our experts. We'll guide you through setup, 
-              answer your questions, and help you maximize your wholesale business potential.
+              Get help with setup, product uploads, customer groups, and day-to-day questions 
+              as you start running your wholesale store.
             </p>
           </div>
           
@@ -427,8 +427,8 @@ export default function LandingPage() {
                   <Video className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">One-on-One Setup Sessions</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Personal video calls to help you configure your account, upload products, and set up customer groups.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Guided Setup Help</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Support to help you configure your account, upload products, and set up customer groups.</p>
                 </div>
               </div>
               
@@ -437,8 +437,8 @@ export default function LandingPage() {
                   <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Priority Phone Support</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Direct access to our support team for urgent questions and technical assistance.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Email & Call Support</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Contact the support team for account questions, setup guidance, and technical assistance.</p>
                 </div>
               </div>
               
@@ -447,19 +447,18 @@ export default function LandingPage() {
                   <Users2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Team Training Sessions</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Group training for your entire team to ensure everyone knows how to use the platform effectively.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Team Training Guidance</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Help your team understand the main workflows for products, customers, orders, and payments.</p>
                 </div>
               </div>
               
               <div className="bg-emerald-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
                 <div className="flex items-center mb-3">
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 mr-2" />
-                  <span className="font-semibold text-emerald-800 text-sm sm:text-base">100% Free</span>
+                  <span className="font-semibold text-emerald-800 text-sm sm:text-base">Included Support</span>
                 </div>
                 <p className="text-emerald-700 text-xs sm:text-sm">
-                  All support services are included with your subscription at no extra cost. 
-                  We're committed to your success.
+                  Basic setup and account support is available to help you get started and keep moving.
                 </p>
               </div>
             </div>
@@ -469,24 +468,23 @@ export default function LandingPage() {
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
                   <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Book Your Free Session</h3>
-                <p className="text-gray-600 text-sm sm:text-base">Choose a time that works for you</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Get Support</h3>
+                <p className="text-gray-600 text-sm sm:text-base">Tell us what you need help with</p>
               </div>
               
-              {/* Calendly Integration */}
               <div className="space-y-3 sm:space-y-4">
                 <Button 
-                  onClick={() => window.open('https://calendly.com/quikpik-support/setup-session', '_blank')}
+                  onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Setup support request'; }}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-4 text-base sm:text-lg font-medium"
                 >
                   <Calendar className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Schedule Setup Session
+                  Request Setup Help
                 </Button>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button 
                     variant="outline" 
-                    onClick={() => window.open('https://calendly.com/quikpik-support/training-session', '_blank')}
+                    onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Team training support'; }}
                     className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   >
                     <Users2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
@@ -494,7 +492,7 @@ export default function LandingPage() {
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => window.open('https://calendly.com/quikpik-support/quick-help', '_blank')}
+                    onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Quick support request'; }}
                     className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   >
                     <Phone className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
@@ -503,11 +501,11 @@ export default function LandingPage() {
                 </div>
                 
                 <div className="text-center pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-500 mb-2">Available time slots:</p>
+                  <p className="text-sm text-gray-500 mb-2">Support availability:</p>
                   <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-                    <span>Mon-Fri: 9AM-6PM GMT</span>
+                    <span>Business hours</span>
                     <span>•</span>
-                    <span>Weekend support available</span>
+                    <span>Response times may vary</span>
                   </div>
                 </div>
               </div>
@@ -523,7 +521,7 @@ export default function LandingPage() {
                 Email us at <a href="mailto:hello@quikpik.co" className="text-emerald-600 hover:text-emerald-700 font-medium">hello@quikpik.co</a>
               </p>
               <p className="text-sm text-gray-500">
-                We typically respond within 2 hours during business hours
+                We will get back to you as soon as possible during business hours
               </p>
             </div>
           </div>
@@ -537,7 +535,7 @@ export default function LandingPage() {
             Ready to Transform Your Wholesale Business?
           </h2>
           <p className="text-xl text-gray-600 mb-8">
-            Join hundreds of wholesalers who are already growing their business with Quikpik
+            Start building a simpler wholesale ordering experience for your customers
           </p>
           
           <form onSubmit={handleWaitlist} className="max-w-md mx-auto mb-8">
@@ -567,7 +565,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Setup in 5 minutes
+              Guided setup
             </div>
           </div>
         </div>

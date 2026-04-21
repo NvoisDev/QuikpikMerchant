@@ -60,7 +60,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 ### Key Features
 
-- **Customer Portal**: Customers can browse your catalog, request access, and place orders once approved
+- **Customer Portal**: Guests can browse your catalog where enabled, but prices and ordering require approved customer access
 - **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
 - **WhatsApp Messaging**: Send supported customer notifications now and prepare groups for future broadcast campaigns
 - **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports
@@ -75,7 +75,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - **Standard Plan**: Up to 50 products, unlimited editing (£19.99/month)
 - **Premium Plan**: Unlimited products, unlimited editing (£49.99/month)
 
-All plans include a 4.6% platform fee on eligible online orders with automatic revenue collection.
+All plans include a 4.6% platform fee on eligible online card orders. Offline, cash, and Pay Later orders have no platform fee unless an online payment is taken later.
         `
       },
       {
@@ -219,7 +219,7 @@ The bell icon in the top-right of every page shows everything that needs your at
 
 #### Pricing Strategy
 - Research competitor pricing in your category
-- Consider your margins and platform fee (4.6% on sales)
+- Consider your margins and the 4.6% platform fee on eligible online card payments
 - Use price visibility settings strategically
 
 #### Product Organization
@@ -1073,7 +1073,7 @@ When customers place orders for collection/pickup, the platform **automatically 
 Each order shows:
 - Customer details and delivery address
 - Order items with quantities and prices
-- Subtotal, platform fee (4.6%), and total
+- Product/delivery subtotal, platform fee (4.6% on eligible online payments), and your revenue
 - Payment status
 - Order date and tracking
 
@@ -1101,10 +1101,11 @@ To receive payments from customers, you must set up Stripe Connect.
 
 #### Payment Flow
 When customers pay:
-1. Customer pays the order total through Stripe
-2. Quikpik automatically collects a 4.6% platform fee from eligible online orders
-3. You receive the remaining amount directly to your bank account
-4. Order status updates to "Processing"
+1. Customer pays their checkout total through Stripe
+2. Customer card checkouts include a customer transaction fee of 5.5% + £0.50
+3. Quikpik automatically collects a 4.6% platform fee from the order subtotal on eligible online orders
+4. You receive the subtotal minus the platform fee directly to your bank account
+5. Order status updates to "Processing"
 
 #### Account Status
 Your payment account has two key states:
@@ -1112,9 +1113,10 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **Platform Fee**: 4.6% to Quikpik for platform services on eligible online orders
-- **You Keep**: The order subtotal after the platform fee
-- **Offline / Pay Later Orders**: No platform fee is collected until an online payment is made
+- **Platform Fee**: 4.6% to Quikpik for platform services on eligible online card orders
+- **Customer Transaction Fee**: 5.5% + £0.50 shown to the customer on card checkout only; it is not your revenue
+- **You Keep**: The order subtotal after the 4.6% platform fee
+- **Offline / Pay Later Orders**: No platform fee or customer transaction fee is collected unless an online payment is made later
 
 #### Bank Transfers
 - Funds are transferred to your bank account automatically
@@ -1157,30 +1159,29 @@ Payment emails include a duplicate-check so that if Stripe sends the same webhoo
     id: "marketplace",
     title: "Marketplace",
     icon: Star,
-    description: "B2B wholesale marketplace — coming soon",
+    description: "B2B wholesale seller discovery and marketplace tools",
     articles: [
       {
         title: "Marketplace Overview",
         content: `
 ### Marketplace Status
 
-The Quikpik B2B wholesale marketplace is **coming soon**. It is not currently a live customer browsing or checkout experience.
+Quikpik now supports seller discovery for customers through the customer portal. Customers can find seller stores, browse products where guest browsing is enabled, and request access when they are not yet approved.
 
-#### What It Will Support
-When launched, the marketplace is planned to help:
-- Wholesalers discover products from other verified suppliers
-- Suppliers list their own wholesale products for wider B2B visibility
-- Businesses build new supplier relationships through Quikpik
+#### What It Supports Now
+- Customers can discover participating wholesaler stores
+- Guests can browse product information where enabled, with prices hidden until approved access
+- Customers can request access from sellers before placing orders
+- Approved customers can switch between seller stores they are registered with
 
 #### Where to Find It
-Use the **Marketplace** page in the sidebar, or go to **/marketplace**, to view the current marketplace intro and future updates.
+Use the **Marketplace** page in the sidebar, or go to **/marketplace**, to view marketplace information and updates.
 
 #### What You Can Do Now
-Until marketplace browsing launches:
-- Share your own customer portal link directly with approved customers
+- Share your own customer portal link directly with customers
 - Keep product names, images, descriptions, MOQ, and stock levels up to date
 - Use customer groups and price lists to manage customer-specific selling terms
-- Use the Marketplace page to follow the feature as it develops
+- Review access requests from customers who discover your store
         `
       }
     ]
@@ -1341,10 +1342,11 @@ Broadcast performance reporting will become available when broadcast campaigns l
 
 #### Transaction Fees
 Regardless of subscription plan:
-- **Platform Fee**: 4.6% on eligible online orders
+- **Platform Fee**: 4.6% on eligible online card orders, paid by the wholesaler
+- **Customer Transaction Fee**: 5.5% + £0.50 added to customer card checkouts only
 - **Payment Processing**: Handled by Stripe
-- **Your Revenue**: Order subtotal minus the 4.6% platform fee
-- **Offline / Pay Later Orders**: No platform fee is collected until an online payment is made
+- **Your Revenue**: Order subtotal minus the 4.6% platform fee; the customer transaction fee is not wholesaler revenue
+- **Offline / Pay Later Orders**: No platform fee or customer transaction fee is collected unless an online payment is made later
         `
       }
     ]
@@ -1412,9 +1414,9 @@ Each order includes:
 - Customer contact information and delivery address
 - Product details with quantities and pricing
 - Payment information and Stripe transaction ID
-- Platform fee calculation (4.6% automatically collected)
+- Platform fee calculation (4.6% on eligible online payments)
 - Order timeline with colour-coded status entries
-- Payment summary showing order total, platform fee, any refunds, and your net amount
+- Payment summary showing subtotal, platform fee, any refunds, and your net amount
 
 #### Order Timeline
 The timeline tracks every stage of an order:
@@ -1426,7 +1428,7 @@ The timeline tracks every stage of an order:
 
 #### Payment Summary
 The payment summary in each order shows:
-- Order total and platform fee (4.6%)
+- Subtotal and platform fee (4.6% on eligible online payments)
 - A **Refunded** or **Partial Refund** row in purple when a refund has been recorded
 - **Your Net Amount** — adjusted to reflect any refunds issued
 
@@ -1445,13 +1447,14 @@ The payment summary in each order shows:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Platform Fee**: 4.6% automatically deducted for Quikpik
-3. **Wholesaler Payment**: Remaining amount transferred to your Stripe account after fees
-4. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
+2. **Customer Transaction Fee**: Card checkouts add 5.5% + £0.50 for the customer
+3. **Platform Fee**: 4.6% deducted from the order subtotal for Quikpik
+4. **Wholesaler Payment**: Subtotal minus the platform fee transferred to your Stripe account
+5. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
 
 #### Invoice Features
 - **Detailed Line Items**: Shows each product, quantity, and unit price
-- **Clear Totals**: Shows product line items, quantities, and order totals
+- **Clear Totals**: Shows product line items, quantities, and the customer checkout total
 - **Professional Format**: Branded with your business information
 - **Email Delivery**: Automatically sent to customer's email
 - **Payment Status**: Marked as paid since payment was already processed
@@ -1466,7 +1469,7 @@ The payment summary in each order shows:
 - **Payment Failures**: Usually due to incomplete Stripe Connect setup
 - **Missing Invoices**: Check customer email addresses and spam folders
 - **Currency Issues**: Verify currency settings match your Stripe account
-- **Platform Fees**: Automatically calculated and collected - no manual action needed
+- **Platform Fees**: Automatically calculated on eligible online payments - no manual action needed
         `
       },
       {
@@ -1776,7 +1779,7 @@ Quikpik supports multiple independent wholesalers, each with their own customer 
 #### Customer Registration Requirements
 
 **Browsing vs Purchasing**:
-- ✅ **Guest browsing**: Customers can view your catalog when guest browsing is enabled, but prices and ordering stay locked until registration
+- ✅ **Guest browsing**: Customers can view your catalog when guest browsing is enabled, but prices and ordering stay locked until approved access
 - ❌ **Purchase requires registration**: Customers must be registered with each specific wholesaler
 
 #### Why Per-Wholesaler Registration?
@@ -1793,12 +1796,12 @@ This approach maintains the **B2B wholesale model** because:
 **Discovery Methods**:
 1. **Direct Link**: You share your store URL directly with customers
 2. **Customer Referrals**: Existing customers recommend your store to others
-3. **Future Marketplace Updates**: Broader marketplace discovery is coming soon
+3. **Seller Discovery**: Customers can use seller selection to find stores and request access
 
 **Customer Journey**:
 1. Customer opens your store link
-2. Customer can browse your catalog where guest browsing is available
-3. When ready to purchase, they must be registered in your customer database
+2. Customer can browse your catalog where guest browsing is available, with prices hidden until approved
+3. When ready to see prices or purchase, they must be registered in your customer database
 4. If not registered, they can request access or contact you to register
 5. You approve their registration and add them to customer groups or price lists as needed
 6. Customer can then purchase from your store using SMS verification
@@ -1833,7 +1836,7 @@ When potential customers contact you for registration:
 
 #### SMS Verification System
 Once registered, customers access your store using:
-1. **Phone Number Entry**: Last 4 digits of their registered phone number
+1. **Phone Number Entry**: Their full registered phone number, including country code when needed
 2. **SMS Code Verification**: 6-digit code sent via SMS (5-minute expiry)
 3. **Session Creation**: Persistent session allows browsing multiple stores
 4. **Cross-Store Access**: Session works across different wholesaler stores they're registered with
@@ -1939,7 +1942,7 @@ Click any row in the payout table to open the **Payout breakdown** panel on the 
 
 #### How the Amount Is Calculated
 
-The amount shown per transaction is what you actually received — after Quikpik's **4.6% platform fee** has been deducted. For example, if a customer paid £100, your share is approximately £95.40.
+The amount shown per transaction is what you actually received — after Quikpik's **4.6% platform fee** has been deducted from the order subtotal. For example, if the order subtotal is £100, your share is approximately £95.40. Customer transaction fees are separate from your revenue.
 
 #### Older Transactions Without an Order Link
 
