@@ -87,12 +87,11 @@ describe('guest browsing regression coverage', () => {
     expect(customerPortalSource).toContain('const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;');
     expect(customerPortalSource).toContain('const shouldFetchGuestSafeProducts = !hasCustomerSession && !isEnhancedPreviewMode;');
     expect(addToCartBlock).toContain('if (!hasCustomerSession) {');
-    expect(addToCartBlock).toContain('setShowGuestSignInModal(true);');
+    expect(addToCartBlock).toContain('openCustomerSignIn();');
     expect(addToCartBlock).toContain('}, [toast, isEnhancedPreviewMode, hasCustomerSession]);');
     expect(addToCartBlock).not.toContain('if (isGuestMode) {');
-    expect(authSuccessBlock).toContain('setShowGuestSignInModal(false);');
-    expect(sessionSuccessBlock).toContain('setShowGuestSignInModal(false);');
-    expect(customerPortalSource).toContain('{showGuestSignInModal && !hasCustomerSession && (');
+    expect(addToCartBlock).not.toContain('setShowGuestSignInModal');
+    expect(customerPortalSource).not.toContain('showGuestSignInModal');
     expect(customerPortalSource).toContain("const guestParam = shouldFetchGuestSafeProducts ? '?guest=true' : '';");
   });
 

@@ -927,7 +927,6 @@ export default function CustomerPortal() {
     return !isPreviewModeCheck && !forceGuestParamCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
-  const [showGuestSignInModal, setShowGuestSignInModal] = useState(false);
   const [openRequestAccessOnAuth, setOpenRequestAccessOnAuth] = useState(false);
   const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;
   const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;
@@ -1611,7 +1610,7 @@ export default function CustomerPortal() {
       return;
     }
     if (!hasCustomerSession) {
-      setShowGuestSignInModal(true);
+      openCustomerSignIn();
       return;
     }
     
@@ -2136,7 +2135,6 @@ export default function CustomerPortal() {
     console.log("🎉 handleAuthSuccess called with customer:", customer);
     clearGuestParam();
     setOpenRequestAccessOnAuth(false);
-    setShowGuestSignInModal(false);
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
@@ -2164,7 +2162,6 @@ export default function CustomerPortal() {
   // Handle guest browse - skip authentication
   const handleSkipAuth = () => {
     setOpenRequestAccessOnAuth(false);
-    setShowGuestSignInModal(false);
     setShowAuth(false);
     setIsGuestMode(true);
     setIsAuthenticated(false);
@@ -2292,7 +2289,6 @@ export default function CustomerPortal() {
       setAuthenticatedCustomer(sessionData.customer);
       setShowAuth(false);
       setIsGuestMode(false);
-      setShowGuestSignInModal(false);
       setIsSwitchingWholesaler(false); // Clear switching state now that new store auth is confirmed
       clearGuestParam();
       return;
@@ -2983,10 +2979,10 @@ export default function CustomerPortal() {
                               <PriceDisplay price={null} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={true} size="medium" />
                               <Button
                                 size="sm"
-                                onClick={() => setShowGuestSignInModal(true)}
+                                onClick={openCustomerSignIn}
                                 className="rounded-full bg-green-600 hover:bg-green-700 text-white"
                               >
-                                View price
+                                Sign in to view
                               </Button>
                             </div>
                           </div>
@@ -6208,49 +6204,6 @@ export default function CustomerPortal() {
               });
             }}
           />
-        )}
-
-        {/* Guest sign-in modal — triggered when guest tries to add to cart */}
-        {showGuestSignInModal && !hasCustomerSession && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <ShoppingCart className="w-6 h-6 text-green-600" />
-                </div>
-                <h2 className="text-lg font-bold text-gray-900">Sign in to add items</h2>
-                <p className="text-sm text-gray-500">
-                  You need to be a registered customer of{' '}
-                  <span className="font-medium text-gray-700">{wholesaler?.businessName || 'this store'}</span>{' '}
-                  to add items to your cart and place orders.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowGuestSignInModal(false);
-                  openCustomerSignIn();
-                }}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors"
-              >
-                Sign in to {wholesaler?.businessName || 'this store'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowGuestSignInModal(false);
-                  openCustomerRequestAccess();
-                }}
-                className="w-full border border-green-200 bg-green-50 hover:bg-green-100 text-green-700 font-semibold py-3 rounded-xl transition-colors"
-              >
-                Request access instead
-              </button>
-              <button
-                onClick={() => setShowGuestSignInModal(false)}
-                className="w-full text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors"
-              >
-                Continue browsing
-              </button>
-            </div>
-          </div>
         )}
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
