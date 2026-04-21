@@ -112,8 +112,8 @@ export default function LandingPage() {
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">4.6% on online orders</span>
-                  <span className="sm:hidden">Online order fees</span>
+                  <span className="hidden sm:inline">4.6% on online card orders</span>
+                  <span className="sm:hidden">Card order fees</span>
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -409,7 +409,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16">
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-xs sm:text-sm px-3 sm:px-4 py-2 mb-4 sm:mb-6">
-              💬 Premium Support Included
+              Support Available
             </Badge>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
               Support & Training Options
