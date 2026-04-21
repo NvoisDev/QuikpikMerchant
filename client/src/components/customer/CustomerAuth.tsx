@@ -201,7 +201,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ phoneNumber: fullPhone, wholesalerId: selectedWholesalerId }),
+        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode, wholesalerId: selectedWholesalerId }),
       });
       const data = await res.json();
 

@@ -143,10 +143,12 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Code is correct — mark as used
       await storage.markPhoneVerificationUsed(record.id);
 
-      // Store a short-lived session nonce to prove OTP was completed
-      // complete-phone-login will require this proof before creating the full session
+      // Store a short-lived session nonce to prove OTP was completed.
+      // The nonce includes the code itself so complete-phone-login can bind to
+      // this specific session — preventing cross-session auth bypass.
       const sessionAny = req.session as any;
       sessionAny.verifiedPhone = normalised;
+      sessionAny.verifiedCode = trimmedCode; // bound to this session
       sessionAny.verifiedPhoneExpiry = Date.now() + 10 * 60 * 1000; // 10-minute window
       await new Promise<void>((resolve) => {
         if (req.session && typeof req.session.save === 'function') {
@@ -174,32 +176,29 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
   // POST /api/customer-auth/complete-phone-login
   // Called after OTP is verified and a wholesaler is selected.
-  // Requires a valid session nonce (set by verify-phone-otp) to prevent auth bypass.
+  // Requires { phoneNumber, code, wholesalerId }. The code is matched against
+  // the session nonce stored by verify-phone-otp, binding the request to
+  // the same session that completed OTP and preventing cross-session auth bypass.
   app.post('/api/customer-auth/complete-phone-login', async (req, res) => {
     try {
-      const { phoneNumber, wholesalerId } = req.body;
-      if (!phoneNumber || !wholesalerId) {
-        return res.status(400).json({ error: 'Phone number and wholesaler ID are required' });
+      const { phoneNumber, code, wholesalerId } = req.body;
+      if (!phoneNumber || !code || !wholesalerId) {
+        return res.status(400).json({ error: 'Phone number, code, and wholesaler ID are required' });
       }
 
       const normalised = phoneNumber.trim();
+      const trimmedCode = String(code).trim();
 
-      // Dual OTP proof: require EITHER (a) session nonce set by verify-phone-otp
-      // OR (b) a recently used DB record for this phone (grace window: 10 min).
-      // Both are checked; at least one must pass.
+      // Validate OTP proof via session nonce — session-bound, prevents cross-session bypass.
+      // The nonce stores verifiedPhone + verifiedCode + expiry set by verify-phone-otp.
       const sessionAny = req.session as any;
       const sessionNonceValid =
         sessionAny?.verifiedPhone === normalised &&
+        sessionAny?.verifiedCode === trimmedCode &&
         sessionAny?.verifiedPhoneExpiry &&
         Date.now() < sessionAny.verifiedPhoneExpiry;
 
-      let dbGraceValid = false;
       if (!sessionNonceValid) {
-        const recentVerification = await storage.findRecentlyUsedPhoneVerification(normalised, 10);
-        dbGraceValid = !!recentVerification;
-      }
-
-      if (!sessionNonceValid && !dbGraceValid) {
         return res.status(403).json({ error: 'Phone verification required or expired. Please verify your code first.' });
       }
 

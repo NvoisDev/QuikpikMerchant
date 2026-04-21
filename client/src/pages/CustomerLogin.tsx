@@ -198,7 +198,7 @@ export default function CustomerLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ phoneNumber: fullPhone, wholesalerId: opt.wholesalerId }),
+        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode, wholesalerId: opt.wholesalerId }),
       });
       const data = await res.json();
 
