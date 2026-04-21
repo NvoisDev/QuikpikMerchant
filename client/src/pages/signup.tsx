@@ -191,9 +191,12 @@ export default function Signup() {
       } else {
         // Show specific error message from server
         const errorMessage = result.message || "Please try again.";
+        const emailAlreadyExists = result.field === "email" || /already exists/i.test(errorMessage);
         toast({
-          title: "Signup failed",
-          description: errorMessage,
+          title: emailAlreadyExists ? "Account already exists" : "Signup failed",
+          description: emailAlreadyExists
+            ? "An account with this email already exists. If your previous signup took too long, try signing in instead."
+            : errorMessage,
           variant: "destructive",
         });
       }
@@ -202,7 +205,7 @@ export default function Signup() {
       toast({
         title: "Signup failed",
         description: error instanceof DOMException && error.name === "AbortError"
-          ? "Account creation is taking too long. Please try again in a moment."
+          ? "Account creation is taking too long. It may still finish in the background, so if retrying says the account exists, try signing in."
           : "Network error. Please check your connection and try again.",
         variant: "destructive",
       });
