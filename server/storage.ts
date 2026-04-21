@@ -4301,13 +4301,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined> {
+    // Throttle by createdAt regardless of isUsed — prevents rapid re-request
+    // after a successful OTP as well as unused ones.
     const cutoff = new Date(Date.now() - minutes * 60 * 1000);
     const [row] = await db
       .select({ id: customerPhoneVerifications.id })
       .from(customerPhoneVerifications)
       .where(and(
         eq(customerPhoneVerifications.phoneNumber, phoneNumber),
-        eq(customerPhoneVerifications.isUsed, false),
         gt(customerPhoneVerifications.createdAt, cutoff)
       ))
       .orderBy(desc(customerPhoneVerifications.createdAt))

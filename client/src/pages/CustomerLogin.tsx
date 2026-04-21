@@ -394,8 +394,8 @@ export default function CustomerLogin() {
                       autoComplete="one-time-code"
                       disabled={isLoading}
                     />
-                    {countdown > 0 && (
-                      <p className="text-xs text-blue-600 text-center">{formatCountdown(countdown)} remaining</p>
+                    {countdown > 60 && (
+                      <p className="text-xs text-blue-600 text-center">Resend available in {formatCountdown(countdown - 60)}</p>
                     )}
                   </div>
 

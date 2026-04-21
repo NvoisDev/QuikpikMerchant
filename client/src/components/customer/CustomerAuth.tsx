@@ -400,8 +400,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                 autoComplete="one-time-code"
                 disabled={isLoading}
               />
-              {countdown > 0 && (
-                <p className="text-xs text-blue-600 text-center">Code expires in {formatCountdown(countdown)}</p>
+              {countdown > 60 && (
+                <p className="text-xs text-blue-600 text-center">Resend available in {formatCountdown(countdown - 60)}</p>
               )}
             </div>
 

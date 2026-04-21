@@ -247,8 +247,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
         groupName,
       };
 
-      // Clear the OTP nonce before creating the full session
+      // Clear the full OTP nonce before creating the full session
       sessionAny.verifiedPhone = undefined;
+      sessionAny.verifiedCode = undefined;
       sessionAny.verifiedPhoneExpiry = undefined;
 
       await buildAndSaveCustomerSession(req, res, customer, wholesalerId);
