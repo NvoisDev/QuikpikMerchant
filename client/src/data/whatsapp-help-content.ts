@@ -135,6 +135,32 @@ export const helpContent = {
         tip: "A simple, clear logo works best - it will be resized for different contexts automatically."
       }
     ]
+  },
+
+  priceLists: {
+    title: "Managing Price Lists",
+    steps: [
+      {
+        title: "What are Price Lists?",
+        content: "Price lists let you offer different prices to different customers or groups. Create a list, add products with custom prices, then assign it to specific customers.",
+        tip: "Use price lists for VIP customers, seasonal promotions, or different regional pricing."
+      },
+      {
+        title: "Adding Products",
+        content: "Click 'Manage' on a price list to add products and set a custom price for each one. Customers assigned to this list will see your custom prices instead of the standard price.",
+        tip: "You can override both unit price and pallet price independently per product."
+      },
+      {
+        title: "Assigning to Customers",
+        content: "Open a price list and click 'Assigned' to link it to individual customers or whole groups. A customer can only be on one active price list at a time.",
+        tip: "Price list prices take priority, so make sure your custom prices are intentional."
+      },
+      {
+        title: "Start and End Dates",
+        content: "Set optional start and end dates to schedule a price list in advance — useful for seasonal deals or contract periods.",
+        tip: "Leave dates blank to make a price list permanent until you manually deactivate it."
+      }
+    ]
   }
 };
 
@@ -261,32 +287,6 @@ export const whatsappHelpContent = {
         title: "Engagement Optimization",
         content: "Monitor message delivery and response rates. Engaged customers are more likely to receive future messages, so focus on quality over quantity.",
         tip: "Customers who respond positively are prioritized by WhatsApp's algorithm for future deliveries."
-      }
-    ]
-  },
-
-  priceLists: {
-    title: "Managing Price Lists",
-    steps: [
-      {
-        title: "What are Price Lists?",
-        content: "Price lists let you offer different prices to different customers or groups. Create a list, add products with custom prices, then assign it to specific customers.",
-        tip: "Use price lists for VIP customers, seasonal promotions, or different regional pricing."
-      },
-      {
-        title: "Adding Products",
-        content: "Click 'Manage' on a price list to add products and set a custom price for each one. Customers assigned to this list will see your custom prices instead of the standard price.",
-        tip: "You can override both unit price and pallet price independently per product."
-      },
-      {
-        title: "Assigning to Customers",
-        content: "Open a price list and click 'Assigned' to link it to individual customers or whole groups. A customer can only be on one active price list at a time.",
-        tip: "Price list prices take priority, so make sure your custom prices are intentional."
-      },
-      {
-        title: "Start and End Dates",
-        content: "Set optional start and end dates to schedule a price list in advance — useful for seasonal deals or contract periods.",
-        tip: "Leave dates blank to make a price list permanent until you manually deactivate it."
       }
     ]
   }
