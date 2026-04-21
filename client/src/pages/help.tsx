@@ -60,7 +60,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 ### Key Features
 
-- **Customer Portal**: Customers can browse your catalogue, request access, and place orders once approved
+- **Customer Portal**: Customers can browse your catalog, request access, and place orders once approved
 - **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
 - **WhatsApp Messaging**: Send supported customer notifications now and prepare groups for future broadcast campaigns
 - **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports
@@ -1360,7 +1360,7 @@ Regardless of subscription plan:
         content: `
 ### Understanding the Customer Portal
 
-The Customer Portal is a dedicated shopping interface where approved customers can browse products, place orders, and make payments. Guests can browse your catalogue when guest browsing is enabled, but prices and ordering require customer access.
+The Customer Portal is a dedicated shopping interface where approved customers can browse products, place orders, and make payments. Guests can browse your catalog when guest browsing is enabled, but prices and ordering require customer access.
 
 #### Key Features
 - **Simple Customer Access**: Approved customers sign in with SMS verification instead of a password
@@ -1776,7 +1776,7 @@ Quikpik supports multiple independent wholesalers, each with their own customer 
 #### Customer Registration Requirements
 
 **Browsing vs Purchasing**:
-- ✅ **Guest browsing**: Customers can view your catalogue when guest browsing is enabled, but prices and ordering stay locked until registration
+- ✅ **Guest browsing**: Customers can view your catalog when guest browsing is enabled, but prices and ordering stay locked until registration
 - ❌ **Purchase requires registration**: Customers must be registered with each specific wholesaler
 
 #### Why Per-Wholesaler Registration?
@@ -1797,7 +1797,7 @@ This approach maintains the **B2B wholesale model** because:
 
 **Customer Journey**:
 1. Customer opens your store link
-2. Customer can browse your catalogue where guest browsing is available
+2. Customer can browse your catalog where guest browsing is available
 3. When ready to purchase, they must be registered in your customer database
 4. If not registered, they can request access or contact you to register
 5. You approve their registration and add them to customer groups or price lists as needed
