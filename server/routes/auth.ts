@@ -1241,6 +1241,7 @@ export function registerAuthRoutes(app: Express): void {
 
   // POST /api/auth/signup
   app.post('/api/auth/signup', async (req, res) => {
+    const signupLogId = `signup-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     try {
       const {
         firstName,
@@ -1260,9 +1261,12 @@ export function registerAuthRoutes(app: Express): void {
         businessType,
         estimatedMonthlyVolume
       } = req.body;
+      const emailDomain = typeof email === 'string' && email.includes('@') ? email.split('@').pop() : 'missing';
+      console.log(`[${signupLogId}] Signup started`, { emailDomain, hasBusinessName: !!businessName });
 
       // CRITICAL FIX: Validate required fields including password
       if (!email || !password || !firstName || !lastName) {
+        console.log(`[${signupLogId}] Signup validation failed: missing required fields`);
         return res.status(400).json({ 
           message: "Email, password, first name, and last name are required",
           field: "validation"
@@ -1272,6 +1276,7 @@ export function registerAuthRoutes(app: Express): void {
       // CRITICAL FIX: Validate password strength
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.isStrong) {
+        console.log(`[${signupLogId}] Signup validation failed: weak password`);
         return res.status(400).json({ 
           message: "Password does not meet security requirements",
           field: "password",
@@ -1280,8 +1285,11 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       // Check if user already exists
+      console.log(`[${signupLogId}] Checking existing user`);
       const existingUser = await storage.getUserByEmail(email);
+      console.log(`[${signupLogId}] Existing user check complete`);
       if (existingUser) {
+        console.log(`[${signupLogId}] Signup blocked: email already exists`);
         return res.status(400).json({ 
           message: "An account with this email already exists",
           field: "email"
@@ -1317,9 +1325,12 @@ export function registerAuthRoutes(app: Express): void {
       };
 
       // CRITICAL FIX: Use createUserWithPassword to hash and store password
-      const newUser = await storage.createUserWithPassword(userData, password);
+      console.log(`[${signupLogId}] Creating user with password`);
+      const newUser = await storage.createUserWithPassword(userData, password, (step) => {
+        console.log(`[${signupLogId}] ${step}`);
+      });
       
-      console.log(`✅ New user account created with secure password for ${email}`);
+      console.log(`[${signupLogId}] User created successfully`, { userId: newUser.id });
 
       // Create session for the new user
       (req.session as any).user = {
@@ -1330,6 +1341,18 @@ export function registerAuthRoutes(app: Express): void {
         role: newUser.role,
         businessName: newUser.businessName
       };
+      console.log(`[${signupLogId}] Session user set`);
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+      console.log(`[${signupLogId}] Session saved`);
 
       res.json({
         success: true,
@@ -1343,9 +1366,10 @@ export function registerAuthRoutes(app: Express): void {
           businessName: newUser.businessName
         }
       });
+      console.log(`[${signupLogId}] Signup response sent`);
 
     } catch (error) {
-      console.error("Signup error:", error);
+      console.error(`[${signupLogId}] Signup error:`, error);
       res.status(500).json({ message: "Failed to create account. Please try again." });
     }
   });

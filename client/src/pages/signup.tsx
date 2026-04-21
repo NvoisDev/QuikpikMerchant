@@ -157,6 +157,8 @@ export default function Signup() {
     }
     
     setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -164,9 +166,10 @@ export default function Signup() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+        signal: controller.signal,
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({ message: "We couldn't read the signup response. Please try again." }));
 
       if (response.ok && result.success) {
         // Show comprehensive welcome message
@@ -198,10 +201,13 @@ export default function Signup() {
       console.error('Signup error:', error);
       toast({
         title: "Signup failed",
-        description: "Network error. Please check your connection and try again.",
+        description: error instanceof DOMException && error.name === "AbortError"
+          ? "Account creation is taking too long. Please try again in a moment."
+          : "Network error. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
+      window.clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };

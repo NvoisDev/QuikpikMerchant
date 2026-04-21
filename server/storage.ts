@@ -91,7 +91,7 @@ export interface IStorage {
   updateUserOnboarding(id: string, onboardingData: { onboardingStep?: number; onboardingCompleted?: boolean; onboardingSkipped?: boolean }): Promise<User>;
   
   // Password authentication methods
-  createUserWithPassword(userData: Partial<UpsertUser>, password: string): Promise<User>;
+  createUserWithPassword(userData: Partial<UpsertUser>, password: string, onProgress?: (step: string) => void): Promise<User>;
   authenticateUser(email: string, password: string): Promise<User | null>;
   updateUserPassword(id: string, newPassword: string): Promise<User>;
   
@@ -530,9 +530,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Password authentication methods
-  async createUserWithPassword(userData: Partial<UpsertUser>, password: string): Promise<User> {
+  async createUserWithPassword(userData: Partial<UpsertUser>, password: string, onProgress?: (step: string) => void): Promise<User> {
     // Hash the password before storing
     const passwordHash = await hashPassword(password);
+    onProgress?.('password_hash_done');
     
     const userDataWithPassword = {
       ...userData,
@@ -543,6 +544,7 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values(userDataWithPassword as any)
       .returning();
+    onProgress?.('user_insert_done');
     return user;
   }
 

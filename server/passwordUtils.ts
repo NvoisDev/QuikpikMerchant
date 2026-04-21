@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs';
  * @returns Promise<string> - Hashed password
  */
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12; // Higher salt rounds for better security
+  const saltRounds = 10;
   return await bcrypt.hash(password, saltRounds);
 }
 
