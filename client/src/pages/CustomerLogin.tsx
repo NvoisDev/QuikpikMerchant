@@ -83,8 +83,11 @@ export default function CustomerLogin() {
   // Full phone (normalised E.164): strip leading 0 from local part
   const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
 
-  // Session resume: if an active customer session exists, redirect to their store
+  // Session resume: if an active customer session exists, redirect to their store.
+  // Skip when ?loggedOut=1 is present — the user just intentionally logged out.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('loggedOut') === '1') return;
     (async () => {
       try {
         const res = await fetch('/api/customer-auth/check-session', { credentials: 'include' });

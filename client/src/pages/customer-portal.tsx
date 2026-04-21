@@ -2200,8 +2200,8 @@ export default function CustomerPortal() {
           description: "You have been successfully logged out.",
         });
         
-        // Redirect to customer-login page
-        window.location.href = '/customer-login';
+        // Redirect to customer-login page — ?loggedOut=1 suppresses session-resume check
+        window.location.href = '/customer-login?loggedOut=1';
       }
     } catch (error) {
       console.error("Logout error:", error);

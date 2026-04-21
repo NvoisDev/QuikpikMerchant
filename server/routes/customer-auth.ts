@@ -831,12 +831,21 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.post('/api/customer-auth/logout', async (req, res) => {
     try {
       const customerAuth = (req.session as any)?.customerAuth;
-      
       if (customerAuth) {
         console.log(`🔓 Customer logout: ${customerAuth.name} (${customerAuth.phone})`);
-        delete (req.session as any).customerAuth;
       }
-      
+
+      // Clear the customer_auth cookie so check-session cannot auto-resume.
+      res.clearCookie('customer_auth', { path: '/' });
+
+      // Destroy the full session (covers both cookie and session-based auth).
+      await new Promise<void>((resolve) => {
+        req.session.destroy((err: any) => {
+          if (err) console.error('❌ Session destroy error on logout:', err);
+          resolve();
+        });
+      });
+
       res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {
       console.error("Customer logout error:", error);
