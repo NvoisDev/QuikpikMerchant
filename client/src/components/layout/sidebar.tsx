@@ -72,6 +72,14 @@ export default function Sidebar() {
     enabled: !!user,
   });
 
+  const { data: pendingOrderData } = useQuery<{ count: number }>({
+    queryKey: ["/api/orders/pending-count"],
+    enabled: !!user && checkTabAccess("orders"),
+    refetchInterval: 60_000,
+    staleTime: 0,
+  });
+  const pendingOrderCount = pendingOrderData?.count ?? 0;
+
   const isPremiumUser = subscriptionData?.user?.currentPlan === "premium";
   const isStandardUser = subscriptionData?.user?.currentPlan === "standard";
   const isFreeUser = !isPremiumUser && !isStandardUser;
@@ -164,6 +172,9 @@ export default function Sidebar() {
                 const showSoonBadge = item.comingSoon || item.soonBadge;
                 if (!checkTabAccess(item.tabName)) return null;
 
+                const isOrders = item.name === "Orders";
+                const showOrderBadge = isOrders && pendingOrderCount > 0;
+
                 const itemContent = (
                   <Link
                     href={isComingSoon ? "#" : isLocked ? "/subscription-pricing" : item.href}
@@ -188,13 +199,20 @@ export default function Sidebar() {
                       data-onboarding={item.onboardingId}
                     >
                       <div className={cn("flex items-center min-w-0", !dc && "flex-1")}>
-                        <IconComponent
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0",
-                            dc ? "lg:mr-0 mr-3" : "mr-3",
-                            isActive ? "text-emerald-400" : (isLocked || isComingSoon) ? "text-slate-600" : "text-slate-500"
+                        {/* Icon — wrap in relative container for Orders dot indicator */}
+                        <span className="relative flex-shrink-0">
+                          <IconComponent
+                            className={cn(
+                              "h-4 w-4",
+                              dc ? "lg:mr-0 mr-3" : "mr-3",
+                              isActive ? "text-emerald-400" : (isLocked || isComingSoon) ? "text-slate-600" : "text-slate-500"
+                            )}
+                          />
+                          {/* Dot indicator — desktop icon-rail only when collapsed */}
+                          {showOrderBadge && dc && (
+                            <span className="hidden lg:block absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
                           )}
-                        />
+                        </span>
                         {/* Label: always visible on mobile, hidden on desktop when collapsed */}
                         <span className={cn("flex-1 truncate", dc && "lg:hidden")}>
                           {item.name}
@@ -204,6 +222,11 @@ export default function Sidebar() {
                       {/* Badges: hidden on desktop when collapsed */}
                       {!dc && (
                         <>
+                          {showOrderBadge && (
+                            <span className="ml-auto text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
+                              {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
+                            </span>
+                          )}
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
@@ -214,7 +237,12 @@ export default function Sidebar() {
                       )}
                       {/* On mobile when dc=true, still show badges */}
                       {dc && (
-                        <span className="lg:hidden">
+                        <span className="lg:hidden flex items-center gap-1.5">
+                          {showOrderBadge && (
+                            <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
+                              {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
+                            </span>
+                          )}
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
@@ -237,7 +265,9 @@ export default function Sidebar() {
                       side="right"
                       className="hidden lg:block bg-slate-800 text-slate-100 border-slate-700"
                     >
-                      {item.name}{showSoonBadge ? " (Coming soon)" : ""}
+                      {item.name}
+                      {showSoonBadge ? " (Coming soon)" : ""}
+                      {showOrderBadge ? ` — ${pendingOrderCount} pending` : ""}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

@@ -568,6 +568,27 @@ export function registerOrderRoutes(app: Express): void {
     }
   });
 
+  // GET /api/orders/pending-count — lightweight badge endpoint for the sidebar
+  app.get('/api/orders/pending-count', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(and(
+          eq(orders.wholesalerId, wholesalerId),
+          eq(orders.status, 'pending')
+        ));
+
+      res.json({ count: Number(result[0]?.count || 0) });
+    } catch (error) {
+      console.error("Error fetching pending order count:", error);
+      res.status(500).json({ message: "Failed to fetch count" });
+    }
+  });
+
   // GET /api/orders
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
