@@ -931,6 +931,7 @@ export default function CustomerPortal() {
   const [openRequestAccessOnAuth, setOpenRequestAccessOnAuth] = useState(false);
   const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;
   const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;
+  const shouldFetchGuestSafeProducts = !hasCustomerSession && !isEnhancedPreviewMode;
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1325,12 +1326,12 @@ export default function CustomerPortal() {
 
   // Fetch all products for the wholesaler with controlled refresh
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
-    queryKey: ['wholesaler-products', wholesalerId, hasCustomerSession, isTrueGuestMode],
+    queryKey: ['wholesaler-products', wholesalerId, hasCustomerSession, shouldFetchGuestSafeProducts],
     queryFn: async () => {
       console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
       console.log(`🌐 Current domain: ${window.location.origin}`);
       console.log(`🔍 Fetching products for wholesaler: ${wholesalerId}`);
-      const guestParam = isTrueGuestMode ? '?guest=true' : '';
+      const guestParam = shouldFetchGuestSafeProducts ? '?guest=true' : '';
       const response = await fetch(`/api/customer-products/${wholesalerId}${guestParam}`);
       console.log(`📡 API Response status: ${response.status}`);
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));

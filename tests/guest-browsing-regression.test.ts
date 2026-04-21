@@ -85,6 +85,7 @@ describe('guest browsing regression coverage', () => {
 
     expect(customerPortalSource).toContain('const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;');
     expect(customerPortalSource).toContain('const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;');
+    expect(customerPortalSource).toContain('const shouldFetchGuestSafeProducts = !hasCustomerSession && !isEnhancedPreviewMode;');
     expect(addToCartBlock).toContain('if (!hasCustomerSession) {');
     expect(addToCartBlock).toContain('setShowGuestSignInModal(true);');
     expect(addToCartBlock).toContain('}, [toast, isEnhancedPreviewMode, hasCustomerSession]);');
@@ -92,7 +93,7 @@ describe('guest browsing regression coverage', () => {
     expect(authSuccessBlock).toContain('setShowGuestSignInModal(false);');
     expect(sessionSuccessBlock).toContain('setShowGuestSignInModal(false);');
     expect(customerPortalSource).toContain('{showGuestSignInModal && !hasCustomerSession && (');
-    expect(customerPortalSource).toContain("const guestParam = isTrueGuestMode ? '?guest=true' : '';");
+    expect(customerPortalSource).toContain("const guestParam = shouldFetchGuestSafeProducts ? '?guest=true' : '';");
   });
 
   it('formats guest catalogue selling format and safe stock rows', () => {
