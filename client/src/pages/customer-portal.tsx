@@ -2614,8 +2614,8 @@ export default function CustomerPortal() {
             </div>
           </div>
 
-          {/* Results area — pb-40 accounts for the taller two-button sticky footer */}
-          <div className="flex-1 overflow-y-auto px-4 pb-40">
+          {/* Results area */}
+          <div className="flex-1 overflow-y-auto px-4 pb-28">
             {wholesalersLoading ? (
               <div className="space-y-3 mt-2">
                 {[...Array(4)].map((_, i) => (
@@ -2682,14 +2682,30 @@ export default function CustomerPortal() {
                   </div>
                   <div className="flex-shrink-0">
                     {wholesalerItem.canRequestAccess ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-8 px-3"
-                        onClick={(e) => { e.stopPropagation(); handleRequestAccess(wholesalerItem); }}
-                      >
-                        Request Access
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-8 px-3"
+                          onClick={(e) => { e.stopPropagation(); handleRequestAccess(wholesalerItem); }}
+                        >
+                          Request Access
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-8 px-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowWholesalerSearch(false);
+                            setWholesalerSearchQuery("");
+                            handleSkipAuth();
+                            setLocation(`/store/${wholesalerItem.id}?guest=true`);
+                          }}
+                        >
+                          View as Guest
+                        </Button>
+                      </div>
                     ) : wholesalerItem.isAccessible ? (
                       <div className="flex items-center text-green-600">
                         <CheckCircle className="w-4 h-4 mr-1" />
@@ -2746,7 +2762,7 @@ export default function CustomerPortal() {
           </div>
 
           {/* Sticky search button */}
-          <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white border-t border-gray-100 space-y-2">
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white border-t border-gray-100">
             <button
               className="w-full py-4 btn-theme-primary rounded-2xl text-base font-semibold"
               onClick={() => {
@@ -2756,16 +2772,6 @@ export default function CustomerPortal() {
               }}
             >
               Search
-            </button>
-            <button
-              className="w-full py-3 rounded-2xl text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={() => {
-                setShowWholesalerSearch(false);
-                setWholesalerSearchQuery('');
-                handleSkipAuth();
-              }}
-            >
-              View as Guest
             </button>
           </div>
 
