@@ -2909,36 +2909,15 @@ export default function CustomerPortal() {
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7 overflow-hidden relative">
               <div className="absolute -top-12 -right-12 w-36 h-36 bg-green-50 rounded-full" />
-              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
-                <Logo
-                  size="lg"
-                  variant="icon-only"
-                  className="w-16 h-16 rounded-2xl shadow-sm flex-shrink-0"
-                  user={{
-                    logoType: wholesaler?.logoType || 'business',
-                    logoUrl: wholesaler?.logoUrl,
-                    businessName: wholesaler?.businessName,
-                    firstName: wholesaler?.firstName,
-                    lastName: wholesaler?.lastName
-                  }}
-                />
+              <div className="relative z-10">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-green-700 mb-1">
                     {timeGreeting} — browse {wholesaler?.businessName || 'this wholesale store'}
                   </p>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
-                    {wholesaler?.businessName || 'Wholesale Store'}
-                  </h2>
                   <p className="text-gray-500 mt-1 max-w-2xl">
                     {wholesaler?.storeTagline || 'Browse available wholesale products. Sign in or request access to unlock prices and place orders.'}
                   </p>
                 </div>
-                <Button
-                  onClick={openCustomerRequestAccess}
-                  className="rounded-full bg-green-600 hover:bg-green-700 text-white font-semibold px-5"
-                >
-                  Request Access
-                </Button>
               </div>
             </div>
 
