@@ -1173,7 +1173,7 @@ When launched, the marketplace is planned to help:
 - Businesses build new supplier relationships through Quikpik
 
 #### Where to Find It
-Use the **Marketplace** page in the sidebar to view the current marketplace area and future updates.
+Use the **Marketplace** page in the sidebar, or go to **/marketplace**, to view the current marketplace intro and future updates.
 
 #### What You Can Do Now
 Until marketplace browsing launches:
