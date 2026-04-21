@@ -84,6 +84,7 @@ describe('guest browsing regression coverage', () => {
     expect(helpPageSource).toContain('the customer transaction fee is not wholesaler revenue');
     expect(helpPageSource).toContain('No platform fee or customer transaction fee is collected unless an online payment is made later');
     expect(helpPageSource).not.toContain('The Quikpik B2B wholesale marketplace is **coming soon**');
+    expect(helpPageSource).not.toContain('Marketplace product discovery is coming soon');
     expect(helpPageSource).not.toContain('Last 4 digits of their registered phone number');
   });
 

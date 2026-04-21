@@ -1666,7 +1666,7 @@ A: Check your subscription plan's product limit. Free plan allows 10 products, S
 A: Ensure images are under 500KB and max 800x600px. Supported formats: JPG, PNG, GIF.
 
 **Q: Products not appearing in my customer portal**
-A: Make sure product status is set to "Active" and you have stock available. Marketplace product discovery is coming soon.
+A: Make sure product status is set to "Active" and you have stock available. Customers can discover seller stores, but product visibility still depends on your store settings, product status, and guest browsing/access rules.
 
 #### WhatsApp Messaging Issues
 
