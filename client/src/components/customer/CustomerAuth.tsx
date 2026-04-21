@@ -825,7 +825,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               </Button>
             </form>
 
-            {onSkipAuth && (
+            {onSkipAuth && error !== "CUSTOMER_NOT_FOUND" && (
               <div className="mt-2">
                 <button
                   type="button"

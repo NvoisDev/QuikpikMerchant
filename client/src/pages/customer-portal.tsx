@@ -160,6 +160,42 @@ const PriceDisplay = ({
   );
 };
 
+const getSellingFormatLabel = (sellingFormat?: Product["sellingFormat"] | null) => {
+  if (sellingFormat === "pallets") return "Full Pallets";
+  if (sellingFormat === "both") return "Units & Pallets";
+  return "Individual Units";
+};
+
+const getGuestStockValue = (stock: unknown) => {
+  const value = typeof stock === "number" ? stock : Number(stock);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const getGuestStockRows = (product: Product) => {
+  const sellingFormat = product.sellingFormat || "units";
+  const unitStock = getGuestStockValue(product.stock);
+  const palletStock = getGuestStockValue(product.palletStock);
+  const rows: Array<{ type: "units" | "pallets"; text: string; available: boolean }> = [];
+
+  if (sellingFormat === "units" || sellingFormat === "both") {
+    rows.push({
+      type: "units",
+      text: unitStock > 0 ? `${formatNumber(unitStock)} units available` : "Units unavailable or limited",
+      available: unitStock > 0,
+    });
+  }
+
+  if (sellingFormat === "pallets" || sellingFormat === "both") {
+    rows.push({
+      type: "pallets",
+      text: palletStock > 0 ? `${formatNumber(palletStock)} pallets available` : "Pallets unavailable or limited",
+      available: palletStock > 0,
+    });
+  }
+
+  return rows;
+};
+
 // Loading skeleton components
 const ProductCardSkeleton = () => (
   <Card className="h-full">
@@ -2159,10 +2195,16 @@ export default function CustomerPortal() {
   // Handle guest browse - skip authentication
   const handleSkipAuth = () => {
     setOpenRequestAccessOnAuth(false);
+    setShowGuestSignInModal(false);
     setShowAuth(false);
     setIsGuestMode(true);
     setIsAuthenticated(false);
+    setAuthenticatedCustomer(null);
+    setCart([]);
+    setSearchTerm("");
     const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete('auth');
+    nextUrl.searchParams.delete('login');
     nextUrl.searchParams.set('guest', 'true');
     window.history.replaceState({}, '', nextUrl.toString());
   };
@@ -2943,6 +2985,7 @@ export default function CustomerPortal() {
                   {filteredProducts.map((product) => {
                     const extraImages = "images" in product && Array.isArray(product.images) ? product.images : [];
                     const image = product.imageUrl || extraImages.find(Boolean);
+                    const guestStockRows = getGuestStockRows(product);
                     return (
                       <Card key={product.id} className="rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow bg-white">
                         <CardContent className="p-0">
@@ -2963,12 +3006,29 @@ export default function CustomerPortal() {
                               )}
                             </div>
                             <div className="flex flex-wrap gap-1.5">
+                              <span className="text-xs bg-green-50 text-green-700 border border-green-100 rounded-full px-2 py-1">
+                                {getSellingFormatLabel(product.sellingFormat)}
+                              </span>
                               {product.category && (
                                 <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2 py-1">{product.category}</span>
                               )}
                               {product.moq && product.moq > 1 && (
                                 <span className="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-1">MOQ {product.moq}</span>
                               )}
+                            </div>
+                            <div className="space-y-1 rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                              {guestStockRows.map((row) => {
+                                const Icon = row.type === "units" ? Hash : Package2;
+                                return (
+                                  <div
+                                    key={row.type}
+                                    className={`flex items-center gap-2 text-xs font-medium ${row.available ? row.type === "units" ? "text-green-700" : "text-blue-700" : "text-amber-700"}`}
+                                  >
+                                    <Icon className="w-3.5 h-3.5" />
+                                    <span>{row.text}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                             <div className="flex items-center justify-between gap-3 pt-1">
                               <PriceDisplay price={null} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={true} size="medium" />
