@@ -199,7 +199,7 @@ export interface IStorage {
   
   // Phone OTP operations (new login flow — no wholesaler required upfront)
   createPhoneVerification(phoneNumber: string, code: string, expiresAt: Date, ipAddress?: string): Promise<void>;
-  getPhoneVerification(phoneNumber: string, code: string): Promise<{ id: number; expiresAt: Date; isUsed: boolean; attempts: number } | undefined>;
+  getLatestPendingPhoneVerification(phoneNumber: string): Promise<{ id: number; code: string; expiresAt: Date; isUsed: boolean; attempts: number } | undefined>;
   markPhoneVerificationUsed(id: number): Promise<void>;
   incrementPhoneVerificationAttempts(id: number): Promise<void>;
   getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined>;
@@ -4260,11 +4260,17 @@ export class DatabaseStorage implements IStorage {
     await db.insert(customerPhoneVerifications).values({ phoneNumber, code, expiresAt, ipAddress });
   }
 
-  async getPhoneVerification(phoneNumber: string, code: string): Promise<{ id: number; expiresAt: Date; isUsed: boolean; attempts: number } | undefined> {
+  async getLatestPendingPhoneVerification(phoneNumber: string): Promise<{ id: number; code: string; expiresAt: Date; isUsed: boolean; attempts: number } | undefined> {
     const [row] = await db
-      .select({ id: customerPhoneVerifications.id, expiresAt: customerPhoneVerifications.expiresAt, isUsed: customerPhoneVerifications.isUsed, attempts: customerPhoneVerifications.attempts })
+      .select({
+        id: customerPhoneVerifications.id,
+        code: customerPhoneVerifications.code,
+        expiresAt: customerPhoneVerifications.expiresAt,
+        isUsed: customerPhoneVerifications.isUsed,
+        attempts: customerPhoneVerifications.attempts,
+      })
       .from(customerPhoneVerifications)
-      .where(and(eq(customerPhoneVerifications.phoneNumber, phoneNumber), eq(customerPhoneVerifications.code, code)))
+      .where(eq(customerPhoneVerifications.phoneNumber, phoneNumber))
       .orderBy(desc(customerPhoneVerifications.createdAt))
       .limit(1);
     return row;

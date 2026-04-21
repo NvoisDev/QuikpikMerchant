@@ -107,25 +107,55 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const normalised = phoneNumber.trim();
       const trimmedCode = code.trim();
 
-      const record = await storage.getPhoneVerification(normalised, trimmedCode);
+      // Fetch the most recent verification record for this phone (regardless of code)
+      const record = await storage.getLatestPendingPhoneVerification(normalised);
+
       if (!record) {
-        return res.status(401).json({ error: 'Invalid verification code' });
+        return res.status(401).json({ error: 'No pending verification found. Please request a new code.' });
       }
 
-      if (record.isUsed) {
-        return res.status(401).json({ error: 'Verification code has already been used' });
-      }
-
-      if (new Date() > record.expiresAt) {
-        return res.status(401).json({ error: 'Verification code has expired' });
-      }
-
+      // Check attempt limit first (before incrementing for this failure)
       if (record.attempts >= 5) {
-        return res.status(401).json({ error: 'Too many attempts. Please request a new code.' });
+        return res.status(401).json({ error: 'Too many failed attempts. Please request a new code.' });
       }
 
-      // Mark used
+      // Check if already used
+      if (record.isUsed) {
+        return res.status(401).json({ error: 'This code has already been used. Please request a new one.' });
+      }
+
+      // Check expiry
+      if (new Date() > record.expiresAt) {
+        return res.status(401).json({ error: 'Verification code has expired. Please request a new one.' });
+      }
+
+      // Compare codes — increment attempts on any mismatch
+      if (record.code !== trimmedCode) {
+        await storage.incrementPhoneVerificationAttempts(record.id);
+        const remaining = 5 - (record.attempts + 1);
+        return res.status(401).json({
+          error: remaining > 0
+            ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+            : 'Invalid code. No more attempts — please request a new code.',
+        });
+      }
+
+      // Code is correct — mark as used
       await storage.markPhoneVerificationUsed(record.id);
+
+      // Store a short-lived session nonce to prove OTP was completed
+      // complete-phone-login will require this proof before creating the full session
+      const sessionAny = req.session as any;
+      sessionAny.verifiedPhone = normalised;
+      sessionAny.verifiedPhoneExpiry = Date.now() + 10 * 60 * 1000; // 10-minute window
+      await new Promise<void>((resolve) => {
+        if (req.session && typeof req.session.save === 'function') {
+          req.session.save((err: any) => {
+            if (err) console.error('❌ Session save error (nonce):', err);
+            resolve();
+          });
+        } else resolve();
+      });
 
       // Find all wholesalers linked to this phone
       const wholesalers = await storage.findCustomersByPhone(normalised);
@@ -143,7 +173,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-auth/complete-phone-login
-  // Called after OTP is verified and wholesaler is selected.
+  // Called after OTP is verified and a wholesaler is selected.
+  // Requires a valid session nonce (set by verify-phone-otp) to prevent auth bypass.
   app.post('/api/customer-auth/complete-phone-login', async (req, res) => {
     try {
       const { phoneNumber, wholesalerId } = req.body;
@@ -152,6 +183,18 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       const normalised = phoneNumber.trim();
+
+      // Require OTP proof via session nonce — prevents auth bypass
+      const sessionAny = req.session as any;
+      const verifiedPhone: string | undefined = sessionAny?.verifiedPhone;
+      const verifiedPhoneExpiry: number | undefined = sessionAny?.verifiedPhoneExpiry;
+
+      if (!verifiedPhone || verifiedPhone !== normalised) {
+        return res.status(403).json({ error: 'Phone verification required. Please verify your code first.' });
+      }
+      if (!verifiedPhoneExpiry || Date.now() > verifiedPhoneExpiry) {
+        return res.status(403).json({ error: 'Phone verification expired. Please verify your code again.' });
+      }
 
       // Find the customer record for this phone + wholesaler combination
       const matches = await storage.findCustomersByPhone(normalised);
@@ -198,6 +241,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
         groupName,
       };
 
+      // Clear the OTP nonce before creating the full session
+      sessionAny.verifiedPhone = undefined;
+      sessionAny.verifiedPhoneExpiry = undefined;
+
       await buildAndSaveCustomerSession(req, res, customer, wholesalerId);
       console.log(`🔐 Phone-OTP session created for ${customerName} → wholesaler ${wholesalerId}`);
 
@@ -218,10 +265,43 @@ export function registerCustomerAuthRoutes(app: Express): void {
     }
   });
 
+  // GET /api/customer-auth/check-session
+  // Wholesaler-agnostic session check. Returns {authenticated, wholesalerId} from current cookie.
+  app.get('/api/customer-auth/check-session', async (req, res) => {
+    try {
+      // Try session-based auth
+      const sessionAny = req.session as any;
+      if (sessionAny?.customerAuth?.wholesalerId && sessionAny?.customerAuth?.customerId) {
+        const expiry = sessionAny.customerAuth.expiresAt ? new Date(sessionAny.customerAuth.expiresAt) : null;
+        if (!expiry || expiry > new Date()) {
+          return res.json({ authenticated: true, wholesalerId: sessionAny.customerAuth.wholesalerId });
+        }
+      }
+      // Try cookie-based auth
+      const cookieVal = req.cookies?.customer_auth;
+      if (cookieVal) {
+        try {
+          const parsed = JSON.parse(Buffer.from(cookieVal, 'base64').toString('utf8'));
+          if (parsed?.wholesalerId && parsed?.expires && Date.now() < parsed.expires) {
+            return res.json({ authenticated: true, wholesalerId: parsed.wholesalerId });
+          }
+        } catch {
+          // malformed cookie
+        }
+      }
+      return res.json({ authenticated: false });
+    } catch (err) {
+      console.error('check-session error:', err);
+      return res.json({ authenticated: false });
+    }
+  });
+
   // ─── LEGACY ENDPOINTS (deprecated — kept for backward compat) ────────────
 
   // POST /api/customer-auth/verify
+  // @deprecated — replaced by /request-phone-otp + /verify-phone-otp + /complete-phone-login
   app.post('/api/customer-auth/verify', async (req, res) => {
+    console.warn('⚠️  DEPRECATED: /api/customer-auth/verify — use phone-OTP endpoints instead');
     try {
       const { wholesalerId, lastFourDigits } = req.body;
       
@@ -254,7 +334,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-auth/request-sms
+  // @deprecated — replaced by /request-phone-otp
   app.post('/api/customer-auth/request-sms', async (req, res) => {
+    console.warn('⚠️  DEPRECATED: /api/customer-auth/request-sms — use /request-phone-otp instead');
     try {
       const { wholesalerId, lastFourDigits } = req.body;
       
@@ -365,7 +447,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-auth/verify-sms
+  // @deprecated — replaced by /verify-phone-otp + /complete-phone-login
   app.post('/api/customer-auth/verify-sms', async (req, res) => {
+    console.warn('⚠️  DEPRECATED: /api/customer-auth/verify-sms — use /verify-phone-otp + /complete-phone-login instead');
     try {
       const { wholesalerId, lastFourDigits, smsCode } = req.body;
       

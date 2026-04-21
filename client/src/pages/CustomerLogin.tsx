@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, User, Send, ShieldCheck, Phone } from "lucide-react";
+import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, ShieldCheck, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface WholesalerOption {
@@ -17,7 +17,7 @@ interface WholesalerOption {
   logoType: string | null;
 }
 
-type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
+type LoginStep = 'phone' | 'otp' | 'select' | 'no-account';
 
 const COUNTRY_CODE = '+44';
 
@@ -69,20 +69,27 @@ export default function CustomerLogin() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
-  const [selectedWholesaler, setSelectedWholesaler] = useState<WholesalerOption | null>(null);
-
-  // Enquiry form state
-  const [enquiryName, setEnquiryName] = useState('');
-  const [enquiryEmail, setEnquiryEmail] = useState('');
-  const [enquiryBusiness, setEnquiryBusiness] = useState('');
-  const [enquiryMessage, setEnquiryMessage] = useState('');
-  const [enquiryProducts, setEnquiryProducts] = useState('');
-  const [enquiryFrequency, setEnquiryFrequency] = useState('');
-  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
 
   const otpRef = useRef<HTMLInputElement>(null);
 
   const fullPhone = COUNTRY_CODE + phoneLocal.replace(/^0/, '');
+
+  // Session resume: if an active customer session exists, redirect to their store
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/customer-auth/check-session', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.authenticated && data?.wholesalerId) {
+            setLocation(`/store/${data.wholesalerId}`);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -202,65 +209,19 @@ export default function CustomerLogin() {
     }
   };
 
-  const handleEnquirySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!enquiryName.trim()) {
-      toast({ title: 'Missing Information', description: 'Please fill in your name.', variant: 'destructive' });
-      return;
-    }
-
-    setIsSubmittingEnquiry(true);
-    try {
-      const res = await fetch('/api/customer/request-wholesaler-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wholesalerId: selectedWholesaler?.wholesalerId,
-          customerName: enquiryName.trim(),
-          customerPhone: fullPhone,
-          customerEmail: enquiryEmail.trim() || undefined,
-          businessName: enquiryBusiness.trim() || undefined,
-          requestMessage: enquiryMessage.trim() || undefined,
-          productsInterested: enquiryProducts.trim() || undefined,
-          orderFrequency: enquiryFrequency.trim() || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: 'Request Sent!', description: "Your request has been sent. We'll review it and get back to you." });
-        setStep('phone');
-        setEnquiryName('');
-        setEnquiryEmail('');
-        setEnquiryBusiness('');
-        setEnquiryMessage('');
-        setEnquiryProducts('');
-        setEnquiryFrequency('');
-      } else {
-        const data = await res.json();
-        toast({ title: 'Request Failed', description: data.error || 'Something went wrong.', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Connection Error', description: 'Unable to send request. Please check your connection.', variant: 'destructive' });
-    } finally {
-      setIsSubmittingEnquiry(false);
-    }
-  };
-
-  const stepTitle = {
+  const stepTitle: Record<LoginStep, string> = {
     phone: 'Sign in',
     otp: 'Verify your number',
     select: 'Choose your store',
     'no-account': 'No account found',
-    enquiry: 'Request Access',
-  }[step];
+  };
 
-  const stepSubtitle = {
+  const stepSubtitle: Record<LoginStep, string> = {
     phone: 'Enter your mobile number to continue',
     otp: `We sent a 6-digit code to ${COUNTRY_CODE} ${phoneLocal}`,
     select: 'You have access to multiple stores',
-    'no-account': `${COUNTRY_CODE} ${phoneLocal} isn't linked to any store`,
-    enquiry: 'Tell us about yourself',
-  }[step];
+    'no-account': `${fullPhone} isn't linked to any store`,
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -292,8 +253,8 @@ export default function CustomerLogin() {
           </button>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">{stepTitle}</h1>
-            <p className="text-gray-500 text-base">{stepSubtitle}</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">{stepTitle[step]}</h1>
+            <p className="text-gray-500 text-base">{stepSubtitle[step]}</p>
           </div>
 
           <Card className="border-0 shadow-none">
@@ -460,110 +421,28 @@ export default function CustomerLogin() {
               {/* ── No account ── */}
               {step === 'no-account' && (
                 <div className="space-y-5">
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center space-y-3">
-                    <Building2 className="h-8 w-8 text-blue-500 mx-auto" />
-                    <p className="text-blue-800 font-semibold text-sm">Not registered yet?</p>
-                    <p className="text-blue-700 text-sm">
-                      Your number isn't linked to any wholesale account. Submit a request and a wholesaler will get back to you.
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
+                    <Building2 className="h-8 w-8 text-amber-500 mx-auto block" />
+                    <p className="text-amber-800 font-semibold text-sm text-center">No account found</p>
+                    <p className="text-amber-700 text-sm text-center">
+                      Your number <span className="font-mono font-semibold">{fullPhone}</span> isn't linked to any wholesale account yet.
                     </p>
-                    <Button
-                      onClick={() => setStep('enquiry')}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
-                    >
-                      <User className="h-4 w-4 mr-2" /> Request Access
-                    </Button>
+                    <div className="border-t border-amber-200 pt-3 space-y-2">
+                      <p className="text-amber-700 text-sm font-medium">How to get access:</p>
+                      <ul className="text-amber-600 text-sm space-y-1 list-disc list-inside">
+                        <li>Ask your wholesaler to add your number directly</li>
+                        <li>Visit a wholesaler's store link and request access there</li>
+                      </ul>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
-                    onClick={() => { setStep('phone'); setError(''); }}
+                    onClick={() => { setStep('phone'); setOtpCode(''); setPhoneLocal(''); setError(''); }}
                     className="w-full h-11 border-2"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" /> Try a different number
                   </Button>
                 </div>
-              )}
-
-              {/* ── Enquiry form ── */}
-              {step === 'enquiry' && (
-                <form onSubmit={handleEnquirySubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="enq-name" className="text-sm font-medium">Your Name *</Label>
-                    <Input
-                      id="enq-name"
-                      type="text"
-                      placeholder="Full name"
-                      value={enquiryName}
-                      onChange={e => setEnquiryName(e.target.value)}
-                      className="h-11 border-2 focus:border-primary"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="enq-email" className="text-sm font-medium">Email</Label>
-                    <Input
-                      id="enq-email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={enquiryEmail}
-                      onChange={e => setEnquiryEmail(e.target.value)}
-                      className="h-11 border-2 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="enq-business" className="text-sm font-medium">Business Name</Label>
-                    <Input
-                      id="enq-business"
-                      type="text"
-                      placeholder="Your business name"
-                      value={enquiryBusiness}
-                      onChange={e => setEnquiryBusiness(e.target.value)}
-                      className="h-11 border-2 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="enq-products" className="text-sm font-medium">Products interested in</Label>
-                    <textarea
-                      id="enq-products"
-                      placeholder="e.g. rice, oil, drinks…"
-                      value={enquiryProducts}
-                      onChange={e => setEnquiryProducts(e.target.value)}
-                      className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm focus:border-primary outline-none resize-none"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="enq-message" className="text-sm font-medium">Message</Label>
-                    <textarea
-                      id="enq-message"
-                      placeholder="Anything else you'd like us to know…"
-                      value={enquiryMessage}
-                      onChange={e => setEnquiryMessage(e.target.value)}
-                      className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm focus:border-primary outline-none resize-none"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setStep('no-account')}
-                      disabled={isSubmittingEnquiry}
-                      className="flex-1 h-12 border-2"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
-                      disabled={isSubmittingEnquiry || !enquiryName.trim()}
-                    >
-                      {isSubmittingEnquiry
-                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
-                        : <><Send className="h-4 w-4 mr-2" /> Send Request</>}
-                    </Button>
-                  </div>
-                </form>
               )}
 
             </CardContent>
