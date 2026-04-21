@@ -14,6 +14,7 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 
 interface OrderItem {
   id: number;
@@ -63,6 +64,7 @@ interface Order {
   paymentStatus?: string;
   paymentMethod?: string;
   stripePaymentLinkUrl?: string;
+  customerTransactionFee?: string;
   wholesalerBusinessName?: string;
   amountRefunded?: string;
   refundReason?: string;
@@ -591,15 +593,7 @@ export default function OrderDetail() {
 
   const openMarkAsPaid = () => {
     if (!order) return;
-    let defaultAmount: string;
-    if (isStripePayment(order)) {
-      defaultAmount = order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '';
-    } else {
-      const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-      const alreadyPaid = parseFloat(order.amountPaid || '0');
-      defaultAmount = Math.max(0, offlineBase - alreadyPaid).toFixed(2);
-    }
-    setMarkAsPaidAmount(defaultAmount);
+    setMarkAsPaidAmount(getOfflinePaymentDefaultAmount(order));
     setMarkAsPaidMethod('cash');
     setMarkAsPaidNote('');
     setIsMarkAsPaidOpen(true);

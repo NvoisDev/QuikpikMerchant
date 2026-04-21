@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 
 interface Order {
   id: number;
@@ -51,6 +52,7 @@ interface Order {
   amountOutstanding?: string;
   paymentStatus?: string;
   stripePaymentLinkUrl?: string;
+  customerTransactionFee?: string;
   wholesalerBusinessName?: string;
   amountRefunded?: string;
   refundReason?: string;
@@ -554,13 +556,7 @@ export default function OrdersFresh() {
   // Open the Mark as Paid dialog
   const openMarkAsPaid = (order: Order) => {
     setMarkAsPaidOrder(order);
-    if (isStripePayment(order)) {
-      setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
-    } else {
-      const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-      const alreadyPaid = parseFloat(order.amountPaid || '0');
-      setMarkAsPaidAmount(Math.max(0, offlineBase - alreadyPaid).toFixed(2));
-    }
+    setMarkAsPaidAmount(getOfflinePaymentDefaultAmount(order));
     setMarkAsPaidMethod('cash');
     setMarkAsPaidNote('');
     setIsMarkAsPaidOpen(true);
