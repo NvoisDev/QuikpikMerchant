@@ -927,6 +927,7 @@ export default function CustomerPortal() {
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
   const [showGuestSignInModal, setShowGuestSignInModal] = useState(false);
+  const [openRequestAccessOnAuth, setOpenRequestAccessOnAuth] = useState(false);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -2130,6 +2131,7 @@ export default function CustomerPortal() {
   const handleAuthSuccess = (customer: any) => {
     console.log("🎉 handleAuthSuccess called with customer:", customer);
     clearGuestParam();
+    setOpenRequestAccessOnAuth(false);
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
@@ -2156,6 +2158,7 @@ export default function CustomerPortal() {
 
   // Handle guest browse - skip authentication
   const handleSkipAuth = () => {
+    setOpenRequestAccessOnAuth(false);
     setShowAuth(false);
     setIsGuestMode(true);
     setIsAuthenticated(false);
@@ -2222,6 +2225,20 @@ export default function CustomerPortal() {
     }
   };
 
+  const openCustomerSignIn = () => {
+    clearGuestParam();
+    setOpenRequestAccessOnAuth(false);
+    setIsGuestMode(false);
+    setShowAuth(true);
+  };
+
+  const openCustomerRequestAccess = () => {
+    clearGuestParam();
+    setOpenRequestAccessOnAuth(true);
+    setIsGuestMode(false);
+    setShowAuth(true);
+  };
+
   // Authentication state management using server sessions
   useEffect(() => {
     if (isEnhancedPreviewMode) {
@@ -2249,6 +2266,7 @@ export default function CustomerPortal() {
     // Check if user explicitly wants to login (force login parameter)
     if (forceLoginParam) {
       console.log('🔑 Force login requested - showing auth screen');
+      setOpenRequestAccessOnAuth(false);
       setIsAuthenticated(false);
       setAuthenticatedCustomer(null);
       setShowAuth(true);
@@ -2354,6 +2372,7 @@ export default function CustomerPortal() {
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
       onSkipAuth={handleSkipAuth}
+      openRequestAccess={openRequestAccessOnAuth}
     />;
   }
 
@@ -2541,21 +2560,13 @@ export default function CustomerPortal() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
             <button
-              onClick={() => {
-                clearGuestParam();
-                setIsGuestMode(false);
-                setShowAuth(true);
-              }}
+              onClick={openCustomerRequestAccess}
               className="bg-white text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-green-50 transition-colors whitespace-nowrap"
             >
-              Register with {wholesaler?.businessName || 'this store'}
+              Request Access
             </button>
             <button
-              onClick={() => {
-                clearGuestParam();
-                setIsGuestMode(false);
-                setShowAuth(true);
-              }}
+              onClick={openCustomerSignIn}
               className="text-white/70 hover:text-white text-xs underline whitespace-nowrap"
             >
               Sign in
@@ -2881,14 +2892,10 @@ export default function CustomerPortal() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => {
-                    clearGuestParam();
-                    setIsGuestMode(false);
-                    setShowAuth(true);
-                  }}
+                  onClick={openCustomerRequestAccess}
                   className="rounded-full bg-green-600 hover:bg-green-700 text-white font-semibold px-5"
                 >
-                  Register / Sign in
+                  Request Access
                 </Button>
               </div>
             </div>
@@ -6211,14 +6218,21 @@ export default function CustomerPortal() {
               </div>
               <button
                 onClick={() => {
-                  clearGuestParam();
                   setShowGuestSignInModal(false);
-                  setIsGuestMode(false);
-                  setShowAuth(true);
+                  openCustomerSignIn();
                 }}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors"
               >
                 Sign in to {wholesaler?.businessName || 'this store'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowGuestSignInModal(false);
+                  openCustomerRequestAccess();
+                }}
+                className="w-full border border-green-200 bg-green-50 hover:bg-green-100 text-green-700 font-semibold py-3 rounded-xl transition-colors"
+              >
+                Request access instead
               </button>
               <button
                 onClick={() => setShowGuestSignInModal(false)}

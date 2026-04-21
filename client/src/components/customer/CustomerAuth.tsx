@@ -13,6 +13,7 @@ interface CustomerAuthProps {
   wholesalerId: string;
   onAuthSuccess: (customerData: any) => void;
   onSkipAuth?: () => void;
+  openRequestAccess?: boolean;
 }
 
 interface Wholesaler {
@@ -24,7 +25,7 @@ interface Wholesaler {
   lastName?: string;
 }
 
-export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
+export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
   // Check for auth parameter from URL
   const urlParams = new URLSearchParams(window.location.search);
   const authParam = urlParams.get('auth');
@@ -55,7 +56,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   });
   
   // Registration request form state
-  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [showRegistrationForm, setShowRegistrationForm] = useState(openRequestAccess);
   const [registrationData, setRegistrationData] = useState({
     name: '',
     businessName: '',
@@ -67,6 +68,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (openRequestAccess) {
+      setShowRegistrationForm(true);
+    }
+  }, [openRequestAccess]);
 
   // Handle registration request form submission
   const handleRegistrationSubmit = async () => {
