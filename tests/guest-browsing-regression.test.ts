@@ -80,6 +80,8 @@ describe('guest browsing regression coverage', () => {
     expect(landingPageSource).not.toContain("products and prices without registration");
     expect(landingPageSource).not.toContain('Premium Support Included');
     expect(customerHelpSource).toContain('Enter your full registered phone number');
+    expect(customerHelpSource).toContain('How do I find or switch sellers?');
+    expect(customerHelpSource).toContain('prices and ordering stay locked until the seller approves your access');
     expect(customerHelpSource).not.toContain('Enter the last 4 digits');
     expect(helpPageSource).toContain('prices and ordering require approved customer access');
     expect(helpPageSource).toContain('Quikpik now supports seller discovery for customers');
@@ -89,6 +91,9 @@ describe('guest browsing regression coverage', () => {
     expect(helpPageSource).not.toContain('The Quikpik B2B wholesale marketplace is **coming soon**');
     expect(helpPageSource).not.toContain('Marketplace product discovery is coming soon');
     expect(helpPageSource).not.toContain('Last 4 digits of their registered phone number');
+    expect(helpPageSource).not.toContain('Response Time');
+    expect(helpPageSource).not.toContain('Immediate assistance');
+    expect(helpPageSource).not.toContain('Dedicated Account Manager');
   });
 
   it('allows confirmed customer sessions to add products without guest prompt state', () => {

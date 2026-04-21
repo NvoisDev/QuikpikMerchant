@@ -1688,7 +1688,7 @@ A: Check that your Stripe account can accept payments. Contact Stripe support if
 A: Stripe invoices are automatically sent after successful payments. Check customer email addresses are correct and check their spam folder.
 
 **Q: Platform fee not being collected**
-A: Platform fees are automatically calculated (4.6%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
+A: Platform fees are calculated at 4.6% on eligible online card payments when Stripe Connect is set up correctly. Offline, cash, and Pay Later orders have no platform fee or customer transaction fee unless an online card payment is taken later. Verify your Stripe Connect setup is complete.
 
 #### Order Management Issues
 
@@ -1723,22 +1723,11 @@ A: This display issue has been fixed. All email confirmations now show actual pr
 
 #### Contacting Support
 
-#### Free Plan Users
+#### All Users
 - **Email Support**: Send detailed questions to hello@quikpik.co
-- **Response Time**: Within 48 hours
-- **Documentation**: Extensive help articles and guides
-
-#### Standard Plan Users
-- **Email Support**: Priority email support
-- **Phone Support**: Direct phone consultation
-- **Response Time**: Within 24 hours
-- **Setup Assistance**: Help with integrations
-
-#### Premium Plan Users
-- **Dedicated Account Manager**: Personal support contact
-- **Priority Support**: Immediate assistance
-- **Phone Support**: Direct line for urgent issues
-- **Custom Onboarding**: Personalized setup assistance
+- **Documentation**: Use the Help Hub for setup and troubleshooting guidance
+- **Setup Guidance**: Ask for help with account setup, product uploads, customer access, and payment configuration
+- **Technical Support**: Share the issue details so the support team can investigate and respond during business hours
 
 #### When Contacting Support
 Please include:

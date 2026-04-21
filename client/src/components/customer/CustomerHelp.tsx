@@ -207,8 +207,16 @@ const helpSections: HelpSection[] = [
         answer: "No. Once you've verified your phone number, your session works across all sellers you're registered with. You can switch between stores without re-entering your code."
       },
       {
+        question: "How do I find or switch sellers?",
+        answer: "Use seller selection to search for available stores. If you're already approved by a seller, you can open their store and shop. If you're not approved yet, you can browse as a guest where enabled or request access from that seller."
+      },
+      {
+        question: "What can I see when browsing as a guest?",
+        answer: "Guest browsing lets you view product information where the seller allows it, but prices and ordering stay locked until the seller approves your access. This protects each seller's wholesale pricing and customer terms."
+      },
+      {
         question: "Why does it say I'm not registered when I try to purchase?",
-        answer: "You need to be added to this seller's customer list before you can place orders. Contact the seller to request access — they'll add you and notify you when you can start purchasing."
+        answer: "You need to be added to this seller's customer list before you can see prices or place orders. Use Request Access where available, or contact the seller directly. They'll review your request and notify you when you can start purchasing."
       }
     ]
   }
