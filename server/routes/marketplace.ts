@@ -10,6 +10,7 @@ import {
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
 } from "./shared";
+import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -2686,17 +2687,7 @@ export function registerMarketplaceRoutes(app: Express): void {
 
         // Strip all pricing data for unauthenticated guest requests
         if (req.query.guest === 'true') {
-          for (const product of formattedProducts as any[]) {
-            product.price = null;
-            product.promoPrice = null;
-            product.palletPrice = null;
-            product.minimumBidPrice = null;
-            product.customPrice = undefined;
-            product.standardPrice = undefined;
-            product.hasPriceList = undefined;
-            product.promotionalOffers = [];
-            product.promoActive = false;
-          }
+          stripGuestPricingDataFromProducts(formattedProducts as any[]);
         }
 
         res.json(formattedProducts);

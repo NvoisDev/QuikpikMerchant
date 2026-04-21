@@ -64,6 +64,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
 import { StockIndicator } from "@/components/ui/stock-indicator";
 import { Package2, Hash } from "lucide-react";
+import { getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
 
 // Extended Product type that includes all schema fields for customer portal
 type ExtendedProduct = ProductType & {
@@ -158,42 +159,6 @@ const PriceDisplay = ({
       )}
     </div>
   );
-};
-
-const getSellingFormatLabel = (sellingFormat?: Product["sellingFormat"] | null) => {
-  if (sellingFormat === "pallets") return "Full Pallets";
-  if (sellingFormat === "both") return "Units & Pallets";
-  return "Individual Units";
-};
-
-const getGuestStockValue = (stock: unknown) => {
-  const value = typeof stock === "number" ? stock : Number(stock);
-  return Number.isFinite(value) ? value : 0;
-};
-
-const getGuestStockRows = (product: Product) => {
-  const sellingFormat = product.sellingFormat || "units";
-  const unitStock = getGuestStockValue(product.stock);
-  const palletStock = getGuestStockValue(product.palletStock);
-  const rows: Array<{ type: "units" | "pallets"; text: string; available: boolean }> = [];
-
-  if (sellingFormat === "units" || sellingFormat === "both") {
-    rows.push({
-      type: "units",
-      text: unitStock > 0 ? `${formatNumber(unitStock)} units available` : "Units unavailable or limited",
-      available: unitStock > 0,
-    });
-  }
-
-  if (sellingFormat === "pallets" || sellingFormat === "both") {
-    rows.push({
-      type: "pallets",
-      text: palletStock > 0 ? `${formatNumber(palletStock)} pallets available` : "Pallets unavailable or limited",
-      available: palletStock > 0,
-    });
-  }
-
-  return rows;
 };
 
 // Loading skeleton components
