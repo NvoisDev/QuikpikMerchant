@@ -113,37 +113,26 @@ const PriceDisplay = ({
   size = 'medium',
   showStrikethrough = false 
 }: {
-  price: number;
-  originalPrice?: number;
+  price: number | null | undefined;
+  originalPrice?: number | null;
   currency?: string;
   isGuestMode: boolean;
   size?: 'small' | 'medium' | 'large';
   showStrikethrough?: boolean;
 }) => {
   const currencySymbol = getCurrencySymbol(currency);
-  const hasDiscount = originalPrice && originalPrice > price;
+  const safePrice = typeof price === 'number' && Number.isFinite(price) ? price : 0;
+  const safeOriginalPrice = typeof originalPrice === 'number' && Number.isFinite(originalPrice) ? originalPrice : undefined;
+  const hasDiscount = safeOriginalPrice && safeOriginalPrice > safePrice;
 
   if (isGuestMode) {
     return (
       <div className="flex flex-col gap-1">
-        <div className="blur-sm select-none pointer-events-none">
-          <span className={`font-bold text-gray-900 ${
-            size === 'small' ? 'text-sm' : 
-            size === 'large' ? 'text-xl' : 'text-base'
-          }`}>
-{formatCurrency(price, currency)}
-          </span>
-          {hasDiscount && showStrikethrough && (
-            <span className={`line-through text-gray-500 ml-2 ${
-              size === 'small' ? 'text-xs' : 
-              size === 'large' ? 'text-lg' : 'text-sm'
-            }`}>
-{formatCurrency(originalPrice, currency)}
-            </span>
-          )}
-        </div>
-        <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 w-fit">
-          Sign in to view price
+        <span className={`font-semibold text-gray-900 bg-gray-100 border border-gray-200 rounded-full px-3 py-1 w-fit ${
+          size === 'small' ? 'text-xs' : 
+          size === 'large' ? 'text-base' : 'text-sm'
+        }`}>
+          Login to view price
         </span>
       </div>
     );
@@ -157,14 +146,14 @@ const PriceDisplay = ({
         size === 'small' ? 'text-sm' : 
         size === 'large' ? 'text-xl' : 'text-base'
       }`}>
-{formatCurrency(price, currency)}
+{formatCurrency(safePrice, currency)}
       </span>
       {hasDiscount && showStrikethrough && (
         <span className={`line-through text-gray-500 ${
           size === 'small' ? 'text-xs' : 
           size === 'large' ? 'text-lg' : 'text-sm'
         }`}>
-{formatCurrency(originalPrice, currency)}
+{formatCurrency(safeOriginalPrice, currency)}
         </span>
       )}
     </div>
@@ -928,11 +917,13 @@ export default function CustomerPortal() {
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), [location]);
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
+  const forceGuestParam = urlParams.get('guest') === 'true';
   const [showAuth, setShowAuth] = useState(() => {
     const isPreviewModeCheck = location === '/preview-store' || location.startsWith('/preview-store/');
     const hasAuthParamCheck = new URLSearchParams(window.location.search).has('auth');
     const forceLoginParamCheck = new URLSearchParams(window.location.search).has('login');
-    return !isPreviewModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
+    const forceGuestParamCheck = new URLSearchParams(window.location.search).get('guest') === 'true';
+    return !isPreviewModeCheck && !forceGuestParamCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
   const [showGuestSignInModal, setShowGuestSignInModal] = useState(false);
@@ -1505,6 +1496,13 @@ export default function CustomerPortal() {
     const cats = new Set(products.map((p: Product) => p.category).filter(Boolean));
     return Array.from(cats);
   }, [products]);
+
+  const timeGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
 
   const cartStats = useMemo(() => {
     let totalItems = 0; // For display - only user-selected quantities
@@ -2160,6 +2158,9 @@ export default function CustomerPortal() {
     setShowAuth(false);
     setIsGuestMode(true);
     setIsAuthenticated(false);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('guest', 'true');
+    window.history.replaceState({}, '', nextUrl.toString());
   };
 
   // Handle logout
@@ -2236,6 +2237,15 @@ export default function CustomerPortal() {
       return; // Wait for wholesalerId and session check to complete
     }
 
+    if (forceGuestParam) {
+      console.log('🛍️ Guest browse requested');
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(false);
+      setIsGuestMode(true);
+      return;
+    }
+
     // Check if user explicitly wants to login (force login parameter)
     if (forceLoginParam) {
       console.log('🔑 Force login requested - showing auth screen');
@@ -2273,7 +2283,7 @@ export default function CustomerPortal() {
       setShowAuth(true);
       setIsGuestMode(true);
     }
-  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
+  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, forceGuestParam, isSwitchingWholesaler]);
 
 
 
@@ -2829,6 +2839,136 @@ export default function CustomerPortal() {
       )}
 
       <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 lg:pt-8 pb-24">
+
+        {isGuestMode && !isEnhancedPreviewMode && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7 overflow-hidden relative">
+              <div className="absolute -top-12 -right-12 w-36 h-36 bg-green-50 rounded-full" />
+              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
+                <Logo
+                  size="lg"
+                  variant="icon-only"
+                  className="w-16 h-16 rounded-2xl shadow-sm flex-shrink-0"
+                  user={{
+                    logoType: wholesaler?.logoType || 'business',
+                    logoUrl: wholesaler?.logoUrl,
+                    businessName: wholesaler?.businessName,
+                    firstName: wholesaler?.firstName,
+                    lastName: wholesaler?.lastName
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-green-700 mb-1">
+                    {timeGreeting} — browse {wholesaler?.businessName || 'this wholesale store'}
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
+                    {wholesaler?.businessName || 'Wholesale Store'}
+                  </h2>
+                  <p className="text-gray-500 mt-1 max-w-2xl">
+                    {wholesaler?.storeTagline || 'Browse available wholesale products. Sign in or request access to unlock prices and place orders.'}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setIsGuestMode(false);
+                    setShowAuth(true);
+                  }}
+                  className="rounded-full bg-green-600 hover:bg-green-700 text-white font-semibold px-5"
+                >
+                  Register / Sign in
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Products</h3>
+                  <p className="text-sm text-gray-500">Prices and ordering unlock after registration.</p>
+                </div>
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search products"
+                    className="pl-9 rounded-full"
+                  />
+                </div>
+              </div>
+
+              {productsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(6)].map((_, index) => (
+                    <ProductCardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : productsError ? (
+                <div className="text-center py-14">
+                  <Package className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load products</h3>
+                  <p className="text-gray-500 mb-4">There was an error loading this catalogue.</p>
+                  <Button onClick={() => refetchProducts()} variant="outline">Try again</Button>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-14">
+                  <Package className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No products found</h3>
+                  <p className="text-gray-500">
+                    {searchTerm ? "Try a different search term." : "This store doesn't have products available yet."}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProducts.map((product) => {
+                    const image = product.imageUrl || ((product as any).images || []).find(Boolean);
+                    return (
+                      <Card key={product.id} className="rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow bg-white">
+                        <CardContent className="p-0">
+                          <div className="aspect-[4/3] bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+                            {image ? (
+                              <img src={image} alt={product.name} className="w-full h-full object-contain p-3" />
+                            ) : (
+                              <Package className="w-12 h-12 text-gray-300" />
+                            )}
+                          </div>
+                          <div className="p-4 space-y-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h4>
+                              {product.description && (
+                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  {cleanAIDescription(product.description)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {product.category && (
+                                <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-2 py-1">{product.category}</span>
+                              )}
+                              {product.moq && product.moq > 1 && (
+                                <span className="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-1">MOQ {product.moq}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between gap-3 pt-1">
+                              <PriceDisplay price={null} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={true} size="medium" />
+                              <Button
+                                size="sm"
+                                onClick={() => setShowGuestSignInModal(true)}
+                                className="rounded-full bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                View price
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Modern Tab Navigation - Only for authenticated users */}
         {isAuthenticated && !isGuestMode && (

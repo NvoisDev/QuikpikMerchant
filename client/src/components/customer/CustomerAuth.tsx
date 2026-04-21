@@ -819,13 +819,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             </form>
 
             {onSkipAuth && (
-              <div className="text-center mt-1 mb-1">
+              <div className="mt-2">
                 <button
                   type="button"
                   onClick={onSkipAuth}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors py-1.5"
+                  className="w-full h-11 rounded-xl border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 font-semibold text-sm transition-colors"
                 >
-                  Browse as Guest →
+                  Browse products as guest →
                 </button>
               </div>
             )}
