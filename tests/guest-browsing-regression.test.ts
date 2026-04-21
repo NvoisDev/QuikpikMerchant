@@ -139,18 +139,41 @@ describe('guest browsing regression coverage', () => {
       ') : wholesalerItem.isAccessible ?',
     );
 
-    expect(sellerGuestButton).toContain('guest=true&guestFrom=selection');
-    expect(getGuestBackTarget('?guest=true&guestFrom=selection')).toBe('seller-selection');
-    expect(getGuestBackTarget('?guest=true')).toBe('landing');
-    expect(getGuestBackTarget('')).toBe('landing');
-    expect(guestBackButton).toContain('getGuestBackTarget(window.location.search) === "seller-selection"');
-    expect(guestBackButton).toContain('clearGuestParam()');
-    expect(guestBackButton).toContain('setIsGuestMode(false)');
+    expect(sellerGuestButton).toContain('const guestFrom = hasCustomerSession && wholesalerId');
+    expect(sellerGuestButton).toContain('`store:${encodeURIComponent(wholesalerId)}`');
+    expect(sellerGuestButton).toContain('guest=true&guestFrom=${guestFrom}');
+    expect(getGuestBackTarget('?guest=true&guestFrom=selection')).toEqual({ type: 'seller-selection' });
+    expect(getGuestBackTarget('?guest=true')).toEqual({ type: 'landing' });
+    expect(getGuestBackTarget('')).toEqual({ type: 'landing' });
+    expect(guestBackButton).toContain('guestBackTarget.type === "seller-selection"');
     expect(guestBackButton).toContain('setAuthenticatedCustomer(null)');
     expect(guestBackButton).toContain('setCart([])');
     expect(guestBackButton).toContain('setShowWholesalerSearch(true)');
     expect(guestBackButton).toContain('setWholesalerSearchQuery("")');
-    expect(guestBackButton.indexOf('getGuestBackTarget(window.location.search) === "seller-selection"')).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));
+    expect(guestBackButton.indexOf('guestBackTarget.type === "seller-selection"')).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));
+  });
+
+  it('returns authenticated guest browsing back to the originating store', () => {
+    const guestBackButton = sourceBetween(
+      customerPortalSource,
+      '{isTrueGuestMode && (',
+      '{/* Explore pill */}',
+    );
+    const sellerGuestButton = sourceBetween(
+      customerPortalSource,
+      '{wholesalerItem.canRequestAccess ? (',
+      ') : wholesalerItem.isAccessible ?',
+    );
+
+    expect(getGuestBackTarget('?guest=true&guestFrom=store%3Afresh-emerald')).toEqual({ type: 'store', wholesalerId: 'fresh-emerald' });
+    expect(sellerGuestButton).toContain('const guestFrom = hasCustomerSession && wholesalerId ? `store:${encodeURIComponent(wholesalerId)}` : "selection";');
+    expect(sellerGuestButton).toContain('enterGuestMode()');
+    expect(sellerGuestButton).not.toContain('handleSkipAuth()');
+    expect(guestBackButton).toContain('guestBackTarget.type === "store"');
+    expect(guestBackButton).toContain('setIsSwitchingWholesaler(true)');
+    expect(guestBackButton).toContain('setShowWholesalerSearch(false)');
+    expect(guestBackButton).toContain('setLocation(`/store/${encodeURIComponent(guestBackTarget.wholesalerId)}`)');
+    expect(guestBackButton.indexOf('guestBackTarget.type === "store"')).toBeLessThan(guestBackButton.indexOf('guestBackTarget.type === "seller-selection"'));
   });
 
   it('formats guest catalogue selling format and safe stock rows', () => {

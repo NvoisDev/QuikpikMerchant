@@ -44,6 +44,20 @@ export const getGuestStockRows = (product: GuestCatalogueProduct) => {
   return rows;
 };
 
-export const getGuestBackTarget = (search: string) => {
-  return new URLSearchParams(search).get("guestFrom") === "selection" ? "seller-selection" : "landing";
+export type GuestBackTarget =
+  | { type: "seller-selection" }
+  | { type: "store"; wholesalerId: string }
+  | { type: "landing" };
+
+export const getGuestBackTarget = (search: string): GuestBackTarget => {
+  const guestFrom = new URLSearchParams(search).get("guestFrom");
+
+  if (guestFrom?.startsWith("store:")) {
+    const wholesalerId = guestFrom.slice("store:".length).trim();
+    if (wholesalerId) {
+      return { type: "store", wholesalerId };
+    }
+  }
+
+  return guestFrom === "selection" ? { type: "seller-selection" } : { type: "landing" };
 };

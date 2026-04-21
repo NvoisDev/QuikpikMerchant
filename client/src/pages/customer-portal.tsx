@@ -2159,8 +2159,7 @@ export default function CustomerPortal() {
     });
   };
 
-  // Handle guest browse - skip authentication
-  const handleSkipAuth = () => {
+  const enterGuestMode = () => {
     setOpenRequestAccessOnAuth(false);
     setShowAuth(false);
     setIsGuestMode(true);
@@ -2168,6 +2167,11 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(null);
     setCart([]);
     setSearchTerm("");
+  };
+
+  // Handle guest browse - skip authentication
+  const handleSkipAuth = () => {
+    enterGuestMode();
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete('auth');
     nextUrl.searchParams.delete('login');
@@ -2526,10 +2530,20 @@ export default function CustomerPortal() {
               {isTrueGuestMode && (
                 <Button
                   onClick={async () => {
-                    if (getGuestBackTarget(window.location.search) === "seller-selection") {
-                      clearGuestParam();
+                    const guestBackTarget = getGuestBackTarget(window.location.search);
+                    if (guestBackTarget.type === "store") {
                       setOpenRequestAccessOnAuth(false);
                       setIsGuestMode(false);
+                      setShowAuth(false);
+                      setShowWholesalerSearch(false);
+                      setWholesalerSearchQuery("");
+                      setCart([]);
+                      setIsSwitchingWholesaler(true);
+                      setLocation(`/store/${encodeURIComponent(guestBackTarget.wholesalerId)}`);
+                      return;
+                    }
+                    if (guestBackTarget.type === "seller-selection") {
+                      setOpenRequestAccessOnAuth(false);
                       setIsAuthenticated(false);
                       setAuthenticatedCustomer(null);
                       setCart([]);
@@ -2712,8 +2726,9 @@ export default function CustomerPortal() {
                             e.stopPropagation();
                             setShowWholesalerSearch(false);
                             setWholesalerSearchQuery("");
-                            handleSkipAuth();
-                            setLocation(`/store/${wholesalerItem.id}?guest=true&guestFrom=selection`);
+                            const guestFrom = hasCustomerSession && wholesalerId ? `store:${encodeURIComponent(wholesalerId)}` : "selection";
+                            enterGuestMode();
+                            setLocation(`/store/${wholesalerItem.id}?guest=true&guestFrom=${guestFrom}`);
                           }}
                         >
                           View as Guest
