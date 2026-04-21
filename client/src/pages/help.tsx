@@ -1283,7 +1283,7 @@ Broadcast performance reporting will become available when broadcast campaigns l
   - Broadcast tools coming soon
   - Order management
   - Basic analytics
-  - Email support
+  - Help Hub access
 
 #### Standard Plan
 - **Cost**: £19.99/month
@@ -1291,9 +1291,9 @@ Broadcast performance reporting will become available when broadcast campaigns l
 - **Features**:
   - Broadcast tools coming soon
   - Customer groups
-  - Priority order processing
+  - Expanded order management tools
   - Advanced analytics
-  - Phone support
+  - Help Hub access
 
 #### Premium Plan
 - **Cost**: £49.99/month
@@ -1303,7 +1303,7 @@ Broadcast performance reporting will become available when broadcast campaigns l
   - Advanced customer segmentation
   - Real-time inventory alerts
   - Premium analytics dashboard
-  - Dedicated account manager
+  - Help Hub access
 
 #### Upgrading Your Plan
 1. Go to **Subscription** in the sidebar

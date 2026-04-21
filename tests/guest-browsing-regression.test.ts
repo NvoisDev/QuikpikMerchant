@@ -91,9 +91,11 @@ describe('guest browsing regression coverage', () => {
     expect(helpPageSource).not.toContain('The Quikpik B2B wholesale marketplace is **coming soon**');
     expect(helpPageSource).not.toContain('Marketplace product discovery is coming soon');
     expect(helpPageSource).not.toContain('Last 4 digits of their registered phone number');
-    expect(helpPageSource).not.toContain('Response Time');
-    expect(helpPageSource).not.toContain('Immediate assistance');
-    expect(helpPageSource).not.toContain('Dedicated Account Manager');
+    expect(helpPageSource).not.toMatch(/response time/i);
+    expect(helpPageSource).not.toMatch(/immediate assistance/i);
+    expect(helpPageSource).not.toMatch(/dedicated account manager/i);
+    expect(helpPageSource).not.toMatch(/phone support/i);
+    expect(helpPageSource).not.toMatch(/priority support/i);
   });
 
   it('allows confirmed customer sessions to add products without guest prompt state', () => {
