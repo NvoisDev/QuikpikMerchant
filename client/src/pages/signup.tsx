@@ -192,6 +192,34 @@ export default function Signup() {
         // Show specific error message from server
         const errorMessage = result.message || "Please try again.";
         const emailAlreadyExists = result.field === "email" || /already exists/i.test(errorMessage);
+        if (emailAlreadyExists) {
+          try {
+            const loginResponse = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: data.email,
+                password: data.password,
+              }),
+            });
+            const loginResult = await loginResponse.json().catch(() => ({ success: false }));
+
+            if (loginResponse.ok && loginResult.success) {
+              toast({
+                title: "Account found",
+                description: "Your account is ready. Signing you in now.",
+              });
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 500);
+              return;
+            }
+          } catch (loginError) {
+            console.error('Signup duplicate recovery login error:', loginError);
+          }
+        }
         toast({
           title: emailAlreadyExists ? "Account already exists" : "Signup failed",
           description: emailAlreadyExists
