@@ -19,6 +19,7 @@ import {
   userBadges,
   onboardingMilestones,
   smsVerificationCodes,
+  customerPhoneVerifications,
   teamMembers,
   tabPermissions,
   deliveryAddresses,
@@ -196,6 +197,14 @@ export interface IStorage {
   }>;
   mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }>;
   
+  // Phone OTP operations (new login flow — no wholesaler required upfront)
+  createPhoneVerification(phoneNumber: string, code: string, expiresAt: Date, ipAddress?: string): Promise<void>;
+  getPhoneVerification(phoneNumber: string, code: string): Promise<{ id: number; expiresAt: Date; isUsed: boolean; attempts: number } | undefined>;
+  markPhoneVerificationUsed(id: number): Promise<void>;
+  incrementPhoneVerificationAttempts(id: number): Promise<void>;
+  getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined>;
+  findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null }>>;
+
   // SMS verification operations
   createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
   getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined>;
@@ -4245,6 +4254,78 @@ export class DatabaseStorage implements IStorage {
 
 
   // SMS verification operations
+  // ─── Phone OTP methods (new login flow) ────────────────────────────────────
+
+  async createPhoneVerification(phoneNumber: string, code: string, expiresAt: Date, ipAddress?: string): Promise<void> {
+    await db.insert(customerPhoneVerifications).values({ phoneNumber, code, expiresAt, ipAddress });
+  }
+
+  async getPhoneVerification(phoneNumber: string, code: string): Promise<{ id: number; expiresAt: Date; isUsed: boolean; attempts: number } | undefined> {
+    const [row] = await db
+      .select({ id: customerPhoneVerifications.id, expiresAt: customerPhoneVerifications.expiresAt, isUsed: customerPhoneVerifications.isUsed, attempts: customerPhoneVerifications.attempts })
+      .from(customerPhoneVerifications)
+      .where(and(eq(customerPhoneVerifications.phoneNumber, phoneNumber), eq(customerPhoneVerifications.code, code)))
+      .orderBy(desc(customerPhoneVerifications.createdAt))
+      .limit(1);
+    return row;
+  }
+
+  async markPhoneVerificationUsed(id: number): Promise<void> {
+    await db.update(customerPhoneVerifications).set({ isUsed: true, usedAt: new Date() }).where(eq(customerPhoneVerifications.id, id));
+  }
+
+  async incrementPhoneVerificationAttempts(id: number): Promise<void> {
+    await db.update(customerPhoneVerifications).set({ attempts: sql`${customerPhoneVerifications.attempts} + 1` }).where(eq(customerPhoneVerifications.id, id));
+  }
+
+  async getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined> {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    const [row] = await db
+      .select({ id: customerPhoneVerifications.id })
+      .from(customerPhoneVerifications)
+      .where(and(
+        eq(customerPhoneVerifications.phoneNumber, phoneNumber),
+        eq(customerPhoneVerifications.isUsed, false),
+        gt(customerPhoneVerifications.createdAt, cutoff)
+      ))
+      .orderBy(desc(customerPhoneVerifications.createdAt))
+      .limit(1);
+    return row;
+  }
+
+  async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null }>> {
+    // Normalise: strip spaces, ensure +44 prefix for UK numbers
+    const normalised = phoneNumber.startsWith('+') ? phoneNumber.replace(/\s/g, '') : phoneNumber.replace(/\s/g, '');
+
+    const rows = await db.execute(sql`
+      SELECT DISTINCT
+        wcr.customer_id   AS customer_id,
+        wcr.wholesaler_id AS wholesaler_id,
+        COALESCE(w.business_name, w.first_name || ' ' || COALESCE(w.last_name, '')) AS business_name,
+        w.logo_url   AS logo_url,
+        w.logo_type  AS logo_type
+      FROM wholesaler_customer_relationships wcr
+      INNER JOIN users u  ON u.id  = wcr.customer_id
+      INNER JOIN users w  ON w.id  = wcr.wholesaler_id
+      WHERE wcr.status = 'active'
+        AND (
+          REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised.replace(/^\+44/, '0')}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised.startsWith('0') ? '+44' + normalised.slice(1) : normalised}
+        )
+      ORDER BY business_name
+    `);
+    return (rows.rows as any[]).map(r => ({
+      customerId: r.customer_id,
+      wholesalerId: r.wholesaler_id,
+      businessName: r.business_name || 'Wholesaler',
+      logoUrl: r.logo_url || null,
+      logoType: r.logo_type || null,
+    }));
+  }
+
+  // ─── End Phone OTP methods ──────────────────────────────────────────────────
+
   async createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode> {
     console.log('Creating SMS verification code for customer:', data.customerId);
     const [code] = await db.insert(smsVerificationCodes).values(data).returning();

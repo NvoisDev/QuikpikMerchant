@@ -1274,6 +1274,34 @@ export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
 export type StockMovement = typeof stockMovements.$inferSelect;
 
 // SMS Verification Codes schema
+// Phone-only OTP verifications — used before wholesaler is known in the new login flow
+export const customerPhoneVerifications = pgTable(
+  "customer_phone_verifications",
+  {
+    id: serial("id").primaryKey(),
+    phoneNumber: varchar("phone_number", { length: 30 }).notNull(),
+    code: varchar("code", { length: 6 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    isUsed: boolean("is_used").default(false).notNull(),
+    usedAt: timestamp("used_at"),
+    attempts: integer("attempts").default(0).notNull(),
+    ipAddress: varchar("ip_address", { length: 45 }),
+  },
+  (table) => ({
+    phoneIdx: index("cpv_phone_idx").on(table.phoneNumber),
+    codeIdx: index("cpv_code_idx").on(table.code),
+    createdAtIdx: index("cpv_created_at_idx").on(table.createdAt),
+  })
+);
+
+export const insertCustomerPhoneVerificationSchema = createInsertSchema(customerPhoneVerifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCustomerPhoneVerification = z.infer<typeof insertCustomerPhoneVerificationSchema>;
+export type CustomerPhoneVerification = typeof customerPhoneVerifications.$inferSelect;
+
 export const insertSMSVerificationCodeSchema = createInsertSchema(smsVerificationCodes).omit({
   id: true,
   createdAt: true,

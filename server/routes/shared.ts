@@ -23,6 +23,7 @@ import {
   wholesalerCustomerRelationships, teamMembers,
   priceLists, priceListItems, priceListAssignments,
   cancellationRefundTypeToEmailStatus,
+  customerPhoneVerifications,
 } from "@shared/schema";
 import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
@@ -83,6 +84,7 @@ export {
   wholesalerCustomerRelationships, teamMembers,
   priceLists, priceListItems, priceListAssignments,
   cancellationRefundTypeToEmailStatus,
+  customerPhoneVerifications,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,

@@ -1,702 +1,271 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, MessageSquare, Mail, Building2, User, ArrowLeft, UserPlus } from "lucide-react";
+import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 
 interface CustomerAuthProps {
-  wholesalerId: string;
+  wholesalerId?: string;
   onAuthSuccess: (customerData: any) => void;
   onSkipAuth?: () => void;
   openRequestAccess?: boolean;
 }
 
-interface Wholesaler {
+interface WholesalerOption {
+  customerId: string;
+  wholesalerId: string;
+  businessName: string;
+  logoUrl: string | null;
+  logoType: string | null;
+}
+
+interface WholesalerInfo {
   id: string;
   businessName: string;
   logoType?: string;
   logoUrl?: string;
-  firstName?: string;
-  lastName?: string;
+}
+
+type AuthStep = 'phone' | 'otp' | 'select' | 'no-account';
+
+const COUNTRY_CODE = '+44';
+
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
+
+function formatCountdown(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
-  // Check for auth parameter from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const authParam = urlParams.get('auth');
-  
-  const [lastFourDigits, setLastFourDigits] = useState(authParam || "");
-  const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'step1' | 'step2' | 'step3' | 'success'>('step2');
-  const [customerData, setCustomerData] = useState<any>(null);
-  const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
-  const [emailCode, setEmailCode] = useState("");
+  const [step, setStep] = useState<AuthStep>('phone');
+  const [phoneLocal, setPhoneLocal] = useState('');          // digits after country code
+  const [otpCode, setOtpCode] = useState('');
+  const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSMSLoading, setIsSMSLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [smsExpiry, setSmsExpiry] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState<number>(0);
-  const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
-  const [smsRequestInProgress, setSmsRequestInProgress] = useState(false);
-  const [lastSmsTime, setLastSmsTime] = useState<number>(0);
-  const [autoVerifying, setAutoVerifying] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ap = params.get('auth');
-    return !!(ap && ap.length === 4 && /^\d{4}$/.test(ap));
-  });
-  const [cameFromLogin] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ap = params.get('auth');
-    return !!(ap && ap.length === 4 && /^\d{4}$/.test(ap));
-  });
-  
-  // Registration request form state
+  const [isResending, setIsResending] = useState(false);
+  const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [wholesalerInfo, setWholesalerInfo] = useState<WholesalerInfo | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(openRequestAccess);
   const [registrationData, setRegistrationData] = useState({
-    name: '',
-    businessName: '',
-    phone: '',
-    email: '',
-    message: '',
-    customerType: ''
+    name: '', businessName: '', phone: '', email: '', message: '', customerType: ''
   });
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
-
+  const otpRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Full phone (normalised E.164)
+  const fullPhone = COUNTRY_CODE + phoneLocal.replace(/^0/, '');
+
+  // Fetch wholesaler branding when wholesalerId is known
   useEffect(() => {
-    if (openRequestAccess) {
-      setShowRegistrationForm(true);
-    }
+    if (!wholesalerId) return;
+    fetch(`/api/marketplace/wholesaler/${wholesalerId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => data && setWholesalerInfo(data))
+      .catch(() => {});
+  }, [wholesalerId]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  useEffect(() => {
+    if (openRequestAccess) setShowRegistrationForm(true);
   }, [openRequestAccess]);
 
-  // Handle registration request form submission
-  const handleRegistrationSubmit = async () => {
-    if (!registrationData.name || !registrationData.phone) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in your name and phone number.",
-        variant: "destructive"
-      });
+  // Check for existing session on mount
+  useEffect(() => {
+    if (!wholesalerId) return;
+    fetch(`/api/customer-auth/check/${wholesalerId}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.authenticated && data?.customer) {
+          onAuthSuccess(data.customer);
+        }
+      })
+      .catch(() => {});
+  }, [wholesalerId]);
+
+  const handleSendOtp = async (resend = false) => {
+    const digits = phoneLocal.replace(/\D/g, '');
+    if (digits.length < 7) {
+      setError('Please enter a valid phone number');
       return;
     }
 
+    if (resend) setIsResending(true);
+    else setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/customer-auth/request-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: fullPhone }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification code');
+        return;
+      }
+
+      if (data.throttled) {
+        toast({ title: 'Already sent', description: 'A code was sent recently. Please check your messages.' });
+      } else {
+        if (resend) toast({ title: 'Code resent!', description: 'A new verification code has been sent.' });
+      }
+
+      setCountdown(120); // 2-minute resend cooldown
+      setOtpCode('');
+      setStep('otp');
+      setTimeout(() => otpRef.current?.focus(), 100);
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsResending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      setError('Please enter the complete 6-digit code');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/customer-auth/verify-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Invalid verification code');
+        return;
+      }
+
+      if (data.noWholesalers) {
+        setStep('no-account');
+        return;
+      }
+
+      const options: WholesalerOption[] = data.wholesalers;
+
+      // If a target wholesalerId is known and the customer is linked to it, auto-select
+      if (wholesalerId) {
+        const match = options.find(o => o.wholesalerId === wholesalerId);
+        if (match) {
+          await completeLogin(match.wholesalerId);
+          return;
+        }
+      }
+
+      if (options.length === 1) {
+        await completeLogin(options[0].wholesalerId);
+        return;
+      }
+
+      setWholesalerOptions(options);
+      setStep('select');
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const completeLogin = async (selectedWholesalerId: string) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/customer-auth/complete-phone-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phoneNumber: fullPhone, wholesalerId: selectedWholesalerId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+
+      toast({ title: 'Welcome!', description: `You're now logged in, ${data.customer.name}.` });
+      onAuthSuccess(data.customer);
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegistrationSubmit = async () => {
+    if (!registrationData.name || !registrationData.phone) {
+      toast({ title: 'Missing Information', description: 'Please fill in your name and phone number.', variant: 'destructive' });
+      return;
+    }
     setIsSubmittingRegistration(true);
     try {
-      const response = await fetch('/api/customer/request-wholesaler-access', {
+      const targetWholesalerId = wholesalerId || wholesalerOptions[0]?.wholesalerId;
+      const res = await fetch('/api/customer/request-wholesaler-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          wholesalerId,
+          wholesalerId: targetWholesalerId,
           customerPhone: registrationData.phone,
           customerName: registrationData.name,
           customerEmail: registrationData.email,
           businessName: registrationData.businessName,
           customerType: registrationData.customerType || null,
-          requestMessage: registrationData.message
-        })
+          requestMessage: registrationData.message,
+        }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Request Sent!",
-          description: data.message || "Your access request has been sent to the wholesaler.",
-        });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: 'Request Sent!', description: data.message || 'Your access request has been sent.' });
         setShowRegistrationForm(false);
         setRegistrationData({ name: '', businessName: '', phone: '', email: '', message: '', customerType: '' });
-        setError(""); // Clear the customer not found error
+        setError('');
       } else {
-        toast({
-          title: "Request Failed",
-          description: data.error || "Failed to send your request. Please try again.",
-          variant: "destructive"
-        });
+        toast({ title: 'Request Failed', description: data.error || 'Failed to send your request.', variant: 'destructive' });
       }
-    } catch (error) {
-      console.error('Registration request error:', error);
-      toast({
-        title: "Connection Error",
-        description: "Unable to send your request. Please check your connection and try again.",
-        variant: "destructive"
-      });
+    } catch {
+      toast({ title: 'Connection Error', description: 'Unable to send your request. Please try again.', variant: 'destructive' });
     } finally {
       setIsSubmittingRegistration(false);
     }
   };
 
-  // Handle automatic authentication when coming from CustomerLogin
-  const handleAuthenticationFromLogin = useCallback(async (digits: string) => {
-    // Prevent duplicate SMS requests with both flag and time-based protection
-    const now = Date.now();
-    if (smsRequestInProgress || (now - lastSmsTime < 30000)) {
-      console.log('🚫 SMS request blocked - either in progress or too recent', {
-        smsRequestInProgress,
-        timeSinceLastSms: now - lastSmsTime,
-        lastSmsTime
-      });
-      return;
-    }
-    
-    setSmsRequestInProgress(true);
-    setLastSmsTime(now);
-    
-    console.log('🚀 HANDLE_AUTHENTICATION_FROM_LOGIN START', { 
-      wholesalerId, 
-      digits,
-      currentAuthStep: authStep,
-      customerData: customerData ? 'EXISTS' : 'NULL'
-    });
-    
-    try {
-      // Verify customer exists with these last 4 digits
-      console.log('📡 SENDING VERIFY REQUEST...');
-      const verifyResponse = await fetch('/api/customer-auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
-      });
+  const storeLabel = wholesalerInfo?.businessName || 'Store';
 
-      const verifyData = await verifyResponse.json();
-      console.log('📡 VERIFY RESPONSE:', { ok: verifyResponse.ok, data: verifyData });
-
-      if (verifyResponse.ok) {
-        console.log('✅ CUSTOMER FOUND - SETTING CUSTOMER DATA');
-        setCustomerData(verifyData.customer);
-        
-        // Send SMS code
-        console.log('📱 SENDING SMS REQUEST...');
-        const smsResponse = await fetch('/api/customer-auth/request-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
-        });
-
-        const smsData = await smsResponse.json();
-        console.log('📱 SMS RESPONSE:', { ok: smsResponse.ok, data: smsData });
-        
-
-
-        if (smsResponse.ok) {
-          console.log('✅ SMS SENT - MOVING TO STEP 3');
-          setVerificationMethod(verifyData.customer.email ? 'both' : 'sms');
-          setSmsExpiry(Date.now() + 5 * 60 * 1000);
-          setCountdown(300);
-          setAuthStep('step3'); // SMS verification step
-        } else {
-          console.log('❌ SMS FAILED - BACK TO STEP 2');
-          setError('Failed to send SMS. Please try again.');
-          setAuthStep('step2');
-        }
-      } else {
-        console.log('❌ CUSTOMER VERIFY FAILED - SHOWING STEP 2 WITH REGISTRATION OPTIONS');
-        // Show customer not found message with contact instructions
-        setError("CUSTOMER_NOT_FOUND");
-        setAuthStep('step2'); // Go to step 2 to show phone form and registration options
-      }
-    } catch (error) {
-      console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
-      setError('Authentication failed. Please try again.');
-      setAuthStep('step2');
-    } finally {
-      setSmsRequestInProgress(false);
-    }
-  }, [wholesalerId, smsRequestInProgress]);
-
-  // Initialize authentication flow once on component mount
-  useEffect(() => {
-    console.log('🔧 COMPONENT MOUNT - Initializing authentication');
-    
-    // Check for existing session first to avoid unnecessary SMS
-    const checkExistingSession = async () => {
-      if (!wholesalerId) return false;
-      
-      try {
-        console.log('🔍 Checking for existing session before SMS...');
-        const response = await fetch(`/api/customer-auth/check/${wholesalerId}`, {
-          credentials: 'include',
-        });
-        
-        if (response.ok) {
-          const sessionData = await response.json();
-          if (sessionData.authenticated && sessionData.customer) {
-            console.log('✅ Existing session found, bypassing SMS:', sessionData.customer.name);
-            onAuthSuccess(sessionData.customer);
-            return true;
-          }
-        }
-      } catch (error) {
-        console.log('🔍 No existing session found, proceeding with authentication');
-      }
-      return false;
-    };
-    
-    // Check for auth parameter from CustomerLogin
-    const urlParams = new URLSearchParams(window.location.search);
-    const authParam = urlParams.get('auth');
-    
-    console.log('🔍 URL Parameter Check on Mount:', { 
-      authParam, 
-      isValid: authParam && authParam.length === 4 && /^\d{4}$/.test(authParam),
-      wholesalerId 
-    });
-    
-    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      setLastFourDigits(authParam);
-      setAutoVerifying(true);
-      
-      checkExistingSession().then(hasSession => {
-        if (!hasSession) {
-          console.log('🔗 FROM CUSTOMER LOGIN: No session found, sending SMS with digits', authParam);
-          handleAuthenticationFromLogin(authParam).finally(() => {
-            setAutoVerifying(false);
-          });
-        } else {
-          setAutoVerifying(false);
-        }
-      });
-    } else {
-      // Fresh start - check for existing session first
-      checkExistingSession().then(hasSession => {
-        if (!hasSession) {
-          console.log('🔄 FRESH START: No session found, starting at phone entry');
-          setAuthStep('step2');
-        }
-      });
-    }
-  }, [wholesalerId]); // Only depend on wholesalerId to prevent infinite loops
-
-  // Fetch wholesaler data
-  useEffect(() => {
-    const fetchWholesaler = async () => {
-      try {
-        console.log('🔍 Fetching wholesaler data for ID:', wholesalerId);
-        const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log('🏪 Wholesaler data received:', {
-            id: data.id,
-            businessName: data.businessName,
-            logoUrl: data.logoUrl,
-            initials: data.businessName ? getInitials(data.businessName) : 'N/A'
-          });
-          setWholesaler(data);
-        } else {
-          console.error('❌ Failed to fetch wholesaler - response not ok:', response.status);
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch wholesaler - network error:', error);
-      }
-    };
-
-    if (wholesalerId) {
-      fetchWholesaler();
-    }
-  }, [wholesalerId]);
-
-  // Countdown timer for SMS expiry
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  const handleLogin = async (overrideDigits?: string) => {
-    const phoneDigits = overrideDigits || lastFourDigits;
-    console.log('🚀 Starting streamlined authentication...', { wholesalerId, lastFourDigits: phoneDigits });
-    
-    if (!phoneDigits) {
-      setError("Please enter the last 4 digits of your phone number");
-      return;
-    }
-
-    if (phoneDigits.length !== 4) {
-      setError("Please enter exactly 4 digits");
-      return;
-    }
-
-    // Prevent multiple simultaneous authentication attempts
-    if (isLoading) {
-      console.log('⏳ Authentication already in progress, ignoring duplicate request');
-      return;
-    }
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      console.log('📡 Verifying customer and sending SMS...');
-      
-      // First verify the customer exists with these last 4 digits
-      const verifyResponse = await fetch('/api/customer-auth/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          wholesalerId,
-          lastFourDigits: phoneDigits.trim()
-        }),
-      });
-
-      const verifyData = await verifyResponse.json();
-
-      if (verifyResponse.ok) {
-        console.log('✅ Customer found, sending SMS immediately...');
-        setCustomerData(verifyData.customer);
-        
-        // Immediately send SMS code without going to verification step
-        const smsResponse = await fetch('/api/customer-auth/request-sms', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            wholesalerId,
-            lastFourDigits: phoneDigits.trim()
-          }),
-        });
-
-        const smsData = await smsResponse.json();
-        
-
-
-        if (smsResponse.ok) {
-          console.log('📱 SMS sent successfully, moving to SMS verification...');
-          // Determine verification method
-          if (verifyData.customer.email && verifyData.customer.email.includes('@')) {
-            setVerificationMethod('both');
-          } else {
-            setVerificationMethod('sms');
-          }
-          
-          setAuthStep('step3');
-          setCountdown(300); // 5 minutes
-          setSmsExpiry(Date.now() + 300000);
-          
-          toast({
-            title: "SMS Sent!",
-            description: `A verification code has been sent to your phone, ${verifyData.customer.name}. Please enter the code below.`,
-          });
-          
-
-        } else {
-          console.error('❌ SMS sending failed:', smsData);
-          setError(smsData.error || "Failed to send SMS code. Please try again.");
-        }
-      } else {
-        console.error('❌ Customer verification failed:', verifyData);
-        // Enhanced error handling - distinguish between different error types
-        if (verifyData.error?.includes("Customer not found") || verifyData.error?.includes("not found")) {
-          setError("CUSTOMER_NOT_FOUND");
-        } else {
-          setError(verifyData.error || "Customer not found. Please check the last 4 digits of your phone number.");
-        }
-      }
-    } catch (error) {
-      console.error('⚠️ Authentication error:', error);
-      setError("Connection error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRequestSMS = async () => {
-    if (!lastFourDigits) {
-      setError("Please enter the last 4 digits of your phone number first");
-      return;
-    }
-
-    if (lastFourDigits.length !== 4) {
-      setError("Please enter exactly 4 digits");
-      return;
-    }
-
-    // Prevent multiple simultaneous SMS requests
-    if (isSMSLoading) {
-      console.log('⏳ SMS request already in progress, ignoring duplicate request');
-      return;
-    }
-
-    setIsSMSLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch('/api/customer-auth/request-sms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          wholesalerId,
-          lastFourDigits: lastFourDigits.trim()
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "SMS Sent!",
-          description: "A verification code has been sent to your phone.",
-        });
-        setCountdown(300); // 5 minutes
-        setSmsExpiry(Date.now() + 300000); // 5 minutes
-        
-
-      } else {
-        setError(data.error || "Failed to send SMS code. Please try again.");
-        // If SMS fails, go back to phone step
-        setAuthStep('step2');
-        setCustomerData(null);
-      }
-    } catch (error) {
-      console.error('SMS request error:', error);
-      setError("Connection error. Please try again.");
-      setAuthStep('step2');
-    } finally {
-      setIsSMSLoading(false);
-    }
-  };
-
-  const handleSMSVerification = async () => {
-    if (!smsCode) {
-      setError("Please enter the verification code");
-      return;
-    }
-
-    if (smsCode.length !== 6) {
-      setError("Please enter the complete 6-digit code");
-      return;
-    }
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch('/api/customer-auth/verify-sms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          wholesalerId,
-          lastFourDigits: lastFourDigits.trim(),
-          smsCode: smsCode.trim()
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Verification Successful!",
-          description: `Welcome ${data.customer.name}, you're now securely logged in.`,
-        });
-        
-        // Check if customer has multiple wholesaler relationships
-        try {
-          const wholesalersResponse = await fetch('/api/customer/wholesalers', {
-            credentials: 'include'
-          });
-          
-          if (wholesalersResponse.ok) {
-            const wholesalers = await wholesalersResponse.json();
-            
-            // If customer has multiple wholesalers, redirect to selection page
-            if (wholesalers.length > 1) {
-              window.location.href = '/select-wholesaler';
-              return;
-            } else if (wholesalers.length === 1) {
-              // If only one wholesaler, check if it's the current one
-              const currentWholesaler = wholesalers[0].wholesaler.id;
-              if (currentWholesaler !== wholesalerId) {
-                // Redirect to the correct wholesaler's portal
-                window.location.href = `/customer-portal/${currentWholesaler}`;
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error checking wholesaler relationships:', error);
-          // Continue with normal flow if check fails
-        }
-        
-        onAuthSuccess(data.customer);
-      } else {
-        setError(data.error || "Invalid verification code. Please try again.");
-        // Clear the input for retry
-        setSmsCode('');
-      }
-    } catch (error) {
-      console.error('SMS verification error:', error);
-      setError("Connection error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Email verification functions
-  const handleRequestEmail = async () => {
-    if (!customerData || !customerData.email) {
-      setError("Email address not available for verification");
-      return;
-    }
-
-    setIsSMSLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch('/api/customer-email-verification/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerId: customerData.id,
-          email: customerData.email
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Email Sent!",
-          description: `A verification code has been sent to ${customerData.email}`,
-        });
-        setCountdown(600); // 10 minutes for email
-        setSmsExpiry(Date.now() + 600000); // 10 minutes
-      } else {
-        setError(data.message || "Failed to send email verification. Please try SMS instead.");
-      }
-    } catch (error) {
-      console.error('Email verification request error:', error);
-      setError("Connection error. Please try again.");
-    } finally {
-      setIsSMSLoading(false);
-    }
-  };
-
-  const handleEmailVerification = async () => {
-    if (!emailCode) {
-      setError("Please enter the email verification code");
-      return;
-    }
-
-    if (emailCode.length !== 6) {
-      setError("Please enter the complete 6-digit code");
-      return;
-    }
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch('/api/customer-email-verification/verify', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerId: customerData.id,
-          email: customerData.email,
-          code: emailCode.trim(),
-          wholesalerId
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Email Verification Successful!",
-          description: `Welcome ${customerData.name}, you're now securely logged in.`,
-        });
-        onAuthSuccess(data.customer || customerData);
-      } else {
-        setError(data.message || "Invalid email verification code. Please try again.");
-      }
-    } catch (error) {
-      console.error('Email verification error:', error);
-      setError("Connection error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6); // Only digits, max 6
-    setEmailCode(value);
-  };
-
-  const handleBackToPhone = () => {
-    setAuthStep('step2');
-    setSmsCode("");
-    setEmailCode("");
-    setCountdown(0);
-    setSmsExpiry(null);
-    setError("");
-    setCustomerData(null);
-  };
-
-  const handleLastFourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 4); // Only digits, max 4
-    setLastFourDigits(value);
-  };
-
-  const handleSMSCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6); // Only digits, max 6
-    setSmsCode(value);
-  };
-
-  const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Helper function to generate initials from business name
-  const getInitials = (businessName: string) => {
-    return businessName
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .substring(0, 2)
-      .toUpperCase();
-  };
-
-
-  if (autoVerifying) {
+  // ─── Loading spinner ─────────────────────────────────────────────────────
+  if (isLoading && step === 'phone') {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
         <div className="text-center max-w-md mx-auto">
-          {wholesaler?.logoUrl ? (
-            <img
-              src={wholesaler.logoUrl}
-              alt={wholesaler.businessName}
-              className="mx-auto h-20 w-20 rounded-full object-cover mb-6 border-2 border-gray-100 shadow-md"
-            />
-          ) : (
-            <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6 shadow-md">
-              <span className="text-2xl font-bold text-white">
-                {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
-              </span>
-            </div>
-          )}
-          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying your access...</h2>
-          <p className="text-gray-500 text-sm">
-            Connecting you to {wholesaler?.businessName || 'the store'}
-          </p>
+          <WholesalerAvatar info={wholesalerInfo} />
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-4 mt-4" />
+          <p className="text-gray-500 text-sm">Sending verification code…</p>
         </div>
       </div>
     );
@@ -705,136 +274,81 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 sm:px-6">
       <div className="w-full max-w-md mx-auto">
+
+        {/* Header */}
         <div className="text-center mb-8">
-          {wholesaler?.logoUrl ? (
-            <img
-              src={wholesaler.logoUrl}
-              alt={wholesaler.businessName}
-              className="mx-auto h-20 w-20 rounded-full object-cover mb-6 border-2 border-gray-100"
-            />
-          ) : (
-            <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center mb-6">
-              <span className="text-2xl font-bold text-white">
-                {wholesaler?.businessName ? getInitials(wholesaler.businessName) : 'Q'}
-              </span>
-            </div>
-          )}
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {authStep === 'step3' && customerData ? `Welcome, ${customerData.name}!` : 'Welcome Back'}
+          <WholesalerAvatar info={wholesalerInfo} />
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">
+            {step === 'phone' && 'Welcome Back'}
+            {step === 'otp' && 'Verify your number'}
+            {step === 'select' && 'Choose your store'}
+            {step === 'no-account' && 'No account found'}
           </h1>
-          <p className="text-gray-600 text-lg">
-            Accessing {wholesaler?.businessName || 'Store'}
+          <p className="text-gray-600 text-base">
+            {step === 'phone' && (wholesalerInfo ? `Accessing ${storeLabel}` : 'Sign in to your wholesale account')}
+            {step === 'otp' && `We sent a code to ${COUNTRY_CODE} ${phoneLocal}`}
+            {step === 'select' && 'You have access to multiple stores'}
+            {step === 'no-account' && `${COUNTRY_CODE} ${phoneLocal} isn't linked to any store`}
           </p>
         </div>
 
-        <div className="flex items-center justify-center space-x-2 mb-2">
-          <div className="h-3 w-3 rounded-full bg-green-600"></div>
-          <div className={`h-0.5 w-8 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          <div className={`h-3 w-3 rounded-full ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          {cameFromLogin && (
-            <>
-              <div className={`h-0.5 w-8 ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-              <div className={`h-3 w-3 rounded-full ${authStep === 'step3' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-            </>
-          )}
-        </div>
-        <p className="text-sm text-gray-500 text-center mb-6">
-          {authStep === 'step3'
-            ? cameFromLogin ? 'Step 3 of 3' : 'Step 2 of 2'
-            : cameFromLogin ? 'Step 2 of 3' : 'Step 1 of 2'}
-        </p>
+        {/* Step dots */}
+        <StepDots current={step} />
 
-        {authStep === 'step2' && (
+        {/* ── Phone entry ── */}
+        {step === 'phone' && (
           <div className="space-y-6">
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="lastFour" className="text-base font-medium">Phone Verification</Label>
-                <p className="text-sm text-gray-600 text-center">Enter the last 4 digits of your phone number</p>
-                <Input
-                  id="lastFour"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="••••"
-                  value={lastFourDigits}
-                  onChange={handleLastFourChange}
-                  maxLength={4}
-                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
-                  disabled={isLoading}
-                  autoComplete="off"
-                />
+            <form onSubmit={e => { e.preventDefault(); handleSendOtp(); }} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-base font-medium flex items-center gap-2">
+                  <Phone className="h-4 w-4" /> Mobile Number
+                </Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium select-none">
+                    🇬🇧 {COUNTRY_CODE}
+                  </span>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="7700 900000"
+                    value={phoneLocal}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^\d\s]/g, '');
+                      setPhoneLocal(v);
+                      setError('');
+                    }}
+                    className="rounded-l-none h-12 text-base border-gray-300 focus:border-green-600"
+                    autoComplete="tel"
+                    disabled={isLoading}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Enter your UK mobile number. We'll send you a verification code.</p>
               </div>
 
               {error && (
-                <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
-                  {error === "CUSTOMER_NOT_FOUND" ? (
-                    <AlertDescription className="text-center space-y-3">
-                      <div className="flex items-center justify-center mb-1">
-                        <Building2 className="w-4 h-4 text-blue-600 mr-2" />
-                        <span className="text-blue-800 font-semibold text-sm">Not registered yet?</span>
-                      </div>
-                      <p className="text-blue-700 text-sm mb-3 px-2">
-                        You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store.
-                      </p>
-                      <div className="space-y-2">
-                        <Button
-                          type="button"
-                          onClick={() => setShowRegistrationForm(true)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
-                        >
-                          <User className="w-4 h-4 mr-2" />
-                          Request Access
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={() => setError("")}
-                          variant="outline"
-                          className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-11 text-sm"
-                        >
-                          <ArrowLeft className="w-4 h-4 mr-2" />
-                          Try Different Number
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  ) : error.includes("SMS failed") || error.includes("Failed to send") ? (
-                    <AlertDescription className="text-center space-y-2">
-                      <h6 className="font-semibold text-gray-800 text-sm">SMS Delivery Issue</h6>
-                      <p className="text-sm text-gray-600 px-2">{error}</p>
-                    </AlertDescription>
-                  ) : (
-                    <AlertDescription className="text-center">
-                      <p className="text-sm text-gray-600 px-2">{error}</p>
-                    </AlertDescription>
-                  )}
+                <Alert variant="destructive" className="border-0 bg-red-50">
+                  <AlertDescription className="text-sm text-center">{error}</AlertDescription>
                 </Alert>
               )}
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
-                disabled={isLoading || lastFourDigits.length !== 4}
+                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold text-base"
+                disabled={isLoading || phoneLocal.replace(/\D/g, '').length < 7}
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending verification code...
-                  </>
-                ) : (
-                  "Access Store"
-                )}
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending code…</> : 'Continue'}
               </Button>
             </form>
 
-            {onSkipAuth && error !== "CUSTOMER_NOT_FOUND" && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={onSkipAuth}
-                  className="w-full h-11 rounded-xl border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 font-semibold text-sm transition-colors"
-                >
-                  Browse products as guest →
-                </button>
-              </div>
+            {onSkipAuth && (
+              <button
+                type="button"
+                onClick={onSkipAuth}
+                className="w-full h-11 rounded-xl border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 font-semibold text-sm transition-colors"
+              >
+                Browse products as guest →
+              </button>
             )}
 
             <div className="border-t pt-4">
@@ -850,199 +364,142 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
           </div>
         )}
 
-        {authStep === 'step3' && customerData && (
+        {/* ── OTP entry ── */}
+        {step === 'otp' && (
           <div className="space-y-6">
-            {countdown > 0 && (
-              <p className="text-xs text-blue-600 text-center">
-                Code expires in {formatCountdown(countdown)}
-              </p>
-            )}
-
-            {verificationMethod === 'both' ? (
-              <div className="flex bg-gray-100 rounded-xl p-1">
-                <button
-                  onClick={() => setVerificationMethod('sms')}
-                  className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white shadow-sm"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  SMS
-                </button>
-                <button
-                  onClick={() => setVerificationMethod('email')}
-                  className="flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email
-                </button>
-              </div>
-            ) : null}
-
-            {(verificationMethod === 'sms' || verificationMethod === 'both') && (
-              <div className="space-y-3">
-                <Label className="text-base font-medium block text-center">SMS Verification</Label>
-                <p className="text-sm text-gray-600 text-center">
-                  Enter the 6-digit code sent to your phone
-                </p>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="123456"
-                  value={smsCode}
-                  onChange={handleSMSCodeChange}
-                  maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
-                  autoComplete="one-time-code"
-                />
-              </div>
-            )}
-
-            {verificationMethod === 'email' && (
-              <div className="space-y-3">
-                <Label className="text-base font-medium block text-center">Email Verification</Label>
-                <p className="text-sm text-gray-600 text-center">
-                  Enter the 6-digit code sent to:
-                </p>
-                <p className="text-sm font-medium text-blue-600 text-center break-all">
-                  {customerData.email}
-                </p>
-                <div className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRequestEmail}
-                    disabled={isSMSLoading}
-                    className="text-xs h-8"
-                  >
-                    {isSMSLoading ? (
-                      <>
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="mr-1 h-3 w-3" />
-                        Send Email Code
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="123456"
-                  value={emailCode}
-                  onChange={handleEmailCodeChange}
-                  maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-blue-600"
-                  autoComplete="one-time-code"
-                />
-              </div>
-            )}
+            <div className="space-y-3">
+              <Label htmlFor="otp" className="text-base font-medium flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" /> Verification Code
+              </Label>
+              <Input
+                ref={otpRef}
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="123456"
+                value={otpCode}
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setOtpCode(v);
+                  setError('');
+                }}
+                maxLength={6}
+                className="text-center text-2xl tracking-[0.5em] h-16 border-2 font-mono focus:border-green-600"
+                autoComplete="one-time-code"
+                disabled={isLoading}
+              />
+              {countdown > 0 && (
+                <p className="text-xs text-blue-600 text-center">Code expires in {formatCountdown(countdown)}</p>
+              )}
+            </div>
 
             {error && (
-              <Alert className="border-red-200 bg-red-50 rounded-lg">
-                <AlertDescription className="text-center space-y-2">
-                  {error.includes("Invalid") || error.includes("incorrect") ? (
-                    <>
-                      <h6 className="font-semibold text-gray-800 text-sm">Code Incorrect</h6>
-                      <p className="text-xs text-gray-600">Double-check the code and try again.</p>
-                    </>
-                  ) : error.includes("expired") ? (
-                    <>
-                      <h6 className="font-semibold text-gray-800 text-sm">Code Expired</h6>
-                      <p className="text-xs text-gray-600">Request a new verification code and try again.</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-600">{error}</p>
-                  )}
-                </AlertDescription>
+              <Alert variant="destructive" className="border-0 bg-red-50">
+                <AlertDescription className="text-sm text-center">{error}</AlertDescription>
               </Alert>
             )}
 
-            {verificationMethod === 'sms' || verificationMethod === 'both' ? (
-              <Button
-                onClick={handleSMSVerification}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                disabled={isLoading || smsCode.length !== 6}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify Code"
-                )}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleEmailVerification}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                disabled={isLoading || emailCode.length !== 6}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify Code"
-                )}
-              </Button>
-            )}
+            <Button
+              onClick={handleVerifyOtp}
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
+              disabled={isLoading || otpCode.length !== 6}
+            >
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying…</> : 'Verify Code'}
+            </Button>
 
-            <div className="flex space-x-3">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={handleBackToPhone}
-                className="flex-1 h-11 font-medium border-2"
+                onClick={() => { setStep('phone'); setOtpCode(''); setError(''); }}
+                className="flex-1 h-11 border-2"
+                disabled={isLoading}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-
-              {(verificationMethod === 'sms' || verificationMethod === 'both') && (
-                <Button
-                  variant="outline"
-                  onClick={handleRequestSMS}
-                  disabled={isSMSLoading || countdown > 240}
-                  className="flex-1 h-11 font-medium border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
-                >
-                  {isSMSLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : countdown > 240 ? (
-                    `Wait ${formatCountdown(countdown - 240)}`
-                  ) : (
-                    <>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Resend SMS
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={() => handleSendOtp(true)}
+                disabled={isResending || countdown > 60}
+                className="flex-1 h-11 border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                {isResending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : countdown > 60 ? `Wait ${formatCountdown(countdown - 60)}` : 'Resend Code'}
+              </Button>
             </div>
           </div>
         )}
 
-        <div className="mt-8">
-          <Footer />
-        </div>
+        {/* ── Wholesaler selection ── */}
+        {step === 'select' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 text-center">Select the store you'd like to shop with today:</p>
+            {wholesalerOptions.map(opt => (
+              <button
+                key={opt.wholesalerId}
+                onClick={() => completeLogin(opt.wholesalerId)}
+                disabled={isLoading}
+                className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-colors text-left"
+              >
+                {opt.logoUrl ? (
+                  <img src={opt.logoUrl} alt={opt.businessName} className="h-12 w-12 rounded-xl object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">{getInitials(opt.businessName)}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{opt.businessName}</p>
+                  <p className="text-sm text-gray-500">Tap to enter this store</p>
+                </div>
+                {isLoading && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
+              </button>
+            ))}
+            {error && (
+              <Alert variant="destructive" className="border-0 bg-red-50">
+                <AlertDescription className="text-sm text-center">{error}</AlertDescription>
+              </Alert>
+            )}
+            <Button variant="outline" onClick={() => { setStep('phone'); setError(''); }} className="w-full h-11 border-2">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+          </div>
+        )}
+
+        {/* ── No account found ── */}
+        {step === 'no-account' && (
+          <div className="space-y-5">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center space-y-3">
+              <Building2 className="h-8 w-8 text-blue-500 mx-auto" />
+              <p className="text-blue-800 font-semibold text-sm">Not registered yet?</p>
+              <p className="text-blue-700 text-sm">
+                Your number isn't linked to any wholesale account. Ask your wholesaler to add you, or submit a registration request below.
+              </p>
+              <Button
+                onClick={() => setShowRegistrationForm(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
+              >
+                <User className="h-4 w-4 mr-2" /> Request Access
+              </Button>
+            </div>
+            <Button variant="outline" onClick={() => { setStep('phone'); setError(''); }} className="w-full h-11 border-2">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Try a different number
+            </Button>
+          </div>
+        )}
+
+        <div className="mt-8"><Footer /></div>
       </div>
 
+      {/* Registration request dialog */}
       <Dialog open={showRegistrationForm} onOpenChange={setShowRegistrationForm}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center text-base sm:text-lg">
               <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-600" />
-              Request Access to {wholesaler?.businessName || 'Store'}
+              Request Access{wholesalerInfo ? ` to ${wholesalerInfo.businessName}` : ''}
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Fill out this form to request access. The wholesaler will review your request and get back to you.
+              Fill in your details and the wholesaler will review your request.
             </DialogDescription>
           </DialogHeader>
 
@@ -1052,7 +509,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <Input
                 id="reg-name"
                 value={registrationData.name}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={e => setRegistrationData(p => ({ ...p, name: e.target.value }))}
                 placeholder="Your full name"
                 className="mt-1 h-10 text-sm"
               />
@@ -1062,7 +519,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <Input
                 id="reg-business"
                 value={registrationData.businessName}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, businessName: e.target.value }))}
+                onChange={e => setRegistrationData(p => ({ ...p, businessName: e.target.value }))}
                 placeholder="Your business name"
                 className="mt-1 h-10 text-sm"
               />
@@ -1072,13 +529,15 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <select
                 id="reg-customer-type"
                 value={registrationData.customerType}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, customerType: e.target.value }))}
-                className="mt-1 w-full h-10 text-sm border border-gray-200 rounded-md px-3 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+                onChange={e => setRegistrationData(p => ({ ...p, customerType: e.target.value }))}
+                className="w-full mt-1 h-10 text-sm border border-input rounded-md px-3 bg-background"
               >
-                <option value="">Select type...</option>
-                <option value="retail">Retailer</option>
-                <option value="wholesale">Wholesaler</option>
+                <option value="">Select type…</option>
+                <option value="retailer">Retailer</option>
+                <option value="restaurant">Restaurant / Catering</option>
+                <option value="wholesaler">Sub-wholesaler</option>
                 <option value="individual">Individual</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div>
@@ -1086,9 +545,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <Input
                 id="reg-phone"
                 type="tel"
-                value={registrationData.phone}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="Your phone number"
+                value={registrationData.phone || (phoneLocal ? COUNTRY_CODE + phoneLocal : '')}
+                onChange={e => setRegistrationData(p => ({ ...p, phone: e.target.value }))}
+                placeholder="+44 7700 900000"
                 className="mt-1 h-10 text-sm"
               />
             </div>
@@ -1098,52 +557,68 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                 id="reg-email"
                 type="email"
                 value={registrationData.email}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Your email address"
+                onChange={e => setRegistrationData(p => ({ ...p, email: e.target.value }))}
+                placeholder="your@email.com"
                 className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="reg-message" className="text-sm font-medium">Message (Optional)</Label>
+              <Label htmlFor="reg-message" className="text-sm font-medium">Message <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Textarea
                 id="reg-message"
                 value={registrationData.message}
-                onChange={(e) => setRegistrationData(prev => ({ ...prev, message: e.target.value }))}
-                placeholder="Tell them why you'd like access to their store..."
-                className="mt-1 resize-none text-sm h-24"
+                onChange={e => setRegistrationData(p => ({ ...p, message: e.target.value }))}
+                placeholder="Tell us about your business or what you'd like to order…"
+                className="mt-1 text-sm"
                 rows={3}
               />
             </div>
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              onClick={() => setShowRegistrationForm(false)}
-              variant="outline"
-              className="w-full sm:w-auto h-10 text-sm"
-            >
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowRegistrationForm(false)} disabled={isSubmittingRegistration} className="flex-1 h-10">
               Cancel
             </Button>
             <Button
               onClick={handleRegistrationSubmit}
-              disabled={isSubmittingRegistration || !registrationData.name || !registrationData.phone}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-10 text-sm"
+              disabled={isSubmittingRegistration || !registrationData.name.trim() || !registrationData.phone.trim()}
+              className="flex-1 h-10 bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isSubmittingRegistration ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Request
-                </>
-              )}
+              {isSubmittingRegistration ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : 'Send Request'}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function WholesalerAvatar({ info }: { info: WholesalerInfo | null }) {
+  if (info?.logoUrl) {
+    return <img src={info.logoUrl} alt={info.businessName} className="mx-auto h-20 w-20 rounded-full object-cover border-2 border-gray-100 shadow-md" />;
+  }
+  return (
+    <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center shadow-md">
+      {info?.businessName ? (
+        <span className="text-2xl font-bold text-white">{getInitials(info.businessName)}</span>
+      ) : (
+        <Store className="h-9 w-9 text-white" />
+      )}
+    </div>
+  );
+}
+
+function StepDots({ current }: { current: AuthStep }) {
+  const steps: AuthStep[] = ['phone', 'otp', 'select'];
+  const idx = steps.indexOf(current);
+  if (idx < 0) return null;
+  return (
+    <div className="flex items-center justify-center space-x-2 mb-6">
+      {steps.slice(0, 3).map((_, i) => (
+        <div key={i} className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${i <= idx ? 'bg-green-600' : 'bg-gray-200'}`} />
+      ))}
     </div>
   );
 }

@@ -7,7 +7,219 @@ import {
   wrapCustomerEmail
 } from "./shared";
 
+// ─── Shared session helper ───────────────────────────────────────────────────
+async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
+  const sessionData = {
+    customerId: customer.id,
+    wholesalerId,
+    name: customer.name,
+    email: customer.email || '',
+    phone: customer.phone || '',
+    groupId: customer.groupId || null,
+    groupName: customer.groupName || '',
+    authenticatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+
+  if (!req.session) req.session = {} as any;
+  (req.session as any).customerAuth = sessionData;
+
+  await new Promise<void>((resolve) => {
+    if (req.session && typeof req.session.save === 'function') {
+      req.session.save((err: any) => {
+        if (err) console.error('❌ Session save error:', err);
+        resolve();
+      });
+    } else resolve();
+  });
+
+  const cookiePayload = Buffer.from(JSON.stringify({
+    customerId: customer.id,
+    wholesalerId,
+    name: customer.name,
+    email: customer.email || '',
+    phone: customer.phone || '',
+    groupId: customer.groupId || null,
+    groupName: customer.groupName || '',
+    timestamp: Date.now(),
+    expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+  })).toString('base64');
+
+  res.cookie('customer_auth', cookiePayload, {
+    httpOnly: true,
+    secure: false,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: 'lax',
+  });
+}
+
 export function registerCustomerAuthRoutes(app: Express): void {
+
+  // ─── NEW FLOW: Phone OTP (wholesaler-agnostic) ───────────────────────────
+
+  // POST /api/customer-auth/request-phone-otp
+  app.post('/api/customer-auth/request-phone-otp', async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim().length < 7) {
+        return res.status(400).json({ error: 'A valid phone number is required' });
+      }
+
+      const normalised = phoneNumber.trim();
+
+      // Rate limit: 1 OTP per 2 minutes per number
+      const recent = await storage.getRecentPhoneVerification(normalised, 2);
+      if (recent) {
+        return res.json({ success: true, throttled: true, message: 'An OTP was sent recently. Please check your messages or wait 2 minutes.' });
+      }
+
+      const code = ReliableSMSService.generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
+
+      await storage.createPhoneVerification(normalised, code, expiresAt, ipAddress);
+
+      const smsResult = await ReliableSMSService.sendVerificationSMS(normalised, code, 'Quikpik', '');
+      console.log(`📱 Phone OTP send result for ${normalised}:`, smsResult);
+
+      if (smsResult.success || process.env.NODE_ENV === 'development') {
+        return res.json({
+          success: true,
+          message: 'Verification code sent',
+          ...(process.env.NODE_ENV === 'development' ? { debugCode: code } : {})
+        });
+      }
+      return res.status(500).json({ error: 'Failed to send SMS. Please try again.' });
+    } catch (error) {
+      console.error('request-phone-otp error:', error);
+      return res.status(500).json({ error: 'Failed to send verification code' });
+    }
+  });
+
+  // POST /api/customer-auth/verify-phone-otp
+  app.post('/api/customer-auth/verify-phone-otp', async (req, res) => {
+    try {
+      const { phoneNumber, code } = req.body;
+      if (!phoneNumber || !code) {
+        return res.status(400).json({ error: 'Phone number and code are required' });
+      }
+
+      const normalised = phoneNumber.trim();
+      const trimmedCode = code.trim();
+
+      const record = await storage.getPhoneVerification(normalised, trimmedCode);
+      if (!record) {
+        return res.status(401).json({ error: 'Invalid verification code' });
+      }
+
+      if (record.isUsed) {
+        return res.status(401).json({ error: 'Verification code has already been used' });
+      }
+
+      if (new Date() > record.expiresAt) {
+        return res.status(401).json({ error: 'Verification code has expired' });
+      }
+
+      if (record.attempts >= 5) {
+        return res.status(401).json({ error: 'Too many attempts. Please request a new code.' });
+      }
+
+      // Mark used
+      await storage.markPhoneVerificationUsed(record.id);
+
+      // Find all wholesalers linked to this phone
+      const wholesalers = await storage.findCustomersByPhone(normalised);
+      console.log(`✅ Phone OTP verified for ${normalised} — ${wholesalers.length} wholesaler(s) found`);
+
+      if (wholesalers.length === 0) {
+        return res.json({ success: true, noWholesalers: true, wholesalers: [] });
+      }
+
+      return res.json({ success: true, wholesalers });
+    } catch (error) {
+      console.error('verify-phone-otp error:', error);
+      return res.status(500).json({ error: 'Verification failed' });
+    }
+  });
+
+  // POST /api/customer-auth/complete-phone-login
+  // Called after OTP is verified and wholesaler is selected.
+  app.post('/api/customer-auth/complete-phone-login', async (req, res) => {
+    try {
+      const { phoneNumber, wholesalerId } = req.body;
+      if (!phoneNumber || !wholesalerId) {
+        return res.status(400).json({ error: 'Phone number and wholesaler ID are required' });
+      }
+
+      const normalised = phoneNumber.trim();
+
+      // Find the customer record for this phone + wholesaler combination
+      const matches = await storage.findCustomersByPhone(normalised);
+      const match = matches.find(m => m.wholesalerId === wholesalerId);
+
+      if (!match) {
+        return res.status(403).json({ error: 'No access to the selected wholesaler' });
+      }
+
+      // Fetch full customer record
+      const customerRecord = await storage.getUser(match.customerId);
+      if (!customerRecord) {
+        return res.status(404).json({ error: 'Customer record not found' });
+      }
+
+      const customerName = `${customerRecord.firstName || ''} ${customerRecord.lastName || ''}`.trim() || customerRecord.businessName || 'Customer';
+
+      // Look up group membership
+      let groupId: string | null = null;
+      let groupName = '';
+      try {
+        const groupRows = await db.execute(sql`
+          SELECT cgm.group_id as group_id, cg.name as group_name
+          FROM customer_group_members cgm
+          INNER JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
+          WHERE cgm.customer_id = ${match.customerId}
+          LIMIT 1
+        `);
+        if (groupRows.rows.length > 0) {
+          const row = groupRows.rows[0] as any;
+          groupId = row.group_id ? String(row.group_id) : null;
+          groupName = row.group_name || '';
+        }
+      } catch (groupErr) {
+        console.warn('⚠️ Could not fetch group info:', groupErr);
+      }
+
+      const customer = {
+        id: match.customerId,
+        name: customerName,
+        email: customerRecord.email || '',
+        phone: customerRecord.phoneNumber || normalised,
+        groupId,
+        groupName,
+      };
+
+      await buildAndSaveCustomerSession(req, res, customer, wholesalerId);
+      console.log(`🔐 Phone-OTP session created for ${customerName} → wholesaler ${wholesalerId}`);
+
+      return res.json({
+        success: true,
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName,
+        }
+      });
+    } catch (error) {
+      console.error('complete-phone-login error:', error);
+      return res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // ─── LEGACY ENDPOINTS (deprecated — kept for backward compat) ────────────
+
   // POST /api/customer-auth/verify
   app.post('/api/customer-auth/verify', async (req, res) => {
     try {
