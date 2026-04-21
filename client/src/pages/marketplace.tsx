@@ -121,7 +121,7 @@ export default function Marketplace() {
   const { user } = useAuth();
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
-  const { data: plans = [], isLoading: plansLoading } = useQuery<SubscriptionPlan[]>({
+  const { data: plans = [], isLoading: plansLoading, isError: plansError } = useQuery<SubscriptionPlan[]>({
     queryKey: ["/api/subscriptions/plans"],
   });
 
@@ -247,13 +247,16 @@ export default function Marketplace() {
           <div className="flex justify-center py-16">
             <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
           </div>
+        ) : plansError ? (
+          <div className="text-center py-16 text-gray-500">
+            <p className="text-sm">Could not load plans right now. Please refresh the page to try again.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             {plans.map((plan) => {
               const colors = getPlanAccentColor(plan.planId);
               const isCurrent = isCurrentPlan(plan.planId);
               const hierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
-              const isUpgrade = (hierarchy[plan.planId] ?? 0) > (hierarchy[currentPlan] ?? 0);
               const isDowngrade = (hierarchy[plan.planId] ?? 0) < (hierarchy[currentPlan] ?? 0);
 
               return (
