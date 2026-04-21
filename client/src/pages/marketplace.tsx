@@ -1,728 +1,364 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Star, Package, Filter, Grid, List, Users, TrendingUp, Award, Crown, Lock, Eye, EyeOff } from "lucide-react";
-import { formatCurrency } from "@/lib/currencies";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
+import {
+  Store,
+  Package,
+  Users,
+  TrendingUp,
+  Eye,
+  ShieldCheck,
+  CheckIcon,
+  StarIcon,
+  CrownIcon,
+  ArrowRight,
+  Clock,
+} from "lucide-react";
+import clsx from "clsx";
+import PageHeader from "@/components/PageHeader";
 
-// Utility function to format numbers with commas
-const formatNumber = (num: number | string): string => {
-  const number = typeof num === 'string' ? parseInt(num) : num;
-  return number.toLocaleString();
-};
-import type { Product, User } from "@shared/schema";
-
-interface WholesalerWithProducts extends User {
-  products: Product[];
-  rating?: number;
-  totalOrders?: number;
-}
-
-interface MarketplaceProduct extends Product {
-  wholesaler: {
-    id: string;
-    businessName: string;
-    profileImageUrl?: string;
-    rating?: number;
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  planId: string;
+  stripePriceId: string | null;
+  monthlyPrice: string;
+  currency: string;
+  description: string;
+  features: string[];
+  limits: {
+    products: number;
+    broadcasts: number;
+    teamMembers: number;
+    customGroups: number;
   };
+  sortOrder: number;
 }
 
-const productCategories = [
-  "All Categories",
-  "Groceries & Food",
-  "Fresh Produce",
-  "Beverages & Drinks",
-  "Snacks & Confectionery",
-  "Personal Care & Hygiene",
-  "Household Cleaning",
-  "Health & Pharmacy",
-  "Baby & Childcare",
-  "Pet Food & Supplies",
-  "Electronics & Gadgets",
-  "Home & Kitchen",
-  "Clothing & Fashion",
-  "Sports & Fitness",
-  "Books & Stationery",
-  "Toys & Games",
-  "Hardware & Tools",
-  "Garden & Outdoor",
-  "Automotive Supplies",
-  "Beauty & Cosmetics",
-  "Other"
+interface CurrentSubscription {
+  user: any;
+  subscription: any;
+  plan: SubscriptionPlan | null;
+  currentPlan: string;
+  subscriptionStatus: string;
+}
+
+const marketplaceHighlights = [
+  {
+    icon: Package,
+    title: "Browse Wholesale Products",
+    description: "Discover products from verified UK wholesalers across every category.",
+  },
+  {
+    icon: Users,
+    title: "Connect with Suppliers",
+    description: "Build direct relationships with like-minded wholesale businesses.",
+  },
+  {
+    icon: Eye,
+    title: "Flexible Price Visibility",
+    description: "Control exactly who sees your prices and apply your own pricing tiers.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Grow Your Sourcing",
+    description: "Expand your product range and find better deals without leaving the platform.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Verified Businesses Only",
+    description: "Every supplier on the marketplace is vetted and verified before listing.",
+  },
+  {
+    icon: Store,
+    title: "List Your Own Products",
+    description: "Put your own catalogue in front of other wholesalers who are ready to buy.",
+  },
 ];
 
-const locations = [
-  "All Locations",
-  "London",
-  "Manchester",
-  "Birmingham",
-  "Leeds",
-  "Glasgow",
-  "Liverpool",
-  "Newcastle",
-  "Sheffield",
-  "Bristol",
-  "Edinburgh",
-  "Leicester",
-  "Coventry",
-  "Bradford",
-  "Cardiff",
-  "Belfast",
-  "Nottingham",
-  "Plymouth",
-  "Stoke-on-Trent",
-  "Wolverhampton"
-];
+function getPlanIcon(planId: string) {
+  switch (planId) {
+    case "free":
+      return <CheckIcon className="w-5 h-5" />;
+    case "standard":
+      return <StarIcon className="w-5 h-5" />;
+    case "premium":
+      return <CrownIcon className="w-5 h-5" />;
+    default:
+      return <CheckIcon className="w-5 h-5" />;
+  }
+}
+
+function getPlanAccentColor(planId: string) {
+  switch (planId) {
+    case "free":
+      return { icon: "bg-gray-100 text-gray-600", ring: "border-gray-200", btn: "bg-gray-700 hover:bg-gray-800" };
+    case "standard":
+      return { icon: "bg-blue-100 text-blue-600", ring: "border-blue-200", btn: "bg-blue-600 hover:bg-blue-700" };
+    case "premium":
+      return { icon: "bg-purple-100 text-purple-600", ring: "border-purple-200", btn: "bg-purple-600 hover:bg-purple-700" };
+    default:
+      return { icon: "bg-gray-100 text-gray-600", ring: "border-gray-200", btn: "bg-gray-700 hover:bg-gray-800" };
+  }
+}
+
+function formatLimit(limit: number) {
+  return limit === -1 ? "Unlimited" : limit.toString();
+}
+
+function formatPlanFeature(feature: string) {
+  return feature.toLowerCase().includes("broadcast") ? "Broadcast tools (coming soon)" : feature;
+}
 
 export default function Marketplace() {
+  const { toast } = useToast();
   const { user } = useAuth();
-  // Subscription system removed
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [viewMode, setViewMode] = useState<"featured" | "products" | "wholesalers">("featured");
-  const [layoutMode, setLayoutMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState("featured");
-  const [selectedLocation, setSelectedLocation] = useState("All Locations");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [ratingFilter, setRatingFilter] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
-  // Upgrade modal removed
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
-  // Check if user has premium access to marketplace
-  const hasMarketplaceAccess = true; // Premium access enabled
+  const { data: plans = [], isLoading: plansLoading } = useQuery<SubscriptionPlan[]>({
+    queryKey: ["/api/subscriptions/plans"],
+  });
 
-  const { data: products = [], isLoading: productsLoading } = useQuery<MarketplaceProduct[]>({
-    queryKey: ["/api/marketplace/products", searchQuery, selectedCategory, sortBy, selectedLocation, priceRange, ratingFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("search", searchQuery);
-      if (selectedCategory !== "All Categories") params.append("category", selectedCategory);
-      if (selectedLocation !== "All Locations") params.append("location", selectedLocation);
-      params.append("sortBy", sortBy);
-      params.append("minPrice", priceRange[0].toString());
-      params.append("maxPrice", priceRange[1].toString());
-      if (ratingFilter > 0) params.append("minRating", ratingFilter.toString());
-      
-      const response = await fetch(`/api/marketplace/products?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch marketplace products");
+  const { data: currentSubscription } = useQuery<CurrentSubscription>({
+    queryKey: ["/api/subscriptions/current"],
+    enabled: !!user,
+  });
+
+  const createCheckoutMutation = useMutation({
+    mutationFn: async (priceId: string) => {
+      const response = await apiRequest("POST", "/api/subscriptions/create-checkout-session", { priceId });
       return response.json();
     },
-    enabled: viewMode === "products",
-  });
-
-  const { data: featuredData, isLoading: featuredLoading } = useQuery({
-    queryKey: ["/api/marketplace/featured"],
-    queryFn: async () => {
-      const response = await fetch("/api/marketplace/featured");
-      if (!response.ok) throw new Error("Failed to fetch featured data");
-      return response.json();
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setProcessingPlanId(null);
+      }
     },
-    enabled: viewMode === "featured",
-  });
-
-  const { data: wholesalers = [], isLoading: wholesalersLoading } = useQuery<WholesalerWithProducts[]>({
-    queryKey: ["/api/marketplace/wholesalers", searchQuery],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("search", searchQuery);
-      
-      const response = await fetch(`/api/marketplace/wholesalers?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch wholesalers");
-      return response.json();
+    onError: (error: any) => {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to start checkout. Please try again.",
+        variant: "destructive",
+      });
+      setProcessingPlanId(null);
     },
-    enabled: viewMode === "wholesalers",
+    onSettled: () => {
+      setTimeout(() => setProcessingPlanId(null), 3000);
+    },
   });
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchQuery || 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.wholesaler.businessName?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "All Categories" || product.category === selectedCategory;
-    const matchesPrice = parseFloat(product.price) >= priceRange[0] && parseFloat(product.price) <= priceRange[1];
-    const matchesRating = ratingFilter === 0 || (product.wholesaler.rating || 0) >= ratingFilter;
-    
-    return matchesSearch && matchesCategory && matchesPrice && matchesRating;
-  });
+  const currentPlan = currentSubscription?.currentPlan || "free";
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case "price_low":
-        return parseFloat(a.price) - parseFloat(b.price);
-      case "price_high":
-        return parseFloat(b.price) - parseFloat(a.price);
-      case "newest":
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      case "rating":
-        return (b.wholesaler.rating || 0) - (a.wholesaler.rating || 0);
-      default:
-        return 0;
+  const isCurrentPlan = (planId: string) => currentPlan === planId;
+
+  const handlePlanSelection = (plan: SubscriptionPlan) => {
+    if (isCurrentPlan(plan.planId)) {
+      toast({ title: "Current Plan", description: `You're already on the ${plan.name} plan.` });
+      return;
     }
-  });
-
-  // Show premium access gate if user doesn't have premium subscription
-  if (!hasMarketplaceAccess) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">B2B Marketplace</h1>
-            <p className="text-gray-600 mt-1">Connect with trusted wholesalers and discover premium products</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="hidden lg:inline-flex">
-              <Crown className="mr-1 h-3 w-3" />
-              Premium Feature
-            </Badge>
-          </div>
-        </div>
-
-        {/* Premium Access Gate */}
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="p-4 sm:p-8 text-center">
-            <div className="mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Premium B2B Marketplace</h2>
-              <p className="text-gray-600">
-                Access our exclusive wholesale marketplace to source products from like-minded wholesalers. 
-                Connect, discover, and grow your business with premium suppliers.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Marketplace Features:</h3>
-              <ul className="text-left space-y-2 text-gray-600">
-                <li className="flex items-center">
-                  <Package className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                  Browse products from verified wholesalers
-                </li>
-                <li className="flex items-center">
-                  <Users className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                  Connect with like-minded wholesale businesses
-                </li>
-                <li className="flex items-center">
-                  <Eye className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                  Flexible price visibility controls
-                </li>
-                <li className="flex items-center">
-                  <TrendingUp className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                  Expand your sourcing opportunities
-                </li>
-              </ul>
-            </div>
-
-            <Button 
-              className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-8 py-3"
-            >
-              <Crown className="w-4 h-4 mr-2" />
-              Upgrade to Premium
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+    const hierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
+    const currentLevel = hierarchy[currentPlan] ?? 0;
+    const targetLevel = hierarchy[plan.planId] ?? 0;
+    if (targetLevel < currentLevel) {
+      toast({
+        title: "Manage your subscription",
+        description: "To downgrade your plan, visit the Subscription page.",
+        action: undefined,
+      });
+      return;
+    }
+    if (!plan.stripePriceId) {
+      toast({ title: "Free Plan", description: "You're currently on a paid plan. Visit Subscription to downgrade." });
+      return;
+    }
+    setProcessingPlanId(plan.planId);
+    createCheckoutMutation.mutate(plan.stripePriceId);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Enhanced Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-4xl font-bold mb-2">Marketplace Discovery</h1>
-            <p className="text-base sm:text-lg text-blue-100">Connect with verified wholesalers across the UK</p>
-            <div className="mt-4 sm:mt-6 max-w-2xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search products, wholesalers, or categories..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 sm:h-12 text-base sm:text-lg bg-white"
-                />
-              </div>
+    <div className="bg-white min-h-screen">
+      <PageHeader title="Marketplace" description="B2B wholesale marketplace — coming soon" />
+
+      <div className="max-w-5xl mx-auto px-4 pb-16">
+
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white px-6 py-12 sm:px-10 sm:py-16 mb-12 text-center">
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-4 py-1.5 rounded-full mb-5">
+              <Clock className="w-4 h-4" />
+              Coming Soon
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold mb-3">
+              The B2B Wholesale Marketplace
+            </h1>
+            <p className="text-emerald-100 text-base sm:text-lg max-w-2xl mx-auto mb-6">
+              Source from verified UK wholesalers, list your own products, and grow your business — all inside Quikpik.
+            </p>
+            <div className="inline-flex items-center gap-2 text-white/80 text-sm">
+              <ShieldCheck className="w-4 h-4" />
+              Verified wholesalers only &nbsp;·&nbsp; Flexible pricing controls &nbsp;·&nbsp; Direct connections
             </div>
           </div>
+          {/* Decorative circles */}
+          <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-white/5" />
+          <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-white/5" />
         </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-2 sm:space-x-8 overflow-x-auto">
-            {[
-              { key: "featured", label: "Featured", icon: Star },
-              { key: "products", label: "All Products", icon: Package },
-              { key: "wholesalers", label: "Wholesalers", icon: MapPin }
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setViewMode(key as any)}
-                className={`flex items-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  viewMode === key
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden text-xs">{label.split(' ')[0]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Bar */}
-      {viewMode !== "featured" && (
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 w-full sm:w-auto"
-              >
-                <Filter className="h-4 w-4" />
-                <span>Filters</span>
-              </Button>
-              
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {productCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => (
-                    <SelectItem key={location} value={location}>
-                      {location}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="featured">Featured</SelectItem>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="price_low">Price: Low to High</SelectItem>
-                  <SelectItem value="price_high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex items-center space-x-2 w-full sm:w-auto sm:ml-auto">
-                <Button
-                  variant={layoutMode === "grid" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setLayoutMode("grid")}
-                  className="flex-1 sm:flex-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={layoutMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setLayoutMode("list")}
-                  className="flex-1 sm:flex-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Advanced Filters Panel */}
-            {showFilters && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Price Range: £{priceRange[0]} - £{priceRange[1]}
-                    </label>
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                      <Input
-                        type="number"
-                        placeholder="Min"
-                        value={priceRange[0]}
-                        onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-20 sm:w-24"
-                      />
-                      <span>-</span>
-                      <Input
-                        type="number"
-                        placeholder="Max"
-                        value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-20 sm:w-24"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Minimum Rating
-                    </label>
-                    <Select value={ratingFilter.toString()} onValueChange={(value) => setRatingFilter(Number(value))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any Rating" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Any Rating</SelectItem>
-                        <SelectItem value="3">3+ Stars</SelectItem>
-                        <SelectItem value="4">4+ Stars</SelectItem>
-                        <SelectItem value="5">5 Stars Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-end col-span-1 sm:col-span-2 lg:col-span-1">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setSelectedCategory("All Categories");
-                        setSelectedLocation("All Locations");
-                        setPriceRange([0, 1000]);
-                        setRatingFilter(0);
-                        setSearchQuery("");
-                      }}
-                    >
-                      Clear Filters
-                    </Button>
-                  </div>
+        {/* Feature highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-14">
+          {marketplaceHighlights.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.title} className="flex gap-4 p-5 rounded-xl border border-gray-100 bg-gray-50">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm mb-1">{item.title}</p>
+                  <p className="text-gray-500 text-sm leading-relaxed">{item.description}</p>
                 </div>
               </div>
-            )}
-          </div>
+            );
+          })}
         </div>
-      )}
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {viewMode === "featured" ? (
-          <FeaturedView data={featuredData} isLoading={featuredLoading} />
-        ) : viewMode === "products" ? (
-          <ProductsView 
-            products={sortedProducts} 
-            isLoading={productsLoading} 
-            layoutMode={layoutMode}
-          />
-        ) : (
-          <WholesalersView 
-            wholesalers={wholesalers} 
-            isLoading={wholesalersLoading}
-            layoutMode={layoutMode}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Featured View Component
-function FeaturedView({ data, isLoading }: { data: any; isLoading: boolean }) {
-  if (isLoading) {
-    return (
-      <div className="space-y-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-300 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-64 bg-gray-300 rounded-lg"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-8 border">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Discover Amazing Wholesale Opportunities
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            Connect with verified wholesalers and grow your retail business
+        {/* Plans heading */}
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose the right plan</h2>
+          <p className="text-gray-500">
+            Marketplace access unlocks as part of your Quikpik subscription.{" "}
+            <Link href="/subscription-pricing" className="text-emerald-600 hover:underline font-medium">
+              Manage your current subscription <ArrowRight className="inline w-3 h-3" />
+            </Link>
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900">500+ Wholesalers</h3>
-              <p className="text-gray-600">Verified suppliers across the UK</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Package className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900">10,000+ Products</h3>
-              <p className="text-gray-600">Diverse inventory to choose from</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900">Growing Network</h3>
-              <p className="text-gray-600">Join the expanding marketplace</p>
-            </div>
+        </div>
+
+        {/* Plan cards */}
+        {plansLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {plans.map((plan) => {
+              const colors = getPlanAccentColor(plan.planId);
+              const isCurrent = isCurrentPlan(plan.planId);
+              const hierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
+              const isUpgrade = (hierarchy[plan.planId] ?? 0) > (hierarchy[currentPlan] ?? 0);
+              const isDowngrade = (hierarchy[plan.planId] ?? 0) < (hierarchy[currentPlan] ?? 0);
 
-      {/* Featured Categories */}
-      <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">Popular Categories</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {productCategories.slice(1, 7).map((category) => (
-            <Card key={category} className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 text-center">
-                <Package className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <h4 className="font-medium text-sm">{category}</h4>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Featured Wholesalers */}
-      <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">Top Rated Wholesalers</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4 mb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={`https://images.unsplash.com/photo-${1560472354 + i}?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100`} />
-                    <AvatarFallback>W{i + 1}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="font-semibold">Sample Wholesaler {i + 1}</h4>
-                    <div className="flex items-center space-x-1">
-                      {[...Array(5)].map((_, j) => (
-                        <Star key={j} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      ))}
-                      <span className="text-sm text-gray-600">(4.{8 + i})</span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-4">
-                  Specializing in quality products with fast delivery and excellent customer service.
-                </p>
-                <div className="flex justify-between items-center">
-                  <Badge variant="secondary">{50 + i * 20} Products</Badge>
-                  <Button size="sm">View Profile</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Products View Component
-function ProductsView({ 
-  products, 
-  isLoading, 
-  layoutMode 
-}: { 
-  products: MarketplaceProduct[]; 
-  isLoading: boolean; 
-  layoutMode: "grid" | "list" 
-}) {
-  // Query user's price visibility setting
-  const { data: userSettings } = useQuery({
-    queryKey: ["/api/user/marketplace-settings"],
-    queryFn: async () => {
-      const response = await fetch("/api/user/marketplace-settings");
-      if (!response.ok) throw new Error("Failed to fetch user settings");
-      return response.json();
-    }
-  });
-
-  const showPrices = userSettings?.showPricesToWholesalers || false;
-
-  if (isLoading) {
-    return (
-      <div className={`grid gap-6 ${layoutMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-gray-300 h-48 rounded-lg mb-4"></div>
-            <div className="h-4 bg-gray-300 rounded mb-2"></div>
-            <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (products.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-        <p className="text-gray-600">Try adjusting your search or filters</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`grid gap-6 ${layoutMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-      {products.map((product) => (
-        <Card key={product.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            {/* Store name and icon in top right */}
-            <div className="flex justify-end mb-2">
-              <div className="flex items-center space-x-1">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={product.wholesaler.profileImageUrl} />
-                  <AvatarFallback>{product.wholesaler.businessName?.[0]}</AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-gray-600">{product.wholesaler.businessName}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-4">
-              <img 
-                src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200"} 
-                alt={product.name}
-                className="w-20 h-20 object-cover rounded-lg"
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                <div className="flex items-center justify-between">
-                  {showPrices ? (
-                    <span className="text-lg font-bold text-blue-600">
-                      {formatCurrency(parseFloat(product.price), product.currency || 'GBP')}
-                    </span>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <div className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-500 blur-sm">
-                        Price Hidden
-                      </div>
-                      <EyeOff className="w-4 h-4 text-gray-400" />
+              return (
+                <Card
+                  key={plan.id}
+                  className={clsx(
+                    "relative transition-all duration-200 border-2",
+                    colors.ring,
+                    {
+                      "ring-4 ring-emerald-500 bg-emerald-50 border-emerald-300 scale-[1.02] shadow-lg": isCurrent,
+                      "scale-105 shadow-lg hover:scale-[1.07]": !isCurrent && plan.planId === "standard",
+                      "hover:scale-[1.02]": !isCurrent && plan.planId !== "standard",
+                    }
+                  )}
+                >
+                  {isCurrent && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-emerald-600 text-white px-3 py-1 text-xs font-semibold">
+                        ✅ Current Plan
+                      </Badge>
                     </div>
                   )}
-                  <Badge variant="secondary">MOQ: {formatNumber(product.moq)}</Badge>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <Button size="sm">View Details</Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
+                  {!isCurrent && plan.planId === "standard" && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-blue-600 text-white px-3 py-1 text-xs font-semibold">
+                        Most Popular
+                      </Badge>
+                    </div>
+                  )}
 
-// Wholesalers View Component
-function WholesalersView({ 
-  wholesalers, 
-  isLoading,
-  layoutMode 
-}: { 
-  wholesalers: WholesalerWithProducts[]; 
-  isLoading: boolean;
-  layoutMode: "grid" | "list" 
-}) {
-  if (isLoading) {
-    return (
-      <div className={`grid gap-6 ${layoutMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-gray-300 h-32 rounded-lg mb-4"></div>
-            <div className="h-4 bg-gray-300 rounded mb-2"></div>
-            <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                  <CardHeader className="text-center pt-8">
+                    <div className={clsx("mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center", colors.icon)}>
+                      {getPlanIcon(plan.planId)}
+                    </div>
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <CardDescription className="text-sm mt-1">{plan.description}</CardDescription>
+                    <div className="mt-4">
+                      <span className="text-4xl font-bold text-gray-900">
+                        £{parseFloat(plan.monthlyPrice).toFixed(0)}
+                      </span>
+                      {parseFloat(plan.monthlyPrice) > 0 && (
+                        <span className="text-gray-500 text-sm ml-1">/mo</span>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+                    <ul className="space-y-2.5 mb-6">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-2.5">
+                          <CheckIcon className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-600">{formatPlanFeature(feature)}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="text-xs text-gray-500 space-y-1.5 mb-5 border-t pt-4">
+                      <div className="flex justify-between">
+                        <span>Products</span>
+                        <span className="font-medium text-gray-700">{formatLimit(plan.limits.products)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Team members</span>
+                        <span className="font-medium text-gray-700">{formatLimit(plan.limits.teamMembers)}</span>
+                      </div>
+                    </div>
+
+                    {isCurrent ? (
+                      <Button disabled variant="outline" className="w-full">
+                        Current Plan
+                      </Button>
+                    ) : isDowngrade ? (
+                      <Link href="/subscription-pricing">
+                        <Button variant="outline" className="w-full">
+                          Manage subscription
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        onClick={() => handlePlanSelection(plan)}
+                        disabled={processingPlanId === plan.planId}
+                        className={clsx("w-full text-white", colors.btn)}
+                      >
+                        {processingPlanId === plan.planId
+                          ? "Processing..."
+                          : plan.planId === "free"
+                          ? "Get Started Free"
+                          : `Upgrade to ${plan.name}`}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        ))}
-      </div>
-    );
-  }
+        )}
 
-  if (wholesalers.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No wholesalers found</h3>
-        <p className="text-gray-600">Try adjusting your search</p>
+        {/* Footer nudge */}
+        <p className="text-center text-sm text-gray-400">
+          Need to cancel or downgrade?{" "}
+          <Link href="/subscription-pricing" className="text-emerald-600 hover:underline">
+            Manage your subscription
+          </Link>
+        </p>
       </div>
-    );
-  }
-
-  return (
-    <div className={`grid gap-6 ${layoutMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-      {wholesalers.map((wholesaler) => (
-        <Card key={wholesaler.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4 mb-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={wholesaler.profileImageUrl} />
-                <AvatarFallback>{wholesaler.businessName?.[0] || wholesaler.firstName?.[0]}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  {wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`}
-                </h3>
-                <div className="flex items-center space-x-1">
-                  {[...Array(5)].map((_, j) => (
-                    <Star 
-                      key={j} 
-                      className={`h-4 w-4 ${j < (wholesaler.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                    />
-                  ))}
-                  <span className="text-sm text-gray-600">({wholesaler.rating || 0})</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Products:</span>
-                <span className="text-sm font-medium">{wholesaler.products?.length || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Orders:</span>
-                <span className="text-sm font-medium">{wholesaler.totalOrders || 0}</span>
-              </div>
-            </div>
-            
-            <Button className="w-full">View Profile</Button>
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }
