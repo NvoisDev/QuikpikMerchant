@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,22 +47,16 @@ import {
 import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressManager";
 import { FirstTimeAddressSetup } from "@/components/customer/FirstTimeAddressSetup";
 import { AddressSelector } from "@/components/customer/AddressSelector";
-import { useOptimizedQuery, useCriticalQuery } from "@/hooks/useOptimizedQuery";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Shared utilities and types
-import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
+import { Product as ProductType } from "@shared/schema";
 import { cleanAIDescription } from "@shared/utils";
 
-import { formatCurrency, formatNumber } from "@shared/utils/currency";
-import { QuikpikFooter } from "@/components/ui/quikpik-footer";
-import { OptimizedImage } from "@/components/ui/optimized-image";
-import { debounce } from "@/utils/performance";
-import { StockIndicator } from "@/components/ui/stock-indicator";
+import { formatCurrency } from "@shared/utils/currency";
 import { Package2, Hash } from "lucide-react";
 import { getGuestBackTarget, getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
 

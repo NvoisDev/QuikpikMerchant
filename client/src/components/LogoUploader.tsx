@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Camera, Image as ImageIcon, Check, X, AlertCircle } from "lucide-react";
+import { Upload, Camera, Image as ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

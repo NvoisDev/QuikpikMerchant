@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, User, Building, Mail, Phone, MapPin, LogIn, Loader2 } from "lucide-react";
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
