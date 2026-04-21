@@ -19,7 +19,7 @@ interface WholesalerOption {
 
 type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
 
-const COUNTRY_CODE = '+44';
+const DEFAULT_COUNTRY_CODE = '+44';
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -62,6 +62,7 @@ export default function CustomerLogin() {
   const { backToHome } = useAuth();
 
   const [step, setStep] = useState<LoginStep>('phone');
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE); // editable, default UK
   const [phoneLocal, setPhoneLocal] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +80,8 @@ export default function CustomerLogin() {
 
   const otpRef = useRef<HTMLInputElement>(null);
 
-  const fullPhone = COUNTRY_CODE + phoneLocal.replace(/^0/, '');
+  // Full phone (normalised E.164): strip leading 0 from local part
+  const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
 
   // Session resume: if an active customer session exists, redirect to their store
   useEffect(() => {
@@ -266,7 +268,7 @@ export default function CustomerLogin() {
 
   const stepSubtitle: Record<LoginStep, string> = {
     phone: 'Enter your mobile number to continue',
-    otp: `We sent a 6-digit code to ${COUNTRY_CODE} ${phoneLocal}`,
+    otp: `We sent a 6-digit code to ${countryCode} ${phoneLocal}`,
     select: 'You have access to multiple stores',
     'no-account': `${fullPhone} isn't linked to any store`,
     enquiry: 'Tell us about your business',
@@ -317,9 +319,19 @@ export default function CustomerLogin() {
                       <Phone className="h-4 w-4" /> Mobile Number
                     </Label>
                     <div className="flex">
-                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium select-none whitespace-nowrap">
-                        🇬🇧 {COUNTRY_CODE}
-                      </span>
+                      <Input
+                        id="country-code"
+                        type="text"
+                        value={countryCode}
+                        onChange={e => {
+                          const v = e.target.value.replace(/[^\d+]/g, '') || '+';
+                          setCountryCode(v.startsWith('+') ? v : '+' + v);
+                          setError('');
+                        }}
+                        className="rounded-r-none h-12 text-base border-gray-300 focus:border-green-600 w-20 text-center font-medium"
+                        aria-label="Country code"
+                        disabled={isLoading}
+                      />
                       <Input
                         id="phone"
                         type="tel"
@@ -330,7 +342,7 @@ export default function CustomerLogin() {
                           setPhoneLocal(e.target.value.replace(/[^\d\s]/g, ''));
                           setError('');
                         }}
-                        className="rounded-l-none h-12 text-base border-gray-300 focus:border-green-600"
+                        className="rounded-l-none h-12 text-base border-l-0 border-gray-300 focus:border-green-600"
                         autoComplete="tel"
                         disabled={isLoading}
                         autoFocus

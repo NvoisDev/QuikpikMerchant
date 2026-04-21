@@ -33,7 +33,7 @@ interface WholesalerInfo {
 
 type AuthStep = 'phone' | 'otp' | 'select' | 'no-account';
 
-const COUNTRY_CODE = '+44';
+const DEFAULT_COUNTRY_CODE = '+44';
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -47,6 +47,7 @@ function formatCountdown(secs: number) {
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
   const [step, setStep] = useState<AuthStep>('phone');
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE); // editable, default UK
   const [phoneLocal, setPhoneLocal] = useState('');          // digits after country code
   const [otpCode, setOtpCode] = useState('');
   const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
@@ -63,8 +64,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
   const otpRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Full phone (normalised E.164)
-  const fullPhone = COUNTRY_CODE + phoneLocal.replace(/^0/, '');
+  // Full phone (normalised E.164): strip leading 0 from local part
+  const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
 
   // Fetch wholesaler branding when wholesalerId is known
   useEffect(() => {
@@ -286,9 +287,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
           </h1>
           <p className="text-gray-600 text-base">
             {step === 'phone' && (wholesalerInfo ? `Accessing ${storeLabel}` : 'Sign in to your wholesale account')}
-            {step === 'otp' && `We sent a code to ${COUNTRY_CODE} ${phoneLocal}`}
+            {step === 'otp' && `We sent a code to ${countryCode} ${phoneLocal}`}
             {step === 'select' && 'You have access to multiple stores'}
-            {step === 'no-account' && `${COUNTRY_CODE} ${phoneLocal} isn't linked to any store`}
+            {step === 'no-account' && `${countryCode} ${phoneLocal} isn't linked to any store`}
           </p>
         </div>
 
@@ -304,9 +305,19 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                   <Phone className="h-4 w-4" /> Mobile Number
                 </Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium select-none">
-                    🇬🇧 {COUNTRY_CODE}
-                  </span>
+                  <Input
+                    id="country-code"
+                    type="text"
+                    value={countryCode}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^\d+]/g, '') || '+';
+                      setCountryCode(v.startsWith('+') ? v : '+' + v);
+                      setError('');
+                    }}
+                    className="rounded-r-none h-12 text-base border-gray-300 focus:border-green-600 w-20 text-center font-medium"
+                    aria-label="Country code"
+                    disabled={isLoading}
+                  />
                   <Input
                     id="phone"
                     type="tel"
@@ -318,12 +329,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                       setPhoneLocal(v);
                       setError('');
                     }}
-                    className="rounded-l-none h-12 text-base border-gray-300 focus:border-green-600"
+                    className="rounded-l-none h-12 text-base border-l-0 border-gray-300 focus:border-green-600"
                     autoComplete="tel"
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-gray-500">Enter your UK mobile number. We'll send you a verification code.</p>
+                <p className="text-xs text-gray-500">Enter your mobile number. We'll send you a verification code.</p>
               </div>
 
               {error && (
@@ -545,7 +556,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <Input
                 id="reg-phone"
                 type="tel"
-                value={registrationData.phone || (phoneLocal ? COUNTRY_CODE + phoneLocal : '')}
+                value={registrationData.phone || (phoneLocal ? countryCode + phoneLocal.replace(/^0/, '') : '')}
                 onChange={e => setRegistrationData(p => ({ ...p, phone: e.target.value }))}
                 placeholder="+44 7700 900000"
                 className="mt-1 h-10 text-sm"

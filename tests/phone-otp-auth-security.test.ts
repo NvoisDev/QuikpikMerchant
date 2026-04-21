@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
 const customerAuthRouteSource = readFileSync('server/routes/customer-auth.ts', 'utf8');
 const customerAuthComponentSource = readFileSync('client/src/components/customer/CustomerAuth.tsx', 'utf8');
@@ -97,6 +97,62 @@ describe('phone OTP auth security contract', () => {
     expect(customerAuthRouteSource).toContain(
       "console.warn('⚠️  DEPRECATED: /api/customer-auth/verify-sms"
     );
+  });
+
+});
+
+describe('international phone support', () => {
+
+  it('CustomerAuth.tsx uses editable country code state (not hardcoded +44 static span)', () => {
+    // Must have a DEFAULT_COUNTRY_CODE constant (UK default)
+    expect(customerAuthComponentSource).toContain("DEFAULT_COUNTRY_CODE = '+44'");
+    // Must have editable state — not a static select-none span
+    expect(customerAuthComponentSource).toContain('countryCode, setCountryCode');
+    expect(customerAuthComponentSource).toContain("useState(DEFAULT_COUNTRY_CODE)");
+    // UI must have an input for country code (not a static emoji badge)
+    expect(customerAuthComponentSource).toContain('aria-label="Country code"');
+    // Phone must be composed from state, not COUNTRY_CODE constant
+    expect(customerAuthComponentSource).toContain('countryCode.trim()');
+    // Static "+44" badge must not be present
+    expect(customerAuthComponentSource).not.toContain("🇬🇧 {COUNTRY_CODE}");
+  });
+
+  it('CustomerLogin.tsx uses editable country code state (not hardcoded +44 static span)', () => {
+    expect(customerLoginSource).toContain("DEFAULT_COUNTRY_CODE = '+44'");
+    expect(customerLoginSource).toContain('countryCode, setCountryCode');
+    expect(customerLoginSource).toContain("useState(DEFAULT_COUNTRY_CODE)");
+    expect(customerLoginSource).toContain('aria-label="Country code"');
+    expect(customerLoginSource).toContain('countryCode.trim()');
+    expect(customerLoginSource).not.toContain("🇬🇧 {COUNTRY_CODE}");
+  });
+
+  it('E.164 composition strips leading 0 from local part for non-UK numbers', () => {
+    // Verify the formula used in fullPhone across both files
+    [customerAuthComponentSource, customerLoginSource].forEach(source => {
+      expect(source).toContain("phoneLocal.replace(/^0/, '')");
+    });
+  });
+
+  test('international number example: +353 87 123 4567 (Ireland)', () => {
+    // Simulate what the components do: countryCode = '+353', phoneLocal = '0871234567'
+    const countryCode = '+353';
+    const phoneLocal = '0871234567';
+    const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
+    expect(fullPhone).toBe('+353871234567');
+  });
+
+  test('international number example: +1 555 123 4567 (USA)', () => {
+    const countryCode = '+1';
+    const phoneLocal = '5551234567';
+    const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
+    expect(fullPhone).toBe('+15551234567');
+  });
+
+  test('UK default: +44 07700 900000 correctly strips leading 0', () => {
+    const countryCode = '+44';
+    const phoneLocal = '07700900000';
+    const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
+    expect(fullPhone).toBe('+447700900000');
   });
 
 });
