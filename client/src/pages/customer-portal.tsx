@@ -935,6 +935,7 @@ export default function CustomerPortal() {
     return !isPreviewModeCheck && (!hasAuthParamCheck || forceLoginParamCheck);
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
+  const [showGuestSignInModal, setShowGuestSignInModal] = useState(false);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1329,12 +1330,13 @@ export default function CustomerPortal() {
 
   // Fetch all products for the wholesaler with controlled refresh
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
-    queryKey: ['wholesaler-products', wholesalerId],
+    queryKey: ['wholesaler-products', wholesalerId, isAuthenticated],
     queryFn: async () => {
       console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
       console.log(`🌐 Current domain: ${window.location.origin}`);
       console.log(`🔍 Fetching products for wholesaler: ${wholesalerId}`);
-      const response = await fetch(`/api/customer-products/${wholesalerId}`);
+      const guestParam = !isAuthenticated && !isEnhancedPreviewMode ? '?guest=true' : '';
+      const response = await fetch(`/api/customer-products/${wholesalerId}${guestParam}`);
       console.log(`📡 API Response status: ${response.status}`);
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
       
@@ -1597,6 +1599,10 @@ export default function CustomerPortal() {
   }, [isEnhancedPreviewMode, toast]);
 
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
+    if (isGuestMode) {
+      setShowGuestSignInModal(true);
+      return;
+    }
     if (isEnhancedPreviewMode) {
       toast({
         title: "Preview Mode",
@@ -2149,6 +2155,13 @@ export default function CustomerPortal() {
     });
   };
 
+  // Handle guest browse - skip authentication
+  const handleSkipAuth = () => {
+    setShowAuth(false);
+    setIsGuestMode(true);
+    setIsAuthenticated(false);
+  };
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -2320,6 +2333,7 @@ export default function CustomerPortal() {
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
+      onSkipAuth={handleSkipAuth}
     />;
   }
 
@@ -2496,6 +2510,37 @@ export default function CustomerPortal() {
           </div>
         </div>
       </div>
+
+      {/* Guest browse conversion banner */}
+      {isGuestMode && !isEnhancedPreviewMode && (
+        <div className="sticky top-0 z-30 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-medium truncate">
+              Register to view prices and place orders
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+            <button
+              onClick={() => {
+                setIsGuestMode(false);
+                setShowAuth(true);
+              }}
+              className="bg-white text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-green-50 transition-colors whitespace-nowrap"
+            >
+              Register with {wholesaler?.businessName || 'this store'}
+            </button>
+            <button
+              onClick={() => {
+                setIsGuestMode(false);
+                setShowAuth(true);
+              }}
+              className="text-white/70 hover:text-white text-xs underline whitespace-nowrap"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Explore — Full-screen wholesaler search */}
       {showWholesalerSearch && (
@@ -5993,6 +6038,41 @@ export default function CustomerPortal() {
               });
             }}
           />
+        )}
+
+        {/* Guest sign-in modal — triggered when guest tries to add to cart */}
+        {showGuestSignInModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <ShoppingCart className="w-6 h-6 text-green-600" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Sign in to add items</h2>
+                <p className="text-sm text-gray-500">
+                  You need to be a registered customer of{' '}
+                  <span className="font-medium text-gray-700">{wholesaler?.businessName || 'this store'}</span>{' '}
+                  to add items to your cart and place orders.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowGuestSignInModal(false);
+                  setIsGuestMode(false);
+                  setShowAuth(true);
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors"
+              >
+                Sign in to {wholesaler?.businessName || 'this store'}
+              </button>
+              <button
+                onClick={() => setShowGuestSignInModal(false)}
+                className="w-full text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors"
+              >
+                Continue browsing
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}

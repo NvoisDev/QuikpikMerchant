@@ -2684,6 +2684,21 @@ export function registerMarketplaceRoutes(app: Express): void {
           console.error('⚠️ Price list resolution failed (non-fatal):', priceListErr);
         }
 
+        // Strip all pricing data for unauthenticated guest requests
+        if (req.query.guest === 'true') {
+          for (const product of formattedProducts as any[]) {
+            product.price = null;
+            product.promoPrice = null;
+            product.palletPrice = null;
+            product.minimumBidPrice = null;
+            product.customPrice = undefined;
+            product.standardPrice = undefined;
+            product.hasPriceList = undefined;
+            product.promotionalOffers = [];
+            product.promoActive = false;
+          }
+        }
+
         res.json(formattedProducts);
         
       } catch (sqlError) {
