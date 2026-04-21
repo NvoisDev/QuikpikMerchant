@@ -2542,6 +2542,7 @@ export default function CustomerPortal() {
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
             <button
               onClick={() => {
+                clearGuestParam();
                 setIsGuestMode(false);
                 setShowAuth(true);
               }}
@@ -2551,6 +2552,7 @@ export default function CustomerPortal() {
             </button>
             <button
               onClick={() => {
+                clearGuestParam();
                 setIsGuestMode(false);
                 setShowAuth(true);
               }}
@@ -2932,7 +2934,8 @@ export default function CustomerPortal() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredProducts.map((product) => {
-                    const image = product.imageUrl || ((product as any).images || []).find(Boolean);
+                    const extraImages = "images" in product && Array.isArray(product.images) ? product.images : [];
+                    const image = product.imageUrl || extraImages.find(Boolean);
                     return (
                       <Card key={product.id} className="rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow bg-white">
                         <CardContent className="p-0">
