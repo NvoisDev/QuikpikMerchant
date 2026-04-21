@@ -2129,6 +2129,7 @@ export default function CustomerPortal() {
   // Authentication handlers
   const handleAuthSuccess = (customer: any) => {
     console.log("🎉 handleAuthSuccess called with customer:", customer);
+    clearGuestParam();
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
@@ -2213,6 +2214,14 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
+  const clearGuestParam = () => {
+    const nextUrl = new URL(window.location.href);
+    if (nextUrl.searchParams.has('guest')) {
+      nextUrl.searchParams.delete('guest');
+      window.history.replaceState({}, '', nextUrl.toString());
+    }
+  };
+
   // Authentication state management using server sessions
   useEffect(() => {
     if (isEnhancedPreviewMode) {
@@ -2237,15 +2246,6 @@ export default function CustomerPortal() {
       return; // Wait for wholesalerId and session check to complete
     }
 
-    if (forceGuestParam) {
-      console.log('🛍️ Guest browse requested');
-      setIsAuthenticated(false);
-      setAuthenticatedCustomer(null);
-      setShowAuth(false);
-      setIsGuestMode(true);
-      return;
-    }
-
     // Check if user explicitly wants to login (force login parameter)
     if (forceLoginParam) {
       console.log('🔑 Force login requested - showing auth screen');
@@ -2264,6 +2264,16 @@ export default function CustomerPortal() {
       setShowAuth(false);
       setIsGuestMode(false);
       setIsSwitchingWholesaler(false); // Clear switching state now that new store auth is confirmed
+      clearGuestParam();
+      return;
+    }
+
+    if (forceGuestParam) {
+      console.log('🛍️ Guest browse requested');
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(false);
+      setIsGuestMode(true);
       return;
     }
     
@@ -2870,6 +2880,7 @@ export default function CustomerPortal() {
                 </div>
                 <Button
                   onClick={() => {
+                    clearGuestParam();
                     setIsGuestMode(false);
                     setShowAuth(true);
                   }}
@@ -6197,6 +6208,7 @@ export default function CustomerPortal() {
               </div>
               <button
                 onClick={() => {
+                  clearGuestParam();
                   setShowGuestSignInModal(false);
                   setIsGuestMode(false);
                   setShowAuth(true);
