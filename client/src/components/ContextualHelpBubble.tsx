@@ -18,16 +18,25 @@ interface ContextualHelpBubbleProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
+type BubblePlacement = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'left' | 'right';
+
 export function ContextualHelpBubble({ 
   topic, 
   title, 
   steps, 
   triggerClassName = "",
-  position = 'bottom'
+  position
 }: ContextualHelpBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [autoPlacement, setAutoPlacement] = useState<BubblePlacement>('bottom-right');
+  const [autoHorizontalOffset, setAutoHorizontalOffset] = useState(0);
+  const [autoPointerOffset, setAutoPointerOffset] = useState(12);
+  const [autoMaxHeight, setAutoMaxHeight] = useState<number | null>(null);
+  const [autoGapOffset, setAutoGapOffset] = useState(8);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const bubbleContentRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Close on click outside
   useEffect(() => {
@@ -43,6 +52,87 @@ export function ContextualHelpBubble({
     }
   }, [isOpen]);
 
+  const getOverridePlacement = (): BubblePlacement | null => {
+    if (!position) {
+      return null;
+    }
+
+    if (position === 'top') {
+      return 'top-right';
+    }
+
+    if (position === 'bottom') {
+      return 'bottom-right';
+    }
+
+    return position;
+  };
+
+  const updateAutoPlacement = () => {
+    const triggerRect = triggerRef.current?.getBoundingClientRect();
+
+    if (!triggerRect) {
+      return;
+    }
+
+    const bubbleWidth = 320;
+    const measuredBubbleHeight = bubbleContentRef.current?.getBoundingClientRect().height;
+    const bubbleHeight = measuredBubbleHeight || 340;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 8;
+    const edgePadding = 16;
+
+    const availableBelow = viewportHeight - triggerRect.bottom;
+    const availableAbove = triggerRect.top;
+    const shouldOpenUpward = availableBelow < bubbleHeight + gap + edgePadding && availableAbove > availableBelow;
+    const opensPastRightEdge = triggerRect.left + bubbleWidth > viewportWidth - edgePadding;
+    const opensPastLeftEdge = triggerRect.right - bubbleWidth < edgePadding;
+    const horizontalAlignment = opensPastRightEdge && !opensPastLeftEdge ? 'right' : 'left';
+    const availableOnChosenSide = shouldOpenUpward ? availableAbove : availableBelow;
+    const gapOnChosenSide = Math.min(gap, Math.max(0, availableOnChosenSide - 1));
+    const paddingOnChosenSide = availableOnChosenSide > gapOnChosenSide + edgePadding + 1 ? edgePadding : 0;
+    const maxHeightOnChosenSide = availableOnChosenSide - gapOnChosenSide - paddingOnChosenSide;
+    const safeBubbleWidth = Math.max(1, Math.min(bubbleWidth, viewportWidth - edgePadding * 2));
+    const preferredLeft = horizontalAlignment === 'right'
+      ? triggerRect.right - safeBubbleWidth
+      : triggerRect.left;
+    const clampedLeft = Math.min(
+      Math.max(preferredLeft, edgePadding),
+      viewportWidth - safeBubbleWidth - edgePadding
+    );
+    const pointerOffset = triggerRect.left + triggerRect.width / 2 - clampedLeft - 8;
+
+    setAutoHorizontalOffset(clampedLeft - triggerRect.left);
+    setAutoPointerOffset(Math.min(Math.max(pointerOffset, 8), safeBubbleWidth - 16));
+    setAutoMaxHeight(Math.max(1, Math.min(bubbleHeight, maxHeightOnChosenSide)));
+    setAutoGapOffset(gapOnChosenSide);
+    setAutoPlacement(`${shouldOpenUpward ? 'top' : 'bottom'}-${horizontalAlignment}` as BubblePlacement);
+  };
+
+  useEffect(() => {
+    if (!isOpen || position) {
+      return;
+    }
+
+    updateAutoPlacement();
+    window.addEventListener('resize', updateAutoPlacement);
+    window.addEventListener('scroll', updateAutoPlacement, true);
+
+    return () => {
+      window.removeEventListener('resize', updateAutoPlacement);
+      window.removeEventListener('scroll', updateAutoPlacement, true);
+    };
+  }, [isOpen, position]);
+
+  const handleTriggerClick = () => {
+    if (!isOpen && !position) {
+      updateAutoPlacement();
+    }
+
+    setIsOpen(!isOpen);
+  };
+
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -55,20 +145,67 @@ export function ContextualHelpBubble({
     }
   };
 
-  const positionClasses = {
-    top: 'bottom-full right-0 mb-2',
-    bottom: 'top-full right-0 mt-2',
+  const placement = getOverridePlacement() ?? autoPlacement;
+
+  const positionClasses: Record<BubblePlacement, string> = {
+    'top-left': '',
+    'top-right': '',
+    'bottom-left': '',
+    'bottom-right': '',
     left: 'right-full mr-2',
     right: 'left-full ml-2'
   };
+
+  const overridePositionClasses: Record<BubblePlacement, string> = {
+    'top-left': 'bottom-full left-0 mb-2',
+    'top-right': 'bottom-full right-0 mb-2',
+    'bottom-left': 'top-full left-0 mt-2',
+    'bottom-right': 'top-full right-0 mt-2',
+    left: 'right-full mr-2',
+    right: 'left-full ml-2'
+  };
+
+  const pointerPositionClasses: Record<BubblePlacement, string> = {
+    'top-left': 'bottom-0 left-3 -mb-2',
+    'top-right': 'bottom-0 right-3 -mb-2',
+    'bottom-left': 'top-0 left-3 -mt-2',
+    'bottom-right': 'top-0 right-3 -mt-2',
+    left: 'right-0 top-4 -mr-2',
+    right: 'left-0 top-4 -ml-2'
+  };
+
+  const pointerArrowClasses: Record<BubblePlacement, string> = {
+    'top-left': 'border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white',
+    'top-right': 'border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white',
+    'bottom-left': 'border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white',
+    'bottom-right': 'border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white',
+    left: 'border-t-8 border-b-8 border-l-8 border-t-transparent border-b-transparent border-l-white',
+    right: 'border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white'
+  };
+
+  const hasOverridePlacement = Boolean(position);
+  const autoPlacementStyle = hasOverridePlacement ? undefined : {
+    left: `${autoHorizontalOffset}px`,
+    ...(placement.startsWith('top')
+      ? { bottom: `calc(100% + ${autoGapOffset}px)` }
+      : { top: `calc(100% + ${autoGapOffset}px)` })
+  };
+  const autoPointerStyle = hasOverridePlacement ? undefined : { left: `${autoPointerOffset}px`, right: 'auto' };
+  const autoCardStyle = !hasOverridePlacement && autoMaxHeight
+    ? { maxHeight: `${autoMaxHeight}px` }
+    : undefined;
+  const resolvedPositionClasses = hasOverridePlacement
+    ? overridePositionClasses[placement]
+    : positionClasses[placement];
 
   return (
     <div className="relative inline-block" ref={bubbleRef}>
       {/* Help Trigger Button */}
       <Button
+        ref={triggerRef}
         variant="ghost"
         size="sm"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleTriggerClick}
         className={`p-1 h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${triggerClassName}`}
         title={`Get help with ${topic}`}
       >
@@ -77,8 +214,8 @@ export function ContextualHelpBubble({
 
       {/* Help Bubble */}
       {isOpen && (
-        <div className={`absolute z-50 ${positionClasses[position]}`}>
-          <Card className="w-80 max-w-sm shadow-lg border-blue-200">
+        <div ref={bubbleContentRef} className={`absolute z-50 ${resolvedPositionClasses}`} style={autoPlacementStyle}>
+          <Card className="w-80 max-w-[calc(100vw-2rem)] overflow-y-auto shadow-lg border-blue-200" style={autoCardStyle}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-blue-900">
@@ -174,16 +311,8 @@ export function ContextualHelpBubble({
           </Card>
 
           {/* Arrow pointer */}
-          <div className={`absolute ${position === 'right' ? 'left-0 top-4 -ml-2' : 
-                                     position === 'left' ? 'right-0 top-4 -mr-2' :
-                                     position === 'bottom' ? 'top-0 right-3 -mt-2' :
-                                     'bottom-0 right-3 -mb-2'}`}>
-            <div className={`w-0 h-0 ${
-              position === 'right' ? 'border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white' :
-              position === 'left' ? 'border-t-8 border-b-8 border-l-8 border-t-transparent border-b-transparent border-l-white' :
-              position === 'bottom' ? 'border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white' :
-              'border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white'
-            }`}></div>
+          <div className={`absolute ${pointerPositionClasses[placement]}`} style={autoPointerStyle}>
+            <div className={`w-0 h-0 ${pointerArrowClasses[placement]}`}></div>
           </div>
         </div>
       )}
