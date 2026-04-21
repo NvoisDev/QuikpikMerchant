@@ -387,7 +387,7 @@ export function registerOrderRoutes(app: Express): void {
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
-      console.log(`✅ Order ${order.orderNumber} marked as ${newPaymentStatus} offline — £${parsedAmount.toFixed(2)} via ${method || 'unspecified'}${note ? ` (${note})` : ''}`);
+      console.log(`✅ Order ${order.orderNumber} marked as ${paymentUpdate.newPaymentStatus} offline — £${parsedAmount.toFixed(2)} via ${method || 'unspecified'}${note ? ` (${note})` : ''}`);
 
       // Task 4: Send payment notifications to customer and wholesaler (best-effort)
       try {
@@ -400,15 +400,16 @@ export function registerOrderRoutes(app: Express): void {
           const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
           const businessName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Supplier';
           const customerName = customer.firstName || 'there';
+          const subtotalBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
           const netAmount = subtotalBase; // Offline = full subtotal, no platform fee
-          const paidSoFar = newAmountPaid;
-          const outstanding = newAmountOutstanding;
+          const paidSoFar = paymentUpdate.newAmountPaid;
+          const outstanding = paymentUpdate.newAmountOutstanding;
           const methodLabel: Record<string, string> = {
             cash: 'Cash', bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
             pay_later: 'Pay Later', other: 'Other',
           };
           const methodText = methodLabel[method || ''] || 'offline payment';
-          const isPaidInFull = newPaymentStatus === 'paid';
+          const isPaidInFull = paymentUpdate.newPaymentStatus === 'paid';
 
           // Customer email
           if (customer.email) {
