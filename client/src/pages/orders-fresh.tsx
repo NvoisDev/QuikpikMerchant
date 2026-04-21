@@ -554,7 +554,13 @@ export default function OrdersFresh() {
   // Open the Mark as Paid dialog
   const openMarkAsPaid = (order: Order) => {
     setMarkAsPaidOrder(order);
-    setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
+    if (isStripePayment(order)) {
+      setMarkAsPaidAmount(order.amountOutstanding ? parseFloat(order.amountOutstanding).toFixed(2) : '');
+    } else {
+      const offlineBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+      const alreadyPaid = parseFloat(order.amountPaid || '0');
+      setMarkAsPaidAmount(Math.max(0, offlineBase - alreadyPaid).toFixed(2));
+    }
     setMarkAsPaidMethod('cash');
     setMarkAsPaidNote('');
     setIsMarkAsPaidOpen(true);
@@ -635,7 +641,8 @@ export default function OrdersFresh() {
   // Returns true for Stripe-paid orders (transaction fee applies); false for offline orders (no fee)
   const isStripePayment = (order: Order) =>
     order.paymentMethod === 'payment_link' ||
-    (!order.paymentMethod && !!order.stripePaymentIntentId);
+    !!order.stripePaymentIntentId ||
+    !!order.stripePaymentLinkUrl;
 
   // Compute payment balance due date from order creation + balanceDueDays; returns null when not applicable
   const getBalanceDueDate = (order: Order): Date | null => {

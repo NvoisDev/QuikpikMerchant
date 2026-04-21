@@ -193,7 +193,8 @@ const getPaymentMethodLabel = (method: string): string => {
 
 const isStripePayment = (order: Order): boolean =>
   order.paymentMethod === 'payment_link' ||
-  (!order.paymentMethod && !!order.stripePaymentIntentId);
+  !!order.stripePaymentIntentId ||
+  !!order.stripePaymentLinkUrl;
 
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');

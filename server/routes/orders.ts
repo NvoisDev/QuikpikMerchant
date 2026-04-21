@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import {
   SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
   createStripeRefundReceipt, db, desc, emailBadge, emailButton, emailCard, emailHeading, eq,
@@ -348,43 +349,27 @@ export function registerOrderRoutes(app: Express): void {
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
       if (order.paymentStatus === 'paid') return res.status(400).json({ error: 'Order is already fully paid' });
 
-      // Determine if this is a Stripe-based payment
-      const isStripePayment = (method === 'payment_link') ||
-        (!method && (order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod)));
+      const paymentUpdate = calculateOfflinePaymentUpdate(order, parsedAmount, method);
 
-      // For offline payments use the fee-free base (subtotal + delivery) as the target
-      const subtotalBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-      const currentAmountPaid = parseFloat(order.amountPaid || '0');
-      const offlineOutstanding = Math.max(0, subtotalBase - currentAmountPaid);
-      const currentOutstanding = isStripePayment
-        ? parseFloat(order.amountOutstanding || '0')
-        : offlineOutstanding;
-
-      if (parsedAmount > currentOutstanding + 0.01) {
-        return res.status(400).json({ error: `Amount (£${parsedAmount.toFixed(2)}) exceeds outstanding balance (£${currentOutstanding.toFixed(2)})` });
+      if (parsedAmount > paymentUpdate.currentOutstanding + 0.01) {
+        return res.status(400).json({ error: `Amount (£${parsedAmount.toFixed(2)}) exceeds outstanding balance (£${paymentUpdate.currentOutstanding.toFixed(2)})` });
       }
 
-      const newAmountPaid = currentAmountPaid + parsedAmount;
-      const newAmountOutstanding = isStripePayment
-        ? Math.max(0, parseFloat(order.amountOutstanding || '0') - parsedAmount)
-        : Math.max(0, subtotalBase - newAmountPaid);
-      const newPaymentStatus = newAmountOutstanding <= 0.01 ? 'paid' : 'part_paid';
-
       const updateData: Record<string, any> = {
-        amountPaid: newAmountPaid.toFixed(2),
-        amountOutstanding: newAmountOutstanding.toFixed(2),
-        paymentStatus: newPaymentStatus,
+        amountPaid: paymentUpdate.newAmountPaid.toFixed(2),
+        amountOutstanding: paymentUpdate.newAmountOutstanding.toFixed(2),
+        paymentStatus: paymentUpdate.newPaymentStatus,
       };
 
-      if (method) updateData.paymentMethod = method;
+      if (paymentUpdate.shouldUpdatePaymentMethod) updateData.paymentMethod = method;
 
-      if (newPaymentStatus === 'paid' && order.status === 'confirmed') {
+      if (paymentUpdate.newPaymentStatus === 'paid' && order.status === 'confirmed') {
         updateData.status = 'paid';
       }
 
       // Task 3: Expire Stripe checkout session when offline payment fully pays the order
       // Always clear link fields on full offline payment regardless of Stripe SDK availability
-      if (newPaymentStatus === 'paid' && !isStripePayment && order.stripePaymentLinkId) {
+      if (paymentUpdate.newPaymentStatus === 'paid' && method !== 'payment_link' && order.stripePaymentLinkId) {
         updateData.stripePaymentLinkUrl = null;
         updateData.stripePaymentLinkId = null;
         if (stripe) {
