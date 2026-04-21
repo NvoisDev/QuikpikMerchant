@@ -113,8 +113,10 @@ describe('guest browsing regression coverage', () => {
 
     expect(sellerGuestButton).toContain('guest=true&guestFrom=selection');
     expect(guestBackButton).toContain("guestParams.get('guestFrom') === 'selection'");
-    expect(guestBackButton).toContain("nextUrl.searchParams.delete('guestFrom')");
-    expect(guestBackButton).toContain("window.history.replaceState({}, '', nextUrl.toString())");
+    expect(guestBackButton).toContain('clearGuestParam()');
+    expect(guestBackButton).toContain('setIsGuestMode(false)');
+    expect(guestBackButton).toContain('setAuthenticatedCustomer(null)');
+    expect(guestBackButton).toContain('setCart([])');
     expect(guestBackButton).toContain('setShowWholesalerSearch(true)');
     expect(guestBackButton).toContain('setWholesalerSearchQuery("")');
     expect(guestBackButton.indexOf("guestParams.get('guestFrom') === 'selection'")).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));

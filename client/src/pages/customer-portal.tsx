@@ -2528,9 +2528,13 @@ export default function CustomerPortal() {
                   onClick={async () => {
                     const guestParams = new URLSearchParams(window.location.search);
                     if (guestParams.get('guestFrom') === 'selection') {
-                      const nextUrl = new URL(window.location.href);
-                      nextUrl.searchParams.delete('guestFrom');
-                      window.history.replaceState({}, '', nextUrl.toString());
+                      clearGuestParam();
+                      setOpenRequestAccessOnAuth(false);
+                      setIsGuestMode(false);
+                      setIsAuthenticated(false);
+                      setAuthenticatedCustomer(null);
+                      setCart([]);
+                      setShowAuth(false);
                       setWholesalerSearchQuery("");
                       setShowWholesalerSearch(true);
                       return;
