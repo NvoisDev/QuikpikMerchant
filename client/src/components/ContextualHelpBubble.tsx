@@ -23,7 +23,7 @@ export function ContextualHelpBubble({
   title, 
   steps, 
   triggerClassName = "",
-  position = 'right'
+  position = 'bottom'
 }: ContextualHelpBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -56,8 +56,8 @@ export function ContextualHelpBubble({
   };
 
   const positionClasses = {
-    top: 'bottom-full mb-2',
-    bottom: 'top-full mt-2',
+    top: 'bottom-full right-0 mb-2',
+    bottom: 'top-full right-0 mt-2',
     left: 'right-full mr-2',
     right: 'left-full ml-2'
   };
@@ -176,8 +176,8 @@ export function ContextualHelpBubble({
           {/* Arrow pointer */}
           <div className={`absolute ${position === 'right' ? 'left-0 top-4 -ml-2' : 
                                      position === 'left' ? 'right-0 top-4 -mr-2' :
-                                     position === 'bottom' ? 'top-0 left-4 -mt-2' :
-                                     'bottom-0 left-4 -mb-2'}`}>
+                                     position === 'bottom' ? 'top-0 right-3 -mt-2' :
+                                     'bottom-0 right-3 -mb-2'}`}>
             <div className={`w-0 h-0 ${
               position === 'right' ? 'border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white' :
               position === 'left' ? 'border-t-8 border-b-8 border-l-8 border-t-transparent border-b-transparent border-l-white' :
