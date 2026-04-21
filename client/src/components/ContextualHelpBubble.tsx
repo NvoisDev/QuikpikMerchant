@@ -2,6 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { HelpCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  type BubblePlacement,
+  type ContextualHelpPosition,
+  getContextualHelpOverridePlacement,
+  resolveContextualHelpPlacement,
+} from "@/lib/contextual-help-placement";
 
 interface HelpStep {
   title: string;
@@ -15,10 +21,8 @@ interface ContextualHelpBubbleProps {
   title: string;
   steps: HelpStep[];
   triggerClassName?: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: ContextualHelpPosition;
 }
-
-type BubblePlacement = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'left' | 'right';
 
 export function ContextualHelpBubble({ 
   topic, 
@@ -52,22 +56,6 @@ export function ContextualHelpBubble({
     }
   }, [isOpen]);
 
-  const getOverridePlacement = (): BubblePlacement | null => {
-    if (!position) {
-      return null;
-    }
-
-    if (position === 'top') {
-      return 'top-right';
-    }
-
-    if (position === 'bottom') {
-      return 'bottom-right';
-    }
-
-    return position;
-  };
-
   const updateAutoPlacement = () => {
     const triggerRect = triggerRef.current?.getBoundingClientRect();
 
@@ -75,39 +63,19 @@ export function ContextualHelpBubble({
       return;
     }
 
-    const bubbleWidth = 320;
     const measuredBubbleHeight = bubbleContentRef.current?.getBoundingClientRect().height;
-    const bubbleHeight = measuredBubbleHeight || 340;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const gap = 8;
-    const edgePadding = 16;
+    const layout = resolveContextualHelpPlacement({
+      triggerRect,
+      bubbleHeight: measuredBubbleHeight || 340,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    });
 
-    const availableBelow = viewportHeight - triggerRect.bottom;
-    const availableAbove = triggerRect.top;
-    const shouldOpenUpward = availableBelow < bubbleHeight + gap + edgePadding && availableAbove > availableBelow;
-    const opensPastRightEdge = triggerRect.left + bubbleWidth > viewportWidth - edgePadding;
-    const opensPastLeftEdge = triggerRect.right - bubbleWidth < edgePadding;
-    const horizontalAlignment = opensPastRightEdge && !opensPastLeftEdge ? 'right' : 'left';
-    const availableOnChosenSide = shouldOpenUpward ? availableAbove : availableBelow;
-    const gapOnChosenSide = Math.min(gap, Math.max(0, availableOnChosenSide - 1));
-    const paddingOnChosenSide = availableOnChosenSide > gapOnChosenSide + edgePadding + 1 ? edgePadding : 0;
-    const maxHeightOnChosenSide = availableOnChosenSide - gapOnChosenSide - paddingOnChosenSide;
-    const safeBubbleWidth = Math.max(1, Math.min(bubbleWidth, viewportWidth - edgePadding * 2));
-    const preferredLeft = horizontalAlignment === 'right'
-      ? triggerRect.right - safeBubbleWidth
-      : triggerRect.left;
-    const clampedLeft = Math.min(
-      Math.max(preferredLeft, edgePadding),
-      viewportWidth - safeBubbleWidth - edgePadding
-    );
-    const pointerOffset = triggerRect.left + triggerRect.width / 2 - clampedLeft - 8;
-
-    setAutoHorizontalOffset(clampedLeft - triggerRect.left);
-    setAutoPointerOffset(Math.min(Math.max(pointerOffset, 8), safeBubbleWidth - 16));
-    setAutoMaxHeight(Math.max(1, Math.min(bubbleHeight, maxHeightOnChosenSide)));
-    setAutoGapOffset(gapOnChosenSide);
-    setAutoPlacement(`${shouldOpenUpward ? 'top' : 'bottom'}-${horizontalAlignment}` as BubblePlacement);
+    setAutoHorizontalOffset(layout.horizontalOffset);
+    setAutoPointerOffset(layout.pointerOffset);
+    setAutoMaxHeight(layout.maxHeight);
+    setAutoGapOffset(layout.gapOffset);
+    setAutoPlacement(layout.placement);
   };
 
   useEffect(() => {
@@ -145,7 +113,7 @@ export function ContextualHelpBubble({
     }
   };
 
-  const placement = getOverridePlacement() ?? autoPlacement;
+  const placement = getContextualHelpOverridePlacement(position) ?? autoPlacement;
 
   const positionClasses: Record<BubblePlacement, string> = {
     'top-left': '',
