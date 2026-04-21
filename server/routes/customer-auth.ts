@@ -838,13 +838,19 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Clear the customer_auth cookie so check-session cannot auto-resume.
       res.clearCookie('customer_auth', { path: '/' });
 
+      // Delete customerAuth from session first as a safety net: if session.destroy
+      // fails below, the auth data is already gone and the next request won't be
+      // authenticated via the stale session entry.
+      delete (req.session as any).customerAuth;
+
       // Destroy the full session (covers both cookie and session-based auth).
-      await new Promise<void>((resolve) => {
-        req.session.destroy((err: any) => {
-          if (err) console.error('❌ Session destroy error on logout:', err);
-          resolve();
-        });
+      const destroyErr = await new Promise<any>((resolve) => {
+        req.session.destroy((err: any) => resolve(err));
       });
+      if (destroyErr) {
+        console.error('❌ Session destroy error on logout:', destroyErr);
+        // Cookie is already cleared and customerAuth deleted — safe to continue.
+      }
 
       res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {

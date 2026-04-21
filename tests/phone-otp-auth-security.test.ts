@@ -156,3 +156,43 @@ describe('international phone support', () => {
   });
 
 });
+
+describe('logout auto-login regression', () => {
+
+  const logoutRoute = readFileSync('server/routes/customer-auth.ts', 'utf8');
+  const loginPage = readFileSync('client/src/pages/CustomerLogin.tsx', 'utf8');
+  const portalPage = readFileSync('client/src/pages/customer-portal.tsx', 'utf8');
+
+  it('logout endpoint clears the customer_auth cookie', () => {
+    const handler = sourceBetween(
+      logoutRoute,
+      "// POST /api/customer-auth/logout",
+      "res.json({ success: true, message: \"Logged out successfully\" })",
+    );
+    expect(handler).toContain("clearCookie('customer_auth'");
+  });
+
+  it('logout endpoint deletes customerAuth from session before destroy (safety net)', () => {
+    const handler = sourceBetween(
+      logoutRoute,
+      "// POST /api/customer-auth/logout",
+      "res.json({ success: true, message: \"Logged out successfully\" })",
+    );
+    expect(handler).toContain('delete (req.session as any).customerAuth');
+    expect(handler).toContain('req.session.destroy');
+  });
+
+  it('logout handler in customer-portal redirects to /customer-login?loggedOut=1', () => {
+    expect(portalPage).toContain("window.location.href = '/customer-login?loggedOut=1'");
+  });
+
+  it('CustomerLogin session-resume skips check-session when ?loggedOut=1 is present', () => {
+    expect(loginPage).toContain("params.get('loggedOut') === '1'");
+  });
+
+  it('CustomerLogin removes ?loggedOut=1 from URL after guard fires (no stale skip on revisit)', () => {
+    expect(loginPage).toContain("params.delete('loggedOut')");
+    expect(loginPage).toContain('window.history.replaceState');
+  });
+
+});

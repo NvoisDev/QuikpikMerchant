@@ -85,9 +85,15 @@ export default function CustomerLogin() {
 
   // Session resume: if an active customer session exists, redirect to their store.
   // Skip when ?loggedOut=1 is present — the user just intentionally logged out.
+  // Remove the param from the URL afterwards so revisiting the page works normally.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('loggedOut') === '1') return;
+    if (params.get('loggedOut') === '1') {
+      params.delete('loggedOut');
+      const clean = params.toString() ? `?${params.toString()}` : '';
+      window.history.replaceState({}, '', `${window.location.pathname}${clean}`);
+      return;
+    }
     (async () => {
       try {
         const res = await fetch('/api/customer-auth/check-session', { credentials: 'include' });
