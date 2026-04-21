@@ -1563,10 +1563,10 @@ export default function Customers() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => {
-                            // Navigate to campaigns with this group pre-selected
-                            window.location.href = `/campaigns?groupId=${group.id}`;
+                            navigate("/campaigns");
                           }}
-                          title="Send Message"
+                          title="Broadcast coming soon"
+                          aria-label="Broadcast coming soon"
                           className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
                           <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />

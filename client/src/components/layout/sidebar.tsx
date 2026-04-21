@@ -50,7 +50,7 @@ const navigation: NavigationItem[] = [
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
-  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
+  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", comingSoon: true },
   { name: "Marketplace", href: "#", icon: Store, tabName: "marketplace", comingSoon: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },

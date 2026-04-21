@@ -573,9 +573,9 @@ export default function WholesalerDashboard() {
                     <InteractiveActionCard
                       href="/campaigns"
                       icon={MessageSquare}
-                      title="Send Campaigns"
-                      description="Broadcast to your customers"
-                      metric={`${formatNumber((broadcastStats as any)?.recipientsReached || 0)} Reached`}
+                      title="Broadcast Soon"
+                      description="Messaging tools are coming soon"
+                      metric="Coming Soon"
                       colorClass="from-emerald-500 to-emerald-600"
                       gradientFrom="from-emerald-50"
                       gradientTo="to-emerald-100"
@@ -584,8 +584,8 @@ export default function WholesalerDashboard() {
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <div className="space-y-2">
-                    <p className="font-semibold">WhatsApp Campaigns</p>
-                    <p className="text-sm">Send targeted WhatsApp messages to customer groups. Promote products, announce sales, and engage directly with your customers.</p>
+                    <p className="font-semibold">Broadcast Coming Soon</p>
+                    <p className="text-sm">Broadcast messaging is paused for now. This shortcut opens the coming-soon page.</p>
                     <div className="text-xs text-gray-400">
                       Keyboard shortcut: Ctrl+2 (⌘+2 on Mac)
                     </div>
@@ -1113,8 +1113,8 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center p-3 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all duration-200 group hover:scale-105">
                     <MessageSquare className="h-5 w-5 text-emerald-600 mr-3 group-hover:scale-110 transition-transform" />
                     <div className="text-left">
-                      <p className="font-medium text-gray-900">Campaigns</p>
-                      <p className="text-xs text-gray-500">Ctrl+2</p>
+                      <p className="font-medium text-gray-900">Broadcast</p>
+                      <p className="text-xs text-gray-500">Coming soon</p>
                     </div>
                   </div>
                 </Link>
