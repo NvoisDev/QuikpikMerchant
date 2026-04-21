@@ -42,6 +42,7 @@ interface NavigationItem {
   tabName: string;
   premiumOnly?: boolean;
   comingSoon?: boolean;
+  soonBadge?: boolean;
 }
 
 const navigation: NavigationItem[] = [
@@ -50,7 +51,7 @@ const navigation: NavigationItem[] = [
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
-  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", comingSoon: true },
+  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", soonBadge: true },
   { name: "Marketplace", href: "#", icon: Store, tabName: "marketplace", comingSoon: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
@@ -160,6 +161,7 @@ export default function Sidebar() {
                 const isActive = location === item.href && item.href !== "#";
                 const isLocked = item.premiumOnly && isFreeUser;
                 const isComingSoon = item.comingSoon;
+                const showSoonBadge = item.comingSoon || item.soonBadge;
                 if (!checkTabAccess(item.tabName)) return null;
 
                 const itemContent = (
@@ -203,7 +205,7 @@ export default function Sidebar() {
                       {!dc && (
                         <>
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
-                          {isComingSoon && (
+                          {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                               Soon
                             </span>
@@ -214,7 +216,7 @@ export default function Sidebar() {
                       {dc && (
                         <span className="lg:hidden">
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
-                          {isComingSoon && (
+                          {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                               Soon
                             </span>
@@ -235,7 +237,7 @@ export default function Sidebar() {
                       side="right"
                       className="hidden lg:block bg-slate-800 text-slate-100 border-slate-700"
                     >
-                      {item.name}{isComingSoon ? " (Coming soon)" : ""}
+                      {item.name}{showSoonBadge ? " (Coming soon)" : ""}
                     </TooltipContent>
                   </Tooltip>
                 ) : (
