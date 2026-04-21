@@ -29,7 +29,7 @@ const getPlanFeatures = (plan: string) => {
       price: "£39.99",
       features: [
         "Unlimited products",
-        "Unlimited broadcasts",
+        "Broadcast tools coming soon",
         "Custom reports and insights",
         "Priority email and phone support",
         "B2B Marketplace access"
@@ -40,7 +40,7 @@ const getPlanFeatures = (plan: string) => {
       price: "£19.99",
       features: [
         "Up to 50 products",
-        "Up to 25 broadcasts per month",
+        "Broadcast tools coming soon",
         "Basic dashboard analytics",
         "Priority email support",
         "Team management (3 members)"
@@ -51,7 +51,7 @@ const getPlanFeatures = (plan: string) => {
       price: "£0",
       features: [
         "Up to 10 products",
-        "Up to 5 broadcasts per month",
+        "Broadcast tools coming soon",
         "Basic dashboard analytics",
         "Standard email support"
       ]

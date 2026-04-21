@@ -47,7 +47,7 @@ export function OnboardingWelcome() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-3 w-3 text-green-600" />
-                Setting up customer groups and broadcasts
+                Setting up customer groups for future broadcasts
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-3 w-3 text-green-600" />

@@ -221,7 +221,7 @@ export default function Signup() {
             The wholesale platform built for growth
           </h2>
           <p className="text-slate-400 text-base leading-relaxed">
-            Manage orders, customers, and products. Broadcast campaigns. Track your revenue — all in one place.
+            Manage orders, customers, products, and revenue — all in one place.
           </p>
         </div>
         <div className="space-y-4">

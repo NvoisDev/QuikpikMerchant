@@ -190,7 +190,7 @@ export default function TeamInvitation() {
               <span className="font-medium">Role: {invitationData.teamMember.role}</span>
             </div>
             <p className="text-emerald-600 text-sm mt-1">
-              You'll have access to products, orders, customers, and broadcast management.
+              You'll have access to products, orders, customers, and future broadcast tools when available.
             </p>
           </div>
 

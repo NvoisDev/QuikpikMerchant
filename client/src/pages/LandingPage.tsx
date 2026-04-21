@@ -291,9 +291,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-sky-400 to-sky-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
                 <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-sky-800">Instant Broadcasting</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-sky-800">Broadcasting Coming Soon</h3>
               <p className="text-sky-700 text-sm font-medium">
-                Send stock updates to all retailers instantly via WhatsApp
+                WhatsApp broadcast tools are on the roadmap for future customer updates
               </p>
             </Card>
             

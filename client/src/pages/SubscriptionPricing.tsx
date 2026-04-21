@@ -259,6 +259,10 @@ export default function SubscriptionPricing() {
     return limit === -1 ? 'Unlimited' : limit.toString();
   };
 
+  const formatPlanFeature = (feature: string) => {
+    return feature.toLowerCase().includes('broadcast') ? 'Broadcast tools coming soon' : feature;
+  };
+
   const isCurrentPlan = (planId: string) => {
     return currentSubscription?.currentPlan === planId;
   };
@@ -400,7 +404,7 @@ export default function SubscriptionPricing() {
       {planLimits && (
         <div className="mb-8 p-6 bg-gray-50 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Your Current Usage</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
                 {planLimits.usage.products}
@@ -412,20 +416,6 @@ export default function SubscriptionPricing() {
                 <div 
                   className="bg-blue-600 h-2 rounded-full" 
                   style={{ width: `${Math.min(planLimits.percentUsed.products, 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {planLimits.usage.broadcasts}
-              </div>
-              <div className="text-sm text-gray-600">
-                Broadcasts this month ({formatLimit(planLimits.limits.broadcasts)} limit)
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min(planLimits.percentUsed.broadcasts, 100)}%` }}
                 />
               </div>
             </div>
@@ -503,7 +493,7 @@ export default function SubscriptionPricing() {
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start">
                     <CheckIcon className="w-4 h-4 text-green-500 mt-1 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{feature}</span>
+                    <span className="text-sm text-gray-700">{formatPlanFeature(feature)}</span>
                   </li>
                 ))}
               </ul>
@@ -512,10 +502,6 @@ export default function SubscriptionPricing() {
                 <div className="flex justify-between">
                   <span>Products:</span>
                   <span className="font-medium">{formatLimit(plan.limits.products)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Monthly Broadcasts:</span>
-                  <span className="font-medium">{formatLimit(plan.limits.broadcasts)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Team Members:</span>

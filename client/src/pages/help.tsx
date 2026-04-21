@@ -42,7 +42,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - Manage inventory and products with AI-powered descriptions
 - Connect with retail customers through customer portal
 - Process orders and payments with automatic invoicing
-- Send WhatsApp broadcasts to customer groups
+- Prepare customer groups for WhatsApp broadcasts coming soon
 - Track business analytics and financial health
 - Accept online payments with automatic platform fee collection
 - Generate professional Stripe invoices for customers
@@ -53,7 +53,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 1. **Complete Your Profile** - Add business information in Settings → Business Settings
 2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments for direct customer payments
 3. **Add Your Products** - Create your product catalog with images and AI descriptions in Product Management
-4. **Create Customer Groups** - Organize your customers for targeted WhatsApp broadcasts
+4. **Create Customer Groups** - Organize your customers now so you're ready for targeted WhatsApp broadcasts when they launch
 5. **Configure WhatsApp** - Set up Twilio integration for customer notifications in Settings → WhatsApp
 6. **Preview Your Store** - Use "Preview Store" to see how customers view your products
 7. **Start Selling** - Share customer portal links and begin receiving orders with automatic invoicing
@@ -62,7 +62,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 - **Customer Portal**: Customers can browse products, place orders, and make payments without registration
 - **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
-- **WhatsApp Integration**: Broadcast product updates and receive order notifications
+- **WhatsApp Integration**: Receive order notifications now; product broadcasts are coming soon
 - **Order Management**: Complete order lifecycle with status tracking and refund processing
 - **Product Negotiation**: Enable custom pricing requests with minimum bid price controls
 - **Real-time Analytics**: Track sales, revenue, and business performance
@@ -120,8 +120,8 @@ The **Team Management** page (accessible from the sidebar) lets you invite colle
 
 | Role | What They Can Do |
 |------|-----------------|
-| **Admin** | Full access: manage products, orders, customers, campaigns, settings, and team |
-| **Manager** | Products, orders, customers, campaigns — cannot access billing or team settings |
+| **Admin** | Full access: manage products, orders, customers, future broadcast tools, settings, and team |
+| **Manager** | Products, orders, customers, future broadcast tools — cannot access billing or team settings |
 | **Staff** | View and update orders, view products and customers |
 | **Viewer** | Read-only access across the platform |
 
@@ -331,13 +331,13 @@ The system prevents duplicate phone numbers across groups.
         content: `
 ### Understanding WhatsApp Group Connectivity
 
-When you see "WhatsApp group connected" on a customer group, it means the group is ready for WhatsApp marketing and communication.
+When you see "WhatsApp group connected" on a customer group, it means the group is ready for supported WhatsApp customer messages and future broadcast tools.
 
 #### What WhatsApp Group Connection Enables
-- **Broadcast Campaigns**: Send product announcements to all group members at once
-- **Stock Updates**: Automatically notify customers when products are back in stock
-- **Promotional Messages**: Share special offers, discounts, or new arrivals
-- **Order Notifications**: Members receive updates about their orders via WhatsApp
+- **Broadcast Campaigns (coming soon)**: Product announcements to group members are on the roadmap
+- **Stock Updates (coming soon)**: Future broadcasts can help announce when products are back in stock
+- **Promotional Messages (coming soon)**: Future broadcasts can help share special offers, discounts, or new arrivals
+- **Order Notifications**: Supported transactional updates can be sent via WhatsApp
 - **Two-way Communication**: Customers can reply directly to ask questions or place orders
 
 #### How WhatsApp Groups Work
@@ -351,22 +351,22 @@ When you see "WhatsApp group connected" on a customer group, it means the group 
 2. **Go to Customer Groups** and select a group
 3. **Click "Create WhatsApp Group"** button
 4. **System validates** your WhatsApp configuration
-5. **Group becomes connected** for messaging campaigns
+5. **Group becomes connected** for customer messaging and future broadcast tools
 
 #### Benefits for Your Business
-- **Instant Communication**: Reach customers immediately on their most-used platform
-- **Higher Engagement**: WhatsApp messages have much higher open rates than email
+- **Prepared Customer Groups**: Keep customers organized now so future broadcasts are easier to launch
+- **Higher Engagement Potential**: WhatsApp messages often have higher open rates than email
 - **Direct Ordering**: Customers can order products directly through message links
 - **Professional Image**: Branded business messages build customer trust
 - **Automated Workflows**: System handles welcome messages for new customers
 
 #### Customer Benefits
-- **Real-time Updates**: Get instant notifications about products they're interested in
+- **Future Product Updates**: Broadcasts will help customers hear about products they're interested in
 - **Easy Ordering**: Direct links to place orders without navigating websites
 - **Personal Service**: Can reply directly to ask questions or request support
-- **Exclusive Access**: First to know about new products, discounts, and special offers
+- **Future Exclusive Access**: Broadcasts will support new product, discount, and special-offer updates when available
 
-The "connected" status confirms your customer group is ready for WhatsApp marketing, making it easier to engage with wholesale customers and drive sales through direct messaging.
+The "connected" status confirms your customer group is ready for WhatsApp messaging. Broadcast marketing is coming soon, making it easier to engage wholesale customers through direct messaging in the future.
         `
       },
       {
@@ -518,7 +518,7 @@ Before merging, review what will be transferred:
 - All order history and purchase data
 - Customer group memberships
 - Product interactions and preferences
-- Campaign history and responses
+- Messaging history and responses
 - Contact information (best version retained)
 
 **Step 5: Execute Merge**
@@ -531,7 +531,7 @@ Before merging, review what will be transferred:
 The merge process handles all database relationships:
 - **Orders**: All purchase history consolidated
 - **Customer Groups**: Memberships combined
-- **Campaigns**: All broadcast history preserved
+- **Messaging**: Communication history preserved
 - **Products**: Viewing and interaction history
 - **Contact Info**: Best available data retained
 - **Analytics**: Accurate customer metrics restored
@@ -588,9 +588,9 @@ The merge system handles all foreign key constraints automatically, ensuring you
   },
   {
     id: "whatsapp-broadcasts",
-    title: "WhatsApp Broadcasts",
+    title: "WhatsApp Messaging & Broadcasts",
     icon: MessageSquare,
-    description: "Send product updates and notifications via WhatsApp",
+    description: "Set up WhatsApp messaging now; broadcasts are coming soon",
     articles: [
       {
         title: "WhatsApp Business API Complete Setup Guide",
@@ -786,37 +786,20 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=your_business_account_id
         `
       },
       {
-        title: "Sending Broadcasts",
+        title: "Broadcasts Coming Soon",
         content: `
-### Creating and Sending Broadcasts
+### Broadcasts Are Coming Soon
 
-#### To Send a Product Broadcast
-1. **Go to Broadcasts** in the sidebar
-2. **Click "Create New Broadcast"**
-3. **Select Product**: Choose which product to promote
-4. **Select Customer Group**: Pick your target audience
-5. **Add Custom Message** (optional): Personalize the message
-6. **Click "Send Broadcast"**
+WhatsApp broadcast campaigns are not available yet. You may still see the Broadcast area in the app, but it is currently a coming-soon feature.
 
-#### Broadcast Message Format
-The system automatically generates messages including:
-- Product name and description
-- Price and MOQ information
-- Your business contact details
-- Custom message (if added)
+#### What You Can Do Now
+1. **Organize Customer Groups**: Keep customer lists accurate so they are ready when broadcasts launch
+2. **Configure WhatsApp**: Set up WhatsApp messaging for supported customer notifications
+3. **Maintain Product Details**: Keep product names, descriptions, prices, and MOQ information current
+4. **Prepare Message Ideas**: Draft future stock updates, new arrival notices, and special offer copy offline
 
-#### Tracking Results
-After sending, you can monitor:
-- **Delivery Status**: Sent, delivered, or failed
-- **Recipient Count**: Total customers reached
-- **Response Rates**: Customer engagement metrics
-
-#### Best Practices
-- Send broadcasts during business hours
-- Keep custom messages concise and relevant
-- Don't over-broadcast to the same group
-- Monitor response rates and adjust strategy
-- Ensure compliance with WhatsApp Business policies
+#### When Broadcasts Launch
+The planned broadcast workflow will help you select products, choose customer groups, add a custom message, and review delivery results.
         `
       },
       {
@@ -1231,10 +1214,10 @@ The Analytics dashboard provides insights into your business performance.
 - **Order Patterns**: Purchase frequency and timing
 - **Geographic Distribution**: Where your customers are located
 
-#### Broadcast Analytics
-- **Total Broadcasts**: Number of campaigns sent
-- **Recipients Reached**: Total customers contacted
-- **Engagement Rates**: Response and conversion rates
+#### Broadcast Analytics (coming soon)
+- **Total Broadcasts**: Planned count of campaigns sent
+- **Recipients Reached**: Planned total customers contacted
+- **Engagement Rates**: Planned response and conversion rates
         `
       },
       {
@@ -1257,11 +1240,11 @@ The Analytics dashboard provides insights into your business performance.
 #### Customer Insights
 - Understand customer purchase patterns
 - Identify your most valuable customer segments
-- Tailor broadcasts to customer preferences
+- Prepare future broadcasts around customer preferences
 - Improve customer retention strategies
 
 #### Marketing Effectiveness
-- Track broadcast performance
+- Broadcast performance tracking is coming soon
 - Measure customer acquisition costs
 - Optimize communication timing
 - A/B test different message formats
@@ -1290,7 +1273,7 @@ The Analytics dashboard provides insights into your business performance.
 - **Cost**: £0/month
 - **Products**: Up to 10 products
 - **Features**: 
-  - Basic WhatsApp broadcasts
+  - Broadcast tools coming soon
   - Order management
   - Basic analytics
   - Email support
@@ -1299,7 +1282,7 @@ The Analytics dashboard provides insights into your business performance.
 - **Cost**: £19.99/month
 - **Products**: Up to 50 products
 - **Features**:
-  - Advanced WhatsApp broadcasts
+  - Broadcast tools coming soon
   - Customer groups
   - Priority order processing
   - Advanced analytics
@@ -1309,7 +1292,7 @@ The Analytics dashboard provides insights into your business performance.
 - **Cost**: £49.99/month
 - **Products**: Unlimited products
 - **Features**:
-  - Custom broadcast templates
+  - Broadcast tools coming soon
   - Advanced customer segmentation
   - Real-time inventory alerts
   - Premium analytics dashboard
@@ -1382,7 +1365,7 @@ The Customer Portal is a dedicated shopping interface where your customers can b
 
 #### How Customers Access Your Portal
 1. **Direct Links**: Share your customer portal URL (found in "Preview Store")
-2. **WhatsApp Broadcasts**: Product links automatically include portal access
+2. **WhatsApp Messages**: Share portal links in direct WhatsApp messages; broadcasts are coming soon
 3. **Email Campaigns**: Include portal links in email marketing
 
 #### Portal Features for Customers
@@ -1675,10 +1658,10 @@ A: Ensure images are under 500KB and max 800x600px. Supported formats: JPG, PNG,
 **Q: Products not appearing in marketplace**
 A: Make sure product status is set to "Active" and you have stock available.
 
-#### WhatsApp Broadcast Issues
+#### WhatsApp Messaging Issues
 
-**Q: WhatsApp broadcasts not sending**
-A: Verify your WhatsApp Business API credentials in Settings → WhatsApp Integration. Ensure your access token is valid.
+**Q: Why can't I send WhatsApp broadcasts yet?**
+A: Broadcast campaigns are marked as coming soon. For supported WhatsApp messages, verify your WhatsApp Business API credentials in Settings → WhatsApp Integration and ensure your access token is valid.
 
 **Q: Messages showing as failed**
 A: Check recipient phone numbers are valid and have WhatsApp. Verify your business phone number is active.

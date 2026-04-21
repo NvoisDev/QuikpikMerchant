@@ -65,7 +65,7 @@ export function SubscriptionUpgradeModal({
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                    25 Broadcasts / month
+                    Broadcast tools coming soon
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
@@ -103,7 +103,7 @@ export function SubscriptionUpgradeModal({
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                    Unlimited Broadcasts
+                    Broadcast tools coming soon
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />

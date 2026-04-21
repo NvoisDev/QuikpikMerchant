@@ -57,8 +57,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: "campaigns",
-    title: "Marketing & Campaigns",
-    description: "Create WhatsApp campaigns and promotional messages to engage your customers. Send product updates, special offers, and order notifications directly to their WhatsApp.",
+    title: "Broadcasts Coming Soon",
+    description: "Broadcast messaging is coming soon. For now, use customer groups to organize your buyers and keep managing orders, products, and customer details from the dashboard.",
     target: "campaigns",
     position: "right",
     animation: "pulse",

@@ -37,7 +37,7 @@ export class SubscriptionService {
           description: "Get started with basic features",
           features: [
             "Up to 10 products",
-            "Up to 5 broadcasts per month", 
+            "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Standard email support"
           ],
@@ -59,7 +59,7 @@ export class SubscriptionService {
           description: "Perfect for growing wholesale businesses",
           features: [
             "Up to 50 products",
-            "Up to 25 broadcasts per month",
+            "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Priority email support"
           ],
@@ -81,7 +81,7 @@ export class SubscriptionService {
           description: "Everything you need to scale your wholesale business",
           features: [
             "Unlimited products",
-            "Unlimited broadcasts", 
+            "Broadcast tools coming soon",
             "Custom reports and insights",
             "Priority email and phone support"
           ],
