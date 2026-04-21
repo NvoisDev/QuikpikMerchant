@@ -2227,8 +2227,9 @@ export default function CustomerPortal() {
 
   const clearGuestParam = () => {
     const nextUrl = new URL(window.location.href);
-    if (nextUrl.searchParams.has('guest')) {
+    if (nextUrl.searchParams.has('guest') || nextUrl.searchParams.has('guestFrom')) {
       nextUrl.searchParams.delete('guest');
+      nextUrl.searchParams.delete('guestFrom');
       window.history.replaceState({}, '', nextUrl.toString());
     }
   };
@@ -2527,6 +2528,9 @@ export default function CustomerPortal() {
                   onClick={async () => {
                     const guestParams = new URLSearchParams(window.location.search);
                     if (guestParams.get('guestFrom') === 'selection') {
+                      const nextUrl = new URL(window.location.href);
+                      nextUrl.searchParams.delete('guestFrom');
+                      window.history.replaceState({}, '', nextUrl.toString());
                       setWholesalerSearchQuery("");
                       setShowWholesalerSearch(true);
                       return;
