@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, ShieldCheck, Phone } from "lucide-react";
+import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, ShieldCheck, Phone, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface WholesalerOption {
@@ -17,7 +17,7 @@ interface WholesalerOption {
   logoType: string | null;
 }
 
-type LoginStep = 'phone' | 'otp' | 'select' | 'no-account';
+type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
 
 const COUNTRY_CODE = '+44';
 
@@ -69,6 +69,13 @@ export default function CustomerLogin() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
+
+  // Enquiry form state
+  const [enquiryName, setEnquiryName] = useState('');
+  const [enquiryEmail, setEnquiryEmail] = useState('');
+  const [enquiryBusiness, setEnquiryBusiness] = useState('');
+  const [enquiryMessage, setEnquiryMessage] = useState('');
+  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
 
   const otpRef = useRef<HTMLInputElement>(null);
 
@@ -209,11 +216,52 @@ export default function CustomerLogin() {
     }
   };
 
+  const handleEnquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enquiryName.trim()) {
+      toast({ title: 'Missing Information', description: 'Please enter your name.', variant: 'destructive' });
+      return;
+    }
+
+    setIsSubmittingEnquiry(true);
+    try {
+      const res = await fetch('/api/customer-auth/general-enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: fullPhone,
+          name: enquiryName.trim(),
+          email: enquiryEmail.trim() || undefined,
+          businessName: enquiryBusiness.trim() || undefined,
+          message: enquiryMessage.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast({ title: 'Request Sent!', description: data.message || "We'll be in touch soon." });
+        setStep('phone');
+        setEnquiryName('');
+        setEnquiryEmail('');
+        setEnquiryBusiness('');
+        setEnquiryMessage('');
+        setPhoneLocal('');
+      } else {
+        toast({ title: 'Request Failed', description: data.error || 'Something went wrong.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Connection Error', description: 'Unable to send request. Please check your connection.', variant: 'destructive' });
+    } finally {
+      setIsSubmittingEnquiry(false);
+    }
+  };
+
   const stepTitle: Record<LoginStep, string> = {
     phone: 'Sign in',
     otp: 'Verify your number',
     select: 'Choose your store',
     'no-account': 'No account found',
+    enquiry: 'Request Wholesale Access',
   };
 
   const stepSubtitle: Record<LoginStep, string> = {
@@ -221,6 +269,7 @@ export default function CustomerLogin() {
     otp: `We sent a 6-digit code to ${COUNTRY_CODE} ${phoneLocal}`,
     select: 'You have access to multiple stores',
     'no-account': `${fullPhone} isn't linked to any store`,
+    enquiry: 'Tell us about your business',
   };
 
   return (
@@ -418,7 +467,7 @@ export default function CustomerLogin() {
                 </div>
               )}
 
-              {/* ── No account ── */}
+              {/* ── No account found ── */}
               {step === 'no-account' && (
                 <div className="space-y-5">
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
@@ -427,14 +476,13 @@ export default function CustomerLogin() {
                     <p className="text-amber-700 text-sm text-center">
                       Your number <span className="font-mono font-semibold">{fullPhone}</span> isn't linked to any wholesale account yet.
                     </p>
-                    <div className="border-t border-amber-200 pt-3 space-y-2">
-                      <p className="text-amber-700 text-sm font-medium">How to get access:</p>
-                      <ul className="text-amber-600 text-sm space-y-1 list-disc list-inside">
-                        <li>Ask your wholesaler to add your number directly</li>
-                        <li>Visit a wholesaler's store link and request access there</li>
-                      </ul>
-                    </div>
                   </div>
+                  <Button
+                    onClick={() => setStep('enquiry')}
+                    className="w-full h-11 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Request Wholesale Access
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => { setStep('phone'); setOtpCode(''); setPhoneLocal(''); setError(''); }}
@@ -443,6 +491,77 @@ export default function CustomerLogin() {
                     <ArrowLeft className="mr-2 h-4 w-4" /> Try a different number
                   </Button>
                 </div>
+              )}
+
+              {/* ── Enquiry form ── */}
+              {step === 'enquiry' && (
+                <form onSubmit={handleEnquirySubmit} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="enq-name" className="text-sm font-medium">Your Name *</Label>
+                    <Input
+                      id="enq-name"
+                      type="text"
+                      placeholder="Full name"
+                      value={enquiryName}
+                      onChange={e => setEnquiryName(e.target.value)}
+                      className="h-11 border-2 focus:border-green-600"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="enq-email" className="text-sm font-medium">Email</Label>
+                    <Input
+                      id="enq-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={enquiryEmail}
+                      onChange={e => setEnquiryEmail(e.target.value)}
+                      className="h-11 border-2 focus:border-green-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="enq-business" className="text-sm font-medium">Business Name</Label>
+                    <Input
+                      id="enq-business"
+                      type="text"
+                      placeholder="Your business name"
+                      value={enquiryBusiness}
+                      onChange={e => setEnquiryBusiness(e.target.value)}
+                      className="h-11 border-2 focus:border-green-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="enq-message" className="text-sm font-medium">Message</Label>
+                    <textarea
+                      id="enq-message"
+                      placeholder="Tell us about your business or what products you're looking for…"
+                      value={enquiryMessage}
+                      onChange={e => setEnquiryMessage(e.target.value)}
+                      className="flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm focus:border-green-600 outline-none resize-none min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStep('no-account')}
+                      disabled={isSubmittingEnquiry}
+                      className="flex-1 h-12 border-2"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={isSubmittingEnquiry || !enquiryName.trim()}
+                    >
+                      {isSubmittingEnquiry
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
+                        : <><Send className="h-4 w-4 mr-2" /> Send Request</>}
+                    </Button>
+                  </div>
+                </form>
               )}
 
             </CardContent>

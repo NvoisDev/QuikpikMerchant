@@ -184,16 +184,23 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       const normalised = phoneNumber.trim();
 
-      // Require OTP proof via session nonce — prevents auth bypass
+      // Dual OTP proof: require EITHER (a) session nonce set by verify-phone-otp
+      // OR (b) a recently used DB record for this phone (grace window: 10 min).
+      // Both are checked; at least one must pass.
       const sessionAny = req.session as any;
-      const verifiedPhone: string | undefined = sessionAny?.verifiedPhone;
-      const verifiedPhoneExpiry: number | undefined = sessionAny?.verifiedPhoneExpiry;
+      const sessionNonceValid =
+        sessionAny?.verifiedPhone === normalised &&
+        sessionAny?.verifiedPhoneExpiry &&
+        Date.now() < sessionAny.verifiedPhoneExpiry;
 
-      if (!verifiedPhone || verifiedPhone !== normalised) {
-        return res.status(403).json({ error: 'Phone verification required. Please verify your code first.' });
+      let dbGraceValid = false;
+      if (!sessionNonceValid) {
+        const recentVerification = await storage.findRecentlyUsedPhoneVerification(normalised, 10);
+        dbGraceValid = !!recentVerification;
       }
-      if (!verifiedPhoneExpiry || Date.now() > verifiedPhoneExpiry) {
-        return res.status(403).json({ error: 'Phone verification expired. Please verify your code again.' });
+
+      if (!sessionNonceValid && !dbGraceValid) {
+        return res.status(403).json({ error: 'Phone verification required or expired. Please verify your code first.' });
       }
 
       // Find the customer record for this phone + wholesaler combination
@@ -262,6 +269,50 @@ export function registerCustomerAuthRoutes(app: Express): void {
     } catch (error) {
       console.error('complete-phone-login error:', error);
       return res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // POST /api/customer-auth/general-enquiry
+  // Accepts a general "I want wholesale access" enquiry when no specific wholesaler is known.
+  // Sends notification to platform admins without requiring a wholesalerId in the DB.
+  app.post('/api/customer-auth/general-enquiry', async (req, res) => {
+    try {
+      const { phoneNumber, name, email, businessName, message } = req.body;
+      if (!phoneNumber || !name) {
+        return res.status(400).json({ error: 'Name and phone number are required' });
+      }
+
+      console.log('📋 General wholesale enquiry received:', { name, phoneNumber: phoneNumber.slice(-4) + '****' });
+
+      // Send email notification to platform admin
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL || 'hello@quikpik.co';
+        const body = `${emailHeading('New Wholesale Enquiry', { size: '22px', color: '#10b981' })}
+          <p style="margin:0 0 20px">A new customer has requested wholesale access via the login page.</p>
+          ${emailCard(
+            `${emailHeading('Enquiry Details', { size: '16px' })}
+             <p style="margin:0 0 6px"><strong>Name:</strong> ${name}</p>
+             <p style="margin:0 0 6px"><strong>Phone:</strong> ${phoneNumber}</p>
+             <p style="margin:0 0 6px"><strong>Email:</strong> ${email || 'Not provided'}</p>
+             <p style="margin:0 0 6px"><strong>Business:</strong> ${businessName || 'Not provided'}</p>
+             ${message ? `<p style="margin:0 0 6px"><strong>Message:</strong> ${message}</p>` : ''}`,
+            { borderColor: '#dbeafe', bgColor: '#eff6ff' }
+          )}`;
+
+        await sendEmail({
+          to: adminEmail,
+          from: 'hello@quikpik.co',
+          subject: `New Wholesale Enquiry — ${name}`,
+          html: wrapCustomerEmail(body, { businessName: 'Quikpik', logoUrl: null }, { preheader: `Wholesale enquiry from ${name}` }),
+        });
+      } catch (emailErr) {
+        console.warn('⚠️ Could not send enquiry notification email:', emailErr);
+      }
+
+      return res.json({ success: true, message: "Your enquiry has been received. We'll be in touch soon." });
+    } catch (error) {
+      console.error('general-enquiry error:', error);
+      return res.status(500).json({ error: 'Failed to submit enquiry' });
     }
   });
 

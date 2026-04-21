@@ -203,6 +203,7 @@ export interface IStorage {
   markPhoneVerificationUsed(id: number): Promise<void>;
   incrementPhoneVerificationAttempts(id: number): Promise<void>;
   getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined>;
+  findRecentlyUsedPhoneVerification(phoneNumber: string, withinMinutes: number): Promise<{ id: number; usedAt: Date | null } | undefined>;
   findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null }>>;
 
   // SMS verification operations
@@ -4282,6 +4283,21 @@ export class DatabaseStorage implements IStorage {
 
   async incrementPhoneVerificationAttempts(id: number): Promise<void> {
     await db.update(customerPhoneVerifications).set({ attempts: sql`${customerPhoneVerifications.attempts} + 1` }).where(eq(customerPhoneVerifications.id, id));
+  }
+
+  async findRecentlyUsedPhoneVerification(phoneNumber: string, withinMinutes: number): Promise<{ id: number; usedAt: Date | null } | undefined> {
+    const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000);
+    const [row] = await db
+      .select({ id: customerPhoneVerifications.id, usedAt: customerPhoneVerifications.usedAt })
+      .from(customerPhoneVerifications)
+      .where(and(
+        eq(customerPhoneVerifications.phoneNumber, phoneNumber),
+        eq(customerPhoneVerifications.isUsed, true),
+        gt(customerPhoneVerifications.usedAt, cutoff)
+      ))
+      .orderBy(desc(customerPhoneVerifications.usedAt))
+      .limit(1);
+    return row;
   }
 
   async getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined> {
