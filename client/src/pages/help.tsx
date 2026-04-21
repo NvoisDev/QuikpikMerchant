@@ -44,7 +44,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - Process orders and payments with automatic invoicing
 - Organise customer groups for price lists, communications, and targeted broadcasts when available
 - Track business analytics and financial health
-- Accept online payments with automatic platform fee collection
+- Accept online card payments with automatic platform fee collection
 - Generate professional Stripe invoices for customers
 - Handle refunds and order management efficiently
 
@@ -1073,7 +1073,7 @@ When customers place orders for collection/pickup, the platform **automatically 
 Each order shows:
 - Customer details and delivery address
 - Order items with quantities and prices
-- Product/delivery subtotal, platform fee (4.6% on eligible online payments), and your revenue
+- Product/delivery subtotal, platform fee (4.6% on eligible online card payments), and your revenue
 - Payment status
 - Order date and tracking
 
@@ -1103,7 +1103,7 @@ To receive payments from customers, you must set up Stripe Connect.
 When customers pay:
 1. Customer pays their checkout total through Stripe
 2. Customer card checkouts include a customer transaction fee of 5.5% + £0.50
-3. Quikpik automatically collects a 4.6% platform fee from the order subtotal on eligible online orders
+3. Quikpik automatically collects a 4.6% platform fee from the order subtotal on eligible online card orders
 4. You receive the subtotal minus the platform fee directly to your bank account
 5. Order status updates to "Processing"
 
@@ -1414,7 +1414,7 @@ Each order includes:
 - Customer contact information and delivery address
 - Product details with quantities and pricing
 - Payment information and Stripe transaction ID
-- Platform fee calculation (4.6% on eligible online payments)
+- Platform fee calculation (4.6% on eligible online card payments)
 - Order timeline with colour-coded status entries
 - Payment summary showing subtotal, platform fee, any refunds, and your net amount
 
@@ -1428,7 +1428,7 @@ The timeline tracks every stage of an order:
 
 #### Payment Summary
 The payment summary in each order shows:
-- Subtotal and platform fee (4.6% on eligible online payments)
+- Subtotal and platform fee (4.6% on eligible online card payments)
 - A **Refunded** or **Partial Refund** row in purple when a refund has been recorded
 - **Your Net Amount** — adjusted to reflect any refunds issued
 
@@ -1469,7 +1469,7 @@ The payment summary in each order shows:
 - **Payment Failures**: Usually due to incomplete Stripe Connect setup
 - **Missing Invoices**: Check customer email addresses and spam folders
 - **Currency Issues**: Verify currency settings match your Stripe account
-- **Platform Fees**: Automatically calculated on eligible online payments - no manual action needed
+- **Platform Fees**: Automatically calculated on eligible online card payments - no manual action needed
         `
       },
       {
