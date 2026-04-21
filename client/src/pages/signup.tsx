@@ -159,6 +159,7 @@ export default function Signup() {
     setIsLoading(true);
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+    const timeoutRecoveryKey = `signup-timeout-${data.email.toLowerCase()}`;
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -172,6 +173,7 @@ export default function Signup() {
       const result = await response.json().catch(() => ({ message: "We couldn't read the signup response. Please try again." }));
 
       if (response.ok && result.success) {
+        sessionStorage.removeItem(timeoutRecoveryKey);
         // Show comprehensive welcome message
         toast({
           title: result.welcomeMessage?.title || "Welcome to Quikpik!",
@@ -192,7 +194,8 @@ export default function Signup() {
         // Show specific error message from server
         const errorMessage = result.message || "Please try again.";
         const emailAlreadyExists = result.field === "email" || /already exists/i.test(errorMessage);
-        if (emailAlreadyExists) {
+        const shouldTryRecoveryLogin = emailAlreadyExists && sessionStorage.getItem(timeoutRecoveryKey) === "1";
+        if (shouldTryRecoveryLogin) {
           try {
             const loginResponse = await fetch('/api/auth/login', {
               method: 'POST',
@@ -207,6 +210,7 @@ export default function Signup() {
             const loginResult = await loginResponse.json().catch(() => ({ success: false }));
 
             if (loginResponse.ok && loginResult.success) {
+              sessionStorage.removeItem(timeoutRecoveryKey);
               toast({
                 title: "Account found",
                 description: "Your account is ready. Signing you in now.",
@@ -230,9 +234,13 @@ export default function Signup() {
       }
     } catch (error) {
       console.error('Signup error:', error);
+      const didTimeout = error instanceof DOMException && error.name === "AbortError";
+      if (didTimeout) {
+        sessionStorage.setItem(timeoutRecoveryKey, "1");
+      }
       toast({
         title: "Signup failed",
-        description: error instanceof DOMException && error.name === "AbortError"
+        description: didTimeout
           ? "Account creation is taking too long. It may still finish in the background, so if retrying says the account exists, try signing in."
           : "Network error. Please check your connection and try again.",
         variant: "destructive",
