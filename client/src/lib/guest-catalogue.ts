@@ -43,3 +43,7 @@ export const getGuestStockRows = (product: GuestCatalogueProduct) => {
 
   return rows;
 };
+
+export const getGuestBackTarget = (search: string) => {
+  return new URLSearchParams(search).get("guestFrom") === "selection" ? "seller-selection" : "landing";
+};

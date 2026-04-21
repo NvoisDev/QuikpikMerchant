@@ -64,7 +64,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
 import { StockIndicator } from "@/components/ui/stock-indicator";
 import { Package2, Hash } from "lucide-react";
-import { getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
+import { getGuestBackTarget, getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
 
 // Extended Product type that includes all schema fields for customer portal
 type ExtendedProduct = ProductType & {
@@ -2526,8 +2526,7 @@ export default function CustomerPortal() {
               {isTrueGuestMode && (
                 <Button
                   onClick={async () => {
-                    const guestParams = new URLSearchParams(window.location.search);
-                    if (guestParams.get('guestFrom') === 'selection') {
+                    if (getGuestBackTarget(window.location.search) === "seller-selection") {
                       clearGuestParam();
                       setOpenRequestAccessOnAuth(false);
                       setIsGuestMode(false);

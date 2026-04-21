@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { getGuestStockRows, getSellingFormatLabel } from '../client/src/lib/guest-catalogue';
+import { getGuestBackTarget, getGuestStockRows, getSellingFormatLabel } from '../client/src/lib/guest-catalogue';
 import { stripGuestPricingData } from '../server/utils/guest-products';
 
 const customerAuthSource = readFileSync('client/src/components/customer/CustomerAuth.tsx', 'utf8');
@@ -112,14 +112,17 @@ describe('guest browsing regression coverage', () => {
     );
 
     expect(sellerGuestButton).toContain('guest=true&guestFrom=selection');
-    expect(guestBackButton).toContain("guestParams.get('guestFrom') === 'selection'");
+    expect(getGuestBackTarget('?guest=true&guestFrom=selection')).toBe('seller-selection');
+    expect(getGuestBackTarget('?guest=true')).toBe('landing');
+    expect(getGuestBackTarget('')).toBe('landing');
+    expect(guestBackButton).toContain('getGuestBackTarget(window.location.search) === "seller-selection"');
     expect(guestBackButton).toContain('clearGuestParam()');
     expect(guestBackButton).toContain('setIsGuestMode(false)');
     expect(guestBackButton).toContain('setAuthenticatedCustomer(null)');
     expect(guestBackButton).toContain('setCart([])');
     expect(guestBackButton).toContain('setShowWholesalerSearch(true)');
     expect(guestBackButton).toContain('setWholesalerSearchQuery("")');
-    expect(guestBackButton.indexOf("guestParams.get('guestFrom') === 'selection'")).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));
+    expect(guestBackButton.indexOf('getGuestBackTarget(window.location.search) === "seller-selection"')).toBeLessThan(guestBackButton.indexOf("window.location.href = '/landing'"));
   });
 
   it('formats guest catalogue selling format and safe stock rows', () => {
