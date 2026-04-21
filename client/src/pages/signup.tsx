@@ -158,7 +158,7 @@ export default function Signup() {
     
     setIsLoading(true);
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
