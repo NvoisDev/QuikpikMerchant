@@ -76,11 +76,6 @@ import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 
 
 export class UserStorageBase {
-  private deliveryAddressesStorage = new Map<string, DeliveryAddress[]>();
-  private nextAddressId = 1;
-  private ordersStorage = new Map<string, any[]>();
-  private nextOrderId = 1;
-
   // Temporary in-memory storage for delivery addresses (due to database size limits)
   private deliveryAddressesStorage = new Map<string, DeliveryAddress[]>();
   private nextAddressId = 1;

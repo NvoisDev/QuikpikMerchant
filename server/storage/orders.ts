@@ -443,7 +443,7 @@ export class OrderStorage extends ProductStorage {
           const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
           
           // SEPARATE STOCK TRACKING: Units reduce unit stock, Pallets reduce pallet stock
-          const { InventoryCalculator } = await import('../shared/inventory-calculator');
+          const { InventoryCalculator } = await import('../../shared/inventory-calculator.js');
           
           const inventoryData = {
             stock: currentProduct.stock || 0,
