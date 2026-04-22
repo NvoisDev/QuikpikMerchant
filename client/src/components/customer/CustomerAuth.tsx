@@ -454,7 +454,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                   key={opt.wholesalerId}
                   onClick={() => {
                     if (isPending) {
-                      toast({ title: 'Request pending', description: 'Your access request is awaiting approval from this wholesaler.' });
+                      toast({ title: 'Request pending', description: 'Your request is pending approval from this wholesaler.' });
                     } else {
                       completeLogin(opt.wholesalerId);
                     }
@@ -476,9 +476,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                   <div className="flex-1 min-w-0">
                     <p className={`font-semibold truncate ${isPending ? 'text-amber-900' : 'text-gray-900'}`}>{opt.businessName}</p>
                     {isPending ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5 mt-0.5">
-                        <Clock className="h-3 w-3" /> Pending approval
-                      </span>
+                      <div className="mt-0.5 space-y-1">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+                          <Clock className="h-3 w-3" /> Pending approval
+                        </span>
+                        <p className="text-xs text-amber-700">Awaiting wholesaler approval</p>
+                      </div>
                     ) : (
                       <p className="text-sm text-gray-500">Tap to enter this store</p>
                     )}
