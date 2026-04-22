@@ -205,7 +205,7 @@ export interface IStorage {
   incrementPhoneVerificationAttempts(id: number): Promise<void>;
   getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined>;
   findRecentlyUsedPhoneVerification(phoneNumber: string, withinMinutes: number): Promise<{ id: number; usedAt: Date | null } | undefined>;
-  findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' }>>;
+  findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' | 'rejected' }>>;
 
   // SMS verification operations
   createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
@@ -772,7 +772,7 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
     return row;
   }
 
-  async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' }>> {
+  async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' | 'rejected' }>> {
     // Normalise: strip spaces, ensure +44 prefix for UK numbers
     const normalised = phoneNumber.startsWith('+') ? phoneNumber.replace(/\s/g, '') : phoneNumber.replace(/\s/g, '');
     const ukLocal   = normalised.replace(/^\+44/, '0');
@@ -816,6 +816,24 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
       ORDER BY business_name
     `);
 
+    // Rejected registration requests
+    const rejectedRows = await db.execute(sql`
+      SELECT DISTINCT
+        crr.wholesaler_id AS wholesaler_id,
+        COALESCE(w.business_name, w.first_name || ' ' || COALESCE(w.last_name, '')) AS business_name,
+        w.logo_url   AS logo_url,
+        w.logo_type  AS logo_type
+      FROM customer_registration_requests crr
+      INNER JOIN users w ON w.id = crr.wholesaler_id
+      WHERE crr.status = 'rejected'
+        AND (
+          REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${normalised}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukLocal}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukE164}
+        )
+      ORDER BY business_name
+    `);
+
     const activeWholesalerIds = new Set((activeRows.rows as any[]).map(r => r.wholesaler_id));
 
     const active = (activeRows.rows as any[]).map(r => ({
@@ -839,7 +857,20 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
         status: 'pending' as const,
       }));
 
-    return [...active, ...pending];
+    // Pending takes precedence over rejected — exclude rejected for any wholesaler already represented
+    const pendingWholesalerIds = new Set(pending.map(r => r.wholesalerId));
+    const rejected = (rejectedRows.rows as any[])
+      .filter(r => !activeWholesalerIds.has(r.wholesaler_id) && !pendingWholesalerIds.has(r.wholesaler_id))
+      .map(r => ({
+        customerId: null,
+        wholesalerId: r.wholesaler_id as string,
+        businessName: (r.business_name || 'Wholesaler') as string,
+        logoUrl: r.logo_url as string | null,
+        logoType: r.logo_type as string | null,
+        status: 'rejected' as const,
+      }));
+
+    return [...active, ...pending, ...rejected];
   }
 
   // ─── End Phone OTP methods ──────────────────────────────────────────────────

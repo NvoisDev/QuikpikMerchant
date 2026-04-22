@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store, Clock } from "lucide-react";
+import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 
@@ -22,7 +22,7 @@ interface WholesalerOption {
   businessName: string;
   logoUrl: string | null;
   logoType: string | null;
-  status?: 'active' | 'pending';
+  status?: 'active' | 'pending' | 'rejected';
 }
 
 interface WholesalerInfo {
@@ -449,33 +449,52 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
             <p className="text-sm text-gray-600 text-center">Select the store you'd like to shop with today:</p>
             {wholesalerOptions.map(opt => {
               const isPending = opt.status === 'pending';
+              const isRejected = opt.status === 'rejected';
+              const isNonInteractive = isPending || isRejected;
               return (
                 <button
                   key={opt.wholesalerId}
                   onClick={() => {
                     if (isPending) {
                       toast({ title: 'Request pending', description: 'Your request is pending approval from this wholesaler.' });
+                    } else if (isRejected) {
+                      toast({ title: 'Request declined', description: 'Your registration request was declined by this wholesaler.' });
                     } else {
                       completeLogin(opt.wholesalerId);
                     }
                   }}
                   disabled={isLoading}
                   className={`w-full flex items-center gap-4 p-4 border-2 rounded-xl text-left transition-colors ${
-                    isPending
+                    isRejected
+                      ? 'border-rose-200 bg-rose-50 opacity-80 cursor-default'
+                      : isPending
                       ? 'border-amber-200 bg-amber-50 opacity-80 cursor-default'
                       : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
                   }`}
                 >
                   {opt.logoUrl ? (
-                    <img src={opt.logoUrl} alt={opt.businessName} className={`h-12 w-12 rounded-xl object-cover flex-shrink-0 ${isPending ? 'opacity-60' : ''}`} />
+                    <img src={opt.logoUrl} alt={opt.businessName} className={`h-12 w-12 rounded-xl object-cover flex-shrink-0 ${isNonInteractive ? 'opacity-60' : ''}`} />
                   ) : (
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isPending ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-green-500 to-green-700'}`}>
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      isRejected
+                        ? 'bg-gradient-to-br from-rose-400 to-rose-500'
+                        : isPending
+                        ? 'bg-gradient-to-br from-amber-400 to-amber-500'
+                        : 'bg-gradient-to-br from-green-500 to-green-700'
+                    }`}>
                       <span className="text-white font-bold text-sm">{getInitials(opt.businessName)}</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold truncate ${isPending ? 'text-amber-900' : 'text-gray-900'}`}>{opt.businessName}</p>
-                    {isPending ? (
+                    <p className={`font-semibold truncate ${isRejected ? 'text-rose-900' : isPending ? 'text-amber-900' : 'text-gray-900'}`}>{opt.businessName}</p>
+                    {isRejected ? (
+                      <div className="mt-0.5 space-y-1">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-700 bg-rose-100 border border-rose-200 rounded-full px-2 py-0.5">
+                          <XCircle className="h-3 w-3" /> Request declined
+                        </span>
+                        <p className="text-xs text-rose-700">Contact the wholesaler or re-apply to request access</p>
+                      </div>
+                    ) : isPending ? (
                       <div className="mt-0.5 space-y-1">
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
                           <Clock className="h-3 w-3" /> Pending approval
@@ -486,7 +505,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                       <p className="text-sm text-gray-500">Tap to enter this store</p>
                     )}
                   </div>
-                  {isLoading && !isPending && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
+                  {isLoading && !isNonInteractive && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
                 </button>
               );
             })}
