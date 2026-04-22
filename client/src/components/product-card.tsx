@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cleanAIDescription } from "@shared/utils";
-import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
 
@@ -108,7 +107,6 @@ export default function ProductCard({
   onManageStock,
 }: ProductCardProps) {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
 
   const getStatusConfig = (status: string) => {
     switch (status) {

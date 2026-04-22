@@ -1373,8 +1373,23 @@ export default function ProductManagement() {
             )}
             {/* Action Buttons Section */}
             <div className="flex items-center justify-between gap-3 mb-4">
-              {/* Secondary actions — More dropdown */}
+              {/* Secondary actions */}
               <div className="flex items-center gap-2">
+                {/* Preview Store — standalone on desktop, omitted on mobile (top bar has it) */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex gap-1.5 text-green-700 border-green-200 hover:bg-green-50"
+                  onClick={() => {
+                    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
+                    window.open(`/preview-store/${effectiveUserId}`, '_blank');
+                  }}
+                >
+                  <Package className="h-4 w-4" />
+                  Preview Store
+                </Button>
+
+                {/* More dropdown — CSV + Bulk Upload only (desktop and mobile) */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-1.5">
@@ -1382,15 +1397,7 @@ export default function ProductManagement() {
                       <span className="hidden sm:inline">More</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
-                        window.open(`/preview-store/${effectiveUserId}`, '_blank');
-                      }}
-                    >
-                      <Package className="h-4 w-4 mr-2" /> Preview Store
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="start" className="w-44">
                     <DropdownMenuItem onClick={downloadTemplate}>
                       <Download className="h-4 w-4 mr-2" /> CSV Template
                     </DropdownMenuItem>
@@ -2450,11 +2457,11 @@ export default function ProductManagement() {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
+                className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 h-9 border-slate-200 rounded-lg">
+              <SelectTrigger className="w-[130px] h-8 border-slate-200 rounded-lg">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
