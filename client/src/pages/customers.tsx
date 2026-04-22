@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -2227,35 +2227,36 @@ export default function Customers() {
                       <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => !list.isLocked && openManagePriceList(list)} disabled={list.isLocked} title={list.isLocked ? "Upgrade your plan to manage this price list" : undefined}>
                         {list.isLocked ? <Lock className="h-3 w-3 mr-1" /> : <Edit3 className="h-3 w-3 mr-1" />} Manage
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50 px-2"
-                        onClick={() => handleNativeShare(list.id, list.name)}
-                        disabled={sharingListId === list.id}
-                        title="Share"
-                        aria-label="Share price list"
-                      >
-                        <Share2 className="h-3 w-3 sm:mr-1" aria-hidden="true" />
-                        <span className="hidden sm:inline">
-                          {sharingListId === list.id ? "…" : "Share"}
-                        </span>
-                        <span className="sm:hidden sr-only">Share</span>
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs px-2"
-                        onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
-                        title="Download Excel"
-                        aria-label="Download Excel price list"
-                      >
-                        <Download className="h-3 w-3 sm:mr-1" aria-hidden="true" />
-                        <span className="hidden sm:inline">Excel</span>
-                        <span className="sm:hidden sr-only">Download Excel</span>
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2"
-                        onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
-                        title="Delete price list"
-                        aria-label="Delete price list"
-                      >
-                        <Trash2 className="h-3 w-3" aria-hidden="true" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline" className="text-xs px-2" aria-label="More actions">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => handleNativeShare(list.id, list.name)}
+                            disabled={sharingListId === list.id}
+                          >
+                            <Share2 className="h-4 w-4 mr-2" />
+                            {sharingListId === list.id ? "Sharing…" : "Share"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => { if (confirm("Delete this price list?")) deletePriceListMutation.mutate(list.id); }}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </CardContent>
                 </Card>
