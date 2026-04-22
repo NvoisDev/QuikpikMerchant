@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Tag, Percent, Package, ShoppingCart, Flame, Calendar, ToggleLeft, ToggleRight, TrendingUp, Clock, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Percent, Package, ShoppingCart, Flame, Calendar, ToggleLeft, ToggleRight, TrendingUp, Clock, AlertCircle, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
 
 const PROMOTION_TYPES = [
@@ -308,16 +309,39 @@ export default function Promotions() {
 
   return (
     <div className="bg-white min-h-screen">
-    <PageHeader title="Promotions" description="Manage promotional offers across your products">
-      <Button onClick={openCreate} className="bg-green-600 hover:bg-green-700">
-        <Plus className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Create Promotion</span>
-        <span className="sm:hidden">Create</span>
-      </Button>
-    </PageHeader>
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+    <PageHeader title="Promotions" description="Manage promotional offers across your products" />
+    <div className="px-4 sm:px-6 py-5 max-w-6xl mx-auto">
 
-      <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">More</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => { setFilter("active"); }}>
+                <TrendingUp className="h-4 w-4 mr-2" /> Active only
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setFilter("scheduled"); }}>
+                <Clock className="h-4 w-4 mr-2" /> Scheduled only
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setFilter("expired"); }}>
+                <AlertCircle className="h-4 w-4 mr-2" /> Expired only
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <Button size="sm" onClick={openCreate} className="bg-green-600 hover:bg-green-700 text-white">
+          <Plus className="h-4 w-4 mr-1.5" />
+          <span className="hidden sm:inline">Create Promotion</span>
+          <span className="sm:hidden">Create</span>
+        </Button>
+      </div>
+
+      <div className="flex gap-2 mb-5">
         <div className="flex-1 flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
           <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
           <span className="text-xs text-green-700 font-medium">Active</span>
@@ -335,31 +359,33 @@ export default function Promotions() {
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap items-center">
-        {(["all", "active", "scheduled", "expired"] as const).map((tab) => (
-          <Button
-            key={tab}
-            variant={filter === tab ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter(tab)}
-            className={filter === tab ? "bg-green-600 hover:bg-green-700" : ""}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </Button>
-        ))}
-        {filteredProductName && (
-          <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-3 py-1 text-sm text-green-800">
-            <Tag className="h-3.5 w-3.5" />
-            <span className="font-medium">{filteredProductName}</span>
-            <button
-              onClick={() => setProductFilter("")}
-              className="ml-1 text-green-600 hover:text-green-900 font-bold leading-none"
-              aria-label="Clear product filter"
-            >
-              ×
-            </button>
-          </div>
-        )}
+      <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={filter} onValueChange={(v) => setFilter(v as "all" | "active" | "scheduled" | "expired")}>
+            <SelectTrigger className="w-[150px] h-8 border-slate-200 rounded-lg">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Promotions</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+          {filteredProductName && (
+            <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-3 py-1 text-sm text-green-800">
+              <Tag className="h-3.5 w-3.5" />
+              <span className="font-medium">{filteredProductName}</span>
+              <button
+                onClick={() => setProductFilter("")}
+                className="ml-1 text-green-600 hover:text-green-900 font-bold leading-none"
+                aria-label="Clear product filter"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {promosLoading ? (
@@ -432,17 +458,26 @@ export default function Promotions() {
                               <ToggleLeft className="h-5 w-5 text-gray-400" />
                             )}
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(promo)}>
-                            <Pencil className="h-4 w-4 text-gray-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem onClick={() => openEdit(promo)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
+                                disabled={deleteMutation.isPending}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap mb-2">
