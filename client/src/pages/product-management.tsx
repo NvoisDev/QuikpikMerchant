@@ -1301,7 +1301,7 @@ export default function ProductManagement() {
       </PageHeader>
       <div className="p-4 sm:p-6 lg:p-8">
             {/* Downgrade warning banner */}
-            {planLimits?.cancelAtPeriodEnd && (planLimits.usage.products > 10) && (
+            {planLimits?.cancelAtPeriodEnd && (planLimits.usage.products > 2) && (
               <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <div className="flex-1 text-sm text-amber-800">
@@ -1310,7 +1310,7 @@ export default function ProductManagement() {
                   {planLimits.subscriptionPeriodEnd
                     ? ' on ' + new Date(planLimits.subscriptionPeriodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
                     : ''}
-                  . {planLimits.usage.products - 10} of your {planLimits.usage.products} products will be locked at that time (Free limit: 10).{' '}
+                  . {planLimits.usage.products - 2} of your {planLimits.usage.products} products will be locked at that time (Free limit: 2).{' '}
                   <a href="/subscription-pricing" className="font-semibold underline hover:text-amber-900">View billing →</a>
                 </div>
               </div>

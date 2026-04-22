@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import SubscriptionService from '../subscription-service';
 import { db } from '../db';
-import { teamMembers } from '@shared/schema';
+import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
 
 // Extend Request type to include user
@@ -266,14 +266,33 @@ async function getCurrentTeamMemberCount(userId: string): Promise<number> {
 }
 
 /**
+ * Helper function to get current price list count (unlocked only)
+ */
+async function getCurrentPriceListCount(userId: string): Promise<number> {
+  try {
+    const result = await db.select({ value: drizzleCount() })
+      .from(priceLists)
+      .where(and(
+        eq(priceLists.wholesalerId, userId),
+        eq(priceLists.isLocked, false)
+      ));
+    return result[0]?.value ?? 0;
+  } catch (error) {
+    console.error('❌ Error getting price list count:', error);
+    return 0;
+  }
+}
+
+/**
  * Get default limits for free plan
  */
 function getDefaultLimits() {
   return {
-    products: 10,
+    products: 2,
     broadcasts: 5,
     teamMembers: 0, // Free plan: 0 invited members (owner only, not in teamMembers table)
-    customGroups: 2
+    customGroups: 2,
+    priceLists: 2,
   };
 }
 
@@ -305,16 +324,18 @@ export async function getUserPlanLimits(userId: string) {
         products: -1,
         broadcasts: -1, 
         teamMembers: -1,
-        customGroups: -1
+        customGroups: -1,
+        priceLists: -1,
       };
       console.log('✅ Premium user detected - applying unlimited limits');
     } else if (userTier === 'standard') {
       // Standard users get higher limits
       limits = {
-        products: 50,
+        products: 5,
         broadcasts: 25,
         teamMembers: 3,
-        customGroups: 5
+        customGroups: 5,
+        priceLists: 5,
       };
       console.log('📊 Standard user detected - applying standard limits');
     } else {
@@ -324,10 +345,11 @@ export async function getUserPlanLimits(userId: string) {
     }
     
     // Get current usage counts
-    const [productCount, broadcastCount, teamMemberCount] = await Promise.all([
+    const [productCount, broadcastCount, teamMemberCount, priceListCount] = await Promise.all([
       getCurrentProductCount(userId),
       getCurrentBroadcastCount(userId), 
-      getCurrentTeamMemberCount(userId)
+      getCurrentTeamMemberCount(userId),
+      getCurrentPriceListCount(userId),
     ]);
 
     const result = {
@@ -336,14 +358,16 @@ export async function getUserPlanLimits(userId: string) {
       usage: {
         products: productCount,
         broadcasts: broadcastCount,
-        teamMembers: teamMemberCount
+        teamMembers: teamMemberCount,
+        priceLists: priceListCount,
       },
       percentUsed: {
         products: limits.products === -1 ? 0 : Math.round((productCount / limits.products) * 100),
         broadcasts: limits.broadcasts === -1 ? 0 : Math.round((broadcastCount / limits.broadcasts) * 100),
         // Guard against zero limit (Free plan: 0 invited members allowed)
         // If limit is 0, show 100% when there are members, 0% otherwise
-        teamMembers: limits.teamMembers === -1 ? 0 : limits.teamMembers === 0 ? (teamMemberCount > 0 ? 100 : 0) : Math.round((teamMemberCount / limits.teamMembers) * 100)
+        teamMembers: limits.teamMembers === -1 ? 0 : limits.teamMembers === 0 ? (teamMemberCount > 0 ? 100 : 0) : Math.round((teamMemberCount / limits.teamMembers) * 100),
+        priceLists: limits.priceLists === -1 ? 0 : Math.round((priceListCount / limits.priceLists) * 100),
       },
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
       subscriptionPeriodEnd: user?.subscriptionPeriodEnd ?? null,

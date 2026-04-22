@@ -335,7 +335,7 @@ export function registerPaymentRoutes(app: Express): void {
         if (userId && tier) {
           console.log(`🔄 Processing ${subscriptionType || 'new'} subscription: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 5 : 2);
           
           // Get subscription details from Stripe if available
           let subscriptionEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -400,7 +400,7 @@ export function registerPaymentRoutes(app: Express): void {
         if (userId && tier) {
           console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 50 : 10);
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 5 : 2);
           
           await storage.updateUser(userId, {
             currentPlan: tier,
@@ -495,7 +495,7 @@ export function registerPaymentRoutes(app: Express): void {
           subscriptionTier: 'free',
           subscriptionStatus: 'free',
           currentPlan: 'free',
-          productLimit: 10,
+          productLimit: 2,
           stripeSubscriptionId: null,
           subscriptionPeriodStart: null,
           subscriptionPeriodEnd: null,
@@ -585,7 +585,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.json({ received: true, type: event.type });
         }
 
-        const subProductLimit = subPlan.planId === 'premium' ? -1 : (subPlan.planId === 'standard' ? 50 : 10);
+        const subProductLimit = subPlan.planId === 'premium' ? -1 : (subPlan.planId === 'standard' ? 5 : 2);
         const subPeriodEnd = subscription.current_period_end
           ? new Date(subscription.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -684,7 +684,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.json({ received: true, type: event.type });
         }
 
-        const invProductLimit = invPlan.planId === 'premium' ? -1 : (invPlan.planId === 'standard' ? 50 : 10);
+        const invProductLimit = invPlan.planId === 'premium' ? -1 : (invPlan.planId === 'standard' ? 5 : 2);
         const invPeriodEnd = new Date(invSub.current_period_end * 1000);
         const invPeriodStart = new Date(invSub.current_period_start * 1000);
 
@@ -1183,7 +1183,7 @@ export function registerPaymentRoutes(app: Express): void {
           await storage.updateUser(userId, {
             currentPlan: targetPlan.planId,
             subscriptionStatus: 'active',
-            productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 50 : 10),
+            productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 5 : 2),
             subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
           
@@ -1418,7 +1418,7 @@ export function registerPaymentRoutes(app: Express): void {
             subscriptionStatus: 'free',
             currentPlan: 'free',
             subscriptionTier: 'free',
-            productLimit: 10,
+            productLimit: 2,
             stripeSubscriptionId: null,
             subscriptionPeriodStart: null,
             subscriptionPeriodEnd: null,

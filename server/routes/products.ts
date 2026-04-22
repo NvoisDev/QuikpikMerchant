@@ -173,7 +173,7 @@ export function registerProductRoutes(app: Express): void {
       // Check if deleting this product creates space to unlock other products
       try {
         const user = await storage.getUser(targetUserId);
-        const productLimit = user?.productLimit || 10;
+        const productLimit = user?.productLimit || 2;
         
         if (productLimit !== -1) { // Only if not unlimited
           const remainingProducts = await storage.getProducts(targetUserId);

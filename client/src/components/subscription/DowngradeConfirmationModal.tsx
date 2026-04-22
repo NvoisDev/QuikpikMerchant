@@ -39,7 +39,7 @@ const getPlanFeatures = (plan: string) => {
       name: "Standard", 
       price: "£19.99",
       features: [
-        "Up to 50 products",
+        "Up to 5 products",
         "Broadcast tools coming soon",
         "Basic dashboard analytics",
         "Priority email support",
@@ -50,7 +50,7 @@ const getPlanFeatures = (plan: string) => {
       name: "Free",
       price: "£0",
       features: [
-        "Up to 10 products",
+        "Up to 2 products",
         "Broadcast tools coming soon",
         "Basic dashboard analytics",
         "Standard email support"
@@ -205,7 +205,7 @@ export function DowngradeConfirmationModal({
               <CardContent className="p-4">
                 <h3 className="font-semibold text-amber-900 mb-2">⚠️ Data Impact</h3>
                 <p className="text-amber-800 text-sm">
-                  If you have more than {targetPlan === 'free' ? '10 products' : '50 products'}, 
+                  If you have more than {targetPlan === 'free' ? '2 products' : '5 products'}, 
                   your newest products will be locked but preserved. You can unlock them by deleting 
                   other products or upgrading again.
                 </p>

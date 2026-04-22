@@ -1553,6 +1553,7 @@ export const priceLists = pgTable("price_lists", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   isActive: boolean("is_active").default(true).notNull(),
+  isLocked: boolean("is_locked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

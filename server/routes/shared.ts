@@ -379,17 +379,17 @@ export const requireNotViewer = async (req: any, res: any, next: any) => {
 };
 
 // ─── Plan enforcement ─────────────────────────────────────────────────────────
-export const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number; groups: number }> = {
-  free:     { products: 10, invitedMembersAllowed: 0,  groups: 2  },
-  standard: { products: 50, invitedMembersAllowed: 3,  groups: 5  },
-  premium:  { products: -1, invitedMembersAllowed: -1, groups: -1 },
+export const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number; groups: number; priceLists: number }> = {
+  free:     { products: 2, invitedMembersAllowed: 0,  groups: 2,  priceLists: 2  },
+  standard: { products: 5, invitedMembersAllowed: 3,  groups: 5,  priceLists: 5  },
+  premium:  { products: -1, invitedMembersAllowed: -1, groups: -1, priceLists: -1 },
 };
 
 export async function enforceNewPlanLimits(
   userId: string, targetTier: string
-): Promise<{ productsLocked: number; teamMembersSuspended: number; groupsArchived: number }> {
+): Promise<{ productsLocked: number; teamMembersSuspended: number; groupsArchived: number; priceListsLocked: number }> {
   const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
-  let productsLocked = 0, teamMembersSuspended = 0, groupsArchived = 0;
+  let productsLocked = 0, teamMembersSuspended = 0, groupsArchived = 0, priceListsLocked = 0;
   if (limits.products !== -1) {
     try {
       const nonLockedProducts = await db.select({ id: products.id }).from(products)
@@ -429,27 +429,42 @@ export async function enforceNewPlanLimits(
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [customer groups] failed for user ${userId}:`, err); }
   }
-  return { productsLocked, teamMembersSuspended, groupsArchived };
+  if (limits.priceLists !== -1) {
+    try {
+      const allPriceLists = await db.select({ id: priceLists.id }).from(priceLists)
+        .where(and(eq(priceLists.wholesalerId, userId), eq(priceLists.isLocked, false)))
+        .orderBy(asc(priceLists.createdAt));
+      const excessPriceLists = allPriceLists.slice(limits.priceLists);
+      if (excessPriceLists.length > 0) {
+        await db.update(priceLists).set({ isLocked: true }).where(inArray(priceLists.id, excessPriceLists.map(pl => pl.id)));
+        priceListsLocked = excessPriceLists.length;
+        console.log(`🔒 Locked ${priceListsLocked} price lists for user ${userId} (tier: ${targetTier})`);
+      }
+    } catch (err) { console.error(`❌ enforceNewPlanLimits [price lists] failed for user ${userId}:`, err); }
+  }
+  return { productsLocked, teamMembersSuspended, groupsArchived, priceListsLocked };
 }
 
 export async function getProjectedDowngradeImpact(
   userId: string, targetTier: string
-): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number; groupsToArchive: number }> {
+): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number; groupsToArchive: number; priceListsToLock: number }> {
   const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
   try {
-    const [nonLockedProductRows, activeMemberRows, activeGroupRows] = await Promise.all([
+    const [nonLockedProductRows, activeMemberRows, activeGroupRows, unlockedPriceListRows] = await Promise.all([
       db.select({ id: products.id }).from(products).where(and(eq(products.wholesalerId, userId), inArray(products.status, ['active', 'inactive']))),
       db.select({ id: teamMembers.id }).from(teamMembers).where(and(eq(teamMembers.wholesalerId, userId), eq(teamMembers.status, 'active'))),
       db.select({ id: customerGroups.id }).from(customerGroups).where(and(eq(customerGroups.wholesalerId, userId), eq(customerGroups.status, 'active'))),
+      db.select({ id: priceLists.id }).from(priceLists).where(and(eq(priceLists.wholesalerId, userId), eq(priceLists.isLocked, false))),
     ]);
     return {
       productsToLock: limits.products === -1 ? 0 : Math.max(0, nonLockedProductRows.length - limits.products),
       totalProducts: nonLockedProductRows.length,
       teamMembersToSuspend: limits.invitedMembersAllowed === -1 ? 0 : Math.max(0, activeMemberRows.length - limits.invitedMembersAllowed),
       groupsToArchive: limits.groups === -1 ? 0 : Math.max(0, activeGroupRows.length - limits.groups),
+      priceListsToLock: limits.priceLists === -1 ? 0 : Math.max(0, unlockedPriceListRows.length - limits.priceLists),
     };
   } catch {
-    return { productsToLock: 0, totalProducts: 0, teamMembersToSuspend: 0, groupsToArchive: 0 };
+    return { productsToLock: 0, totalProducts: 0, teamMembersToSuspend: 0, groupsToArchive: 0, priceListsToLock: 0 };
   }
 }
 

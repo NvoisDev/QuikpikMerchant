@@ -1327,7 +1327,7 @@ export function registerAuthRoutes(app: Express): void {
         onboardingStep: 0,
         onboardingSkipped: false,
         isFirstLogin: true,
-        productLimit: 10
+        productLimit: 2
       };
 
       // CRITICAL FIX: Use createUserWithPassword to hash and store password

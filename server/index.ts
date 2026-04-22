@@ -44,9 +44,12 @@ async function runStartupMigrations() {
     // Task #46: Security — clear stale google_id from team_member records so they cannot
     // match in the googleId-first lookup and leak another wholesaler's data.
     `UPDATE users SET google_id = NULL WHERE role = 'team_member' AND google_id IS NOT NULL`,
-    // Task #49 fix: Correct free-tier users whose product_limit was set to 3 (old default).
-    // Free plan allows 10 products; any free wholesaler with limit < 10 gets corrected here.
-    `UPDATE users SET product_limit = 10 WHERE subscription_tier = 'free' AND product_limit IS NOT NULL AND product_limit < 10`,
+    // Task #49/#305: Align product_limit for all tiers to new limits (Free=2, Standard=5, Premium=-1).
+    // This corrects any stale values from old defaults.
+    `UPDATE users SET product_limit = 2 WHERE subscription_tier = 'free'`,
+    `UPDATE users SET product_limit = 5 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 5)`,
+    // Task #305: Add is_locked column to price_lists for plan enforcement
+    `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE`,
     // Task #72: Add phone number to team members for SMS stock alerts
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
     // Task #73: Add expiry date to products

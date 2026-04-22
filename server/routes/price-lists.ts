@@ -4,8 +4,9 @@ import {
   priceLists, priceListItems, priceListAssignments,
   products, customerGroups, customerGroupMembers,
   wholesalerCustomerRelationships,
+  PLAN_ENFORCEMENT_LIMITS,
 } from "./shared";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, count as drizzleCount } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import {
   wrapCustomerEmail, emailCard, emailTable, emailButton,
@@ -283,6 +284,20 @@ export function registerPriceListRoutes(app: Express): void {
   app.post("/api/price-lists", requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = getWholesalerId(req);
+
+      // Enforce plan limit
+      const user = await storage.getUser(wholesalerId);
+      const tier = user?.subscriptionTier || 'free';
+      const tierLimits = PLAN_ENFORCEMENT_LIMITS[tier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+      if (tierLimits.priceLists !== -1) {
+        const [countRow] = await db.select({ value: drizzleCount() }).from(priceLists)
+          .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isLocked, false)));
+        const currentCount = countRow?.value ?? 0;
+        if (currentCount >= tierLimits.priceLists) {
+          return res.status(403).json({ message: `You've reached your plan limit of ${tierLimits.priceLists} price list${tierLimits.priceLists === 1 ? '' : 's'}. Upgrade to create more.` });
+        }
+      }
+
       const schema = z.object({
         name: z.string().min(1),
         description: z.string().optional().nullable(),
@@ -324,6 +339,7 @@ export function registerPriceListRoutes(app: Express): void {
         .from(priceLists)
         .where(and(eq(priceLists.id, id), eq(priceLists.wholesalerId, wholesalerId)));
       if (!existing) return res.status(404).json({ message: "Price list not found" });
+      if (existing.isLocked) return res.status(403).json({ message: "This price list is locked. Upgrade your plan to unlock it." });
 
       const { name, description, startDate, endDate, isActive } = req.body;
       const [updated] = await db
@@ -378,6 +394,7 @@ export function registerPriceListRoutes(app: Express): void {
         .from(priceLists)
         .where(and(eq(priceLists.id, id), eq(priceLists.wholesalerId, wholesalerId)));
       if (!existing) return res.status(404).json({ message: "Price list not found" });
+      if (existing.isLocked) return res.status(403).json({ message: "This price list is locked. Upgrade your plan to unlock it." });
 
       const schema = z.array(
         z.object({
@@ -449,6 +466,7 @@ export function registerPriceListRoutes(app: Express): void {
         .from(priceLists)
         .where(and(eq(priceLists.id, id), eq(priceLists.wholesalerId, wholesalerId)));
       if (!existing) return res.status(404).json({ message: "Price list not found" });
+      if (existing.isLocked) return res.status(403).json({ message: "This price list is locked. Upgrade your plan to unlock it." });
 
       const schema = z.array(
         z.object({

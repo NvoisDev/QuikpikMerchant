@@ -60,7 +60,9 @@ import {
   Tag,
   Share2,
   Download,
-  Package
+  Package,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
@@ -79,6 +81,7 @@ interface PriceListSummary {
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
+  isLocked: boolean;
   createdAt: string;
   updatedAt: string;
   itemCount: number;
@@ -343,8 +346,8 @@ export default function Customers() {
   // Plan limits — used for group limit pre-check before opening Create Group dialog
   const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
     plan: string;
-    limits: { products: number; broadcasts: number; teamMembers: number; customGroups: number };
-    usage: { products: number; broadcasts: number; teamMembers: number };
+    limits: { products: number; broadcasts: number; teamMembers: number; customGroups: number; priceLists: number };
+    usage: { products: number; broadcasts: number; teamMembers: number; priceLists: number };
   }>({
     queryKey: ['/api/subscriptions/plan-limits'],
     staleTime: 5 * 60 * 1000,
@@ -1986,23 +1989,39 @@ export default function Customers() {
               <h2 className="text-lg sm:text-xl font-semibold">Price Lists</h2>
               <p className="text-sm text-muted-foreground">Create custom prices for specific customers or groups</p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
+              {planLimits && planLimits.limits.priceLists !== -1 && (
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {planLimits.usage.priceLists ?? 0} / {planLimits.limits.priceLists} price lists
+                </span>
+              )}
               <ContextualHelpBubble
                 topic="Price Lists"
                 title="Managing Price Lists"
                 steps={helpContent.priceLists.steps}
               />
-              <Button
-                onClick={() => {
-                  setEditingPriceList(null);
-                  setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
-                  setIsPriceListModalOpen(true);
-                }}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Price List
-              </Button>
+              {planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists ? (
+                <Button
+                  disabled
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 opacity-50 cursor-not-allowed"
+                  title="Upgrade your plan to create more price lists"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  New Price List
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setEditingPriceList(null);
+                    setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
+                    setIsPriceListModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Price List
+                </Button>
+              )}
             </div>
           </div>
 
@@ -2080,7 +2099,7 @@ export default function Customers() {
             return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPriceLists.map((list) => (
-                <Card key={list.id} className="relative hover:shadow-lg transition-shadow border-slate-200">
+                <Card key={list.id} className={`relative hover:shadow-lg transition-shadow border-slate-200 ${list.isLocked ? 'opacity-60 grayscale' : ''}`}>
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -2088,9 +2107,15 @@ export default function Customers() {
                         {list.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{list.description}</p>}
                       </div>
                       <div className="flex items-center gap-1 ml-2 shrink-0">
-                        <Badge variant={list.isActive ? "default" : "secondary"} className={list.isActive ? "bg-emerald-100 text-emerald-700 border-0 rounded-full font-semibold text-xs px-2.5 py-1" : "text-xs rounded-full px-2.5 py-1"}>
-                          {list.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                        {list.isLocked ? (
+                          <Badge variant="secondary" className="text-xs rounded-full px-2.5 py-1 bg-gray-100 text-gray-500 flex items-center gap-1">
+                            <Lock className="h-3 w-3" /> Locked
+                          </Badge>
+                        ) : (
+                          <Badge variant={list.isActive ? "default" : "secondary"} className={list.isActive ? "bg-emerald-100 text-emerald-700 border-0 rounded-full font-semibold text-xs px-2.5 py-1" : "text-xs rounded-full px-2.5 py-1"}>
+                            {list.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -2192,9 +2217,15 @@ export default function Customers() {
                       </div>
                     )}
 
+                    {list.isLocked && (
+                      <div className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        <span>Locked — <a href="/subscription-pricing" className="underline font-medium">upgrade to unlock</a></span>
+                      </div>
+                    )}
                     <div className="flex gap-1.5 pt-1">
-                      <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => openManagePriceList(list)}>
-                        <Edit3 className="h-3 w-3 mr-1" /> Manage
+                      <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => !list.isLocked && openManagePriceList(list)} disabled={list.isLocked} title={list.isLocked ? "Upgrade your plan to manage this price list" : undefined}>
+                        {list.isLocked ? <Lock className="h-3 w-3 mr-1" /> : <Edit3 className="h-3 w-3 mr-1" />} Manage
                       </Button>
                       <Button size="sm" variant="outline" className="text-xs text-green-700 border-green-200 hover:bg-green-50 px-2"
                         onClick={() => handleNativeShare(list.id, list.name)}
