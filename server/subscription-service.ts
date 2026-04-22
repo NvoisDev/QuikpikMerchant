@@ -36,13 +36,13 @@ export class SubscriptionService {
           currency: "GBP",
           description: "Get started with basic features",
           features: [
-            "Up to 10 products",
+            "Up to 2 products",
             "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Standard email support"
           ],
           limits: {
-            products: 10,
+            products: 2,
             broadcasts: 5,
             teamMembers: 1,
             customGroups: 2
@@ -58,13 +58,13 @@ export class SubscriptionService {
           currency: "GBP",
           description: "Perfect for growing wholesale businesses",
           features: [
-            "Up to 50 products",
+            "Up to 5 products",
             "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Priority email support"
           ],
           limits: {
-            products: 50,
+            products: 5,
             broadcasts: 25,
             teamMembers: 3,
             customGroups: 5

@@ -424,7 +424,7 @@ const UPGRADE_PLANS_CARD = emailCard(
   '<div style="font-weight:bold;font-size:15px;color:#1d4ed8;margin-bottom:4px">Standard</div>' +
   '<div style="font-size:18px;font-weight:bold;color:#1f2937;margin-bottom:8px">\u00A319.99<span style="font-size:13px;color:#6b7280">/mo</span></div>' +
   '<ul style="margin:0;padding-left:18px;font-size:13px;color:#374151;line-height:1.7">' +
-  '<li>50 products</li><li>Broadcast tools coming soon</li><li>3 team members</li><li>5 customer groups</li></ul>' +
+  '<li>5 products</li><li>Broadcast tools coming soon</li><li>3 team members</li><li>5 customer groups</li></ul>' +
   '</div></td>' +
   '<td width="50%" valign="top" style="padding-left:8px"><div style="border:1px solid #d1fae5;border-radius:8px;padding:14px 16px;background:#ecfdf5">' +
   '<div style="font-weight:bold;font-size:15px;color:#059669;margin-bottom:4px">Premium</div>' +
@@ -528,7 +528,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
 
   const currentFeaturesText = data.currentPlan === 'premium'
     ? 'Current Premium features: Unlimited products, broadcast tools coming soon, team members, and groups.'
-    : 'Current Standard features: 50 products, broadcast tools coming soon, 3 team members, 5 customer groups.';
+    : 'Current Standard features: 5 products, broadcast tools coming soon, 3 team members, 5 customer groups.';
 
   const impactTextLines: string[] = [];
   if ((data.productsToLock ?? 0) > 0) {
@@ -546,7 +546,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
     'Hi ' + (data.firstName || 'there') + ',\n\n' +
     'Your ' + planLabel + ' subscription will move to the Free plan on ' + dateStr + '.\n\n' +
     currentFeaturesText + '\n\n' +
-    'Free plan limits: 10 products, broadcast tools coming soon, 1 team member, 2 customer groups.\n\n' +
+    'Free plan limits: 2 products, broadcast tools coming soon, 1 team member, 2 customer groups.\n\n' +
     (impactTextLines.length > 0
       ? 'What will be affected ' + (isImmediate ? 'now' : 'on ' + dateStr) + ':\n' + impactTextLines.join('\n') + '\n\n'
       : '') +
@@ -621,12 +621,12 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
     'Your Quikpik plan has changed to Free\n\n' +
     'Hi ' + (data.firstName || 'there') + ',\n\n' +
     'Your subscription has ended and your account is now on the Free plan.\n\n' +
-    'Free plan limits: 10 products, broadcast tools coming soon, 1 team member, 2 customer groups.\n\n' +
+    'Free plan limits: 2 products, broadcast tools coming soon, 1 team member, 2 customer groups.\n\n' +
     (effectiveImpactText.length > 0
       ? 'What changed on your account:\n' + effectiveImpactText.join('\n') + '\n\n'
       : '') +
     'To unlock more, upgrade at: ' + UPGRADE_URL + '\n\n' +
-    'Standard: \u00A319.99/mo — 50 products, broadcast tools coming soon, 3 team members\n' +
+    'Standard: \u00A319.99/mo — 5 products, broadcast tools coming soon, 3 team members\n' +
     'Premium: \u00A339.99/mo — Unlimited products, team members, and groups; broadcast tools coming soon\n\n' +
     'Powered by Quikpik Merchant';
 
