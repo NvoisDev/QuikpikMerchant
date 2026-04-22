@@ -17,7 +17,7 @@ export const PLAN_LIMITS = {
   standard: {
     products: 5,
     broadcasts: 25,
-    teamMembers: 3,
+    teamMembers: 2,
     groups: 5,
     priceLists: 5,
   },

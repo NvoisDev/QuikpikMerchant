@@ -65,7 +65,7 @@ export class SubscriptionService {
           limits: {
             products: 5,
             broadcasts: 25,
-            teamMembers: 3,
+            teamMembers: 2,
             customGroups: 5,
             priceLists: 5,
           },
