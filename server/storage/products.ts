@@ -13,6 +13,7 @@ import {
   campaignOrders,
   stockUpdateNotifications,
   stockMovements,
+  productPerformanceSummary,
   stockAlerts,
   customerRegistrationRequests,
   customerProfileUpdateNotifications,
@@ -390,6 +391,18 @@ export class ProductStorage extends UserStorageBase {
 
 
   async deleteProduct(id: number): Promise<void> {
+    // Clear order_items references (nulled so historical orders are preserved)
+    await db.update(orderItems).set({ productId: null }).where(eq(orderItems.productId, id));
+    // Delete rows that exist purely for this product
+    await db.delete(stockMovements).where(eq(stockMovements.productId, id));
+    await db.delete(negotiations).where(eq(negotiations.productId, id));
+    await db.delete(templateProducts).where(eq(templateProducts.productId, id));
+    await db.delete(productPerformanceSummary).where(eq(productPerformanceSummary.productId, id));
+    await db.delete(stockUpdateNotifications).where(eq(stockUpdateNotifications.productId, id));
+    // Clear nullable FK references in analytics tables
+    await db.update(users).set({ mostOrderedProductId: null })
+      .where(eq(users.mostOrderedProductId, id));
+    // Finally delete the product
     await db.delete(products).where(eq(products.id, id));
   }
 
