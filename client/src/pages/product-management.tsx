@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1358,51 +1358,78 @@ export default function ProductManagement() {
           </Link>
         )}
       </PageHeader>
-      <div className="p-4 sm:p-6 lg:p-8">
-            {/* Downgrade warning banner */}
+      <div className="px-4 sm:px-6 py-5">
+            {/* Downgrade warning banner — compact */}
             {planLimits?.cancelAtPeriodEnd && (planLimits.usage.products > 2) && (
-              <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                <div className="flex-1 text-sm text-amber-800">
-                  <span className="font-semibold">Downgrade scheduled: </span>
-                  Your plan will move to Free
-                  {planLimits.subscriptionPeriodEnd
-                    ? ' on ' + new Date(planLimits.subscriptionPeriodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-                    : ''}
-                  . {planLimits.usage.products - 2} of your {planLimits.usage.products} products will be locked at that time (Free limit: 2).{' '}
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                <span>
+                  <span className="font-semibold">Downgrade scheduled:</span>{" "}
+                  Plan moves to Free{planLimits.subscriptionPeriodEnd ? ' on ' + new Date(planLimits.subscriptionPeriodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}.{" "}
+                  {planLimits.usage.products - 2} of {planLimits.usage.products} products will lock.{" "}
                   <a href="/subscription-pricing" className="font-semibold underline hover:text-amber-900">View billing →</a>
-                </div>
+                </span>
               </div>
             )}
             {/* Action Buttons Section */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="hidden sm:flex text-green-700 border-green-200 hover:bg-green-50"
-                  onClick={() => {
-                    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
-                    window.open(`/preview-store/${effectiveUserId}`, '_blank');
-                  }}
-                >
-                  <Package className="h-4 w-4 mr-1" />
-                  Preview Store
-                </Button>
-                
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                  <Download className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">CSV Template</span>
-                </Button>
-                
-                <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Bulk Upload</span>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              {/* Secondary actions — More dropdown */}
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="hidden sm:inline">More</span>
                     </Button>
-                  </DialogTrigger>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
+                        window.open(`/preview-store/${effectiveUserId}`, '_blank');
+                      }}
+                    >
+                      <Package className="h-4 w-4 mr-2" /> Preview Store
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={downloadTemplate}>
+                      <Download className="h-4 w-4 mr-2" /> CSV Template
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsBulkUploadDialogOpen(true)}>
+                      <Upload className="h-4 w-4 mr-2" /> Bulk Upload
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
+              {/* Primary action + usage counter */}
+              {!isViewer && (
+                <div className="flex items-center gap-3">
+                  {planLimits && planLimits.limits.products !== -1 && (
+                    <span className="text-xs text-slate-400 hidden sm:block">
+                      {planLimits.usage.products}/{planLimits.limits.products} products
+                    </span>
+                  )}
+                  <ContextualHelpBubble
+                    topic="Products"
+                    title="Managing Your Products"
+                    steps={helpContent.productManagement.steps}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white hidden sm:flex"
+                    disabled={planLimitsLoading}
+                    onClick={handleAddProductClick}
+                    data-onboarding="add-product-button"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add Product
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Bulk Upload Dialog — controlled via state */}
+                <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Bulk Upload Products</DialogTitle>
@@ -1521,28 +1548,6 @@ export default function ProductManagement() {
                   )}
                 </DialogContent>
                 </Dialog>
-              </div>
-              
-              {!isViewer && (
-              <div className="hidden sm:flex items-center space-x-2">
-                <ContextualHelpBubble
-                  topic="Products"
-                  title="Managing Your Products"
-                  steps={helpContent.productManagement.steps}
-                />
-              <Button 
-                size="sm"
-                variant="outline"
-                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
-                disabled={planLimitsLoading}
-                onClick={handleAddProductClick}
-                data-onboarding="add-product-button">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-              </div>
-              )}
-            </div>
 
               {/* Standalone Dialog without DialogTrigger */}
               <Dialog 
@@ -2436,10 +2441,9 @@ export default function ProductManagement() {
                 </DialogContent>
               </Dialog>
 
-        {/* Content */}
-        <div className="p-8">
-          {/* Filters and Search */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* Filters and Search */}
+        <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-4">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -2480,6 +2484,7 @@ export default function ProductManagement() {
               </Button>
             </div>
           </div>
+        </div>
 
           {/* Products Grid/List */}
           {isLoading ? (
@@ -2505,9 +2510,9 @@ export default function ProductManagement() {
             <div className="space-y-4">
               {filteredProducts.map((product: any) => (
                 <div key={product.id} className="space-y-3">
-                  <Card className={`hover:shadow-md transition-shadow ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-300' : ''}`}>
-                    <CardContent className="p-3 sm:p-6">
-                      <div className="flex items-start gap-3 sm:gap-4">
+                  <Card className={`transition-all duration-200 ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-200 cursor-not-allowed' : 'hover:shadow-md hover:border-slate-300'}`}>
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-start gap-3">
                         <img 
                           src={
                             (product.images && product.images.length > 0) 
@@ -2515,7 +2520,7 @@ export default function ProductManagement() {
                               : (product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100")
                           } 
                           alt={product.name}
-                          className="w-14 h-14 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
+                          className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -2740,7 +2745,6 @@ export default function ProductManagement() {
               )}
             </div>
           )}
-        </div>
       </div>
 
       <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) setStockProduct(null); }}>
