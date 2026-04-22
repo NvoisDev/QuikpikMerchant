@@ -365,18 +365,28 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     return newRequest;
   }
 
+  // Build all format variants for a phone number so we match both E.164 (+447…)
+  // and UK local (07…) forms regardless of how the record was originally stored.
+  private phoneVariants(phone: string): string[] {
+    const e164 = formatPhoneToInternational(phone);
+    const variants = new Set([phone, e164]);
+    // If E.164 is +44XXXXXXXXXX derive the local 0XXXXXXXXXX form
+    if (e164.startsWith('+44')) {
+      variants.add('0' + e164.slice(3));
+    }
+    // If local 0X… form, E.164 is already added above
+    return [...variants];
+  }
+
   async getCustomerRegistrationRequest(wholesalerId: string, customerPhone: string) {
-    const normalised = formatPhoneToInternational(customerPhone);
+    const variants = this.phoneVariants(customerPhone);
     const [request] = await db
       .select()
       .from(customerRegistrationRequests)
       .where(
         and(
           eq(customerRegistrationRequests.wholesalerId, wholesalerId),
-          or(
-            eq(customerRegistrationRequests.customerPhone, normalised),
-            eq(customerRegistrationRequests.customerPhone, customerPhone)
-          ),
+          or(...variants.map(v => eq(customerRegistrationRequests.customerPhone, v))),
           eq(customerRegistrationRequests.status, 'pending')
         )
       )
@@ -386,17 +396,14 @@ export class CustomerMgmtStorage extends BroadcastStorage {
 
   // Allow customers to request access again after rejection
   async getLatestRegistrationRequest(wholesalerId: string, customerPhone: string) {
-    const normalised = formatPhoneToInternational(customerPhone);
+    const variants = this.phoneVariants(customerPhone);
     const [request] = await db
       .select()
       .from(customerRegistrationRequests)
       .where(
         and(
           eq(customerRegistrationRequests.wholesalerId, wholesalerId),
-          or(
-            eq(customerRegistrationRequests.customerPhone, normalised),
-            eq(customerRegistrationRequests.customerPhone, customerPhone)
-          )
+          or(...variants.map(v => eq(customerRegistrationRequests.customerPhone, v)))
         )
       )
       .orderBy(desc(customerRegistrationRequests.requestedAt))
