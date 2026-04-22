@@ -267,7 +267,7 @@ export default function Sidebar() {
                     >
                       {item.name}
                       {showSoonBadge ? " (Coming soon)" : ""}
-                      {showOrderBadge ? ` — ${pendingOrderCount} pending` : ""}
+                      {showOrderBadge ? ` — ${pendingOrderCount} active` : ""}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

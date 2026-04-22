@@ -579,7 +579,7 @@ export function registerOrderRoutes(app: Express): void {
         .from(orders)
         .where(and(
           eq(orders.wholesalerId, wholesalerId),
-          eq(orders.status, 'pending')
+          sql`NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid'))`
         ));
 
       res.json({ count: Number(result[0]?.count || 0) });
