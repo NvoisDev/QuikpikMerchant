@@ -1405,7 +1405,13 @@ export function registerPaymentRoutes(app: Express): void {
           updatedAt: new Date(),
         }).where(eq(userSubscriptions.userId, userId));
 
-        console.log(`✅ DB synced: cancelAtPeriodEnd=true for user ${userId}`);
+        // Keep users table in sync so any code reading users.subscriptionStatus sees the correct state
+        await db.update(users).set({
+          subscriptionStatus: 'cancel_at_period_end',
+          updatedAt: new Date(),
+        }).where(eq(users.id, userId));
+
+        console.log(`✅ DB synced: cancelAtPeriodEnd=true, subscriptionStatus=cancel_at_period_end for user ${userId}`);
 
         // Compute projected impact for the scheduled email (cancel = at period end, nothing locked yet)
         const cancelProjectedImpact = await getProjectedDowngradeImpact(userId, 'free');
