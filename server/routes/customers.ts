@@ -4,7 +4,7 @@ import {
   emailHeading, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
   insertCustomerGroupSchema, multiWholesalerService, or, orders, parseCustomerName, products,
   requireAuth, requireNotViewer, sendEmail, sendWelcomeMessages, storage, twilio,
-  validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
+  users, validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
   wrapCustomerEmail, z
 } from "./shared";
 
@@ -606,14 +606,12 @@ export function registerCustomerRoutes(app: Express): void {
           eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
         ));
 
-      // Non-name fields (phone, email, businessName) are shared identity — update globally
-      await storage.updateCustomerInfoDetailed(customerId, {
-        firstName,   // kept for signature compatibility; not shown to this wholesaler's customers
-        lastName,
-        phoneNumber,
-        email,
-        businessName
-      });
+      // Non-name fields (phone, email, businessName) are shared identity — update globally.
+      // Name fields are intentionally NOT written to users here; they live in displayName above.
+      const sharedUpdates: Record<string, string | null | undefined> = { phoneNumber };
+      if (email !== undefined) sharedUpdates.email = email || null;
+      if (businessName !== undefined) sharedUpdates.businessName = businessName || null;
+      await db.update(users).set(sharedUpdates).where(eq(users.id, customerId));
       
       res.json({
         success: true,
