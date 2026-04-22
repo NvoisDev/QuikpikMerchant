@@ -205,7 +205,7 @@ export interface IStorage {
   incrementPhoneVerificationAttempts(id: number): Promise<void>;
   getRecentPhoneVerification(phoneNumber: string, minutes: number): Promise<{ id: number } | undefined>;
   findRecentlyUsedPhoneVerification(phoneNumber: string, withinMinutes: number): Promise<{ id: number; usedAt: Date | null } | undefined>;
-  findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null }>>;
+  findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' }>>;
 
   // SMS verification operations
   createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
