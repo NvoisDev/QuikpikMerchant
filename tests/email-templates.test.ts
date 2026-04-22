@@ -416,7 +416,7 @@ describe('generateDowngradeScheduledEmail — premium plan, future date', () => 
   });
 
   it('HTML shows Free plan limits table', () => {
-    expect(result.html).toContain('10 maximum');
+    expect(result.html).toContain('2 maximum');
   });
 
   it('HTML includes upgrade button', () => {
@@ -503,7 +503,7 @@ describe('generateDowngradeEffectiveEmail — no items affected', () => {
   });
 
   it('HTML shows Free plan limits table', () => {
-    expect(result.html).toContain('10 maximum');
+    expect(result.html).toContain('2 maximum');
   });
 
   it('HTML includes "Upgrade My Plan" button', () => {
