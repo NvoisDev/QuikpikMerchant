@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckIcon, X, StarIcon, CrownIcon } from 'lucide-react';
+import { CheckIcon, X, StarIcon, CrownIcon, AlertTriangleIcon } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import clsx from 'clsx';
 import PageHeader from '@/components/PageHeader';
@@ -45,6 +46,8 @@ export default function SubscriptionPricing() {
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [targetDowngradePlan, setTargetDowngradePlan] = useState<string>('free');
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
+  const [showUpgradeWarningModal, setShowUpgradeWarningModal] = useState(false);
+  const [pendingUpgrade, setPendingUpgrade] = useState<{ priceId: string; planName: string; planId: string } | null>(null);
   // Handle success/cancel URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -112,10 +115,15 @@ export default function SubscriptionPricing() {
         const planName = data.newPlan
           ? data.newPlan.charAt(0).toUpperCase() + data.newPlan.slice(1)
           : 'new';
+        const hadCancellation = !!pendingUpgrade;
         toast({
           title: "Plan Upgraded!",
-          description: `You're now on the ${planName} plan. Your new features are active immediately.`,
+          description: hadCancellation
+            ? `You're now on the ${planName} plan. Your scheduled cancellation has been removed and your new features are active immediately.`
+            : `You're now on the ${planName} plan. Your new features are active immediately.`,
+          duration: hadCancellation ? 8000 : 5000,
         });
+        setPendingUpgrade(null);
         queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
         queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/plan-limits'] });
         setProcessingPlanId(null);
@@ -246,9 +254,21 @@ export default function SubscriptionPricing() {
     
     // Handle upgrades - proceed with checkout/subscription update
     if (plan.stripePriceId) {
+      if (isCancellationScheduled) {
+        setPendingUpgrade({ priceId: plan.stripePriceId, planName: plan.name, planId: plan.planId });
+        setShowUpgradeWarningModal(true);
+        return;
+      }
       setProcessingPlanId(plan.planId);
       createCheckoutMutation.mutate(plan.stripePriceId);
     }
+  };
+
+  const handleConfirmUpgrade = () => {
+    if (!pendingUpgrade) return;
+    setShowUpgradeWarningModal(false);
+    setProcessingPlanId(pendingUpgrade.planId);
+    createCheckoutMutation.mutate(pendingUpgrade.priceId);
   };
 
   const getPlanIcon = (planId: string) => {
@@ -660,6 +680,59 @@ export default function SubscriptionPricing() {
             : undefined
         }}
       />
+
+      {/* Upgrade Warning Modal — shown when a cancellation is scheduled */}
+      <Dialog open={showUpgradeWarningModal} onOpenChange={(open) => {
+        setShowUpgradeWarningModal(open);
+        if (!open) setPendingUpgrade(null);
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <AlertTriangleIcon className="h-5 w-5 text-amber-500" />
+              Upgrade Will Remove Scheduled Cancellation
+            </DialogTitle>
+            <DialogDescription>
+              You currently have a cancellation scheduled for the end of your billing period. Upgrading to the{' '}
+              <strong>{pendingUpgrade?.planName}</strong> plan will remove that cancellation and recommit you to your subscription.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+            <p className="font-medium mb-1">What happens when you upgrade:</p>
+            <ul className="space-y-1 text-xs">
+              <li>• Your scheduled cancellation will be cancelled immediately</li>
+              <li>• You will move to the {pendingUpgrade?.planName} plan straight away</li>
+              <li>• Your subscription will continue to renew each billing period</li>
+            </ul>
+          </div>
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUpgradeWarningModal(false);
+                setPendingUpgrade(null);
+              }}
+              className="flex-1"
+            >
+              Keep Cancellation
+            </Button>
+            <Button
+              onClick={handleConfirmUpgrade}
+              disabled={createCheckoutMutation.isPending}
+              className="flex-1"
+            >
+              {createCheckoutMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Processing...
+                </div>
+              ) : (
+                `Upgrade to ${pendingUpgrade?.planName}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );
