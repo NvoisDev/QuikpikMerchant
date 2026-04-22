@@ -5,6 +5,7 @@ import { stripGuestPricingData } from '../server/utils/guest-products';
 
 const customerAuthSource = readFileSync('client/src/components/customer/CustomerAuth.tsx', 'utf8');
 const customerPortalSource = readFileSync('client/src/pages/customer-portal.tsx', 'utf8');
+const priceDisplaySource = readFileSync('client/src/components/customer/PriceDisplay.tsx', 'utf8');
 const customerHelpSource = readFileSync('client/src/components/customer/CustomerHelp.tsx', 'utf8');
 const landingPageSource = readFileSync('client/src/pages/LandingPage.tsx', 'utf8');
 const helpPageSource = readFileSync('client/src/pages/help.tsx', 'utf8');
@@ -51,7 +52,7 @@ describe('guest browsing regression coverage', () => {
   });
 
   it('keeps guest catalogue pricing hidden while showing format and safe stock labels', () => {
-    const guestPriceBranch = sourceBetween(customerPortalSource, 'if (isGuestMode) {', '\n  return (\n    <div className="flex items-center gap-2 flex-wrap">');
+    const guestPriceBranch = sourceBetween(priceDisplaySource, 'if (isGuestMode) {', '\n  return (\n    <div className="flex items-center gap-2 flex-wrap">');
     const guestCatalogue = sourceBetween(
       customerPortalSource,
       '{isTrueGuestMode && (',
