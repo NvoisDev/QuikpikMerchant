@@ -184,8 +184,9 @@ export default function SubscriptionPricing() {
         description: message,
         duration: 8000,
       });
-      // Refresh subscription data
+      // Refresh subscription data — invalidate both so plan badge AND usage bars update immediately
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/plan-limits'] });
       setShowDowngradeModal(false);
     },
     onError: (error: any) => {
