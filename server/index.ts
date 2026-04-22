@@ -73,6 +73,13 @@ async function runStartupMigrations() {
     // Task #74: Drop any check constraint on team_members.role so 'viewer' is always valid.
     // The column is varchar with no enum — this is a no-op if no constraint exists.
     `DO $$ DECLARE con record; BEGIN FOR con IN SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='team_members' AND constraint_type='CHECK' AND constraint_name LIKE '%role%' LOOP EXECUTE 'ALTER TABLE team_members DROP CONSTRAINT IF EXISTS ' || quote_ident(con.constraint_name); END LOOP; END $$`,
+    // Task #319: Remove pre-existing duplicate pending registration requests caused by phone number
+    // format differences (e.g. 07941619640 vs +447941619640) before the Task #316 normalisation fix.
+    // Scoped to status='pending' only so approved/rejected audit rows are never touched, making this
+    // statement safe to run on every startup (becomes a no-op once no pending duplicates exist).
+    // Uses regexp_replace to strip non-digits before comparing last 10 digits, ensuring spaces/dashes
+    // in stored numbers don't cause mismatches. id DESC breaks ties when requested_at is identical.
+    `DELETE FROM customer_registration_requests WHERE status = 'pending' AND id NOT IN (SELECT DISTINCT ON (wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10)) id FROM customer_registration_requests WHERE status = 'pending' ORDER BY wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10), requested_at DESC, id DESC)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
