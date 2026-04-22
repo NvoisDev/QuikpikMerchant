@@ -51,7 +51,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Send,
+  MessageCircle,
   Shield,
   ShieldX,
   UserX,
@@ -1846,11 +1846,13 @@ export default function Customers() {
                           )}
                           {!isViewer && (
                           <DropdownMenuItem 
-                            onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
-                            disabled={sendWelcomeMessageMutation.isPending}
+                            onClick={() => {
+                              const phone = customer?.phoneNumber?.replace(/[^0-9]/g, '');
+                              if (phone) window.open(`https://wa.me/${phone}`, '_blank');
+                            }}
                           >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Welcome
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Send Message
                           </DropdownMenuItem>
                           )}
                           {!isViewer && (

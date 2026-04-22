@@ -40,7 +40,7 @@ import {
   FileText,
   MessageSquare,
   ExternalLink,
-  Send,
+  MessageCircle,
   ShieldX,
   UserPlus,
   Users,
@@ -556,19 +556,15 @@ export default function CustomerDetail() {
               Edit addresses
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => sendWelcomeMessageMutation.mutate(customerId)}
-              disabled={sendWelcomeMessageMutation.isPending}
+              onClick={() => {
+                const phone = customer?.phoneNumber?.replace(/[^0-9]/g, '');
+                if (phone) window.open(`https://wa.me/${phone}`, '_blank');
+              }}
             >
-              <Send className="h-4 w-4 mr-2" />
-              Send Welcome
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Send Message
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {customer?.phoneNumber && (
-              <DropdownMenuItem onClick={() => window.open(`https://wa.me/${customer.phoneNumber.replace(/[^0-9]/g, '')}`, '_blank')}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                WhatsApp
-              </DropdownMenuItem>
-            )}
             {customer?.phoneNumber && (
               <DropdownMenuItem onClick={() => window.open(`tel:${customer.phoneNumber}`)}>
                 <Phone className="h-4 w-4 mr-2" />
