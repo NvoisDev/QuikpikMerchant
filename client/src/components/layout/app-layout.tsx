@@ -4,6 +4,31 @@ import Footer from "@/components/ui/footer";
 import { SidebarProvider, useSidebarContext } from "@/contexts/sidebar-context";
 import Logo from "@/components/ui/logo";
 import { Menu } from "lucide-react";
+import { useLocation } from "wouter";
+
+const PAGE_NAMES: { href: string; name: string }[] = [
+  { href: "/orders", name: "Orders" },
+  { href: "/products", name: "Products" },
+  { href: "/promotions", name: "Promotions" },
+  { href: "/customers", name: "Customers" },
+  { href: "/campaigns", name: "Broadcast" },
+  { href: "/marketplace", name: "Marketplace" },
+  { href: "/integrations", name: "Integrations" },
+  { href: "/team-management", name: "Team Management" },
+  { href: "/financials", name: "Finance" },
+  { href: "/subscription-pricing", name: "Subscription" },
+  { href: "/help", name: "Help Hub" },
+  { href: "/settings", name: "Settings" },
+  { href: "/", name: "Dashboard" },
+];
+
+function usePageName() {
+  const [location] = useLocation();
+  const match = PAGE_NAMES.find((p) =>
+    p.href === "/" ? location === "/" : location.startsWith(p.href)
+  );
+  return match?.name ?? "Dashboard";
+}
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,6 +37,7 @@ interface AppLayoutProps {
 function AppLayoutInner({ children }: AppLayoutProps) {
   const { user, isLoading } = useAuth();
   const { isDesktopCollapsed, openMobileSidebar } = useSidebarContext();
+  const pageName = usePageName();
 
   if (isLoading) {
     return (
@@ -46,9 +72,10 @@ function AppLayoutInner({ children }: AppLayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1 flex justify-center pr-9">
-            <Logo size="sm" />
-          </div>
+          <span className="flex-1 text-white font-semibold text-base truncate">
+            {pageName}
+          </span>
+          <Logo size="sm" />
         </header>
       )}
 
