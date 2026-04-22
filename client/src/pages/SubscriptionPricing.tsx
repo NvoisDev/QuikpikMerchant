@@ -268,6 +268,11 @@ export default function SubscriptionPricing() {
     return currentSubscription?.currentPlan === planId;
   };
 
+  const isCancellationScheduled = !!currentSubscription?.subscription?.cancel_at_period_end;
+  const cancellationEndDate = currentSubscription?.user?.subscriptionPeriodEnd
+    ? new Date(currentSubscription.user.subscriptionPeriodEnd)
+    : null;
+
   if (plansLoading || subscriptionLoading) {
     return (
       <div className="bg-white min-h-screen">
@@ -553,21 +558,39 @@ export default function SubscriptionPricing() {
 
                 {/* Cancel/Downgrade Button - Only show for current paid plans */}
                 {isCurrentPlan(plan.planId) && plan.planId !== 'free' && (
-                  <Button
-                    onClick={() => {
-                      setTargetDowngradePlan('free');
-                      setShowDowngradeModal(true);
-                    }}
-                    disabled={cancelSubscriptionMutation.isPending}
-                    variant="outline"
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                  >
-                    {cancelSubscriptionMutation.isPending ? (
-                      'Processing...'
-                    ) : (
-                      'Cancel Subscription'
-                    )}
-                  </Button>
+                  isCancellationScheduled ? (
+                    <div className="space-y-1.5">
+                      <Button
+                        disabled
+                        variant="outline"
+                        className="w-full text-amber-700 border-amber-300 bg-amber-50 cursor-not-allowed opacity-100"
+                      >
+                        ✓ Cancellation Scheduled
+                      </Button>
+                      {cancellationEndDate && (
+                        <p className="text-xs text-center text-amber-700 leading-snug">
+                          Free plan begins{' '}
+                          <strong>
+                            {cancellationEndDate.toLocaleDateString('en-GB', {
+                              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                            })}
+                          </strong>
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        setTargetDowngradePlan('free');
+                        setShowDowngradeModal(true);
+                      }}
+                      disabled={cancelSubscriptionMutation.isPending}
+                      variant="outline"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                    >
+                      {cancelSubscriptionMutation.isPending ? 'Processing...' : 'Cancel Subscription'}
+                    </Button>
+                  )
                 )}
               </div>
             </CardContent>
