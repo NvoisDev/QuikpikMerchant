@@ -5,6 +5,7 @@ import { SidebarProvider, useSidebarContext } from "@/contexts/sidebar-context";
 import Logo from "@/components/ui/logo";
 import { Menu } from "lucide-react";
 import { useLocation } from "wouter";
+import ShareBellControls from "@/components/shared/ShareBellControls";
 
 const PAGE_NAMES: { href: string; name: string }[] = [
   { href: "/orders", name: "Orders" },
@@ -75,6 +76,7 @@ function AppLayoutInner({ children }: AppLayoutProps) {
           <span className="flex-1 text-white font-semibold text-base truncate">
             {pageName}
           </span>
+          <ShareBellControls variant="dark" />
           <Logo size="sm" />
         </header>
       )}
