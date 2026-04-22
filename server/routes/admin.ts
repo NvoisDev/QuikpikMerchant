@@ -471,7 +471,7 @@ export function registerAdminRoutes(app: Express): void {
         resolvedPlanId = recoverPlan.planId;
       }
 
-      const recoverProductLimit = resolvedPlanId === 'premium' ? -1 : (resolvedPlanId === 'standard' ? 50 : 10);
+      const recoverProductLimit = resolvedPlanId === 'premium' ? -1 : (resolvedPlanId === 'standard' ? 5 : 2);
       const recoverPeriodEnd = new Date(stripeSub.current_period_end * 1000);
       const recoverPeriodStart = new Date(stripeSub.current_period_start * 1000);
 
