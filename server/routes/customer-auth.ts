@@ -210,8 +210,12 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(403).json({ error: 'No access to the selected wholesaler' });
       }
 
+      if (match.status === 'pending') {
+        return res.status(403).json({ error: 'Your access request is still pending approval from this wholesaler.' });
+      }
+
       // Fetch full customer record
-      const customerRecord = await storage.getUser(match.customerId);
+      const customerRecord = await storage.getUser(match.customerId!);
       if (!customerRecord) {
         return res.status(404).json({ error: 'Customer record not found' });
       }

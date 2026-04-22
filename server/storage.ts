@@ -772,11 +772,14 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
     return row;
   }
 
-  async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null }>> {
+  async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' }>> {
     // Normalise: strip spaces, ensure +44 prefix for UK numbers
     const normalised = phoneNumber.startsWith('+') ? phoneNumber.replace(/\s/g, '') : phoneNumber.replace(/\s/g, '');
+    const ukLocal   = normalised.replace(/^\+44/, '0');
+    const ukE164    = normalised.startsWith('0') ? '+44' + normalised.slice(1) : normalised;
 
-    const rows = await db.execute(sql`
+    // Active relationships
+    const activeRows = await db.execute(sql`
       SELECT DISTINCT
         wcr.customer_id   AS customer_id,
         wcr.wholesaler_id AS wholesaler_id,
@@ -789,18 +792,54 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
       WHERE wcr.status = 'active'
         AND (
           REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised}
-          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised.replace(/^\+44/, '0')}
-          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised.startsWith('0') ? '+44' + normalised.slice(1) : normalised}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukLocal}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukE164}
         )
       ORDER BY business_name
     `);
-    return (rows.rows as any[]).map(r => ({
-      customerId: r.customer_id,
-      wholesalerId: r.wholesaler_id,
-      businessName: r.business_name || 'Wholesaler',
-      logoUrl: r.logo_url || null,
-      logoType: r.logo_type || null,
+
+    // Pending registration requests (no relationship yet — customer may not have a user record)
+    const pendingRows = await db.execute(sql`
+      SELECT DISTINCT
+        crr.wholesaler_id AS wholesaler_id,
+        COALESCE(w.business_name, w.first_name || ' ' || COALESCE(w.last_name, '')) AS business_name,
+        w.logo_url   AS logo_url,
+        w.logo_type  AS logo_type
+      FROM customer_registration_requests crr
+      INNER JOIN users w ON w.id = crr.wholesaler_id
+      WHERE crr.status = 'pending'
+        AND (
+          REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${normalised}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukLocal}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukE164}
+        )
+      ORDER BY business_name
+    `);
+
+    const activeWholesalerIds = new Set((activeRows.rows as any[]).map(r => r.wholesaler_id));
+
+    const active = (activeRows.rows as any[]).map(r => ({
+      customerId: r.customer_id as string,
+      wholesalerId: r.wholesaler_id as string,
+      businessName: (r.business_name || 'Wholesaler') as string,
+      logoUrl: r.logo_url as string | null,
+      logoType: r.logo_type as string | null,
+      status: 'active' as const,
     }));
+
+    // Only include pending requests for wholesalers the customer doesn't already have active access to
+    const pending = (pendingRows.rows as any[])
+      .filter(r => !activeWholesalerIds.has(r.wholesaler_id))
+      .map(r => ({
+        customerId: null,
+        wholesalerId: r.wholesaler_id as string,
+        businessName: (r.business_name || 'Wholesaler') as string,
+        logoUrl: r.logo_url as string | null,
+        logoType: r.logo_type as string | null,
+        status: 'pending' as const,
+      }));
+
+    return [...active, ...pending];
   }
 
   // ─── End Phone OTP methods ──────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store } from "lucide-react";
+import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 
@@ -17,11 +17,12 @@ interface CustomerAuthProps {
 }
 
 interface WholesalerOption {
-  customerId: string;
+  customerId: string | null;
   wholesalerId: string;
   businessName: string;
   logoUrl: string | null;
   logoType: string | null;
+  status?: 'active' | 'pending';
 }
 
 interface WholesalerInfo {
@@ -170,18 +171,20 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       }
 
       const options: WholesalerOption[] = data.wholesalers;
+      const activeOptions = options.filter(o => o.status !== 'pending');
 
-      // If a target wholesalerId is known and the customer is linked to it, auto-select
+      // If a target wholesalerId is known and the customer has ACTIVE access to it, auto-select
       if (wholesalerId) {
-        const match = options.find(o => o.wholesalerId === wholesalerId);
+        const match = activeOptions.find(o => o.wholesalerId === wholesalerId);
         if (match) {
           await completeLogin(match.wholesalerId);
           return;
         }
       }
 
-      if (options.length === 1) {
-        await completeLogin(options[0].wholesalerId);
+      // Auto-select only when there is exactly one active store (pending stores never auto-select)
+      if (activeOptions.length === 1 && options.length === 1) {
+        await completeLogin(activeOptions[0].wholesalerId);
         return;
       }
 
@@ -444,27 +447,46 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
         {step === 'select' && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600 text-center">Select the store you'd like to shop with today:</p>
-            {wholesalerOptions.map(opt => (
-              <button
-                key={opt.wholesalerId}
-                onClick={() => completeLogin(opt.wholesalerId)}
-                disabled={isLoading}
-                className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-colors text-left"
-              >
-                {opt.logoUrl ? (
-                  <img src={opt.logoUrl} alt={opt.businessName} className="h-12 w-12 rounded-xl object-cover flex-shrink-0" />
-                ) : (
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">{getInitials(opt.businessName)}</span>
+            {wholesalerOptions.map(opt => {
+              const isPending = opt.status === 'pending';
+              return (
+                <button
+                  key={opt.wholesalerId}
+                  onClick={() => {
+                    if (isPending) {
+                      toast({ title: 'Request pending', description: 'Your access request is awaiting approval from this wholesaler.' });
+                    } else {
+                      completeLogin(opt.wholesalerId);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className={`w-full flex items-center gap-4 p-4 border-2 rounded-xl text-left transition-colors ${
+                    isPending
+                      ? 'border-amber-200 bg-amber-50 opacity-80 cursor-default'
+                      : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                  }`}
+                >
+                  {opt.logoUrl ? (
+                    <img src={opt.logoUrl} alt={opt.businessName} className={`h-12 w-12 rounded-xl object-cover flex-shrink-0 ${isPending ? 'opacity-60' : ''}`} />
+                  ) : (
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isPending ? 'bg-gradient-to-br from-amber-400 to-amber-500' : 'bg-gradient-to-br from-green-500 to-green-700'}`}>
+                      <span className="text-white font-bold text-sm">{getInitials(opt.businessName)}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold truncate ${isPending ? 'text-amber-900' : 'text-gray-900'}`}>{opt.businessName}</p>
+                    {isPending ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5 mt-0.5">
+                        <Clock className="h-3 w-3" /> Pending approval
+                      </span>
+                    ) : (
+                      <p className="text-sm text-gray-500">Tap to enter this store</p>
+                    )}
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{opt.businessName}</p>
-                  <p className="text-sm text-gray-500">Tap to enter this store</p>
-                </div>
-                {isLoading && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
-              </button>
-            ))}
+                  {isLoading && !isPending && <Loader2 className="h-5 w-5 animate-spin text-green-600 flex-shrink-0" />}
+                </button>
+              );
+            })}
             {error && (
               <Alert variant="destructive" className="border-0 bg-red-50">
                 <AlertDescription className="text-sm text-center">{error}</AlertDescription>
