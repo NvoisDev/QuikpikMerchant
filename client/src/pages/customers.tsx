@@ -1244,17 +1244,36 @@ export default function Customers() {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Customers" description="View and manage your wholesale customers">
-        <Link href="/customer-registration-requests">
-          <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-            <UserPlus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Requests</span>
-          </Button>
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">More</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuItem asChild>
+              <Link href="/customer-registration-requests" className="flex items-center cursor-pointer">
+                <UserPlus className="h-4 w-4 mr-2" /> Requests
+              </Link>
+            </DropdownMenuItem>
+            {!isViewer && (
+              <DropdownMenuItem onClick={() => setIsInvitationModalOpen(true)}>
+                <Share2 className="h-4 w-4 mr-2" /> Invite Customer
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         {!isViewer && (
-        <Button size="sm" className="text-xs sm:text-sm" onClick={() => setIsAddCustomerDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add
-        </Button>
+          <Button
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setIsAddCustomerDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Add Customer</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
         )}
       </PageHeader>
           <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
@@ -1647,6 +1666,7 @@ export default function Customers() {
             </div>
           )}
 
+          <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-4">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -1654,12 +1674,12 @@ export default function Customers() {
                 placeholder="Search customers by name, email, or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1725,6 +1745,7 @@ export default function Customers() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          </div>
 
           {/* Customer List */}
           {isLoadingCustomers ? (
@@ -1744,8 +1765,8 @@ export default function Customers() {
           ) : (
             <div className="space-y-2 overflow-x-hidden">
               {sortedCustomers.map((customer) => (
-                <div key={customer?.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
-                  <Avatar className="h-10 w-10 flex-shrink-0">
+                <div key={customer?.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                  <Avatar className="h-9 w-9 flex-shrink-0">
                     <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
                       {getInitials(customer?.firstName || '', customer?.lastName)}
                     </AvatarFallback>

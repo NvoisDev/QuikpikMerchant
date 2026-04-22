@@ -779,24 +779,35 @@ export default function OrdersFresh() {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <PageHeader title="Orders" description="View and manage all your customer orders">
-      <span className="text-xs text-gray-500 whitespace-nowrap hidden sm:inline">
-        {statusFilter ? (
-          <>Showing {displayedOrders} {statusFilter}</>
-        ) : (
-          <>Showing {totalOrders} {archiveTab === 'archived' ? 'archived ' : archiveTab === 'all' ? '' : 'active '}orders</>
-        )}
-      </span>
-      <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
-        Refresh
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <MoreVertical className="h-4 w-4" />
+            <span className="hidden sm:inline">More</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuItem onClick={() => loadOrders(currentPage, searchQuery)}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <div className="px-2 py-1.5 text-xs text-slate-500">
+            {statusFilter ? (
+              <>Showing {displayedOrders} {statusFilter}</>
+            ) : (
+              <>Showing {totalOrders} {archiveTab === 'archived' ? 'archived ' : archiveTab === 'all' ? '' : 'active '}orders</>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {!isViewer && (
-      <Link href="/quick-quote">
-        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-          <FileText className="w-4 h-4 mr-1 md:mr-2" />
-          <span className="hidden sm:inline">Quick Quote</span>
-          <span className="sm:hidden">Quote</span>
-        </Button>
-      </Link>
+        <Link href="/quick-quote">
+          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+            <FileText className="w-4 h-4 mr-1.5" />
+            <span className="hidden sm:inline">Quick Quote</span>
+            <span className="sm:hidden">Quote</span>
+          </Button>
+        </Link>
       )}
     </PageHeader>
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -846,8 +857,9 @@ export default function OrdersFresh() {
         </button>
       </div>
 
-      {/* Search and Filter - stacks on mobile */}
-      <div className="flex flex-col gap-2 sm:gap-3">
+      {/* Search and Filter - sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 md:-mx-6 px-4 md:px-6 mb-2">
+      <div className="flex flex-col gap-2">
         <div className="relative">
           <input
             type="text"
@@ -940,6 +952,7 @@ export default function OrdersFresh() {
             </Button>
           )}
         </div>
+      </div>
       </div>
 
       {/* Statistics Cards - only show on Active tab */}
