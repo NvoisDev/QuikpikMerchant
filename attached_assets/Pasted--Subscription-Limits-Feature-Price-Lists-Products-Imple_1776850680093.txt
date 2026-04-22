@@ -1,0 +1,100 @@
+🔒 Subscription Limits Feature (Price Lists + Products)
+
+Implement subscription-based limits for price lists and product creation, including UI indicators and downgrade handling, without breaking existing functionality.
+
+⸻
+
+⚠️ Constraints
+
+* Do NOT break existing pricing, product, or subscription logic
+* Do NOT delete existing data when limits are exceeded
+* Apply limits at both backend (enforcement) and frontend (UI feedback)
+* Maintain current user experience for existing features
+
+⸻
+
+🎯 Requirements
+
+1️⃣ Price List Limits
+
+* Free tier: max 2 price lists
+* Standard tier: max 5 price lists
+
+Behaviour:
+
+* Prevent creation beyond limit based on subscription
+* Show clear message when limit is reached:
+    “Upgrade to create more price lists”
+
+⸻
+
+2️⃣ Downgrade Handling (Important)
+
+* If a user downgrades from Standard → Free:
+    * They may have more than 2 price lists (e.g. 5)
+    * Keep all price lists (do NOT delete)
+    * Only allow 2 active/editable
+    * The most recently created excess price lists (e.g. last 3) should be:
+        * Locked
+        * Not editable
+        * Clearly marked
+
+⸻
+
+3️⃣ UI Indicator (Padlock System)
+
+* Add a padlock icon (same style as product locking if it exists)
+* Apply to:
+    * Locked price lists
+    * Locked products (see below)
+
+Locked state should:
+
+* Disable editing
+* Disable usage (e.g. assigning to customers)
+* Show tooltip:
+    “Upgrade to unlock”
+
+⸻
+
+4️⃣ Product Limits
+
+* Free tier: max 2 products
+* Standard tier: max 5 products
+
+Behaviour:
+
+* Prevent creating new products beyond limit
+* On downgrade:
+    * Keep all products
+    * Lock excess products (same logic as price lists)
+    * Show padlock icon
+    * Disable editing
+
+⸻
+
+🔐 Backend Enforcement
+
+* Validate limits on:
+    * Product creation
+    * Price list creation
+* Prevent bypass via API
+* Ensure locked items cannot be modified via API
+
+⸻
+
+🧠 Frontend Behaviour
+
+* Show limits clearly in UI
+* Disable “Create” buttons when limit reached
+* Show upgrade prompts where relevant
+* Ensure consistent locked state visuals
+
+⸻
+
+📊 Output
+
+* Show updated data model (if needed)
+* Show how limits are enforced
+* Show UI updates (padlock, messaging)
+* Confirm no existing data is lost
