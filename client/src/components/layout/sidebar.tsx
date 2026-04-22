@@ -18,7 +18,6 @@ import {
   Settings,
   LogOut,
   Store,
-  Menu,
   X,
   HelpCircle,
   Crown,
@@ -30,7 +29,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 
@@ -63,8 +61,7 @@ const navigation: NavigationItem[] = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { isDesktopCollapsed, toggleDesktopCollapsed } = useSidebarContext();
+  const { isDesktopCollapsed, toggleDesktopCollapsed, isMobileOpen, closeMobileSidebar } = useSidebarContext();
   const { checkTabAccess } = useSidebarPermissions();
 
   const { data: subscriptionData } = useQuery({
@@ -90,21 +87,11 @@ export default function Sidebar() {
   return (
     <TooltipProvider delayDuration={400}>
       <>
-        {/* Mobile hamburger — visible only when drawer is shut */}
-        {!isMobileOpen && (
-          <button
-            onClick={() => setIsMobileOpen(true)}
-            className="lg:hidden fixed top-4 left-4 z-[60] p-2 bg-slate-900 text-white rounded-md shadow-md border border-slate-700"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Mobile backdrop */}
+        {/* Mobile backdrop — z-[48] sits above the top bar (z-[45]) so it dims correctly */}
         {isMobileOpen && (
           <div
-            className="lg:hidden fixed inset-0 z-[40] bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsMobileOpen(false)}
+            className="lg:hidden fixed inset-0 z-[48] bg-black/60 backdrop-blur-sm"
+            onClick={closeMobileSidebar}
           />
         )}
 
@@ -142,7 +129,7 @@ export default function Sidebar() {
 
               {/* Mobile close */}
               <button
-                onClick={() => setIsMobileOpen(false)}
+                onClick={closeMobileSidebar}
                 className="lg:hidden p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors flex-shrink-0"
               >
                 <X className="h-5 w-5" />
@@ -194,7 +181,7 @@ export default function Sidebar() {
                       )}
                       onClick={(e) => {
                         if (isComingSoon) { e.preventDefault(); return; }
-                        setIsMobileOpen(false);
+                        closeMobileSidebar();
                       }}
                       data-onboarding={item.onboardingId}
                     >

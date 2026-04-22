@@ -3,11 +3,17 @@ import { createContext, useContext, useState } from "react";
 interface SidebarContextValue {
   isDesktopCollapsed: boolean;
   toggleDesktopCollapsed: () => void;
+  isMobileOpen: boolean;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
 }
 
 const SidebarContext = createContext<SidebarContextValue>({
   isDesktopCollapsed: false,
   toggleDesktopCollapsed: () => {},
+  isMobileOpen: false,
+  openMobileSidebar: () => {},
+  closeMobileSidebar: () => {},
 });
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
@@ -18,6 +24,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   });
+
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const toggleDesktopCollapsed = () => {
     setIsDesktopCollapsed((prev) => {
@@ -30,7 +38,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SidebarContext.Provider value={{ isDesktopCollapsed, toggleDesktopCollapsed }}>
+    <SidebarContext.Provider value={{
+      isDesktopCollapsed,
+      toggleDesktopCollapsed,
+      isMobileOpen,
+      openMobileSidebar: () => setIsMobileOpen(true),
+      closeMobileSidebar: () => setIsMobileOpen(false),
+    }}>
       {children}
     </SidebarContext.Provider>
   );

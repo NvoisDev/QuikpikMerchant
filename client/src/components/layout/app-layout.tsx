@@ -2,6 +2,8 @@ import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "./sidebar";
 import Footer from "@/components/ui/footer";
 import { SidebarProvider, useSidebarContext } from "@/contexts/sidebar-context";
+import Logo from "@/components/ui/logo";
+import { Menu } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,7 +11,7 @@ interface AppLayoutProps {
 
 function AppLayoutInner({ children }: AppLayoutProps) {
   const { user, isLoading } = useAuth();
-  const { isDesktopCollapsed } = useSidebarContext();
+  const { isDesktopCollapsed, openMobileSidebar } = useSidebarContext();
 
   if (isLoading) {
     return (
@@ -33,10 +35,27 @@ function AppLayoutInner({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50/60 flex flex-col">
       {user && <Sidebar />}
+
+      {/* Mobile-only top header bar — replaces the old floating hamburger */}
+      {user && (
+        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-[45] bg-slate-900 border-b border-slate-700/60 flex items-center px-3 gap-3">
+          <button
+            onClick={openMobileSidebar}
+            className="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex-1 flex justify-center pr-9">
+            <Logo size="sm" />
+          </div>
+        </header>
+      )}
+
       <div
         className={`flex-1 flex flex-col transition-[margin] duration-200 ${
           user ? (isDesktopCollapsed ? "lg:ml-14" : "lg:ml-64") : ""
-        }`}
+        } ${user ? "pt-14 lg:pt-0" : ""}`}
       >
         <main className="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8">{children}</main>
         <Footer />
