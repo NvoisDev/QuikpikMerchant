@@ -312,28 +312,7 @@ export default function Promotions() {
     <PageHeader title="Promotions" description="Manage promotional offers across your products" />
     <div className="px-4 sm:px-6 py-5 max-w-6xl mx-auto">
 
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="hidden sm:inline">More</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => { setFilter("active"); }}>
-                <TrendingUp className="h-4 w-4 mr-2" /> Active only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setFilter("scheduled"); }}>
-                <Clock className="h-4 w-4 mr-2" /> Scheduled only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setFilter("expired"); }}>
-                <AlertCircle className="h-4 w-4 mr-2" /> Expired only
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div className="flex items-center justify-end gap-3 mb-5">
         <Button size="sm" onClick={openCreate} className="bg-green-600 hover:bg-green-700 text-white">
           <Plus className="h-4 w-4 mr-1.5" />
           <span className="hidden sm:inline">Create Promotion</span>
