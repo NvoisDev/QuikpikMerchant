@@ -718,8 +718,8 @@ export default function ProductManagement() {
   };
 
   useEffect(() => {
-    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId
-      ? (user as any).wholesalerId
+    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId
+      ? user.wholesalerId
       : user?.id;
 
     setMobileTopBarActions(
