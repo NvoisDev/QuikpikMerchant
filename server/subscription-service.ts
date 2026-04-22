@@ -229,6 +229,7 @@ export class SubscriptionService {
       const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
         proration_behavior: 'create_prorations', // Create prorations for immediate billing/credit
         billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
+        cancel_at_period_end: false, // Clear any scheduled cancellation so downgrade can proceed
         items: [{
           id: subscription.items.data[0].id,
           price: newPriceId, // Switch to the new (lower) plan's price ID
@@ -260,6 +261,7 @@ export class SubscriptionService {
       await db.update(users).set({
         subscriptionStatus: updatedSubscription.status,
         currentPlan: newPlanId,
+        cancelAtPeriodEnd: false,
         subscriptionPeriodStart: updatedSubscription.current_period_start ? new Date(updatedSubscription.current_period_start * 1000) : null,
         subscriptionPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
         updatedAt: new Date()
