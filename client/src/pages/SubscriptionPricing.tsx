@@ -270,7 +270,7 @@ export default function SubscriptionPricing() {
     return currentSubscription?.currentPlan === planId;
   };
 
-  const isCancellationScheduled = !!currentSubscription?.subscription?.cancel_at_period_end;
+  const isCancellationScheduled = !!currentSubscription?.subscription?.cancelAtPeriodEnd;
   const cancellationEndDate = currentSubscription?.user?.subscriptionPeriodEnd
     ? new Date(currentSubscription.user.subscriptionPeriodEnd)
     : null;
@@ -314,7 +314,7 @@ export default function SubscriptionPricing() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Next Billing Date */}
-            {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancel_at_period_end && (
+            {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancelAtPeriodEnd && (
               <div className="bg-white p-4 rounded-lg border border-blue-100">
                 <div className="text-sm text-blue-600 font-medium mb-1">Next Billing Date</div>
                 <div className="text-lg font-semibold text-gray-900">
@@ -356,7 +356,7 @@ export default function SubscriptionPricing() {
           </div>
 
           {/* Downgrade pending — subscription ends at period end */}
-          {currentSubscription.subscription?.cancel_at_period_end && currentSubscription.user?.subscriptionPeriodEnd && (
+          {currentSubscription.subscription?.cancelAtPeriodEnd && currentSubscription.user?.subscriptionPeriodEnd && (
             <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <div className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0">
