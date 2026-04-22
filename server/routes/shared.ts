@@ -445,6 +445,36 @@ export async function enforceNewPlanLimits(
   return { productsLocked, teamMembersSuspended, groupsArchived, priceListsLocked };
 }
 
+/**
+ * Unlock products (locked → inactive) and price lists (isLocked → false) after an upgrade.
+ * Safe to call on renewals — it's a no-op when nothing is locked.
+ */
+export async function unlockForUpgrade(userId: string): Promise<{ productsUnlocked: number; priceListsUnlocked: number }> {
+  let productsUnlocked = 0;
+  let priceListsUnlocked = 0;
+  try {
+    const lockedProducts = await db.select({ id: products.id }).from(products)
+      .where(and(eq(products.wholesalerId, userId), eq(products.status, 'locked')));
+    if (lockedProducts.length > 0) {
+      await db.update(products).set({ status: 'inactive' })
+        .where(inArray(products.id, lockedProducts.map(p => p.id)));
+      productsUnlocked = lockedProducts.length;
+      console.log(`🔓 Unlocked ${productsUnlocked} products for user ${userId} after upgrade`);
+    }
+  } catch (err) { console.error(`❌ unlockForUpgrade [products] failed for user ${userId}:`, err); }
+  try {
+    const lockedPriceLists = await db.select({ id: priceLists.id }).from(priceLists)
+      .where(and(eq(priceLists.wholesalerId, userId), eq(priceLists.isLocked, true)));
+    if (lockedPriceLists.length > 0) {
+      await db.update(priceLists).set({ isLocked: false })
+        .where(inArray(priceLists.id, lockedPriceLists.map(pl => pl.id)));
+      priceListsUnlocked = lockedPriceLists.length;
+      console.log(`🔓 Unlocked ${priceListsUnlocked} price lists for user ${userId} after upgrade`);
+    }
+  } catch (err) { console.error(`❌ unlockForUpgrade [price lists] failed for user ${userId}:`, err); }
+  return { productsUnlocked, priceListsUnlocked };
+}
+
 export async function getProjectedDowngradeImpact(
   userId: string, targetTier: string
 ): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number; groupsToArchive: number; priceListsToLock: number }> {

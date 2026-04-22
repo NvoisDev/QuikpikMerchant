@@ -5,8 +5,8 @@ import {
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, sendEmail, sendSMS, sgMail,
-  sql, stockMovements, storage, stripe, subscriptionPlans, sum, userSubscriptions, users,
-  wrapCustomerEmail, z
+  sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
+  users, wrapCustomerEmail, z
 } from "./shared";
 
 export function registerPaymentRoutes(app: Express): void {
@@ -368,6 +368,10 @@ export function registerPaymentRoutes(app: Express): void {
             subscriptionPeriodEnd: subscriptionEndsAt,
             subscriptionPeriodStart: periodStart,
           });
+
+          if (tier === 'standard' || tier === 'premium') {
+            await unlockForUpgrade(userId);
+          }
           
           console.log(`✅ ${subscriptionType || 'New'} subscription processed: ${userId} to ${tier}`);
           
@@ -408,6 +412,10 @@ export function registerPaymentRoutes(app: Express): void {
             productLimit: productLimit,
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });
+
+          if (tier === 'standard' || tier === 'premium') {
+            await unlockForUpgrade(userId);
+          }
           
           console.log(`✅ Payment upgrade complete: ${userId} to ${tier}`);
           
@@ -604,6 +612,10 @@ export function registerPaymentRoutes(app: Express): void {
           subscriptionPeriodStart: subPeriodStart,
         });
 
+        if (subPlan.planId === 'standard' || subPlan.planId === 'premium') {
+          await unlockForUpgrade(subUser.id);
+        }
+
         // Propagate Stripe's cancel_at_period_end so update events don't desync cancellation state
         const subCancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
 
@@ -696,6 +708,10 @@ export function registerPaymentRoutes(app: Express): void {
           stripeSubscriptionId: invSub.id,
           subscriptionEndsAt: invPeriodEnd,
         });
+
+        if (invPlan.planId === 'standard' || invPlan.planId === 'premium') {
+          await unlockForUpgrade(invUser.id);
+        }
 
         const [existingInvSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, invUser.id));
         if (existingInvSubRow) {
@@ -1186,6 +1202,8 @@ export function registerPaymentRoutes(app: Express): void {
             productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 5 : 2),
             subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
+
+          await unlockForUpgrade(userId);
           
           return res.json({ 
             success: true, 
