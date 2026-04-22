@@ -72,6 +72,7 @@ import {
 import { db } from "../db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../passwordUtils";
+import { formatPhoneToInternational } from "../../shared/phone-utils";
 import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 
 import { BroadcastStorage } from './broadcasts';
@@ -365,13 +366,17 @@ export class CustomerMgmtStorage extends BroadcastStorage {
   }
 
   async getCustomerRegistrationRequest(wholesalerId: string, customerPhone: string) {
+    const normalised = formatPhoneToInternational(customerPhone);
     const [request] = await db
       .select()
       .from(customerRegistrationRequests)
       .where(
         and(
           eq(customerRegistrationRequests.wholesalerId, wholesalerId),
-          eq(customerRegistrationRequests.customerPhone, customerPhone),
+          or(
+            eq(customerRegistrationRequests.customerPhone, normalised),
+            eq(customerRegistrationRequests.customerPhone, customerPhone)
+          ),
           eq(customerRegistrationRequests.status, 'pending')
         )
       )
@@ -381,13 +386,17 @@ export class CustomerMgmtStorage extends BroadcastStorage {
 
   // Allow customers to request access again after rejection
   async getLatestRegistrationRequest(wholesalerId: string, customerPhone: string) {
+    const normalised = formatPhoneToInternational(customerPhone);
     const [request] = await db
       .select()
       .from(customerRegistrationRequests)
       .where(
         and(
           eq(customerRegistrationRequests.wholesalerId, wholesalerId),
-          eq(customerRegistrationRequests.customerPhone, customerPhone)
+          or(
+            eq(customerRegistrationRequests.customerPhone, normalised),
+            eq(customerRegistrationRequests.customerPhone, customerPhone)
+          )
         )
       )
       .orderBy(desc(customerRegistrationRequests.requestedAt))

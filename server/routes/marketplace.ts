@@ -424,7 +424,9 @@ export function registerMarketplaceRoutes(app: Express): void {
   // POST /api/customer/request-wholesaler-access
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {
-      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType } = req.body;
+      const { wholesalerId, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType } = req.body;
+      // Normalise to E.164 immediately so all formats of the same number are treated identically
+      const customerPhone = formatPhoneToInternational(req.body.customerPhone || '');
       
       console.log("🔍 Customer registration request:", { wholesalerId, customerPhone: customerPhone?.slice(-4) + "****", customerName });
       
