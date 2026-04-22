@@ -686,6 +686,12 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   customerPhoneIdx: index("registration_requests_customer_phone_idx").on(table.customerPhone),
   statusIdx: index("registration_requests_status_idx").on(table.status),
   requestedAtIdx: index("registration_requests_requested_at_idx").on(table.requestedAt),
+  // Task #320: DB-level uniqueness guard — enforced via startup migration (functional partial unique
+  // index not expressible in Drizzle's schema API):
+  //   CREATE UNIQUE INDEX IF NOT EXISTS uniq_pending_reg_per_wholesaler_phone
+  //   ON customer_registration_requests
+  //     (wholesaler_id, RIGHT(regexp_replace(customer_phone, '\D', '', 'g'), 10))
+  //   WHERE status = 'pending'
 }));
 
 // Cancellation refund types — stored in the DB and used to derive email status

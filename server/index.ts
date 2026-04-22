@@ -80,6 +80,12 @@ async function runStartupMigrations() {
     // Uses regexp_replace to strip non-digits before comparing last 10 digits, ensuring spaces/dashes
     // in stored numbers don't cause mismatches. id DESC breaks ties when requested_at is identical.
     `DELETE FROM customer_registration_requests WHERE status = 'pending' AND id NOT IN (SELECT DISTINCT ON (wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10)) id FROM customer_registration_requests WHERE status = 'pending' ORDER BY wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10), requested_at DESC, id DESC)`,
+    // Task #320: Enforce uniqueness at the DB level so a bug or bypassed normalisation can never
+    // re-introduce duplicate pending requests. This is a partial unique index (WHERE status='pending')
+    // on the last-10-digits of the normalised phone + wholesaler_id pair.  The Task #319 DELETE above
+    // runs first so by the time we reach this statement there are no pre-existing duplicates that
+    // would cause the CREATE to fail.  IF NOT EXISTS makes it idempotent on every restart.
+    `CREATE UNIQUE INDEX IF NOT EXISTS uniq_pending_reg_per_wholesaler_phone ON customer_registration_requests (wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10)) WHERE status = 'pending'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

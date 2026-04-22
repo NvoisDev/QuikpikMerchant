@@ -373,11 +373,24 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     productsInterested?: string | null;
     orderFrequency?: string | null;
   }) {
-    const [newRequest] = await db
-      .insert(customerRegistrationRequests)
-      .values(request)
-      .returning();
-    return newRequest;
+    try {
+      const [newRequest] = await db
+        .insert(customerRegistrationRequests)
+        .values(request)
+        .returning();
+      return newRequest;
+    } catch (err: any) {
+      // PostgreSQL unique-constraint violation (code 23505) from the partial unique index
+      // uniq_pending_reg_per_wholesaler_phone — a pending request for this phone + wholesaler
+      // already exists.  Throw a friendly error so callers can surface a clear message.
+      if (err?.code === '23505' && err?.constraint === 'uniq_pending_reg_per_wholesaler_phone') {
+        throw Object.assign(
+          new Error(`A pending registration request already exists for phone ${request.customerPhone} with this wholesaler.`),
+          { code: 'DUPLICATE_REGISTRATION' }
+        );
+      }
+      throw err;
+    }
   }
 
   // Build all format variants for a phone number so we match both E.164 (+447…)

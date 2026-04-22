@@ -495,8 +495,11 @@ export function registerMarketplaceRoutes(app: Express): void {
         requestId: request.id,
         message: "Your access request has been sent to the wholesaler. You'll be notified once they approve your request."
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error creating registration request:", error);
+      if (error?.code === 'DUPLICATE_REGISTRATION') {
+        return res.status(400).json({ error: `There is already a pending request with the number ${req.body?.customerPhone}. Please wait for the wholesaler to review it.` });
+      }
       res.status(500).json({ error: "Failed to submit registration request" });
     }
   });
