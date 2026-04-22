@@ -222,6 +222,12 @@ export default function CustomerPortal() {
   });
   const [isGuestMode, setIsGuestMode] = useState(true);
   const [openRequestAccessOnAuth, setOpenRequestAccessOnAuth] = useState(false);
+  const [showRequestAccessDialog, setShowRequestAccessDialog] = useState(false);
+  const [requestAccessTarget, setRequestAccessTarget] = useState<{id: string; businessName: string} | null>(null);
+  const [requestAccessMessage, setRequestAccessMessage] = useState("");
+  const [requestAccessName, setRequestAccessName] = useState("");
+  const [requestAccessPhone, setRequestAccessPhone] = useState("");
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   const hasCustomerSession = isAuthenticated && !!authenticatedCustomer;
   const isTrueGuestMode = isGuestMode && !hasCustomerSession && !isEnhancedPreviewMode;
   const shouldFetchGuestSafeProducts = !hasCustomerSession && !isEnhancedPreviewMode;
@@ -286,33 +292,46 @@ export default function CustomerPortal() {
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
-  // Request access handler for new wholesalers
-  const handleRequestAccess = async (wholesaler: any) => {
+  // Request access handler for new wholesalers — opens message prompt dialog
+  const handleRequestAccess = (wholesaler: any) => {
     if (!authenticatedCustomer?.phone) return;
-    
+    setRequestAccessTarget({ id: wholesaler.id, businessName: wholesaler.businessName });
+    setRequestAccessMessage("");
+    setShowRequestAccessDialog(true);
+  };
+
+  // Submit the access request (used by both flows)
+  const handleSubmitRequestAccess = async () => {
+    if (!requestAccessTarget) return;
+    const customerPhone = isTrueGuestMode ? requestAccessPhone.trim() : authenticatedCustomer?.phone;
+    const customerName = isTrueGuestMode ? requestAccessName.trim() : authenticatedCustomer?.name;
+    if (!customerPhone || !customerName) return;
+
+    setIsSubmittingRequest(true);
     try {
       const response = await fetch('/api/customer/request-wholesaler-access', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          wholesalerId: wholesaler.id,
-          customerPhone: authenticatedCustomer.phone,
-          customerName: authenticatedCustomer.name,
-          customerEmail: authenticatedCustomer.email,
-          requestMessage: `I would like to access your wholesale products. Customer: ${authenticatedCustomer.name}`
+          wholesalerId: requestAccessTarget.id,
+          customerPhone,
+          customerName,
+          customerEmail: authenticatedCustomer?.email || null,
+          requestMessage: requestAccessMessage.trim() || null,
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
+        setShowRequestAccessDialog(false);
+        setRequestAccessMessage("");
+        setRequestAccessName("");
+        setRequestAccessPhone("");
         toast({
-          title: "Request Sent Successfully",
-          description: `Your access request has been sent to ${wholesaler.businessName}. You'll be notified once they approve your request.`,
-          variant: "default"
+          title: "Request Sent",
+          description: `Your request has been sent to ${requestAccessTarget.businessName}. You'll be notified once they respond.`,
         });
       } else {
         toast({
@@ -323,13 +342,15 @@ export default function CustomerPortal() {
       }
     } catch (error) {
       toast({
-        title: "Request Failed", 
-        description: "Network error - please try again",
+        title: "Request Failed",
+        description: "Something went wrong. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmittingRequest(false);
     }
   };
-  
+
   // Fetch available wholesalers for search - registration-aware for authenticated customers
   const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
     queryKey: [
@@ -1540,10 +1561,14 @@ export default function CustomerPortal() {
   };
 
   const openCustomerRequestAccess = () => {
-    clearGuestParam();
-    setOpenRequestAccessOnAuth(true);
-    setIsGuestMode(false);
-    setShowAuth(true);
+    setRequestAccessTarget({
+      id: wholesalerId || '',
+      businessName: wholesaler?.businessName || 'this wholesaler'
+    });
+    setRequestAccessMessage("");
+    setRequestAccessName("");
+    setRequestAccessPhone("");
+    setShowRequestAccessDialog(true);
   };
 
   // Authentication state management using server sessions
@@ -2460,6 +2485,96 @@ export default function CustomerPortal() {
             }}
           />
         )}
+
+        {/* Request Access Dialog — shared by Explore and guest-banner flows */}
+        <Dialog
+          open={showRequestAccessDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowRequestAccessDialog(false);
+              setRequestAccessMessage("");
+              setRequestAccessName("");
+              setRequestAccessPhone("");
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Request Access</DialogTitle>
+              <DialogDescription>
+                Send a request to <strong>{requestAccessTarget?.businessName}</strong> to access their wholesale catalogue. They'll be notified and can approve or decline.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {isTrueGuestMode && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="req-name">Your name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="req-name"
+                      placeholder="Full name or business name"
+                      value={requestAccessName}
+                      onChange={(e) => setRequestAccessName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="req-phone">Phone number <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="req-phone"
+                      type="tel"
+                      placeholder="+44 7700 900000"
+                      value={requestAccessPhone}
+                      onChange={(e) => setRequestAccessPhone(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="req-message">
+                  Message{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="req-message"
+                  placeholder="Introduce yourself or let them know what you're looking for…"
+                  value={requestAccessMessage}
+                  onChange={(e) => setRequestAccessMessage(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-1">
+              <Button
+                variant="outline"
+                onClick={() => setShowRequestAccessDialog(false)}
+                disabled={isSubmittingRequest}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitRequestAccess}
+                disabled={
+                  isSubmittingRequest ||
+                  (isTrueGuestMode &&
+                    (!requestAccessName.trim() || !requestAccessPhone.trim()))
+                }
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSubmittingRequest ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  "Send Request"
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
         {hasCustomerSession && !isTrueGuestMode && cart.length > 0 && (
