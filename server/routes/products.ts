@@ -82,19 +82,6 @@ export function registerProductRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      // Check product limit before creating
-      const limitCheck = await storage.checkProductLimit(targetUserId);
-      if (!limitCheck.canAdd) {
-        // Subscription logging removed
-        
-        return res.status(403).json({ 
-          message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan.`,
-          currentCount: limitCheck.currentCount,
-          limit: limitCheck.limit,
-          tier: limitCheck.tier
-        });
-      }
-
       const wholesalerUser = await storage.getUser(targetUserId);
       const defaultThreshold = wholesalerUser?.defaultLowStockThreshold ?? 50;
 

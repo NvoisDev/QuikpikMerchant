@@ -3,6 +3,7 @@ import SubscriptionService from '../subscription-service';
 import { db } from '../db';
 import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
+import { PLAN_LIMITS, getPlanLimits } from '../config/plan-limits';
 
 // Extend Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -284,15 +285,15 @@ async function getCurrentPriceListCount(userId: string): Promise<number> {
 }
 
 /**
- * Get default limits for free plan
+ * Get default limits for free plan — derived from canonical PLAN_LIMITS.
  */
 function getDefaultLimits() {
   return {
-    products: 2,
-    broadcasts: 5,
-    teamMembers: 0, // Free plan: 0 invited members (owner only, not in teamMembers table)
-    customGroups: 2,
-    priceLists: 2,
+    products: PLAN_LIMITS.free.products,
+    broadcasts: PLAN_LIMITS.free.broadcasts,
+    teamMembers: PLAN_LIMITS.free.teamMembers,
+    customGroups: PLAN_LIMITS.free.groups,
+    priceLists: PLAN_LIMITS.free.priceLists,
   };
 }
 
@@ -318,31 +319,16 @@ export async function getUserPlanLimits(userId: string) {
     
     console.log(`🔍 getUserPlanLimits for user ${userId}: tier=${userTier}, plan=${JSON.stringify(plan?.limits)}`);
     
-    if (userTier === 'premium') {
-      // Premium users get unlimited everything
-      limits = {
-        products: -1,
-        broadcasts: -1, 
-        teamMembers: -1,
-        customGroups: -1,
-        priceLists: -1,
-      };
-      console.log('✅ Premium user detected - applying unlimited limits');
-    } else if (userTier === 'standard') {
-      // Standard users get higher limits
-      limits = {
-        products: 5,
-        broadcasts: 25,
-        teamMembers: 3,
-        customGroups: 5,
-        priceLists: 5,
-      };
-      console.log('📊 Standard user detected - applying standard limits');
-    } else {
-      // Free users get basic limits
-      limits = getDefaultLimits();
-      console.log('🆓 Free user detected - applying free limits');
-    }
+    // Derive limits from the canonical PLAN_LIMITS (server/config/plan-limits.ts)
+    const planLimits = getPlanLimits(userTier);
+    limits = {
+      products: planLimits.products,
+      broadcasts: planLimits.broadcasts,
+      teamMembers: planLimits.teamMembers,
+      customGroups: planLimits.groups,
+      priceLists: planLimits.priceLists,
+    };
+    console.log(`📊 ${userTier} user detected - applying limits from PLAN_LIMITS`);
     
     // Get current usage counts
     const [productCount, broadcastCount, teamMemberCount, priceListCount] = await Promise.all([

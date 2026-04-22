@@ -68,6 +68,7 @@ import {
   eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull, like,
 } from "drizzle-orm";
 import { getEmailDeliveryAddress } from "../utils/address-helper";
+import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export {
@@ -379,11 +380,9 @@ export const requireNotViewer = async (req: any, res: any, next: any) => {
 };
 
 // ─── Plan enforcement ─────────────────────────────────────────────────────────
-export const PLAN_ENFORCEMENT_LIMITS: Record<string, { products: number; invitedMembersAllowed: number; groups: number; priceLists: number }> = {
-  free:     { products: 2, invitedMembersAllowed: 0,  groups: 2,  priceLists: 2  },
-  standard: { products: 5, invitedMembersAllowed: 3,  groups: 5,  priceLists: 5  },
-  premium:  { products: -1, invitedMembersAllowed: -1, groups: -1, priceLists: -1 },
-};
+// PLAN_ENFORCEMENT_LIMITS is an alias for PLAN_LIMITS (single source of truth in server/config/plan-limits.ts).
+// `teamMembers` replaces the old `invitedMembersAllowed` field name.
+export const PLAN_ENFORCEMENT_LIMITS = PLAN_LIMITS;
 
 export async function enforceNewPlanLimits(
   userId: string, targetTier: string
@@ -403,12 +402,12 @@ export async function enforceNewPlanLimits(
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [products] failed for user ${userId}:`, err); }
   }
-  if (limits.invitedMembersAllowed !== -1) {
+  if (limits.teamMembers !== -1) {
     try {
       const activeMembers = await db.select({ id: teamMembers.id }).from(teamMembers)
         .where(and(eq(teamMembers.wholesalerId, userId), eq(teamMembers.status, 'active')))
         .orderBy(asc(teamMembers.createdAt));
-      const membersToSuspend = activeMembers.slice(limits.invitedMembersAllowed);
+      const membersToSuspend = activeMembers.slice(limits.teamMembers);
       if (membersToSuspend.length > 0) {
         await db.update(teamMembers).set({ status: 'suspended' }).where(inArray(teamMembers.id, membersToSuspend.map(m => m.id)));
         teamMembersSuspended = membersToSuspend.length;
@@ -489,7 +488,7 @@ export async function getProjectedDowngradeImpact(
     return {
       productsToLock: limits.products === -1 ? 0 : Math.max(0, nonLockedProductRows.length - limits.products),
       totalProducts: nonLockedProductRows.length,
-      teamMembersToSuspend: limits.invitedMembersAllowed === -1 ? 0 : Math.max(0, activeMemberRows.length - limits.invitedMembersAllowed),
+      teamMembersToSuspend: limits.teamMembers === -1 ? 0 : Math.max(0, activeMemberRows.length - limits.teamMembers),
       groupsToArchive: limits.groups === -1 ? 0 : Math.max(0, activeGroupRows.length - limits.groups),
       priceListsToLock: limits.priceLists === -1 ? 0 : Math.max(0, unlockedPriceListRows.length - limits.priceLists),
     };
@@ -814,20 +813,13 @@ export function generateOrderNotificationMessage(order: any, customer: any, item
 }
 
 // ─── Tier limit helpers ───────────────────────────────────────────────────────
-export function getProductLimit(tier: string): number {
-  switch (tier) { case 'free': return 10; case 'standard': return 50; case 'premium': return -1; default: return 10; }
-}
+// These delegate to the canonical PLAN_LIMITS in server/config/plan-limits.ts.
+// getProductLimit and getTeamMemberLimit were dead code and have been removed.
 export function getCustomerGroupLimit(tier: string): number {
-  switch (tier) { case 'free': return 2; case 'standard': return 5; case 'premium': return -1; default: return 2; }
+  return getPlanLimits(tier).groups;
 }
 export function getBroadcastLimit(tier: string): number {
-  switch (tier) { case 'free': return 5; case 'standard': return 25; case 'premium': return -1; default: return 5; }
-}
-export function getCustomersPerGroupLimit(tier: string): number {
-  switch (tier) { case 'free': return 10; case 'standard': return 50; case 'premium': return -1; default: return 10; }
-}
-export function getTeamMemberLimit(tier: string): number {
-  switch (tier) { case 'free': return 0; case 'standard': return 3; case 'premium': return -1; default: return 0; }
+  return getPlanLimits(tier).broadcasts;
 }
 
 export function isInvitationExpired(invitedAt: Date | string | null | undefined): boolean {
