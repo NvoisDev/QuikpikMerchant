@@ -744,7 +744,7 @@ export default function ProductManagement() {
       </div>
     );
     return () => setMobileTopBarActions(null);
-  }, [user, isViewer, planLimitsLoading, planLimits]);
+  }, [user, isViewer, planLimitsLoading, planLimits, setMobileTopBarActions]);
 
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
@@ -1391,14 +1391,14 @@ export default function ProductManagement() {
                 </Button>
                 
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                  <Download className="mr-1 h-4 w-4" />
+                  <Download className="h-4 w-4 sm:mr-1" />
                   <span className="hidden sm:inline">CSV Template</span>
                 </Button>
                 
                 <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Upload className="mr-1 h-4 w-4" />
+                      <Upload className="h-4 w-4 sm:mr-1" />
                       <span className="hidden sm:inline">Bulk Upload</span>
                     </Button>
                   </DialogTrigger>
