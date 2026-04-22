@@ -566,6 +566,12 @@ export default function CustomerDetail() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {customer?.phoneNumber && (
+              <DropdownMenuItem onClick={() => window.open(`https://wa.me/${customer.phoneNumber.replace(/[^0-9]/g, '')}`, '_blank')}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                WhatsApp
+              </DropdownMenuItem>
+            )}
+            {customer?.phoneNumber && (
               <DropdownMenuItem onClick={() => window.open(`tel:${customer.phoneNumber}`)}>
                 <Phone className="h-4 w-4 mr-2" />
                 Call
