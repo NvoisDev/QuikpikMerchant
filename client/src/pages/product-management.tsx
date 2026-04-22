@@ -39,6 +39,7 @@ import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whi
 import PageHeader from "@/components/PageHeader";
 import { FloatingHelp } from "@/components/ui/floating-help";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
+import { useSidebarContext } from "@/contexts/sidebar-context";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -129,6 +130,7 @@ export default function ProductManagement() {
   const { user } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [, navigate] = useLocation();
+  const { setMobileTopBarActions } = useSidebarContext();
   
   // SECURITY FIX: Removed hardcoded mock user to prevent data isolation bugs
   // Users must be properly authenticated to access any data
@@ -686,6 +688,63 @@ export default function ProductManagement() {
     queryKey: ['/api/subscriptions/plan-limits'],
     staleTime: 5 * 60 * 1000,
   });
+
+  const handleAddProductClick = () => {
+    const limit = planLimits?.limits?.products;
+    const usage = planLimits?.usage?.products ?? 0;
+    if (limit !== undefined && limit !== -1 && usage >= limit) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setEditingProduct(null);
+    form.reset({
+      name: "",
+      description: "",
+      price: "",
+      currency: "GBP",
+      moq: "1",
+      stock: "0",
+      category: "",
+      imageUrl: "",
+      priceVisible: true,
+      negotiationEnabled: false,
+      minimumBidPrice: "",
+      status: "active",
+      unit: "units",
+      unitsPerPallet: "",
+      promotionalOffers: [],
+    });
+    setIsDialogOpen(true);
+  };
+
+  useEffect(() => {
+    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId
+      ? (user as any).wholesalerId
+      : user?.id;
+
+    setMobileTopBarActions(
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => window.open(`/preview-store/${effectiveUserId}`, '_blank')}
+          className="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          title="Preview Store"
+        >
+          <Package className="h-5 w-5" />
+        </button>
+        {!isViewer && (
+          <button
+            onClick={handleAddProductClick}
+            disabled={planLimitsLoading}
+            className="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+            title="Add Product"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+    );
+    return () => setMobileTopBarActions(null);
+  }, [user, isViewer, planLimitsLoading, planLimits]);
 
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
@@ -1321,7 +1380,7 @@ export default function ProductManagement() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-green-700 border-green-200 hover:bg-green-50"
+                  className="hidden sm:flex text-green-700 border-green-200 hover:bg-green-50"
                   onClick={() => {
                     const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
                     window.open(`/preview-store/${effectiveUserId}`, '_blank');
@@ -1333,14 +1392,14 @@ export default function ProductManagement() {
                 
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>
                   <Download className="mr-1 h-4 w-4" />
-                  CSV Template
+                  <span className="hidden sm:inline">CSV Template</span>
                 </Button>
                 
                 <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Upload className="mr-1 h-4 w-4" />
-                      Bulk Upload
+                      <span className="hidden sm:inline">Bulk Upload</span>
                     </Button>
                   </DialogTrigger>
 
@@ -1465,7 +1524,7 @@ export default function ProductManagement() {
               </div>
               
               {!isViewer && (
-              <div className="flex items-center space-x-2">
+              <div className="hidden sm:flex items-center space-x-2">
                 <ContextualHelpBubble
                   topic="Products"
                   title="Managing Your Products"
@@ -1476,34 +1535,8 @@ export default function ProductManagement() {
                 variant="outline"
                 className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
                 disabled={planLimitsLoading}
-                onClick={() => {
-                const limit = planLimits?.limits?.products;
-                const usage = planLimits?.usage?.products ?? 0;
-                if (limit !== undefined && limit !== -1 && usage >= limit) {
-                  setShowUpgradeModal(true);
-                  return;
-                }
-                setEditingProduct(null);
-                form.reset({
-                  name: "",
-                  description: "",
-                  price: "",
-                  currency: "GBP",
-                  moq: "1",
-                  stock: "0",
-                  category: "",
-                  imageUrl: "",
-                  priceVisible: true,
-                  negotiationEnabled: false,
-                  minimumBidPrice: "",
-                  status: "active",
-                  unit: "units",
-                  unitsPerPallet: "",
-                  promotionalOffers: [],
-                });
-                setIsDialogOpen(true);
-              }}
-              data-onboarding="add-product-button">
+                onClick={handleAddProductClick}
+                data-onboarding="add-product-button">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>

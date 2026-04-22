@@ -37,7 +37,7 @@ interface AppLayoutProps {
 
 function AppLayoutInner({ children }: AppLayoutProps) {
   const { user, isLoading } = useAuth();
-  const { isDesktopCollapsed, openMobileSidebar } = useSidebarContext();
+  const { isDesktopCollapsed, openMobileSidebar, mobileTopBarActions } = useSidebarContext();
   const pageName = usePageName();
 
   if (isLoading) {
@@ -76,6 +76,7 @@ function AppLayoutInner({ children }: AppLayoutProps) {
           <span className="flex-1 text-white font-semibold text-base truncate">
             {pageName}
           </span>
+          {mobileTopBarActions}
           <ShareBellControls variant="dark" />
           <Logo size="sm" />
         </header>

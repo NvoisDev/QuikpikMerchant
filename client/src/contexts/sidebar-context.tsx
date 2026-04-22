@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface SidebarContextValue {
   isDesktopCollapsed: boolean;
@@ -6,6 +6,8 @@ interface SidebarContextValue {
   isMobileOpen: boolean;
   openMobileSidebar: () => void;
   closeMobileSidebar: () => void;
+  mobileTopBarActions: ReactNode;
+  setMobileTopBarActions: (actions: ReactNode) => void;
 }
 
 const SidebarContext = createContext<SidebarContextValue>({
@@ -14,9 +16,11 @@ const SidebarContext = createContext<SidebarContextValue>({
   isMobileOpen: false,
   openMobileSidebar: () => {},
   closeMobileSidebar: () => {},
+  mobileTopBarActions: null,
+  setMobileTopBarActions: () => {},
 });
 
-export function SidebarProvider({ children }: { children: React.ReactNode }) {
+export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sidebar-collapsed") === "true";
@@ -26,6 +30,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [mobileTopBarActions, setMobileTopBarActions] = useState<ReactNode>(null);
 
   const toggleDesktopCollapsed = () => {
     setIsDesktopCollapsed((prev) => {
@@ -44,6 +49,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       isMobileOpen,
       openMobileSidebar: () => setIsMobileOpen(true),
       closeMobileSidebar: () => setIsMobileOpen(false),
+      mobileTopBarActions,
+      setMobileTopBarActions,
     }}>
       {children}
     </SidebarContext.Provider>
