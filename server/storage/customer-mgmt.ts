@@ -90,7 +90,10 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     
     // Step 1: Get all active customers for this wholesaler in one query
     const customerRelationships = await db
-      .select({ user: users })
+      .select({
+        user: users,
+        displayName: wholesalerCustomerRelationships.displayName,
+      })
       .from(wholesalerCustomerRelationships)
       .innerJoin(users, eq(wholesalerCustomerRelationships.customerId, users.id))
       .where(and(
@@ -144,8 +147,20 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     return customerRelationships.map(row => {
       const stats = statsMap.get(row.user.id);
       const groups = groupMap.get(row.user.id) || [];
+
+      // Prefer the per-wholesaler displayName over the shared global name
+      let firstName = row.user.firstName;
+      let lastName = row.user.lastName;
+      if (row.displayName) {
+        const parts = row.displayName.trim().split(/\s+/);
+        firstName = parts[0] || firstName;
+        lastName = parts.slice(1).join(' ') || null;
+      }
+
       return {
         ...row.user,
+        firstName,
+        lastName,
         groupNames: groups.map(g => g.groupName),
         totalOrders: Number(stats?.totalOrders ?? 0),
         totalSpent: Number(stats?.totalSpent ?? 0),

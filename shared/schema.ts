@@ -297,6 +297,7 @@ export const wholesalerCustomerRelationships = pgTable("wholesaler_customer_rela
   customPricing: boolean("custom_pricing").default(false), // Whether this customer has custom pricing
   paymentTerms: varchar("payment_terms").default("immediate"), // Payment terms for this relationship
   creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }), // Credit limit if applicable
+  displayName: varchar("display_name"), // Per-wholesaler name override — shown instead of users.firstName/lastName for this wholesaler
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

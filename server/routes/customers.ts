@@ -283,18 +283,50 @@ export function registerCustomerRoutes(app: Express): void {
       // Create or find customer with formatted phone number
       let customer = await storage.getUserByPhone(formattedPhoneNumber);
       let isNewCustomer = false;
+      const { firstName: parsedFirst, lastName: parsedLast } = parseCustomerName(name);
+      const displayNameValue = name.trim() || null;
       
       if (!customer) {
         // Create a new customer/retailer account
-        const { firstName, lastName } = parseCustomerName(name);
         customer = await storage.createCustomer({
           phoneNumber: formattedPhoneNumber,
-          firstName,
-          lastName,
+          firstName: parsedFirst,
+          lastName: parsedLast,
           role: "retailer",
           wholesalerId: targetUserId, // Link customer to their wholesaler
         });
         isNewCustomer = true;
+        // Create WCR for this wholesaler with the per-wholesaler name
+        await db.insert(wholesalerCustomerRelationships).values({
+          customerId: customer.id,
+          wholesalerId: targetUserId,
+          status: 'active',
+          displayName: displayNameValue,
+        });
+      } else {
+        // Existing customer — ensure this wholesaler's WCR row exists with their chosen name
+        const existingWcr = await db.select()
+          .from(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, customer.id),
+            eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+          ))
+          .limit(1);
+        if (existingWcr.length === 0) {
+          await db.insert(wholesalerCustomerRelationships).values({
+            customerId: customer.id,
+            wholesalerId: targetUserId,
+            status: 'active',
+            displayName: displayNameValue,
+          });
+        } else {
+          await db.update(wholesalerCustomerRelationships)
+            .set({ displayName: displayNameValue, status: 'active' })
+            .where(and(
+              eq(wholesalerCustomerRelationships.customerId, customer.id),
+              eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+            ));
+        }
       }
 
       // Add customer to the group
@@ -564,9 +596,19 @@ export function registerCustomerRoutes(app: Express): void {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Update customer information with new fields
+      // Write the name to the per-wholesaler relationship so this wholesaler's view
+      // is updated without overwriting another wholesaler's label for the same customer.
+      const displayNameValue = `${firstName} ${lastName || ''}`.trim() || null;
+      await db.update(wholesalerCustomerRelationships)
+        .set({ displayName: displayNameValue })
+        .where(and(
+          eq(wholesalerCustomerRelationships.customerId, customerId),
+          eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+        ));
+
+      // Non-name fields (phone, email, businessName) are shared identity — update globally
       await storage.updateCustomerInfoDetailed(customerId, {
-        firstName,
+        firstName,   // kept for signature compatibility; not shown to this wholesaler's customers
         lastName,
         phoneNumber,
         email,
@@ -678,16 +720,27 @@ export function registerCustomerRoutes(app: Express): void {
           ))
           .limit(1);
           
+        // Per-wholesaler display name so each wholesaler sees the name they entered
+        const displayNameValue = `${firstName} ${lastName || ''}`.trim() || null;
+
         if (existingRelationship.length === 0) {
-          // Create new relationship
+          // Create new relationship with the name this wholesaler knows the customer by
           await db.insert(wholesalerCustomerRelationships).values({
             customerId: customer.id,
             wholesalerId: targetUserId,
             status: 'active',
+            displayName: displayNameValue,
           });
           console.log('✅ Created new wholesaler-customer relationship for existing customer');
         } else {
-          console.log('✅ Wholesaler-customer relationship already exists');
+          // Update displayName in case the wholesaler is re-adding with a different name
+          await db.update(wholesalerCustomerRelationships)
+            .set({ displayName: displayNameValue, status: 'active' })
+            .where(and(
+              eq(wholesalerCustomerRelationships.customerId, customer.id),
+              eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+            ));
+          console.log('✅ Updated wholesaler-customer relationship displayName');
         }
       } else {
         // Check for existing customer with same email and 'customer' role
@@ -987,13 +1040,36 @@ export function registerCustomerRoutes(app: Express): void {
   // PATCH /api/customers/:id
   app.patch('/api/customers/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
       const customerId = req.params.id;
-      const updates = req.body;
+      const { firstName, lastName, ...nonNameUpdates } = req.body;
       
-      console.log('Updating customer:', customerId, 'with updates:', updates);
-      const updatedCustomer = await storage.updateCustomer(customerId, updates);
+      console.log('Updating customer:', customerId, 'with updates:', req.body);
+
+      // Write name to the per-wholesaler relationship so each wholesaler's
+      // label is independent and doesn't overwrite another wholesaler's view.
+      if (firstName !== undefined || lastName !== undefined) {
+        const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
+        await db.update(wholesalerCustomerRelationships)
+          .set({ displayName: displayNameValue })
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, customerId),
+            eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+          ));
+      }
+
+      // Write remaining (non-name) fields to the shared user record
+      const updatedCustomer = await storage.updateCustomer(customerId, nonNameUpdates);
       console.log('Customer updated successfully:', updatedCustomer);
-      res.json(updatedCustomer);
+
+      // Merge the name back into the response so the caller sees the correct values
+      res.json({
+        ...updatedCustomer,
+        ...(firstName !== undefined ? { firstName } : {}),
+        ...(lastName !== undefined ? { lastName } : {}),
+      });
     } catch (error) {
       console.error('Error updating customer:', error);
       res.status(500).json({ error: 'Failed to update customer' });
