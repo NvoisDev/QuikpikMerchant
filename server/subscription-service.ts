@@ -182,10 +182,14 @@ export class SubscriptionService {
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
-      // Update subscription with immediate proration
+      // Update subscription with immediate proration.
+      // cancel_at_period_end is explicitly cleared so that upgrading re-commits the
+      // customer to the subscription — a pending cancellation should not survive a
+      // plan upgrade.
       const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
         proration_behavior: 'create_prorations', // Create prorations for immediate billing
         billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
+        cancel_at_period_end: false, // Clear any scheduled cancellation on upgrade
         items: [{
           id: subscription.items.data[0].id,
           price: newPriceId,

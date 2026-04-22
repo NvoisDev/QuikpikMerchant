@@ -108,6 +108,17 @@ export default function SubscriptionPricing() {
     onSuccess: (data) => {
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.type === 'upgrade' && data.success) {
+        const planName = data.newPlan
+          ? data.newPlan.charAt(0).toUpperCase() + data.newPlan.slice(1)
+          : 'new';
+        toast({
+          title: "Plan Upgraded!",
+          description: `You're now on the ${planName} plan. Your new features are active immediately.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/plan-limits'] });
+        setProcessingPlanId(null);
       } else {
         setProcessingPlanId(null);
       }

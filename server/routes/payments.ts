@@ -1195,12 +1195,14 @@ export function registerPaymentRoutes(app: Express): void {
             targetPlan.planId
           );
           
-          // Update user's plan immediately for upgrades (instant access)
+          // Update user's plan immediately for upgrades (instant access).
+          // Also clear cancelAtPeriodEnd since upgrading re-commits the customer.
           await storage.updateUser(userId, {
             currentPlan: targetPlan.planId,
             subscriptionStatus: 'active',
             productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 5 : 2),
-            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
+            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000),
+            cancelAtPeriodEnd: false
           });
 
           await unlockForUpgrade(userId);
@@ -1208,6 +1210,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.json({ 
             success: true, 
             type: 'upgrade',
+            newPlan: targetPlan.planId,
             subscription: {
               id: updatedSubscription.id,
               status: updatedSubscription.status,
