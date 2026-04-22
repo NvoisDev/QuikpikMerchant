@@ -35,9 +35,9 @@ export function HelpTab({
       />
       <CustomerHelp wholesaler={wholesaler ? {
         businessName: wholesaler.businessName,
-        phoneNumber: wholesaler.phoneNumber,
-        businessPhone: wholesaler.businessPhone,
-        email: wholesaler.email,
+        phoneNumber: wholesaler.phoneNumber ?? undefined,
+        businessPhone: wholesaler.businessPhone ?? undefined,
+        email: wholesaler.email ?? undefined,
       } : undefined} />
     </>
   );
