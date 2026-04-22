@@ -156,8 +156,9 @@ export default function SubscriptionPricing() {
         description: cancellationMessage,
         duration: 8000,
       });
-      // Refresh subscription data
+      // Refresh subscription data — invalidate both so plan badge AND usage bars update immediately
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/current'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/plan-limits'] });
     },
     onError: (error: any) => {
       console.error('Cancel error:', error);

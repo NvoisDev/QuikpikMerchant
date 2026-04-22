@@ -1392,6 +1392,21 @@ export function registerPaymentRoutes(app: Express): void {
           { cancelAtPeriodEnd: true }
         );
 
+        // CRITICAL: Sync cancel_at_period_end back to the DB immediately so the next
+        // GET /api/subscriptions/current returns fresh data (not a 304 with stale ETag).
+        const cancelPeriodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : null;
+
+        await db.update(userSubscriptions).set({
+          cancelAtPeriodEnd: true,
+          status: 'active', // stays active until period end
+          currentPeriodEnd: cancelPeriodEnd,
+          updatedAt: new Date(),
+        }).where(eq(userSubscriptions.userId, userId));
+
+        console.log(`✅ DB synced: cancelAtPeriodEnd=true for user ${userId}`);
+
         // Compute projected impact for the scheduled email (cancel = at period end, nothing locked yet)
         const cancelProjectedImpact = await getProjectedDowngradeImpact(userId, 'free');
 
