@@ -579,7 +579,7 @@ export class SubscriptionService {
       // Free plan users get basic access
       if (!plan || currentPlan === 'free') {
         const freeLimits = {
-          products: 10,
+          products: 2,
           broadcasts: 5,
           teamMembers: 1,
           customGroups: 2

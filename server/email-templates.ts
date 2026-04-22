@@ -410,7 +410,7 @@ const UPGRADE_URL = 'https://quikpik.app/subscription-pricing';
 const FREE_LIMITS_TABLE = emailTable(
   ['Feature', 'Free Plan Limit'],
   [
-    ['Products', '10 maximum'],
+    ['Products', '2 maximum'],
     ['Broadcast tools', 'Coming soon'],
     ['Team members', '1 only (you)'],
     ['Customer groups', '2 maximum'],
@@ -464,7 +464,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
         ['Customer groups', 'Unlimited'],
       ]
     : [
-        ['Products', '50 maximum'],
+        ['Products', '5 maximum'],
         ['Broadcast tools', 'Coming soon'],
         ['Team members', '3 maximum'],
         ['Customer groups', '5 maximum'],
@@ -480,7 +480,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
   if ((data.productsToLock ?? 0) > 0) {
     const total = data.totalProducts ?? (data.productsToLock ?? 0);
     impactLines.push(
-      '<li style="margin-bottom:6px"><b>' + data.productsToLock + '</b> of your ' + total + ' products will be locked (Free limit: 10)</li>'
+      '<li style="margin-bottom:6px"><b>' + data.productsToLock + '</b> of your ' + total + ' products will be locked (Free limit: 2)</li>'
     );
   }
   if ((data.teamMembersToSuspend ?? 0) > 0) {
