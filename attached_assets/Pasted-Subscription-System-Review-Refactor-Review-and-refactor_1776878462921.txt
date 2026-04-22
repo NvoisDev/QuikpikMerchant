@@ -1,0 +1,109 @@
+Subscription System Review & Refactor
+
+Review and refactor the subscription system to fix inconsistencies, remove legacy logic, and improve how limits are applied, without breaking existing functionality.
+
+⸻
+
+⚠️ Critical Constraints
+
+* Do NOT break existing user access, data, or permissions
+* Do NOT remove active subscriptions or user data
+* Do NOT change billing logic unless clearly identified as unused or broken
+* All changes must be backward compatible or safely migrated
+
+⸻
+
+🎯 Phase 1: Audit (Read-only first)
+
+Analyse the current subscription system and identify:
+
+* All existing limits (products, price lists, etc.)
+* Where limits are enforced (frontend vs backend)
+* Any duplicated, conflicting, or unused logic
+* Legacy or dead subscription-related code
+* Inconsistencies between UI and backend enforcement
+
+📊 Output:
+
+* List all subscription rules currently in place
+* Highlight what is:
+    * Working correctly
+    * Broken or inconsistent
+    * Redundant / unused
+
+🚫 Do NOT delete anything yet
+
+⸻
+
+🧹 Phase 2: Cleanup (Controlled)
+
+Based on the audit, remove only confirmed unused or conflicting subscription logic.
+
+Rules:
+
+* Do NOT remove anything with active dependencies
+* Do NOT remove anything without high confidence
+* If unsure, flag instead of deleting
+
+Output:
+
+* Show exactly what will be removed
+* Confirm no impact before applying
+
+⸻
+
+🔧 Phase 3: Refactor & Standardise
+
+Refactor the subscription system into a clean, centralised structure.
+
+Requirements:
+
+* Centralise all limits in one place (e.g. subscription config)
+* Ensure limits are enforced:
+    * Backend (authoritative)
+    * Frontend (UI feedback)
+* Remove scattered logic across components
+* Ensure consistent behaviour across:
+    * Products
+    * Price lists
+    * Any other limited features
+
+⸻
+
+💡 Phase 4: Improve Subscription UX
+
+Suggest improvements to make the subscription system clearer and more valuable for users.
+
+Focus on:
+
+* Clear visibility of limits (e.g. “2/5 products used”)
+* Upgrade prompts at the right moments
+* Graceful downgrade handling (locking, not deleting)
+* Reducing confusion around what’s included in each tier
+
+Output:
+
+* List of UX improvements
+* Suggested UI changes
+* Suggested messaging
+
+⸻
+
+🧪 Validation
+
+Before finalising:
+
+* Test free vs standard behaviour
+* Test upgrade and downgrade flows
+* Ensure no bypass via API
+* Confirm no data loss
+
+⸻
+
+📦 Final Output
+
+1. Audit summary
+2. Cleanup changes
+3. Refactored structure
+4. UX improvement suggestions
+5. Confirmation no breaking changes
