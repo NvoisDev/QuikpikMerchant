@@ -1196,14 +1196,20 @@ export function registerPaymentRoutes(app: Express): void {
           );
           
           // Update user's plan immediately for upgrades (instant access).
-          // Also clear cancelAtPeriodEnd since upgrading re-commits the customer.
           await storage.updateUser(userId, {
             currentPlan: targetPlan.planId,
             subscriptionStatus: 'active',
             productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 5 : 2),
-            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000),
-            cancelAtPeriodEnd: false
+            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
+
+          // Clear the scheduled cancellation flag on userSubscriptions so that the
+          // "Cancellation Scheduled" badge disappears immediately after upgrade.
+          await db.update(userSubscriptions).set({
+            cancelAtPeriodEnd: false,
+            status: 'active',
+            updatedAt: new Date()
+          }).where(eq(userSubscriptions.userId, userId));
 
           await unlockForUpgrade(userId);
           
