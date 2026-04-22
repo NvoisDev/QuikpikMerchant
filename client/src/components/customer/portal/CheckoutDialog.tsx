@@ -793,20 +793,6 @@ export function CheckoutDialog({
                             selectedDeliveryAddress: customerData.selectedDeliveryAddress
                           },
                           wholesaler: wholesaler,
-                          ...(() => {
-                            const computedSubtotal = cartStats.subtotal;
-                            const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
-                              ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                            const computedBeforeFees = computedSubtotal + computedShipping;
-                            const computedTransactionFee = (computedBeforeFees * 0.055) + 0.50;
-                            const computedTotal = computedBeforeFees + computedTransactionFee;
-                            return {
-                              subtotal: computedSubtotal,
-                              transactionFee: computedTransactionFee,
-                              shippingCost: computedShipping,
-                              totalAmount: computedTotal
-                            };
-                          })()
                         };
                         setCompletedOrder(orderDataWithCart);
 

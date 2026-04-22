@@ -742,10 +742,46 @@ export function registerMarketplaceRoutes(app: Express): void {
       let productSubtotal = 0;
       const validatedItems = [];
 
+      // Cache customer DB ID for price-list resolution (looked up once on first iteration)
+      let customerIdForPriceList: string | null = null;
+      let priceListCustomerResolved = false;
+
       for (const item of items) {
         const product = await storage.getProduct(item.productId);
         if (!product) {
           return res.status(400).json({ message: `Product ${item.productId} not found` });
+        }
+
+        // Resolve customer ID for price list lookup (once, using first product's wholesalerId)
+        if (!priceListCustomerResolved && customerPhone) {
+          priceListCustomerResolved = true;
+          try {
+            const lastFour = customerPhone.replace(/[^0-9]/g, '').slice(-4);
+            const cu = await storage.findCustomerByPhoneAndWholesaler(product.wholesalerId, customerPhone, lastFour);
+            customerIdForPriceList = cu?.id ?? null;
+          } catch {
+            // non-fatal — fall back to catalog pricing
+          }
+        }
+
+        // Resolve price list override for this product
+        let isPriceListOrder = false;
+        let priceListCalculationPrice: number | null = null;
+        if (customerIdForPriceList && item.sellingType !== 'pallets') {
+          try {
+            const override = await resolveCustomerProductPrice({
+              wholesalerId: product.wholesalerId,
+              customerId: customerIdForPriceList,
+              productId: product.id,
+              standardPrice: product.price,
+            });
+            if (override) {
+              priceListCalculationPrice = parseFloat(override.customPrice);
+              isPriceListOrder = true;
+            }
+          } catch {
+            // non-fatal — fall back to catalog pricing
+          }
         }
 
         const basePrice = parseFloat(product.price);
@@ -753,9 +789,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Use the sellingType field sent from frontend instead of guessing from price
         const sellingType = item.sellingType || 'units';
         const isPalletOrder = sellingType === 'pallets';
-        const isUnitOrder = sellingType === 'units' && parseFloat(item.unitPrice) === basePrice;
+        const isUnitOrder = !isPriceListOrder && sellingType === 'units' && parseFloat(item.unitPrice) === basePrice;
         const hasActivePromos = product.promoActive && Array.isArray((product as any).promotionalOffers) && (product as any).promotionalOffers.length > 0;
-        const isPromotionalOrder = sellingType === 'units' && !isUnitOrder && hasActivePromos;
+        const isPromotionalOrder = !isPriceListOrder && sellingType === 'units' && !isUnitOrder && hasActivePromos;
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
           itemQuantity: item.quantity,
@@ -793,7 +829,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           } else {
             console.log(`🧠 SMART PALLET MOQ: Allowing ${item.quantity} pallets of ${product.name} (MOQ: ${product.palletMoq}, Available: ${palletStock})`);
           }
-        } else if (!isUnitOrder && !isPalletOrder && !isPromotionalOrder) {
+        } else if (!isUnitOrder && !isPalletOrder && !isPromotionalOrder && !isPriceListOrder) {
           return res.status(400).json({ 
             message: `Invalid unit price for ${product.name}. Expected: £${product.price}${product.promoActive && product.promoPrice ? ` or £${product.promoPrice} (promo)` : ''}${product.palletPrice ? ` or £${product.palletPrice} (pallet)` : ''}` 
           });
@@ -805,7 +841,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           });
         }
 
-        // CRITICAL FIX: Calculate pricing based on whether this is a pallet, unit, or promotional order
+        // CRITICAL FIX: Calculate pricing based on whether this is a pallet, price-list, unit, or promotional order
         let pricing;
         let calculationPrice;
         
@@ -818,6 +854,19 @@ export function registerMarketplaceRoutes(app: Express): void {
             totalDiscount: 0,
             discountPercentage: 0,
             appliedOffers: [] as string[],
+            freeItems: 0,
+            totalQuantity: item.quantity
+          };
+        } else if (isPriceListOrder && priceListCalculationPrice !== null) {
+          // Price list wins over promotions — matches front-end calculatePromotionalPricing behaviour
+          calculationPrice = priceListCalculationPrice;
+          pricing = {
+            originalPrice: parseFloat(product.price),
+            effectivePrice: calculationPrice,
+            totalCost: calculationPrice * item.quantity,
+            totalDiscount: 0,
+            discountPercentage: 0,
+            appliedOffers: ['Price list'] as string[],
             freeItems: 0,
             totalQuantity: item.quantity
           };
@@ -888,6 +937,8 @@ export function registerMarketplaceRoutes(app: Express): void {
           isUnitOrder,
           isPalletOrder,
           isPromotionalOrder,
+          isPriceListOrder,
+          priceListCalculationPrice,
           calculationPrice,
           sentUnitPrice: item.unitPrice,
           quantity: item.quantity,
