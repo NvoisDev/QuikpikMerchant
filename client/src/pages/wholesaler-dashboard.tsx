@@ -321,8 +321,8 @@ export default function WholesalerDashboard() {
               </div>
 
               
-              {/* Header Icons */}
-              <div className="flex items-center gap-1">
+              {/* Header Icons — hidden on mobile (top bar covers them); visible on lg+ */}
+              <div className="hidden lg:flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="relative hover:bg-gray-100" onClick={handleShareStore}>
                   <Share2 className="h-5 w-5" />
                 </Button>
