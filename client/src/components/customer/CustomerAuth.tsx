@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
     name: '', businessName: '', phone: '', email: '', message: '', customerType: ''
   });
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
+  const [registrationPendingStatus, setRegistrationPendingStatus] = useState<'none' | 'pending' | 'checking'>('none');
+  const [registrationInlineError, setRegistrationInlineError] = useState('');
   const otpRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -87,6 +89,37 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
   useEffect(() => {
     if (openRequestAccess) setShowRegistrationForm(true);
   }, [openRequestAccess]);
+
+  // Debounced check: when the phone field in the registration form changes, look up pending status
+  const checkRegistrationPhone = useCallback((phone: string) => {
+    const targetWholesalerId = wholesalerId;
+    if (!targetWholesalerId || !phone || phone.replace(/\D/g, '').length < 7) {
+      setRegistrationPendingStatus('none');
+      return;
+    }
+    setRegistrationPendingStatus('checking');
+    fetch(`/api/customer/registration-status?wholesalerId=${encodeURIComponent(targetWholesalerId)}&phone=${encodeURIComponent(phone)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.status === 'pending') {
+          setRegistrationPendingStatus('pending');
+        } else {
+          setRegistrationPendingStatus('none');
+        }
+      })
+      .catch(() => setRegistrationPendingStatus('none'));
+  }, [wholesalerId]);
+
+  useEffect(() => {
+    if (!showRegistrationForm) {
+      setRegistrationPendingStatus('none');
+      setRegistrationInlineError('');
+      return;
+    }
+    const phone = registrationData.phone || (phoneLocal ? countryCode + phoneLocal.replace(/^0/, '') : '');
+    const timer = setTimeout(() => checkRegistrationPhone(phone), 600);
+    return () => clearTimeout(timer);
+  }, [registrationData.phone, showRegistrationForm, checkRegistrationPhone, phoneLocal, countryCode]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -228,6 +261,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       toast({ title: 'Missing Information', description: 'Please fill in your name and phone number.', variant: 'destructive' });
       return;
     }
+    setRegistrationInlineError('');
     setIsSubmittingRegistration(true);
     try {
       const targetWholesalerId = wholesalerId || wholesalerOptions[0]?.wholesalerId;
@@ -249,7 +283,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
         toast({ title: 'Request Sent!', description: data.message || 'Your access request has been sent.' });
         setShowRegistrationForm(false);
         setRegistrationData({ name: '', businessName: '', phone: '', email: '', message: '', customerType: '' });
+        setRegistrationPendingStatus('none');
+        setRegistrationInlineError('');
         setError('');
+      } else if (data.code === 'DUPLICATE_REGISTRATION') {
+        setRegistrationPendingStatus('pending');
+        setRegistrationInlineError(data.error || 'You already have a pending request with this wholesaler.');
       } else {
         toast({ title: 'Request Failed', description: data.error || 'Failed to send your request.', variant: 'destructive' });
       }
@@ -558,6 +597,19 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
             </DialogDescription>
           </DialogHeader>
 
+          {/* Inline pending-request notice */}
+          {registrationPendingStatus === 'pending' && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex gap-3 items-start">
+              <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Request already pending</p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  {registrationInlineError || 'You already have a pending request with this wholesaler. Check back soon — they\'ll review it shortly.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="reg-name" className="text-sm font-medium">Name *</Label>
@@ -605,6 +657,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                 placeholder="+44 7700 900000"
                 className="mt-1 h-10 text-sm"
               />
+              {registrationPendingStatus === 'checking' && (
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Checking…
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="reg-email" className="text-sm font-medium">Email</Label>
@@ -636,7 +693,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
             </Button>
             <Button
               onClick={handleRegistrationSubmit}
-              disabled={isSubmittingRegistration || !registrationData.name.trim() || !registrationData.phone.trim()}
+              disabled={isSubmittingRegistration || !registrationData.name.trim() || !registrationData.phone.trim() || registrationPendingStatus === 'pending'}
               className="flex-1 h-10 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmittingRegistration ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : 'Send Request'}

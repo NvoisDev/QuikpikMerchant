@@ -421,6 +421,30 @@ export function registerMarketplaceRoutes(app: Express): void {
     }
   });
 
+  // GET /api/customer/registration-status?wholesalerId=X&phone=Y
+  // Lightweight check so the registration form can detect a pending request up-front.
+  app.get("/api/customer/registration-status", async (req, res) => {
+    try {
+      const wholesalerId = req.query.wholesalerId as string;
+      const phone = req.query.phone as string;
+      if (!wholesalerId || !phone) {
+        return res.status(400).json({ error: "wholesalerId and phone are required" });
+      }
+      const normalizedPhone = formatPhoneToInternational(phone);
+      if (!normalizedPhone) {
+        return res.json({ status: 'none' });
+      }
+      const existing = await storage.getCustomerRegistrationRequest(wholesalerId, normalizedPhone);
+      if (!existing) {
+        return res.json({ status: 'none' });
+      }
+      return res.json({ status: existing.status });
+    } catch (error) {
+      console.error("Registration status check error:", error);
+      return res.status(500).json({ error: "Failed to check registration status" });
+    }
+  });
+
   // POST /api/customer/request-wholesaler-access
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {
@@ -445,7 +469,10 @@ export function registerMarketplaceRoutes(app: Express): void {
       // Check for existing pending request
       const existingRequest = await storage.getCustomerRegistrationRequest(wholesalerId, customerPhone);
       if (existingRequest && existingRequest.status === 'pending') {
-        return res.status(400).json({ error: `There is already a pending request with the number ${customerPhone}. Please wait for the wholesaler to review it.` });
+        return res.status(400).json({
+          code: 'DUPLICATE_REGISTRATION',
+          error: 'You already have a pending request with this wholesaler. Check back soon — they\'ll review it shortly.',
+        });
       }
       
       // Allow customers to request again after rejection (re-request capability)
@@ -498,7 +525,10 @@ export function registerMarketplaceRoutes(app: Express): void {
     } catch (error: any) {
       console.error("❌ Error creating registration request:", error);
       if (error?.code === 'DUPLICATE_REGISTRATION') {
-        return res.status(400).json({ error: `There is already a pending request with the number ${req.body?.customerPhone}. Please wait for the wholesaler to review it.` });
+        return res.status(400).json({
+          code: 'DUPLICATE_REGISTRATION',
+          error: 'You already have a pending request with this wholesaler. Check back soon — they\'ll review it shortly.',
+        });
       }
       res.status(500).json({ error: "Failed to submit registration request" });
     }
