@@ -232,10 +232,10 @@ export default function Customers() {
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
   
-  // Get tab from URL parameter or default to "groups"
+  // Get tab from URL parameter or default to "address-book"
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
-  const defaultTab = tabFromUrl && ['groups', 'address-book', 'price-lists'].includes(tabFromUrl) ? tabFromUrl : 'groups';
+  const defaultTab = tabFromUrl && ['groups', 'address-book', 'price-lists'].includes(tabFromUrl) ? tabFromUrl : 'address-book';
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   // Group management state
