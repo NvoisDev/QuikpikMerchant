@@ -213,6 +213,10 @@ app.use((req, res, next) => {
     // Apply idempotent schema migrations (ADD COLUMN IF NOT EXISTS)
     await runStartupMigrations();
 
+    // Sync subscription plan features/limits from code into DB
+    const { SubscriptionService } = await import("./subscription-service");
+    await SubscriptionService.initializePlans();
+
     // Ensure Stripe prices for Standard/Premium match the correct monthly_price amounts
     await fixStripePricesIfNeeded();
 

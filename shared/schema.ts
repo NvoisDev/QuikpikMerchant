@@ -349,6 +349,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
     broadcasts?: number; // Broadcast limit per month (-1 for unlimited)
     teamMembers?: number; // Team member limit (-1 for unlimited)
     customGroups?: number; // Customer group limit (-1 for unlimited)
+    priceLists?: number; // Price list limit (-1 for unlimited)
   }>().default({}),
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0), // Display order

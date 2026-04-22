@@ -25,6 +25,7 @@ interface SubscriptionPlan {
     broadcasts: number;
     teamMembers: number;
     customGroups: number;
+    priceLists: number;
   };
   sortOrder: number;
 }
@@ -85,9 +86,9 @@ export default function SubscriptionPricing() {
 
   // Get plan limits and usage — always fresh so limits reflect the current plan immediately
   const { data: planLimits, isLoading: limitsLoading } = useQuery<{
-    usage: { products: number; broadcasts: number; teamMembers: number };
-    limits: { products: number; broadcasts: number; teamMembers: number };
-    percentUsed: { products: number; broadcasts: number; teamMembers: number };
+    usage: { products: number; broadcasts: number; teamMembers: number; priceLists: number };
+    limits: { products: number; broadcasts: number; teamMembers: number; priceLists: number };
+    percentUsed: { products: number; broadcasts: number; teamMembers: number; priceLists: number };
     plan: string;
   }>({
     queryKey: ['/api/subscriptions/plan-limits'],
@@ -404,7 +405,7 @@ export default function SubscriptionPricing() {
       {planLimits && (
         <div className="mb-8 p-6 bg-gray-50 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Your Current Usage</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
                 {planLimits.usage.products}
@@ -416,6 +417,20 @@ export default function SubscriptionPricing() {
                 <div 
                   className="bg-blue-600 h-2 rounded-full" 
                   style={{ width: `${Math.min(planLimits.percentUsed.products, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {planLimits.usage.priceLists}
+              </div>
+              <div className="text-sm text-gray-600">
+                Price Lists ({formatLimit(planLimits.limits.priceLists)} limit)
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-green-600 h-2 rounded-full" 
+                  style={{ width: `${Math.min(planLimits.percentUsed.priceLists, 100)}%` }}
                 />
               </div>
             </div>
@@ -502,6 +517,10 @@ export default function SubscriptionPricing() {
                 <div className="flex justify-between">
                   <span>Products:</span>
                   <span className="font-medium">{formatLimit(plan.limits.products)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Price Lists:</span>
+                  <span className="font-medium">{formatLimit(plan.limits.priceLists ?? plan.limits.products)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Team Members:</span>

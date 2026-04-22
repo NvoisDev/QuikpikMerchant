@@ -20,10 +20,6 @@ export class SubscriptionService {
     try {
       // Check if plans already exist
       const existingPlans = await db.select().from(subscriptionPlans);
-      if (existingPlans.length > 0) {
-        console.log('📋 Subscription plans already initialized');
-        return existingPlans;
-      }
 
       // Create default plans
       const defaultPlans = [
@@ -37,6 +33,7 @@ export class SubscriptionService {
           description: "Get started with basic features",
           features: [
             "Up to 2 products",
+            "Up to 2 price lists",
             "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Standard email support"
@@ -45,7 +42,8 @@ export class SubscriptionService {
             products: 2,
             broadcasts: 5,
             teamMembers: 1,
-            customGroups: 2
+            customGroups: 2,
+            priceLists: 2,
           },
           sortOrder: 0
         },
@@ -59,6 +57,7 @@ export class SubscriptionService {
           description: "Perfect for growing wholesale businesses",
           features: [
             "Up to 5 products",
+            "Up to 5 price lists",
             "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Priority email support"
@@ -67,7 +66,8 @@ export class SubscriptionService {
             products: 5,
             broadcasts: 25,
             teamMembers: 3,
-            customGroups: 5
+            customGroups: 5,
+            priceLists: 5,
           },
           sortOrder: 1
         },
@@ -81,6 +81,7 @@ export class SubscriptionService {
           description: "Everything you need to scale your wholesale business",
           features: [
             "Unlimited products",
+            "Unlimited price lists",
             "Broadcast tools coming soon",
             "Custom reports and insights",
             "Priority email and phone support"
@@ -89,15 +90,27 @@ export class SubscriptionService {
             products: -1, // unlimited
             broadcasts: -1, // unlimited  
             teamMembers: -1, // unlimited
-            customGroups: -1 // unlimited
+            customGroups: -1, // unlimited
+            priceLists: -1, // unlimited
           },
           sortOrder: 2
         }
       ];
 
-      const createdPlans = await db.insert(subscriptionPlans).values(defaultPlans).returning();
-      console.log('✅ Default subscription plans created:', createdPlans.map(p => p.name).join(', '));
-      return createdPlans;
+      if (existingPlans.length === 0) {
+        const createdPlans = await db.insert(subscriptionPlans).values(defaultPlans).returning();
+        console.log('✅ Default subscription plans created:', createdPlans.map(p => p.name).join(', '));
+        return createdPlans;
+      }
+
+      // Always sync features and limits so changes in code are reflected in DB
+      for (const plan of defaultPlans) {
+        await db.update(subscriptionPlans)
+          .set({ features: plan.features, limits: plan.limits })
+          .where(eq(subscriptionPlans.planId, plan.planId));
+      }
+      console.log('✅ Subscription plan features/limits synced');
+      return await db.select().from(subscriptionPlans);
       
     } catch (error) {
       console.error('❌ Failed to initialize subscription plans:', error);
