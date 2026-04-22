@@ -76,6 +76,28 @@ import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 
 import { UserStorageBase } from './users';
 
+function resolveLivePromo(offers: any[], basePrice: string): { promoActive: boolean; promoPrice: string | null } {
+  if (!Array.isArray(offers) || offers.length === 0) return { promoActive: false, promoPrice: null };
+  const now = new Date();
+  const activeOffer = offers.find(o => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+    return true;
+  });
+  if (!activeOffer) return { promoActive: false, promoPrice: null };
+  const base = parseFloat(basePrice || '0');
+  let promoPrice: string | null = null;
+  if (activeOffer.type === 'fixed_price' && activeOffer.fixedPrice != null) {
+    promoPrice = String(activeOffer.fixedPrice);
+  } else if (activeOffer.type === 'percentage_discount' && activeOffer.discountPercentage != null) {
+    promoPrice = String(Math.round(base * (1 - activeOffer.discountPercentage / 100) * 100) / 100);
+  } else if (activeOffer.type === 'clearance' && activeOffer.fixedPrice != null) {
+    promoPrice = String(activeOffer.fixedPrice);
+  }
+  return { promoActive: true, promoPrice };
+}
+
 export class ProductStorage extends UserStorageBase {
   async getProducts(wholesalerId?: string): Promise<Product[]> {
     console.log('⚡ PERFORMANCE: Ultra-optimized getProducts called for:', wholesalerId || 'all');
