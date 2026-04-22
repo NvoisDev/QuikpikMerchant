@@ -31,6 +31,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Connection Pooling**: Neon serverless connection pooling.
 - **Session Storage**: PostgreSQL-based.
 - **Additional Tables**: `customerRegistrationRequests` for managing access requests. `priceLists`, `priceListItems`, `priceListAssignments` for customer price list system.
+- **Storage Architecture**: Split into 7 domain files under `server/storage/` using inheritance chain: `UserStorageBase → ProductStorage → OrderStorage → CustomerStorage → BroadcastStorage → CustomerMgmtStorage → DeliveryStorage → DatabaseStorage`. `server/storage.ts` holds IStorage interface + final class (1,197 lines, down from 5,372).
 
 ## External Dependencies
 - **Payment Processing**: Stripe Connect (marketplace payments with Express accounts, application fees).
