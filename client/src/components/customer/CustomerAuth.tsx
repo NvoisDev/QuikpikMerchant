@@ -280,7 +280,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
         <div className="text-center mb-8">
           <WholesalerAvatar info={wholesalerInfo} />
           <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">
-            {step === 'phone' && 'Welcome Back'}
+            {step === 'phone' && (wholesalerId ? 'Sign In' : 'Welcome Back')}
             {step === 'otp' && 'Verify your number'}
             {step === 'select' && 'Choose your store'}
             {step === 'no-account' && 'No account found'}
@@ -366,10 +366,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
               <button
                 type="button"
                 onClick={() => setShowRegistrationForm(true)}
-                className="w-full flex items-center justify-center gap-2 text-sm text-green-700 hover:text-green-800 font-medium transition-colors py-2"
+                className="w-full h-11 rounded-xl border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
               >
                 <UserPlus className="h-4 w-4" />
-                Not a customer yet? Request wholesale access
+                New customer? Request access
               </button>
             </div>
           </div>
