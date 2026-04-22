@@ -530,7 +530,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
   const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, { preheader: 'Your ' + planLabel + ' plan will downgrade to Free' + (isImmediate ? ' now' : ' on ' + dateStr) });
 
   const currentFeaturesText = data.currentPlan === 'premium'
-    ? 'Current Premium features: Unlimited products, broadcast tools coming soon, team members, and groups.'
+    ? 'Current Premium features: Unlimited products, unlimited price lists, broadcast tools coming soon, team members, and groups.'
     : 'Current Standard features: 5 products, 5 price lists, broadcast tools coming soon, 3 team members, 5 customer groups.';
 
   const impactTextLines: string[] = [];
@@ -630,7 +630,7 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
       : '') +
     'To unlock more, upgrade at: ' + UPGRADE_URL + '\n\n' +
     'Standard: \u00A319.99/mo — 5 products, 5 price lists, broadcast tools coming soon, 3 team members\n' +
-    'Premium: \u00A339.99/mo — Unlimited products, team members, and groups; broadcast tools coming soon\n\n' +
+    'Premium: \u00A339.99/mo — Unlimited products, unlimited price lists, team members, and groups; broadcast tools coming soon\n\n' +
     'Powered by Quikpik Merchant';
 
   return { subject, html, text };
