@@ -102,14 +102,20 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS pb_product_id_idx ON product_batches(product_id)`,
     `CREATE INDEX IF NOT EXISTS pb_product_expiry_idx ON product_batches(product_id, expiry_date)`,
     `CREATE INDEX IF NOT EXISTS pb_status_idx ON product_batches(status)`,
+    // Partial unique index on (product_id) where batch_number = 'Initial Stock' makes the seed
+    // conflict-safe under concurrent startup: ON CONFLICT DO NOTHING becomes deterministic.
+    `CREATE UNIQUE INDEX IF NOT EXISTS pb_initial_seed_uniq
+       ON product_batches (product_id)
+       WHERE batch_number = 'Initial Stock'`,
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(id)`,
     // Backward-compat migration: seed one "Initial Stock" batch per product that has stock > 0
-    // and does not yet have any batch records (idempotent — runs as a no-op once seeded).
+    // and does not yet have any batch records. ON CONFLICT DO NOTHING is race-safe because the
+    // partial unique index above prevents duplicate rows even under concurrent startup.
     `INSERT INTO product_batches (product_id, batch_number, quantity, status, created_at)
      SELECT id, 'Initial Stock', GREATEST(COALESCE(stock, 0), 0), 'active', NOW()
      FROM products
      WHERE COALESCE(stock, 0) > 0
-       AND id NOT IN (SELECT DISTINCT product_id FROM product_batches)`,
+     ON CONFLICT DO NOTHING`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
