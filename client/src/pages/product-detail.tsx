@@ -295,26 +295,29 @@ export default function ProductDetail() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5" disabled={isLocked}>
+              <Button variant="outline" size="sm" className="gap-1.5">
                 <MoreHorizontal className="h-4 w-4" /> Actions
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={openEditModal}>
+              <DropdownMenuItem onClick={openEditModal} disabled={isLocked}>
                 <Edit className="h-4 w-4 mr-2" /> Edit product
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={openStockModal}>
+              <DropdownMenuItem onClick={openStockModal} disabled={isLocked}>
                 <PackagePlus className="h-4 w-4 mr-2" /> Manage stock
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}>
+              <DropdownMenuItem
+                onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}
+                disabled={isLocked}
+              >
                 {product.status === "active"
                   ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set inactive</>
                   : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set active</>}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/promotions?productId=${productId}`)}>
+              <DropdownMenuItem onClick={() => navigate(`/promotions?productId=${productId}`)} disabled={isLocked}>
                 <Tag className="h-4 w-4 mr-2" /> Promotions
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => duplicateMutation.mutate()} disabled={duplicateMutation.isPending}>
+              <DropdownMenuItem onClick={() => duplicateMutation.mutate()} disabled={isLocked || duplicateMutation.isPending}>
                 <Copy className="h-4 w-4 mr-2" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
