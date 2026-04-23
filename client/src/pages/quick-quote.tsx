@@ -238,7 +238,7 @@ export default function QuickQuote() {
   });
 
   const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
-    const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : (product.totalBatchStock ?? product.stock || 0);
+    const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : ((product.totalBatchStock ?? product.stock) || 0);
     if (availableStock <= 0) {
       toast({
         title: "Out of Stock",

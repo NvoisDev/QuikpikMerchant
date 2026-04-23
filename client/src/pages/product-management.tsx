@@ -2658,7 +2658,7 @@ export default function ProductManagement() {
                     onDelete={handleDelete}
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
-                    onManageStock={(p) => { setStockProduct(p); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); }}
+                    onManageStock={(p) => { setStockProduct(p); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(p.costPrice ? String(p.costPrice) : ""); }}
                   />
                 </div>
               ))}
@@ -2784,11 +2784,11 @@ export default function ProductManagement() {
                               <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
                                 {formatNumber(product.stock)} units
                               </div>
-                              {(product as any).batchCount > 0 && (
+                              {product.batchCount > 0 && (
                                 <div className="text-xs text-gray-400 mt-0.5">
-                                  {(product as any).batchCount} batch{(product as any).batchCount !== 1 ? 'es' : ''}
-                                  {(product as any).nearestExpiry && (() => {
-                                    const exp = new Date((product as any).nearestExpiry);
+                                  {product.batchCount} batch{product.batchCount !== 1 ? 'es' : ''}
+                                  {product.nearestExpiry && (() => {
+                                    const exp = new Date(product.nearestExpiry);
                                     const now = new Date(); now.setHours(0, 0, 0, 0);
                                     const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                                     const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2840,20 +2840,20 @@ export default function ProductManagement() {
                             </Button>
                             <Button
                               variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(""); } }}
+                              onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); } }}
                               disabled={product.status === 'locked'}
                               title="Manage Stock"
                             >
                               <PackagePlus className="h-4 w-4" />
                             </Button>
-                            {(product as any).batchCount > 0 && (
+                            {product.batchCount > 0 && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700"
                                 onClick={() => setExpandedBatchProductId(prev => prev === product.id ? null : product.id)}
                               >
-                                {expandedBatchProductId === product.id ? 'Hide batches' : `${(product as any).batchCount} batch${(product as any).batchCount !== 1 ? 'es' : ''}`}
+                                {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${product.batchCount !== 1 ? 'es' : ''}`}
                               </Button>
                             )}
                             <DropdownMenu
