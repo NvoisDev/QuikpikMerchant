@@ -1243,14 +1243,37 @@ export function registerOrderRoutes(app: Express): void {
         refundAmount = parseFloat(order.amountPaid || '0');
       }
 
+      // Determine new status - full cancellation if no items specified OR all items returned at full quantity
+      // NOTE: must be evaluated BEFORE the Stripe refund block so we know whether to use order.total
+      let isFullCancellation = !returnedItems || returnedItems.length === 0;
+
+      // Check if all items are being returned at full quantity (also a full cancellation)
+      if (!isFullCancellation && returnedItems && returnedItems.length > 0) {
+        const allItemsFullyReturned = orderItems.every(orderItem => {
+          const returnItem = returnedItems.find((ri: any) => ri.productId === orderItem.productId);
+          return returnItem && returnItem.quantity >= orderItem.quantity;
+        });
+        if (allItemsFullyReturned && returnedItems.length >= orderItems.length) {
+          isFullCancellation = true;
+          console.log('🚫 All items returned at full quantity - treating as full cancellation');
+        }
+      }
+
       // Process Stripe refund if order was paid and refund requested
       let stripeRefundTotalPounds = 0;
       let stripeRefundError: string | null = null;
       const amountPaid = parseFloat(order.amountPaid || '0');
+      // For a full cancellation refund the complete customer-facing charge (order.total),
+      // which includes the 5.5% + £0.50 customer transaction fee.
+      // For partial returns refund only the item value (fee is not proportionally refunded).
+      const orderTotal = parseFloat(order.total || '0');
 
       if (processRefund && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
-        const refundAmountToProcess = returnedItems?.length > 0 ? refundAmount : amountPaid;
-        if (refundAmountToProcess > 0 && refundAmountToProcess <= amountPaid) {
+        const refundAmountToProcess = isFullCancellation && orderTotal > 0
+          ? orderTotal   // full cancel → return everything the customer paid
+          : refundAmount; // partial → return item value only
+        const refundCeiling = isFullCancellation ? orderTotal : amountPaid;
+        if (refundAmountToProcess > 0 && refundAmountToProcess <= refundCeiling) {
           const result = await refundAcrossPaymentIntents(
             stripe,
             order.stripePaymentIntentId,
@@ -1264,21 +1287,6 @@ export function registerOrderRoutes(app: Express): void {
             // Partial Stripe success — some amount couldn't be refunded
             stripeRefundError = `£${result.remaining.toFixed(2)} could not be refunded automatically`;
           }
-        }
-      }
-
-      // Determine new status - full cancellation if no items specified OR all items returned at full quantity
-      let isFullCancellation = !returnedItems || returnedItems.length === 0;
-      
-      // Check if all items are being returned at full quantity (also a full cancellation)
-      if (!isFullCancellation && returnedItems && returnedItems.length > 0) {
-        const allItemsFullyReturned = orderItems.every(orderItem => {
-          const returnItem = returnedItems.find((ri: any) => ri.productId === orderItem.productId);
-          return returnItem && returnItem.quantity >= orderItem.quantity;
-        });
-        if (allItemsFullyReturned && returnedItems.length >= orderItems.length) {
-          isFullCancellation = true;
-          console.log('🚫 All items returned at full quantity - treating as full cancellation');
         }
       }
       
@@ -1677,7 +1685,9 @@ export function registerOrderRoutes(app: Express): void {
             }
           }
           
-          custCancelAmountPaid = parseFloat(order.amountPaid || '0');
+          // Use order.total (the full customer-facing charge) so the customer gets back
+          // their transaction fee (5.5% + £0.50) as well as the product/delivery value.
+          custCancelAmountPaid = parseFloat(order.total || order.amountPaid || '0');
           
           if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe) {
             const result = await refundAcrossPaymentIntents(
