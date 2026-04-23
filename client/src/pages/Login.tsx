@@ -171,7 +171,7 @@ export default function Login() {
         <div className="space-y-4">
           {[
             { label: "Start free", value: "No credit card" },
-            { label: "AI product tools", value: "Built-in" },
+            { label: "Save hours on admin", value: "Automated" },
             { label: "Price lists", value: "Per customer" },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between border-t border-slate-800 pt-4">
