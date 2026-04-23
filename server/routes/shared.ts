@@ -338,8 +338,7 @@ export async function refundAcrossPaymentIntents(
   stripeClient: Stripe,
   piIdsStr: string,
   totalAmountPounds: number,
-  metadata: Record<string, string>,
-  refundApplicationFee = false   // true = platform absorbs its fee on full cancellations
+  metadata: Record<string, string>
 ): Promise<{ totalRefunded: number; remaining: number; lastError: string | null }> {
   const piIds = piIdsStr.split(',').map((s: string) => s.trim()).filter(Boolean).reverse();
   let remainingPence = Math.round(totalAmountPounds * 100);
@@ -363,14 +362,10 @@ export async function refundAcrossPaymentIntents(
         reason: 'requested_by_customer',
         metadata,
       };
-      if (refundApplicationFee) {
-        refundParams['refund_application_fee'] = true;
-        refundParams['reverse_transfer'] = true;
-      }
       const refund = await stripeClient.refunds.create(refundParams as any);
       totalRefundedPence += refund.amount;
       remainingPence -= refund.amount;
-      console.log(`💳 Refunded £${(refund.amount / 100).toFixed(2)} from PI ${piId}${refundApplicationFee ? ' (incl. application fee)' : ''}, remaining: £${(remainingPence / 100).toFixed(2)}`);
+      console.log(`💳 Refunded £${(refund.amount / 100).toFixed(2)} from PI ${piId}, remaining: £${(remainingPence / 100).toFixed(2)}`);
     } catch (e: any) {
       lastError = e?.message || 'Unknown error';
       console.error(`Stripe refund failed for PI ${piId}:`, e);

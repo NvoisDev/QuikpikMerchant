@@ -1324,8 +1324,7 @@ export function registerOrderRoutes(app: Express): void {
             stripe,
             order.stripePaymentIntentId,
             refundAmountToProcess,
-            { order_id: id.toString(), reason: reason || 'Order cancelled' },
-            isFullCancellation // absorb platform fee on full cancellations
+            { order_id: id.toString(), reason: reason || 'Order cancelled' }
           );
           stripeRefundTotalPounds = result.totalRefunded;
           if (result.totalRefunded === 0) {
