@@ -61,6 +61,9 @@ interface Product {
   palletWeight?: number;
   expiryDate?: string | null;
   promotionalOffers?: PromotionalOffer[];
+  batchCount?: number;
+  nearestExpiry?: string | null;
+  totalBatchStock?: number | null;
 }
 
 function getActivePromos(offers: PromotionalOffer[]): PromotionalOffer[] {
@@ -373,6 +376,29 @@ export default function ProductCard({
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${expiryInfo.className}`}>
                     {expiryInfo.label}
                   </span>
+                </div>
+              )}
+              {!expiryInfo && product.nearestExpiry && (() => {
+                const exp = new Date(product.nearestExpiry);
+                const now = new Date(); now.setHours(0, 0, 0, 0);
+                const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                if (diff > 30) return null;
+                const cls = diff < 0
+                  ? 'bg-red-100 text-red-700 border-red-200'
+                  : 'bg-amber-100 text-amber-700 border-amber-200';
+                const label = diff < 0 ? `Batch expired · ${fmt}` : `Batch exp: ${fmt}`;
+                return (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Batch expiry</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
+                  </div>
+                );
+              })()}
+              {(product.batchCount ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Batches</span>
+                  <span className="text-gray-600">{product.batchCount} active</span>
                 </div>
               )}
               {product.sellingFormat === 'both' && (

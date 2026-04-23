@@ -94,6 +94,9 @@ interface Product {
   unitWeight?: string | null;
   palletWeight?: string | null;
   promotionalOffers?: any[];
+  totalBatchStock?: number | null;
+  nearestExpiry?: string | null;
+  batchCount?: number;
 }
 
 export default function QuickQuote() {
@@ -235,7 +238,7 @@ export default function QuickQuote() {
   });
 
   const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
-    const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0);
+    const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : (product.totalBatchStock ?? product.stock || 0);
     if (availableStock <= 0) {
       toast({
         title: "Out of Stock",
@@ -793,7 +796,8 @@ export default function QuickQuote() {
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {(() => {
-                              const unitInStock = (product.stock || 0) > 0;
+                              const availableUnits = product.totalBatchStock ?? product.stock;
+                              const unitInStock = availableUnits > 0;
                               return (
                               <div
                                 className={`flex-1 min-w-[140px] p-2 border rounded-lg transition-colors ${unitInStock ? 'cursor-pointer hover:border-green-500 hover:bg-green-50' : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'}`}
@@ -812,8 +816,22 @@ export default function QuickQuote() {
                                     )}
                                   </div>
                                   <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
-                                    {unitInStock ? `${product.stock} units` : 'Out of stock'}
+                                    {unitInStock ? `${availableUnits} units` : 'Out of stock'}
                                   </div>
+                                  {unitInStock && product.batchCount && product.batchCount > 0 && (
+                                    <div className="text-xs mt-0.5 text-gray-400">
+                                      {product.batchCount} batch{product.batchCount !== 1 ? 'es' : ''}
+                                      {product.nearestExpiry && (() => {
+                                        const exp = new Date(product.nearestExpiry);
+                                        const now = new Date(); now.setHours(0, 0, 0, 0);
+                                        const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                        const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                        if (diff < 0) return <span className="text-red-600"> · Exp {fmt}</span>;
+                                        if (diff <= 30) return <span className="text-amber-600"> · Exp {fmt}</span>;
+                                        return <span> · Exp {fmt}</span>;
+                                      })()}
+                                    </div>
+                                  )}
                                   {product.costPrice && (
                                     <div className="text-xs mt-1 text-gray-400">
                                       {(() => {

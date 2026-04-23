@@ -7,10 +7,24 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Package, Check, X, Settings, Eye, Info } from "lucide-react";
+import { AlertTriangle, Package, Check, X, Settings, Eye, Info, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+
+interface ExpiringBatch {
+  batchId: number;
+  productId: number;
+  productName: string;
+  productStock: number;
+  imageUrl?: string | null;
+  batchNumber: string;
+  quantity: number;
+  expiryDate: string;
+  costPrice?: string | null;
+  status: string;
+  isExpired: boolean;
+}
 
 interface StockAlert {
   id: number;
@@ -47,6 +61,11 @@ export default function StockAlerts() {
   // Fetch stock alerts
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ['/api/stock-alerts'],
+  });
+
+  // Fetch expiring batches
+  const { data: expiringBatches = [] } = useQuery<ExpiringBatch[]>({
+    queryKey: ['/api/batches/expiring-soon'],
   });
 
   // Fetch user info for default threshold
@@ -237,7 +256,7 @@ export default function StockAlerts() {
         </Dialog>
       </PageHeader>
 
-      <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* Compact info banner */}
         <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
@@ -246,6 +265,58 @@ export default function StockAlerts() {
             Stock is checked daily at <strong>8 AM</strong>. Products at or below their threshold appear here and trigger an email alert — one per product per 24 hours. Use <strong>Adjust</strong> on any card to set a per-product threshold.
           </p>
         </div>
+
+        {/* Expiring Soon section */}
+        {expiringBatches.length > 0 && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-amber-500" />
+              Expiring Batches
+              <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">{expiringBatches.length}</Badge>
+            </h2>
+            <div className="space-y-2">
+              {expiringBatches.map((batch) => {
+                const expiryDate = new Date(batch.expiryDate);
+                const now = new Date(); now.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                const expiryFmt = expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                return (
+                  <Card
+                    key={batch.batchId}
+                    className={`border ${batch.isExpired ? 'bg-red-50 border-red-200 border-l-4 border-l-red-500' : 'bg-amber-50 border-amber-200 border-l-4 border-l-amber-500'}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 shrink-0">
+                            {batch.isExpired
+                              ? <X className="h-4 w-4 text-red-500" />
+                              : <AlertTriangle className="h-4 w-4 text-amber-500" />
+                            }
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                              <span className="font-medium text-sm">{batch.productName}</span>
+                              <Badge className={`text-xs border-0 ${batch.isExpired ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {batch.isExpired ? 'Expired' : `Expires in ${diffDays} day${diffDays !== 1 ? 's' : ''}`}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Batch: <strong>{batch.batchNumber || 'Initial Stock'}</strong>
+                              {' · '}{batch.quantity} units
+                              {' · '}Exp: {expiryFmt}
+                              {batch.costPrice && ` · Cost: £${parseFloat(batch.costPrice).toFixed(2)}/unit`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {alerts.length === 0 ? (
           <Card>
