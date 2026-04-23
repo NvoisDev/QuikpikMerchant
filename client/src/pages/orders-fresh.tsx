@@ -811,6 +811,38 @@ export default function OrdersFresh() {
         </Link>
       )}
     </PageHeader>
+    {/* Mobile-only action bar — PageHeader is hidden below lg breakpoint */}
+    <div className="lg:hidden flex items-center justify-end gap-2 px-4 pt-3 pb-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <MoreVertical className="h-4 w-4" />
+            <span>More</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => loadOrders(currentPage, searchQuery)}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <div className="px-2 py-1.5 text-xs text-slate-500">
+            {statusFilter ? (
+              <>Showing {displayedOrders} {statusFilter}</>
+            ) : (
+              <>Showing {totalOrders} {archiveTab === 'archived' ? 'archived ' : archiveTab === 'all' ? '' : 'active '}orders</>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {!isViewer && (
+        <Link href="/quick-quote">
+          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5">
+            <FileText className="w-4 h-4" />
+            Quick Quote
+          </Button>
+        </Link>
+      )}
+    </div>
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
       {/* Archive Tabs */}
