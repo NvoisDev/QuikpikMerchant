@@ -1,0 +1,131 @@
+🔄 Stock Calculation Logic (CRITICAL CHANGE)
+Old:
+product.stock = manual value
+New:
+product.total_stock = SUM(all active batch quantities)
+
+👉 Product stock becomes derived, not stored manually
+
+📦 Stock In (Purchases / Restocking)
+
+When new stock is added:
+
+ALWAYS create a new batch record
+
+Example:
+
++100 units of Coca-Cola
+Expiry: 01-Jan-2027
+→ Create new batch
+
+👉 Do NOT merge with existing batches (even if same product)
+
+📤 Stock Out (Orders / Sales)
+Implement FEFO (First Expiry First Out)
+Sort batches by expiry_date ASC
+Reduce stock from earliest expiry first
+Example:
+Batch	Qty	Expiry
+A	50	Jan
+B	100	March
+
+Order = 60 units:
+
+Take 50 from Batch A
+Take 10 from Batch B
+⚠️ Expiry Handling
+Add logic:
+Automatically mark batch as:
+status = expired
+
+when:
+
+expiry_date < today
+Expired stock:
+Excluded from available stock
+Still stored for reporting
+📊 UI/UX Changes
+Product View:
+Show:
+Total Stock
+Number of batches
+Nearest expiry date
+Batch Breakdown (expandable):
+Batch 1 – 50 units – Exp: Jan 2027
+Batch 2 – 100 units – Exp: Mar 2027
+Alerts:
+🟠 “Expiring soon” (e.g. < 30 days)
+🔴 “Expired stock”
+🧾 Order Flow Impact
+
+When creating an order:
+
+System should:
+Auto-select batches (FEFO)
+Reserve stock at batch level
+Store in order_items:
+{
+  "product_id": "...",
+  "batch_id": "...",
+  "quantity": 10
+}
+
+👉 This gives:
+
+Traceability
+Recall capability
+Audit trail
+🔄 Editing / Adjustments
+Stock Adjustments must be batch-specific:
+Damage
+Returns
+Manual corrections
+
+Example:
+
+Reduce 5 units from Batch B
+Reason: Damaged
+⚠️ Backward Compatibility (VERY IMPORTANT)
+
+For existing products:
+
+Convert current stock into a default batch
+batch_name: "Initial Stock"
+expiry_date: NULL (or far future)
+quantity: existing stock
+
+👉 Prevents breaking current data
+
+🔐 Edge Cases to Handle
+Products without expiry → allow NULL expiry
+Same expiry, multiple deliveries → separate batches
+Partial batch depletion → keep batch until quantity = 0
+Returns → optionally reassign to original batch
+📈 Reporting Opportunities (Add this now)
+
+Enable:
+
+Expiry reports
+Waste tracking
+Margin per batch (if cost differs)
+Fast-moving vs slow-moving stock
+💡 Strategic Layer (Don’t skip this)
+
+This unlocks:
+
+Smart suggestions:
+
+“Sell Batch A first (expires soon)”
+
+Dynamic pricing:
+
+Discount near-expiry stock
+
+Better logistics:
+
+Route deliveries based on expiry urgency
+
+⚙️ Performance Consideration
+Index:
+(product_id, expiry_date)
+Avoid heavy queries on every request → cache total stock if needed
