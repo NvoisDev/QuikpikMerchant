@@ -4,7 +4,7 @@ import {
   emailButton, emailCard, emailHeading, eq, formatPhoneToInternational,
   generateOrderNotificationMessage, generateOrderNumber, generateWholesalerOrderNotificationEmail,
   getCurrencySymbol, getEmailLogoUrl, getUserPlanLimits, gte, inArray, like,
-  multiWholesalerService, or, orderCancellationRequests, orderItems, orders, parcel2goService,
+  multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
   parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, stripe, sum, users, validatePhoneNumber,
   whatsAppBusinessService, wrapCustomerEmail,
@@ -1947,9 +1947,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           totalAmount: parseFloat(totalCustomerPays || correctTotal || '0'),
           subtotal: parseFloat(productSubtotal || '0'),
           transactionFee: parseFloat(customerTransactionFee || '0'),
-          shippingCost: shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service 
-            ? parseFloat(shippingInfo.service.price.toString())
-            : 0
+          shippingCost: parseFloat(metadataShippingCost || '0')
         });
       } else {
         res.status(400).json({ message: 'Invalid order type' });

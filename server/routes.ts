@@ -4,7 +4,6 @@ import { setupAuth } from "./replitAuth";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { performanceMiddleware } from "./middleware/performance";
-import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { registerSystemRoutes } from "./routes/system";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerCustomerAuthRoutes } from "./routes/customer-auth";
@@ -29,10 +28,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(performanceMiddleware.securityHeadersMiddleware());
   app.set("trust proxy", 1);
   app.use(cookieParser());
-
-  if (process.env.PARCEL2GO_CLIENT_ID && process.env.PARCEL2GO_CLIENT_SECRET) {
-    parcel2goService.setCredentials(createTestCredentials());
-  }
 
   registerSystemRoutes(app);
   registerAuthRoutes(app);

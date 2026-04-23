@@ -5,7 +5,7 @@ import {
   createStripeRefundReceipt, db, desc, emailBadge, emailButton, emailCard, emailHeading, eq,
   generateOrderNumber, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
-  orderNotificationService, orderPhotoUpload, orders, parcel2goService, products,
+  orderNotificationService, orderPhotoUpload, orders, products,
   refundAcrossPaymentIntents, requireAuth, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus
@@ -2687,7 +2687,7 @@ export function registerOrderRoutes(app: Express): void {
         }]
       };
 
-      // Handle demo mode for testing when Parcel2Go API is unavailable
+      // Check for demo mode shipping (no real courier integration active)
       if (serviceId.startsWith('demo-') || serviceId.startsWith('test-')) {
         const demoShippingOrder = {
           OrderId: `DEMO-${Date.now()}`,
@@ -2714,9 +2714,15 @@ export function registerOrderRoutes(app: Express): void {
           demoMode: true
         });
       } else {
-        const shippingOrder = await parcel2goService.createOrder(orderRequest);
-        
-        // Update the order with shipping information
+        // No external courier integration active — generate a local shipping reference.
+        const shippingOrder = {
+          OrderId: `SHIP-${Date.now()}`,
+          Hash: `hash-${orderId}-${Date.now()}`,
+          TotalPrice: shippingCost,
+          Status: 'created',
+          TrackingNumber: `TRK${Math.random().toString().substr(2, 8).toUpperCase()}`
+        };
+
         await storage.updateOrder(parseInt(orderId), {
           shippingOrderId: shippingOrder.OrderId,
           shippingHash: shippingOrder.Hash,

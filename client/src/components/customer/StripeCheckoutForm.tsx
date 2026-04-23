@@ -158,7 +158,7 @@ const PaymentFormContent = ({
               totalAmount: orderData.totalAmount ?? totalAmount,
               subtotal: orderData.subtotal ?? subtotal,
               transactionFee: orderData.transactionFee ?? transactionFee,
-              shippingCost: orderData.shippingCost ?? shippingCost,
+              shippingCost: orderData.shippingCost || shippingCost,
             });
             toast({
               title: "Payment Successful!",

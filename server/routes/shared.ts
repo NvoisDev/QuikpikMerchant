@@ -29,7 +29,6 @@ import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 import { generateProductDescription, generateProductImage } from "../ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "../ai-taglines";
-import { parcel2goService, createTestCredentials } from "../parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../../shared/phone-utils";
 import { getCurrencySymbol } from "../../shared/utils/currency";
 import { whatsAppBusinessService } from "../whatsapp-simple";
@@ -89,7 +88,6 @@ export {
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,
-  parcel2goService, createTestCredentials,
   formatPhoneToInternational, validatePhoneNumber,
   getCurrencySymbol,
   whatsAppBusinessService,
