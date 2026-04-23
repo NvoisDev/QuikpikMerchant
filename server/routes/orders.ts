@@ -10,7 +10,79 @@ import {
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus
 } from "./shared";
+import { productBatches } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
+
+/**
+ * Batch-aware unit stock restock helper.
+ * - If the order item recorded a batchId: adds quantity back to the original batch
+ *   (re-activates it if depleted).  If the batch no longer exists, creates a new
+ *   "RETURN-<orderNumber>" batch so stock is never lost.
+ * - If no batchId was recorded (pre-batch orders): falls back to the flat counter.
+ */
+async function restockUnitsToOrigin(
+  batchId: number | null,
+  productId: number,
+  qty: number,
+  wholesalerId: string,
+  orderId: number,
+  orderNumber: string
+): Promise<void> {
+  if (batchId) {
+    try {
+      const [existingBatch] = await db
+        .select()
+        .from(productBatches)
+        .where(eq(productBatches.id, batchId));
+
+      if (existingBatch && existingBatch.productId === productId) {
+        // Restore to original batch — adjustBatchQuantity re-activates depleted batches
+        // and syncs product.stock automatically
+        await storage.adjustBatchQuantity(
+          batchId,
+          qty,
+          `Order cancellation return — ${qty} units restored to batch ${existingBatch.batchNumber || batchId}`,
+          wholesalerId,
+          orderId
+        );
+        return;
+      }
+    } catch {
+      // Batch lookup failed — fall through to create a new batch
+    }
+
+    // Original batch not found / mismatched — create a return batch
+    await storage.createProductBatch(
+      {
+        productId,
+        batchNumber: `RETURN-${orderNumber}`,
+        quantity: qty,
+        status: 'active',
+        notes: `Return restock from order ${orderNumber}`,
+      },
+      wholesalerId
+    );
+    return;
+  }
+
+  // No batch tracking on this order item (legacy) — flat counter update
+  const product = await storage.getProduct(productId);
+  if (!product) return;
+  const stockBefore = product.stock;
+  const stockAfter = stockBefore + qty;
+  await storage.updateProductStock(productId, stockAfter);
+  await db.insert(stockMovements).values({
+    productId,
+    wholesalerId,
+    movementType: 'return',
+    quantity: qty,
+    unitType: 'units',
+    stockBefore,
+    stockAfter,
+    reason: `Order cancellation — ${qty} units returned`,
+    orderId,
+  });
+}
 
 export function registerOrderRoutes(app: Express): void {
   // PUT /api/orders/:orderId/change-delivery-address
@@ -1163,20 +1235,7 @@ export function registerOrderRoutes(app: Express): void {
                   orderId: id,
                 });
               } else {
-                const stockBefore = product.stock;
-                const stockAfter = stockBefore + returnQty;
-                await storage.updateProductStock(product.id, stockAfter);
-                await db.insert(stockMovements).values({
-                  productId: product.id,
-                  wholesalerId: order.wholesalerId,
-                  movementType: 'return',
-                  quantity: returnQty,
-                  unitType: 'units',
-                  stockBefore,
-                  stockAfter,
-                  reason: `Order cancellation - ${returnQty} units returned`,
-                  orderId: id,
-                });
+                await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber);
               }
               
               // Calculate refund for this item
@@ -1220,21 +1279,8 @@ export function registerOrderRoutes(app: Express): void {
                 reason: `Order cancelled - ${item.quantity} pallets returned`,
                 orderId: id,
               });
-            } else {
-              const stockBefore = product.stock;
-              const stockAfter = stockBefore + item.quantity;
-              await storage.updateProductStock(item.productId, stockAfter);
-              await db.insert(stockMovements).values({
-                productId: product.id,
-                wholesalerId: order.wholesalerId,
-                movementType: 'return',
-                quantity: item.quantity,
-                unitType: 'units',
-                stockBefore,
-                stockAfter,
-                reason: `Order cancelled - ${item.quantity} units returned`,
-                orderId: id,
-              });
+            } else if (item.productId) {
+                await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, id, order.orderNumber);
             }
             stockRestoredCount += item.quantity;
           }
@@ -1278,7 +1324,8 @@ export function registerOrderRoutes(app: Express): void {
             stripe,
             order.stripePaymentIntentId,
             refundAmountToProcess,
-            { order_id: id.toString(), reason: reason || 'Order cancelled' }
+            { order_id: id.toString(), reason: reason || 'Order cancelled' },
+            isFullCancellation // absorb platform fee on full cancellations
           );
           stripeRefundTotalPounds = result.totalRefunded;
           if (result.totalRefunded === 0) {
@@ -1694,7 +1741,8 @@ export function registerOrderRoutes(app: Express): void {
               stripe,
               order.stripePaymentIntentId,
               custCancelAmountPaid,
-              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` }
+              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` },
+              true // customer-initiated full cancel — platform absorbs its fee
             );
             custCancelStripeRefunded = result.totalRefunded;
             if (result.totalRefunded > 0) {
