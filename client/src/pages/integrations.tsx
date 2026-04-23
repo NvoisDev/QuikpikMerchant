@@ -290,30 +290,21 @@ export default function Integrations() {
 
             {selectedCategory === 'communication' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <button
-                  onClick={() => { setSelectedIntegration('whatsapp'); setIntegrationView('detail'); }}
-                  className="text-left border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-green-300 transition-all bg-white"
-                >
-                  <div className="bg-[#25D366] h-28 flex items-center justify-center">
+                <div className="text-left border border-gray-200 rounded-xl overflow-hidden bg-white opacity-70 cursor-not-allowed">
+                  <div className="bg-[#25D366] h-28 flex items-center justify-center relative">
                     <SiWhatsapp className="w-12 h-12 text-white" />
                   </div>
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <span className="font-semibold text-gray-900 text-sm">WhatsApp Messaging</span>
-                      {(whatsappStatus as any)?.isConfigured ? (
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
-                          <CheckCircle className="h-2.5 w-2.5" /> Connected
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
-                          <AlertCircle className="h-2.5 w-2.5" /> Setup Required
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
+                        Coming Soon
+                      </span>
                     </div>
                     <p className="text-xs text-gray-500">Send campaigns, order updates and promotions via WhatsApp.</p>
                     <p className="text-xs text-gray-400 mt-2">Communication · Marketing</p>
                   </div>
-                </button>
+                </div>
               </div>
             )}
 
