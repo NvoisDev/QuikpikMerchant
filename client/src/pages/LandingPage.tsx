@@ -55,7 +55,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
-              <span className="hidden sm:inline text-lg sm:text-2xl font-bold text-gray-900">Quikpik</span>
+              <span className="hidden sm:inline text-lg sm:text-2xl font-bold text-primary">Quikpik</span>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Button 
