@@ -1,0 +1,125 @@
+🧾 Prompt: Create Product Detail Page (Modern, Read-Only + Actions)
+🎯 Objective
+
+Create a dedicated product detail page that displays all product information in a clean, modern layout, allowing users to:
+
+View full product details (no editing)
+Quickly access actions via 3-dot menu (same as list view)
+Understand stock, batches, pricing, and performance at a glance
+🧠 Core Principle
+
+Product List = Overview
+Product Page = Deep Dive (single source of truth)
+
+🧱 Page Structure
+1. Header Section (Top of Page)
+
+Display:
+
+Product Image (large, clean)
+Product Name
+Category
+Status badge (Active / Inactive)
+Margin badge (e.g. 63.6%)
+
+Right side:
+
+3-dot menu (reuse existing actions)
+
+Menu options:
+
+Edit
+Manage Stock
+Set Inactive
+Promotions
+Duplicate
+Delete
+
+👉 Keep this consistent with your current UI (don’t reinvent it)
+
+2. Pricing & Commercial Section
+
+Card-style layout:
+
+Per Unit Price: £40.00  
+Cost Price: £20.00  
+Margin: 50%  
+
+Pallet Price: £200.00  
+Pallet MOQ: 1  
+
+Optional:
+
+Show “Base Margin” vs “Actual Margin”
+3. Inventory Section (Important for your batch system)
+Total Stock: 2,649 units  
+Total Batches: 5 active  
+
+Nearest Expiry: 23 Apr 2026 (Expiring Soon)
+Expandable Batch Table:
+Batch	Quantity	Expiry	Status
+B001	500	Jan 2027	Active
+B002	200	Apr 2026	Expiring Soon
+
+👉 This is where your batch system becomes visible and valuable
+
+4. Logistics Section
+Unit Type: Units & Pallets  
+MOQ: 2 units  
+
+Pallet Stock: 88  
+Weight (optional): X kg  
+5. Promotions Section
+
+If active:
+
+Active Promotion: 10% off  
+OR  
+Buy 2 Get 1 Free
+6. Description Section
+
+Full product description (not truncated like list view)
+
+7. Activity / History (Optional but powerful)
+Last updated
+Recent orders (later)
+Stock changes (later)
+🎨 UX / Design Guidelines
+Use card-based layout
+Keep spacing clean (like Stripe / Shopify style)
+Highlight:
+Margin (green)
+Expiry (orange/red)
+Make it mobile-first (your screenshot shows mobile usage)
+🔁 Navigation Flow
+
+From product list:
+
+👉 Tap product card → opens product detail page
+
+⚙️ Backend Requirements
+
+Create endpoint:
+
+GET /products/:id
+
+Return:
+
+{
+  "product": {...},
+  "batches": [...],
+  "pricing": {...},
+  "stock_summary": {...},
+  "promotions": [...]
+}
+🚫 What to Avoid
+❌ Don’t reuse edit page as view page
+❌ Don’t overload with inputs (this is read-only)
+❌ Don’t hide batch data (this is your differentiator)
+✅ Acceptance Criteria
+User can view all product info without editing
+3-dot menu works exactly like list view
+Batch + expiry clearly visible
+Margin clearly visible
+Mobile-friendly layout
+Loads fast (<1s ideally)
