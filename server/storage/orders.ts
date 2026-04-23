@@ -480,9 +480,11 @@ export class OrderStorage extends ProductStorage {
           }
 
           const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
+          // quantityInPack = base units per pack; unitsPerPallet = packs per pallet
+          const quantityInPack: number = currentProduct.quantityInPack ?? 1;
           // Convert ordered quantity to base units
           const baseUnitsNeeded = sellingType === 'pallets'
-            ? orderedQuantity * unitsPerPallet
+            ? orderedQuantity * unitsPerPallet * quantityInPack
             : orderedQuantity;
 
           // Pre-check: abort if total batch stock is insufficient
@@ -540,7 +542,10 @@ export class OrderStorage extends ProductStorage {
               )
             );
           const newStock = Number(batchSum[0]?.total ?? 0);
-          const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
+          // Pallet stock = floor(floor(baseUnits / quantityInPack) / unitsPerPallet)
+          const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
+            ? Math.floor(Math.floor(newStock / quantityInPack) / unitsPerPallet)
+            : 0;
           await tx.update(products)
             .set({ stock: newStock, palletStock: newPalletStock })
             .where(eq(products.id, item.productId));
@@ -819,8 +824,10 @@ export class OrderStorage extends ProductStorage {
             );
 
           const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
+          // quantityInPack = base units per pack; unitsPerPallet = packs per pallet
+          const quantityInPack: number = currentProduct.quantityInPack ?? 1;
           const baseUnitsNeeded = sellingType === 'pallets'
-            ? totalStockToReduce * unitsPerPallet
+            ? totalStockToReduce * unitsPerPallet * quantityInPack
             : totalStockToReduce;
           const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
 
@@ -887,7 +894,10 @@ export class OrderStorage extends ProductStorage {
               )
             );
           const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
-          const newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+          // Pallet stock = floor(floor(baseUnits / quantityInPack) / unitsPerPallet)
+          const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
+            ? Math.floor(Math.floor(newUnitStock / quantityInPack) / unitsPerPallet)
+            : 0;
 
           await trx
             .update(products)

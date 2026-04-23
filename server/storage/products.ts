@@ -691,7 +691,8 @@ export class ProductStorage extends UserStorageBase {
   /**
    * Internal helper: set products.stock AND products.palletStock from the SUM
    * of active non-expired batch quantities.
-   * palletStock = floor(stock / unitsPerPallet), matching the FEFO order path.
+   * palletStock = floor(floor(stock / quantityInPack) / unitsPerPallet), matching the FEFO order path.
+   * (unitsPerPallet = packs per pallet; quantityInPack = base units per pack)
    */
   private async _syncProductStockFromBatches(productId: number): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
@@ -710,13 +711,18 @@ export class ProductStorage extends UserStorageBase {
 
     const newStock = Number(total ?? 0);
 
-    // Derive palletStock so both fields stay in sync
+    // Derive palletStock so both fields stay in sync.
+    // unitsPerPallet = packs per pallet; quantityInPack = base units per pack.
+    // palletStock = floor( floor(baseUnits / quantityInPack) / unitsPerPallet )
     const [prod] = await db
-      .select({ unitsPerPallet: products.unitsPerPallet })
+      .select({ unitsPerPallet: products.unitsPerPallet, quantityInPack: products.quantityInPack })
       .from(products)
       .where(eq(products.id, productId));
     const unitsPerPallet = prod?.unitsPerPallet ?? 1;
-    const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
+    const quantityInPack = prod?.quantityInPack ?? 1;
+    const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
+      ? Math.floor(Math.floor(newStock / quantityInPack) / unitsPerPallet)
+      : 0;
 
     await db.update(products)
       .set({ stock: newStock, palletStock: newPalletStock })
