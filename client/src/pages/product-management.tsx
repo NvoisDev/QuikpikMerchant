@@ -149,6 +149,7 @@ export default function ProductManagement() {
     localStorage.setItem("productsViewMode", mode);
     setViewMode(mode);
   };
+  const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null);
   const [marginSort, setMarginSort] = useState<"none" | "asc" | "desc">(() => {
     const saved = localStorage.getItem("productsMarginSort");
     return saved === "asc" || saved === "desc" ? saved : "none";
@@ -2745,9 +2746,18 @@ export default function ProductManagement() {
                             >
                               <PackagePlus className="h-4 w-4" />
                             </Button>
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={openMenuProductId === product.id}
+                              onOpenChange={(open) => setOpenMenuProductId(open ? product.id : null)}
+                            >
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onPointerDown={(e) => e.preventDefault()}
+                                  onClick={() => setOpenMenuProductId(prev => prev === product.id ? null : product.id)}
+                                >
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>

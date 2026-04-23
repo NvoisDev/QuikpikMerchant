@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -139,6 +140,8 @@ export default function ProductCard({
     if (onDuplicate) onDuplicate(product);
   };
 
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+
   const isLocked = product.status === 'locked';
   const currentStatusConfig = getStatusConfig(product.status);
 
@@ -213,13 +216,14 @@ export default function ProductCard({
 
           {/* ⋯ Actions menu — top-left floating pill */}
           <div className="absolute top-2 left-2">
-            <DropdownMenu>
+            <DropdownMenu open={actionsMenuOpen} onOpenChange={setActionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7 bg-white/85 backdrop-blur-sm hover:bg-white shadow-sm rounded-full"
-                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => { e.stopPropagation(); setActionsMenuOpen(prev => !prev); }}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
                 </Button>
