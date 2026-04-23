@@ -116,7 +116,7 @@ export function registerBatchRoutes(app: Express): void {
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
       }
-      const updated = await storage.updateProductBatch(batchId, updates);
+      const updated = await storage.updateProductBatch(batchId, updates, wholesalerId);
       res.json(updated);
     } catch (error) {
       console.error('Error updating batch:', error);
@@ -142,7 +142,7 @@ export function registerBatchRoutes(app: Express): void {
         return res.status(404).json({ error: 'Batch not found' });
       }
 
-      await storage.updateProductBatch(batchId, { status: 'depleted', quantity: 0 });
+      await storage.updateProductBatch(batchId, { status: 'depleted', quantity: 0 }, wholesalerId);
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting batch:', error);

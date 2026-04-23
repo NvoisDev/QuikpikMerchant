@@ -555,7 +555,15 @@ export class ProductStorage extends UserStorageBase {
    * Guards applied here: quantity must be >= 0; when quantity = 0 the status is forced
    * to 'depleted'; when a depleted batch is given quantity > 0 status reverts to 'active'.
    */
-  async updateProductBatch(batchId: number, updates: Partial<InsertProductBatch>): Promise<ProductBatch> {
+  async updateProductBatch(
+    batchId: number,
+    updates: Partial<InsertProductBatch>,
+    wholesalerId?: string,
+  ): Promise<ProductBatch> {
+    // Capture old quantity for movement logging
+    const [before] = await db.select().from(productBatches).where(eq(productBatches.id, batchId));
+    if (!before) throw new Error(`Batch ${batchId} not found`);
+
     const safeUpdates = { ...updates };
 
     // Quantity invariants
@@ -575,9 +583,25 @@ export class ProductStorage extends UserStorageBase {
       .where(eq(productBatches.id, batchId))
       .returning();
 
-    if (!updated) {
-      throw new Error(`Batch ${batchId} not found`);
+    if (!updated) throw new Error(`Batch ${batchId} not found`);
+
+    // Log a stock movement when quantity was directly changed (not via adjustBatchQuantity)
+    if (safeUpdates.quantity !== undefined && wholesalerId) {
+      const actualDelta = updated.quantity - before.quantity;
+      if (actualDelta !== 0) {
+        await db.insert(stockMovements).values({
+          productId: before.productId,
+          wholesalerId,
+          movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
+          quantity: actualDelta,
+          unitType: 'units',
+          stockBefore: before.quantity,
+          stockAfter: updated.quantity,
+          reason: `Direct batch quantity update (batch #${before.batchNumber || batchId})`,
+        });
+      }
     }
+
     await this._syncProductStockFromBatches(updated.productId);
     return updated;
   }
