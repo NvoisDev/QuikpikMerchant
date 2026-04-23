@@ -248,7 +248,11 @@ export default function QuickQuote() {
       ? parseFloat(product.palletPrice) 
       : parseFloat(product.price);
 
-    const baseCost = product.costPrice ? parseFloat(product.costPrice) : 0;
+    const unitCost = product.costPrice ? parseFloat(product.costPrice) : 0;
+    // For pallet lines, cost must be per-pallet (unit cost × units-per-pallet) so it matches the per-pallet selling price
+    const baseCost = sellingType === 'pallets' && product.unitsPerPallet
+      ? unitCost * product.unitsPerPallet
+      : unitCost;
     const weightKg = sellingType === 'pallets'
       ? (product.palletWeight ? parseFloat(product.palletWeight) : 0)
       : (product.unitWeight ? parseFloat(product.unitWeight) : 0);
