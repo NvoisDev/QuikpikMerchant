@@ -316,41 +316,27 @@ export class OrderStorage extends ProductStorage {
     return orderList;
   }
 
-  // Generate unique order number for wholesaler with atomic database transaction
+  // Generate unique order number for wholesaler using an atomic counter on the users row.
+  // The counter never resets when orderNumberPrefix changes — sequence integrity is always preserved.
   async generateOrderNumber(wholesalerId: string): Promise<string> {
-    // Get wholesaler's business prefix
-    const wholesaler = await this.getUser(wholesalerId);
-    const businessPrefix = wholesaler?.businessName 
-      ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
-      : 'WS';
-    
-    // Use atomic transaction to find the highest order number safely
-    const result = await db.transaction(async (tx) => {
-      console.log(`🔍 DEBUG: Looking for orders with wholesaler_id=${wholesalerId} and prefix=${businessPrefix}`);
-      
-      // CRITICAL FIX: Remove FOR UPDATE from aggregate query (not allowed in Neon PostgreSQL)
-      const maxOrderResult = await tx.execute(sql`
-        SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-        FROM orders 
-        WHERE wholesaler_id = ${wholesalerId} 
-        AND order_number LIKE ${businessPrefix + '-%'}
-      `);
-      
-      const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
-      const nextNumber = parseInt(maxNumber.toString()) + 1;
-      
-      console.log(`🔍 DEBUG: Found max_number=${maxNumber}, generating nextNumber=${nextNumber}`);
-      
-      // Format with leading zeros (e.g., "SF-135")
-      const formattedNumber = nextNumber.toString().padStart(3, '0');
-      const newOrderNumber = `${businessPrefix}-${formattedNumber}`;
-      
-      console.log(`🔢 ATOMIC: Generated order number ${newOrderNumber} for ${wholesaler?.businessName} (current max: ${businessPrefix}-${maxNumber.toString().padStart(3, '0')})`);
-      
-      return newOrderNumber;
-    });
-    
-    return result;
+    const result = await db.execute(sql`
+      UPDATE users
+      SET order_number_counter = order_number_counter + 1
+      WHERE id = ${wholesalerId}
+      RETURNING order_number_counter, order_number_prefix, business_name
+    `);
+    const row = result.rows[0];
+    if (!row) throw new Error(`Wholesaler ${wholesalerId} not found when generating order number`);
+    const counter = parseInt(row.order_number_counter as string);
+    const storedPrefix = (row.order_number_prefix as string) || null;
+    const prefix = storedPrefix && storedPrefix.trim()
+      ? storedPrefix.trim().toUpperCase()
+      : (row.business_name as string)
+        ? (row.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
+        : 'ORD';
+    const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
+    console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter})`);
+    return orderNumber;
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
@@ -360,24 +346,23 @@ export class OrderStorage extends ProductStorage {
       
       // Generate order number within this transaction if not provided
       if (!orderNumber) {
-        const wholesaler = await tx.select().from(users).where(eq(users.id, order.wholesalerId)).limit(1);
-        const businessPrefix = wholesaler[0]?.businessName 
-          ? wholesaler[0].businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
-          : 'WS';
-        
-        const maxOrderResult = await tx.execute(sql`
-          SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-          FROM orders 
-          WHERE wholesaler_id = ${order.wholesalerId} 
-          AND order_number LIKE ${businessPrefix + '-%'}
+        const genResult = await tx.execute(sql`
+          UPDATE users
+          SET order_number_counter = order_number_counter + 1
+          WHERE id = ${order.wholesalerId}
+          RETURNING order_number_counter, order_number_prefix, business_name
         `);
-        
-        const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
-        const nextNumber = parseInt(maxNumber.toString()) + 1;
-        const formattedNumber = nextNumber.toString().padStart(3, '0');
-        orderNumber = `${businessPrefix}-${formattedNumber}`;
-        
-        console.log(`🔢 ATOMIC: Generated order number ${orderNumber} for ${wholesaler[0]?.businessName} (current max: ${businessPrefix}-${maxNumber.toString().padStart(3, '0')})`);
+        const genRow = genResult.rows[0];
+        if (!genRow) throw new Error(`Wholesaler ${order.wholesalerId} not found when generating order number`);
+        const counter = parseInt(genRow.order_number_counter as string);
+        const storedPrefix = (genRow.order_number_prefix as string) || null;
+        const prefix = storedPrefix && storedPrefix.trim()
+          ? storedPrefix.trim().toUpperCase()
+          : (genRow.business_name as string)
+            ? (genRow.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
+            : 'ORD';
+        orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
+        console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter}) inside createOrder transaction`);
       }
       
       // CRITICAL DEBUG: Add detailed logging to identify SQL syntax error
