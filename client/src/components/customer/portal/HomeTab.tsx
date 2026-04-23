@@ -271,7 +271,7 @@ export function HomeTab({
                           {hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
                             </p>
                           )}
                         </div>

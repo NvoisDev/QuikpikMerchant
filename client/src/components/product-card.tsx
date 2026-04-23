@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cleanAIDescription } from "@shared/utils";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
+import { formatCurrency } from "@/lib/currencies";
 
 const formatNumber = (num: number | string): string => {
   const number = typeof num === 'string' ? parseInt(num) : num;
@@ -83,13 +84,13 @@ function formatPromoLabel(promo: PromotionalOffer): string {
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-      return `Now £${Number(promo.fixedPrice).toFixed(2)}`;
+      return `Now ${formatCurrency(promo.fixedPrice)}`;
     case "clearance":
-      return `Clearance £${Number(promo.fixedPrice).toFixed(2)}`;
+      return `Clearance ${formatCurrency(promo.fixedPrice)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
-      return `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`;
+      return `${promo.minQuantity}+ at ${formatCurrency(promo.fixedPrice)} each`;
     default:
       return promo.name || "Promotion";
   }
@@ -415,7 +416,7 @@ export default function ProductCard({
                   <div className="flex justify-between items-center border-t pt-1.5 mt-1.5">
                     <span className="text-gray-500">Pallet price</span>
                     <span className="font-semibold text-gray-900">
-                      {product.priceVisible ? `£${parseFloat((product.palletPrice || 0).toString()).toFixed(2)}` : "Hidden"}
+                      {product.priceVisible ? formatCurrency(product.palletPrice || 0) : "Hidden"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

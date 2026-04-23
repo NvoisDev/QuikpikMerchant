@@ -11,6 +11,7 @@ import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
+import { formatCurrency } from "@shared/utils/currency";
 
 interface ProductsTabProps {
   setActiveTab: (tab: string) => void;
@@ -505,7 +506,7 @@ export function ProductsTab({
                           {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
                             </p>
                           )}
                         </div>
@@ -858,7 +859,7 @@ export function ProductsTab({
                           {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: £{parseFloat((product as any).palletPrice?.toString() || '0').toFixed(2)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
                             </p>
                           )}
                         </div>

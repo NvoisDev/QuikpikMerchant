@@ -535,7 +535,7 @@ export default function SubscriptionPricing() {
               </CardDescription>
               <div className="mt-4">
                 <div className="text-4xl font-bold">
-                  £{parseFloat(plan.monthlyPrice).toFixed(2)}
+                  {parseFloat(plan.monthlyPrice).toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
                 </div>
                 <div className="text-gray-600">per month</div>
               </div>

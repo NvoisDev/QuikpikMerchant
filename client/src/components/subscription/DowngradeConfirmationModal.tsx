@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatCurrency } from '@/lib/currencies';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -139,7 +140,7 @@ export function DowngradeConfirmationModal({
                 {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
                   <div className="bg-green-100 p-3 rounded-md border border-green-200">
                     <p className="text-green-800 text-sm font-medium">
-                      💰 You'll receive a pro-rated credit of <strong>£{billingInfo.proratedCredit.toFixed(2)}</strong>
+                      💰 You'll receive a pro-rated credit of <strong>{formatCurrency(billingInfo.proratedCredit)}</strong>
                     </p>
                     <p className="text-green-700 text-xs mt-1">
                       This credit will be applied to your next billing cycle or refunded if you cancel completely.
@@ -150,11 +151,11 @@ export function DowngradeConfirmationModal({
                 {/* Next Billing Information */}
                 <div className="bg-gray-100 p-3 rounded-md">
                   <p className="text-gray-800 text-sm">
-                    <strong>Next Billing:</strong> Your next charge will be <strong>£{(billingInfo?.nextBillingAmount || parseFloat(targetFeatures.price.replace('£', ''))).toFixed(2)}/month</strong> for the {targetFeatures.name} plan
+                    <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount || parseFloat(targetFeatures.price.replace('£', '')))}/month</strong> for the {targetFeatures.name} plan
                   </p>
                   {billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
                     <p className="text-gray-600 text-xs mt-1">
-                      Monthly savings: £{(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice).toFixed(2)}
+                      Monthly savings: {formatCurrency(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice)}
                     </p>
                   )}
                 </div>

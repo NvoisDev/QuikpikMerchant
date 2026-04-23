@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import {
-  and, count, customerGroups, db, eq, gte, inArray, openai, or, orderCancellationRequests,
+  and, count, customerGroups, db, eq, gte, inArray, lte, openai, or, orderCancellationRequests,
   orderItems, orders, products, requireAuth, requireNotViewer, storage, sum
 } from "./shared";
+import { productBatches } from "@shared/schema";
 
 export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/cancellations
@@ -334,6 +335,104 @@ export function registerAnalyticsRoutes(app: Express): void {
     } catch (error) {
       console.error("Error fetching broadcast stats:", error);
       res.status(500).json({ message: "Failed to fetch broadcast stats" });
+    }
+  });
+
+  // GET /api/analytics/margin-summary
+  app.get('/api/analytics/margin-summary', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const { fromDate, toDate } = req.query;
+      if (!fromDate || !toDate) {
+        return res.status(400).json({ message: "fromDate and toDate are required" });
+      }
+
+      const startDate = new Date(fromDate as string);
+      const endDate = new Date(toDate as string);
+
+      const ordersInRange = await db
+        .select({ id: orders.id, isQuote: orders.isQuote, status: orders.status })
+        .from(orders)
+        .where(and(
+          eq(orders.wholesalerId, targetUserId),
+          gte(orders.createdAt, startDate),
+          lte(orders.createdAt, endDate),
+        ));
+
+      const validOrders = ordersInRange.filter(o => o.status !== 'cancelled');
+
+      const empty = { revenue: 0, cost: 0, margin: 0, marginPercent: 0, hasMissingCost: false };
+      if (validOrders.length === 0) {
+        return res.json({ quotes: { ...empty }, online: { ...empty }, total: { ...empty } });
+      }
+
+      const orderIds = validOrders.map(o => o.id);
+
+      const items = await db
+        .select({
+          orderId: orderItems.orderId,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          batchId: orderItems.batchId,
+          costPrice: productBatches.costPrice,
+        })
+        .from(orderItems)
+        .leftJoin(productBatches, eq(orderItems.batchId, productBatches.id))
+        .where(inArray(orderItems.orderId, orderIds));
+
+      const orderQuoteMap = new Map(validOrders.map(o => [o.id, o.isQuote ?? false]));
+
+      let quotesRevenue = 0, quotesCost = 0, quotesMissingCost = false;
+      let onlineRevenue = 0, onlineCost = 0, onlineMissingCost = false;
+
+      for (const item of items) {
+        const isQuote = orderQuoteMap.get(item.orderId) ?? false;
+        const hasCost = item.batchId !== null && item.costPrice !== null && item.costPrice !== undefined;
+
+        if (!hasCost) {
+          // Mark missing cost but exclude this item entirely from margin arithmetic
+          if (isQuote) { quotesMissingCost = true; } else { onlineMissingCost = true; }
+          continue;
+        }
+
+        const revenue = parseFloat(item.unitPrice) * item.quantity;
+        const cost = parseFloat(item.costPrice!) * item.quantity;
+
+        if (isQuote) {
+          quotesRevenue += revenue;
+          quotesCost += cost;
+        } else {
+          onlineRevenue += revenue;
+          onlineCost += cost;
+        }
+      }
+
+      const calcMetrics = (revenue: number, cost: number, hasMissingCost: boolean) => {
+        const margin = revenue - cost;
+        const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
+        return {
+          revenue: Math.round(revenue * 100) / 100,
+          cost: Math.round(cost * 100) / 100,
+          margin: Math.round(margin * 100) / 100,
+          marginPercent: Math.round(marginPercent * 10) / 10,
+          hasMissingCost,
+        };
+      };
+
+      const totalRevenue = quotesRevenue + onlineRevenue;
+      const totalCost = quotesCost + onlineCost;
+
+      res.json({
+        quotes: calcMetrics(quotesRevenue, quotesCost, quotesMissingCost),
+        online: calcMetrics(onlineRevenue, onlineCost, onlineMissingCost),
+        total: calcMetrics(totalRevenue, totalCost, quotesMissingCost || onlineMissingCost),
+      });
+    } catch (error) {
+      console.error("Error fetching margin summary:", error);
+      res.status(500).json({ message: "Failed to fetch margin summary" });
     }
   });
 

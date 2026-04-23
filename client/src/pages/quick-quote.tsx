@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { formatCurrency } from "@/lib/currencies";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -786,10 +787,10 @@ export default function QuickQuote() {
                                 'bg-gray-100 text-gray-700 text-xs'
                               }>
                                 {offer.type === 'percentage_discount' ? `${offer.discountPercentage}% Off` :
-                                 offer.type === 'fixed_price' ? `£${offer.fixedPrice} each` :
+                                 offer.type === 'fixed_price' ? `${formatCurrency(offer.fixedPrice)} each` :
                                  offer.type === 'buy_x_get_y_free' ? `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free` :
-                                 offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ £${offer.fixedPrice}` :
-                                 offer.type === 'clearance' ? `Clearance £${offer.fixedPrice}` :
+                                 offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ ${formatCurrency(offer.fixedPrice)}` :
+                                 offer.type === 'clearance' ? `Clearance ${formatCurrency(offer.fixedPrice)}` :
                                  offer.name || 'Promo'}
                               </Badge>
                             ))}
@@ -808,11 +809,11 @@ export default function QuickQuote() {
                                   <div className={`font-semibold ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
                                     {promoUnitPrice !== null ? (
                                       <>
-                                        <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.price).toFixed(2)}</span>
-                                        £{promoUnitPrice.toFixed(2)}
+                                        <span className="line-through text-gray-400 font-normal mr-1">{formatCurrency(product.price)}</span>
+                                        {formatCurrency(promoUnitPrice)}
                                       </>
                                     ) : (
-                                      <>£{parseFloat(product.price).toFixed(2)}</>
+                                      <>{formatCurrency(product.price)}</>
                                     )}
                                   </div>
                                   <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
@@ -841,9 +842,9 @@ export default function QuickQuote() {
                                         const mPct = sell > 0 ? ((mAmt / sell) * 100).toFixed(0) : '0';
                                         return (
                                           <>
-                                            Cost £{cost.toFixed(2)} | Margin{' '}
+                                            Cost {formatCurrency(cost)} | Margin{' '}
                                             <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
-                                              £{mAmt.toFixed(2)} ({mPct}%)
+                                              {formatCurrency(mAmt)} ({mPct}%)
                                             </span>
                                           </>
                                         );
@@ -874,11 +875,11 @@ export default function QuickQuote() {
                                   <div className={`font-semibold ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>
                                     {promoPalletPrice !== null ? (
                                       <>
-                                        <span className="line-through text-gray-400 font-normal mr-1">£{parseFloat(product.palletPrice).toFixed(2)}</span>
-                                        £{promoPalletPrice.toFixed(2)}
+                                        <span className="line-through text-gray-400 font-normal mr-1">{formatCurrency(product.palletPrice)}</span>
+                                        {formatCurrency(promoPalletPrice)}
                                       </>
                                     ) : (
-                                      <>£{parseFloat(product.palletPrice).toFixed(2)}</>
+                                      <>{formatCurrency(product.palletPrice)}</>
                                     )}
                                   </div>
                                   <div className={`text-xs mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
@@ -893,9 +894,9 @@ export default function QuickQuote() {
                                         const mPct = palletSell > 0 ? ((mAmt / palletSell) * 100).toFixed(0) : '0';
                                         return (
                                           <>
-                                            Cost £{palletCost.toFixed(2)} | Margin{' '}
+                                            Cost {formatCurrency(palletCost)} | Margin{' '}
                                             <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
-                                              £{mAmt.toFixed(2)} ({mPct}%)
+                                              {formatCurrency(mAmt)} ({mPct}%)
                                             </span>
                                           </>
                                         );
@@ -945,7 +946,7 @@ export default function QuickQuote() {
                             )}
                           </div>
                           <div className="text-sm text-gray-500">
-                            Original: £{item.originalPrice.toFixed(2)}{item.sellingType === 'pallets' ? '/pallet' : '/unit'}
+                            Original: {formatCurrency(item.originalPrice)}{item.sellingType === 'pallets' ? '/pallet' : '/unit'}
                             {item.customPrice < item.originalPrice && (
                               <Badge variant="secondary" className="ml-2 text-green-600">
                                 <Percent className="h-3 w-3 mr-1" />
@@ -974,10 +975,10 @@ export default function QuickQuote() {
                                     'bg-purple-100 text-purple-700 text-xs'
                                   }>
                                     {offer.type === 'percentage_discount' ? `${offer.discountPercentage}% Off` :
-                                     offer.type === 'fixed_price' ? `£${offer.fixedPrice} each` :
+                                     offer.type === 'fixed_price' ? `${formatCurrency(offer.fixedPrice)} each` :
                                      offer.type === 'buy_x_get_y_free' ? `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free` :
-                                     offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ £${offer.fixedPrice} each` :
-                                     offer.type === 'clearance' ? `Clearance £${offer.fixedPrice}` :
+                                     offer.type === 'bundle_deal' ? `${offer.minQuantity}+ @ ${formatCurrency(offer.fixedPrice)} each` :
+                                     offer.type === 'clearance' ? `Clearance ${formatCurrency(offer.fixedPrice)}` :
                                      offer.name || 'Promo Active'}
                                   </Badge>
                                 ))}
@@ -1073,7 +1074,7 @@ export default function QuickQuote() {
                         <div className="w-20 text-right">
                           <Label className="text-xs text-gray-500">Total</Label>
                           <div className="font-semibold">
-                            £{(item.customPrice * item.quantity).toFixed(2)}
+                            {formatCurrency(item.customPrice * item.quantity)}
                           </div>
                         </div>
                       </div>
@@ -1115,7 +1116,7 @@ export default function QuickQuote() {
                             <div className="flex-1 text-xs">
                               <Label className="text-xs text-gray-400">Margin / unit</Label>
                               <div className={`font-medium mt-1.5 ${isNegative ? 'text-red-600' : 'text-green-700'}`}>
-                                £{marginAmt.toFixed(2)} ({marginPct.toFixed(1)}%)
+                                {formatCurrency(marginAmt)} ({marginPct.toFixed(1)}%)
                               </div>
                             </div>
                             {item.weightKg > 0 && (
@@ -1148,25 +1149,25 @@ export default function QuickQuote() {
               {calculateSavings() > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Customer Savings</span>
-                  <span>-£{calculateSavings().toFixed(2)}</span>
+                  <span>-{formatCurrency(calculateSavings())}</span>
                 </div>
               )}
               <Separator />
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Products</span>
-                  <span>£{calculateProductSubtotal().toFixed(2)}</span>
+                  <span>{formatCurrency(calculateProductSubtotal())}</span>
                 </div>
                 {fulfillmentType === 'delivery' && (parseFloat(deliveryCharge) || 0) > 0 && (
                   <div className="flex justify-between text-blue-700">
                     <span>Delivery</span>
-                    <span>£{(parseFloat(deliveryCharge) || 0).toFixed(2)}</span>
+                    <span>{formatCurrency(parseFloat(deliveryCharge) || 0)}</span>
                   </div>
                 )}
               </div>
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>£{calculateTotal().toFixed(2)}</span>
+                <span>{formatCurrency(calculateTotal())}</span>
               </div>
 
               {quoteItems.length > 0 && (
@@ -1176,15 +1177,15 @@ export default function QuickQuote() {
                     <div className="font-medium text-gray-700 mb-1.5">Margin Overview</div>
                     <div className="flex justify-between text-gray-600">
                       <span>Revenue</span>
-                      <span>£{calculateTotalRevenue().toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotalRevenue())}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Total Cost</span>
-                      <span>£{calculateTotalCost().toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotalCost())}</span>
                     </div>
                     <div className={`flex justify-between font-semibold ${calculateTotalMarginAmount() < 0 ? 'text-red-600' : 'text-green-700'}`}>
                       <span>Margin</span>
-                      <span>£{calculateTotalMarginAmount().toFixed(2)} ({calculateTotalMarginPct().toFixed(1)}%)</span>
+                      <span>{formatCurrency(calculateTotalMarginAmount())} ({calculateTotalMarginPct().toFixed(1)}%)</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Weight</span>
@@ -1237,7 +1238,7 @@ export default function QuickQuote() {
                     <span className="text-xs text-gray-400">editable per quote</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {(user as any)?.deliveryFlatRate ? `Default rate: £${parseFloat((user as any).deliveryFlatRate).toFixed(2)}` : 'No default rate set in settings'}
+                    {(user as any)?.deliveryFlatRate ? `Default rate: ${formatCurrency((user as any).deliveryFlatRate)}` : 'No default rate set in settings'}
                   </p>
                 </div>
               )}
@@ -1351,7 +1352,7 @@ export default function QuickQuote() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-blue-800 font-medium">Pay Later - No payment required now</span>
-                    <span className="font-semibold text-blue-800">£{calculateTotal().toFixed(2)}</span>
+                    <span className="font-semibold text-blue-800">{formatCurrency(calculateTotal())}</span>
                   </div>
                   <p className="text-xs text-blue-600 mt-1">Customer will pay the full amount later. No payment link will be sent.</p>
                 </div>
@@ -1391,11 +1392,11 @@ export default function QuickQuote() {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-amber-800">Deposit ({depositPercentage}%)</span>
-                    <span className="font-semibold text-amber-800">£{calculateDepositAmount().toFixed(2)}</span>
+                    <span className="font-semibold text-amber-800">{formatCurrency(calculateDepositAmount())}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-amber-700">Remaining Balance</span>
-                    <span className="text-amber-700">£{calculateRemainingBalance().toFixed(2)}</span>
+                    <span className="text-amber-700">{formatCurrency(calculateRemainingBalance())}</span>
                   </div>
                 </div>
               )}
@@ -1424,7 +1425,7 @@ export default function QuickQuote() {
                   </div>
                   {balanceDueDays > 0 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      Customer will be reminded to pay the remaining £{calculateRemainingBalance().toFixed(2)} within {balanceDueDays} days
+                      Customer will be reminded to pay the remaining {formatCurrency(calculateRemainingBalance())} within {balanceDueDays} days
                     </p>
                   )}
                 </div>
@@ -1434,7 +1435,7 @@ export default function QuickQuote() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-green-700">Full Payment</span>
-                    <span className="font-semibold text-green-700">£{calculateTotal().toFixed(2)}</span>
+                    <span className="font-semibold text-green-700">{formatCurrency(calculateTotal())}</span>
                   </div>
                 </div>
               )}

@@ -31,13 +31,16 @@ import {
   Plus,
   Bell,
   TrendingUp,
+  TrendingDown,
   Users,
   Trophy,
   Share2,
   CreditCard,
   Eye,
   Tag,
-  CheckCircle
+  CheckCircle,
+  Info,
+  Percent
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,6 +48,135 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynamic-tooltip";
 
 // Chart data is now fetched from real backend API instead of fake data generation
+
+interface MarginSegment {
+  revenue: number;
+  cost: number;
+  margin: number;
+  marginPercent: number;
+  hasMissingCost: boolean;
+}
+interface MarginSummary {
+  quotes: MarginSegment;
+  online: MarginSegment;
+  total: MarginSegment;
+}
+
+function MarginOverview({ dateRange }: { dateRange: DateRange }) {
+  const { data: marginData, isLoading } = useQuery<MarginSummary>({
+    queryKey: ["/api/analytics/margin-summary", dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryFn: async () => {
+      if (!dateRange.from || !dateRange.to) throw new Error("Date range required");
+      const params = new URLSearchParams({
+        fromDate: dateRange.from.toISOString(),
+        toDate: dateRange.to.toISOString(),
+      });
+      const res = await fetch(`/api/analytics/margin-summary?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch margin summary");
+      return res.json();
+    },
+    enabled: !!dateRange?.from && !!dateRange?.to,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const fmt = (v: number) => formatCurrency(v);
+  const pct = (v: number) => `${v >= 0 ? "" : "-"}${Math.abs(v).toFixed(1)}%`;
+  const hasMissingCost = marginData?.total?.hasMissingCost || marginData?.quotes?.hasMissingCost || marginData?.online?.hasMissingCost;
+
+  const StatTile = ({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) => (
+    <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-1">
+      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-2xl font-bold ${positive === undefined ? "text-slate-900" : positive ? "text-emerald-600" : "text-red-500"}`}>{value}</p>
+      {sub && <p className="text-xs text-slate-400">{sub}</p>}
+    </div>
+  );
+
+  const BreakdownRow = ({ label, seg, icon }: { label: string; seg: MarginSegment; icon: JSX.Element }) => (
+    <div className="grid grid-cols-5 gap-2 items-center py-3 border-t border-slate-100 first:border-0">
+      <div className="flex items-center gap-2 col-span-1">
+        {icon}
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+      </div>
+      <div className="text-sm text-right text-slate-700">{fmt(seg.revenue)}</div>
+      <div className="text-sm text-right text-slate-700">{fmt(seg.cost)}</div>
+      <div className={`text-sm text-right font-medium ${seg.margin >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmt(seg.margin)}</div>
+      <div className={`text-sm text-right font-semibold ${seg.marginPercent >= 0 ? "text-emerald-600" : "text-red-500"}`}>{pct(seg.marginPercent)}</div>
+    </div>
+  );
+
+  return (
+    <div className="mb-8">
+      <Card className="bg-white border-slate-200 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Percent className="w-5 h-5 text-emerald-500" />
+                Margin Overview
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-1">Estimated gross margin based on batch cost prices</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="bg-slate-50 rounded-xl p-4 animate-pulse">
+                    <div className="h-3 bg-slate-200 rounded w-2/3 mb-3" />
+                    <div className="h-7 bg-slate-200 rounded w-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="h-24 bg-slate-50 rounded-xl animate-pulse" />
+            </div>
+          ) : marginData ? (
+            <div className="space-y-6">
+              {hasMissingCost && (
+                <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <Info className="w-4 h-4 flex-shrink-0" />
+                  <span>Some products have no cost data — those items are excluded from margin totals.</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatTile label="Total Revenue" value={fmt(marginData.total.revenue)} />
+                <StatTile label="Est. Cost" value={fmt(marginData.total.cost)} />
+                <StatTile label="Margin (£)" value={fmt(marginData.total.margin)} positive={marginData.total.margin >= 0} />
+                <StatTile label="Margin %" value={pct(marginData.total.marginPercent)} positive={marginData.total.marginPercent >= 0} />
+              </div>
+              <div>
+                <div className="grid grid-cols-5 gap-2 pb-2">
+                  <div className="col-span-1" />
+                  {["Revenue", "Est. Cost", "Margin (£)", "Margin %"].map(h => (
+                    <p key={h} className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-right">{h}</p>
+                  ))}
+                </div>
+                <BreakdownRow
+                  label="Quotes"
+                  seg={marginData.quotes}
+                  icon={<TrendingUp className="w-4 h-4 text-purple-500 flex-shrink-0" />}
+                />
+                <BreakdownRow
+                  label="Online Orders"
+                  seg={marginData.online}
+                  icon={<ShoppingCart className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Percent className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p>No margin data available for this period</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function WholesalerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -535,6 +667,9 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Margin Overview */}
+          <MarginOverview dateRange={dateRange} />
           
           {/* Interactive Quick Actions Grid */}
           <TooltipProvider>
@@ -706,7 +841,7 @@ export default function WholesalerDashboard() {
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            £{(topProducts as any)[0].price ? parseFloat((topProducts as any)[0].price.toString()).toFixed(2) : '0.00'}
+                            {formatCurrency((topProducts as any)[0].price || 0)}
                           </p>
                         </div>
                       </div>
@@ -935,10 +1070,10 @@ export default function WholesalerDashboard() {
                     {activePromotions.slice(0, 6).map((promo: any) => {
                       const typeLabels: Record<string, string> = {
                         percentage_discount: `${promo.discountPercentage}% OFF`,
-                        fixed_price: `Now £${promo.fixedPrice}`,
+                        fixed_price: `Now ${formatCurrency(promo.fixedPrice)}`,
                         buy_x_get_y_free: `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`,
-                        bundle_deal: `${promo.minQuantity}+ @ £${promo.fixedPrice}`,
-                        clearance: `Clearance £${promo.fixedPrice}`,
+                        bundle_deal: `${promo.minQuantity}+ @ ${formatCurrency(promo.fixedPrice)}`,
+                        clearance: `Clearance ${formatCurrency(promo.fixedPrice)}`,
                       };
                       const typeColors: Record<string, string> = {
                         percentage_discount: 'bg-red-100 text-red-700',

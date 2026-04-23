@@ -10,6 +10,7 @@ import { AddressSelector } from "@/components/customer/AddressSelector";
 import { StripeCheckoutForm } from "@/components/customer/StripeCheckoutForm";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@shared/utils/currency";
 import type { CartItem } from "@/components/customer/portal-types";
 
 interface CheckoutDialogProps {
@@ -154,7 +155,7 @@ export function CheckoutDialog({
                             <div className="text-right flex-shrink-0">
                               {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
                                 <div className="text-xs text-gray-400 line-through">
-                                  £{(cartPricing.originalPrice * item.quantity).toFixed(2)}
+                                  {formatCurrency(cartPricing.originalPrice * item.quantity)}
                                 </div>
                               )}
                               <PriceDisplay
@@ -193,9 +194,9 @@ export function CheckoutDialog({
                           </div>
 
                           <p className="text-xs text-gray-500 mt-1">
-                            £{itemPrice.toFixed(2)} / {item.sellingType === 'pallets' ? 'pallet' : 'unit'}
+                            {formatCurrency(itemPrice)} / {item.sellingType === 'pallets' ? 'pallet' : 'unit'}
                             {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
-                              <span className="ml-1 text-gray-400 line-through">£{cartPricing.originalPrice.toFixed(2)}</span>
+                              <span className="ml-1 text-gray-400 line-through">{formatCurrency(cartPricing.originalPrice)}</span>
                             )}
                           </p>
                         </div>
@@ -472,12 +473,12 @@ export function CheckoutDialog({
                       <div className="flex justify-between">
                         <span>Home delivery</span>
                         <span className="text-blue-600 font-medium">
-                          {wholesaler?.deliveryFlatRate ? `£${parseFloat(wholesaler.deliveryFlatRate).toFixed(2)}` : 'Arranged by supplier'}
+                          {wholesaler?.deliveryFlatRate ? formatCurrency(wholesaler.deliveryFlatRate) : 'Arranged by supplier'}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
                         {wholesaler?.deliveryFlatRate
-                          ? `Flat delivery fee of £${parseFloat(wholesaler.deliveryFlatRate).toFixed(2)} added at checkout`
+                          ? `Flat delivery fee of ${formatCurrency(wholesaler.deliveryFlatRate)} added at checkout`
                           : 'The supplier will contact you to arrange delivery and discuss costs'}
                       </p>
                     </Label>
@@ -627,7 +628,7 @@ export function CheckoutDialog({
                             ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                           const beforeFees = subtotal + shipping;
                           const transactionFee = (beforeFees * 0.055) + 0.50;
-                          return `£${(beforeFees + transactionFee).toFixed(2)}`;
+                          return formatCurrency(beforeFees + transactionFee);
                         })()}
                       </strong>{' '}
                       will be due on invoice. The supplier will be notified of your order.

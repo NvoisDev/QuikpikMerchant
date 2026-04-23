@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@shared/utils/currency";
 import type { ExtendedProduct, CartItem } from "@/components/customer/portal-types";
 
 interface UnitSelectionModalProps {
@@ -86,11 +87,11 @@ export function UnitSelectionModal({
                         <p className="text-sm text-gray-600">
                           {hasDiscount ? (
                             <>
-                              <span className="line-through text-gray-400 mr-1">£{promoPricing.originalPrice.toFixed(2)}</span>
-                              <span className="text-emerald-600 font-semibold">£{promoPricing.effectivePrice.toFixed(2)}</span> per unit
+                              <span className="line-through text-gray-400 mr-1">{formatCurrency(promoPricing.originalPrice)}</span>
+                              <span className="text-emerald-600 font-semibold">{formatCurrency(promoPricing.effectivePrice)}</span> per unit
                             </>
                           ) : (
-                            <>£{promoPricing.effectivePrice.toFixed(2)} per unit</>
+                            <>{formatCurrency(promoPricing.effectivePrice)} per unit</>
                           )}
                         </p>
                         {hasDiscount && promoPricing.promoLabel && (
@@ -110,11 +111,11 @@ export function UnitSelectionModal({
                       <div className="text-right">
                         {hasDiscount && (
                           <div className="text-xs text-gray-400 line-through">
-                            £{(promoPricing.originalPrice * moq).toFixed(2)}
+                            {formatCurrency(promoPricing.originalPrice * moq)}
                           </div>
                         )}
                         <div className="text-lg font-semibold text-emerald-600">
-                          £{promoPricing.totalCost.toFixed(2)}
+                          {formatCurrency(promoPricing.totalCost)}
                         </div>
                         <div className="text-xs text-gray-500">
                           for {moq} units
@@ -140,7 +141,7 @@ export function UnitSelectionModal({
                   <div>
                     <h4 className="font-medium text-gray-900">Full Pallets</h4>
                     <p className="text-sm text-gray-600">
-                      £{parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0').toFixed(2)} per pallet
+                      {formatCurrency((selectedProductForModal as any).palletPrice || 0)} per pallet
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {(selectedProductForModal as any).unitsPerPallet} units per pallet
@@ -156,7 +157,7 @@ export function UnitSelectionModal({
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold text-blue-600">
-                      £{(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * ((selectedProductForModal as any).palletMoq || 1)).toFixed(2)}
+                      {formatCurrency(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * ((selectedProductForModal as any).palletMoq || 1))}
                     </div>
                     <div className="text-xs text-gray-500">
                       for {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
@@ -235,14 +236,14 @@ export function UnitSelectionModal({
                           if (hasPromo) {
                             return (
                               <>
-                                <span className="line-through text-gray-400 mr-1">£{qtyPricing.originalPrice.toFixed(2)}</span>
-                                <span className="text-emerald-600 font-semibold">£{qtyPricing.effectivePrice.toFixed(2)}</span> per unit
+                                <span className="line-through text-gray-400 mr-1">{formatCurrency(qtyPricing.originalPrice)}</span>
+                                <span className="text-emerald-600 font-semibold">{formatCurrency(qtyPricing.effectivePrice)}</span> per unit
                               </>
                             );
                           }
-                          return `£${qtyPricing.effectivePrice.toFixed(2)} per unit`;
+                          return `${formatCurrency(qtyPricing.effectivePrice)} per unit`;
                         })()
-                      : `£${parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0').toFixed(2)} per pallet`
+                      : `${formatCurrency((selectedProductForModal as any).palletPrice || 0)} per pallet`
                     }
                   </p>
                   {selectedModalType === 'units' && (() => {
@@ -417,11 +418,11 @@ export function UnitSelectionModal({
                       <>
                         {hasPromo && (
                           <div className="text-sm text-gray-400 line-through">
-                            £{(totalPricing.originalPrice * modalQuantity).toFixed(2)}
+                            {formatCurrency(totalPricing.originalPrice * modalQuantity)}
                           </div>
                         )}
                         <div className="text-2xl font-bold text-emerald-600">
-                          £{totalPricing.totalCost.toFixed(2)}
+                          {formatCurrency(totalPricing.totalCost)}
                         </div>
                         {hasPromo && totalPricing.promoLabel && (
                           <div className="text-xs text-green-600 mt-1">
@@ -433,7 +434,7 @@ export function UnitSelectionModal({
                   }
                   return (
                     <div className="text-2xl font-bold text-emerald-600">
-                      £{(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * modalQuantity).toFixed(2)}
+                      {formatCurrency(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * modalQuantity)}
                     </div>
                   );
                 })()}

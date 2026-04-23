@@ -725,7 +725,7 @@ export default function CustomerPortal() {
         result.totalCost = offer.fixedPrice * quantity;
         result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
         result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        const fixedDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        const fixedDetail = `${formatCurrency(offer.fixedPrice)} each`;
         result.appliedOffers.push(offer.name ? `${offer.name} - ${fixedDetail}` : fixedDetail);
         result.promoType = 'fixed_price';
         result.promoLabel = 'SPECIAL PRICE';
@@ -759,7 +759,7 @@ export default function CustomerPortal() {
         result.totalCost = offer.fixedPrice * quantity;
         result.totalDiscount = (basePrice - offer.fixedPrice) * quantity;
         result.discountPercentage = Math.round(((basePrice - offer.fixedPrice) / basePrice) * 100);
-        const clearanceDetail = `£${offer.fixedPrice.toFixed(2)} each`;
+        const clearanceDetail = `${formatCurrency(offer.fixedPrice)} each`;
         result.appliedOffers.push(offer.name ? `${offer.name} - ${clearanceDetail}` : `Clearance - ${clearanceDetail}`);
         result.promoType = 'clearance';
         result.promoLabel = 'CLEARANCE';

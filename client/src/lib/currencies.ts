@@ -59,19 +59,18 @@ export function getCurrencySymbol(currencyCode: string): string {
   return currency?.symbol || currencyCode;
 }
 
-// Force cache refresh - updated function name
-export function formatCurrency(amount: number | string, currencyCode: string = "GBP"): string {
+export function formatCurrency(amount: number | string | null | undefined, currencyCode: string = "GBP"): string {
+  if (amount === null || amount === undefined) return "£0.00";
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-  
-  // Always use GBP as default and get the correct symbol
+  if (isNaN(numAmount)) return "£0.00";
+
   const finalCurrency = currencyCode || "GBP";
   const symbol = getCurrencySymbol(finalCurrency);
-  
-  // Format the number without currency, then add our symbol
+
   const formatted = new Intl.NumberFormat('en-GB', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numAmount);
-  
+
   return `${symbol}${formatted}`;
 }

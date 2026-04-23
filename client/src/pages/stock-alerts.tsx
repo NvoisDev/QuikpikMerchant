@@ -11,6 +11,7 @@ import { AlertTriangle, Package, Check, X, Settings, Eye, Info, Clock } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { formatCurrency } from "@/lib/currencies";
 
 interface ExpiringBatch {
   batchId: number;
@@ -305,7 +306,7 @@ export default function StockAlerts() {
                               Batch: <strong>{batch.batchNumber || 'Initial Stock'}</strong>
                               {' · '}{batch.quantity} units
                               {' · '}Exp: {expiryFmt}
-                              {batch.costPrice && ` · Cost: £${parseFloat(batch.costPrice).toFixed(2)}/unit`}
+                              {batch.costPrice && ` · Cost: ${formatCurrency(batch.costPrice)}/unit`}
                             </p>
                           </div>
                         </div>

@@ -2182,11 +2182,11 @@ export default function Customers() {
                                     <div key={item.productId} className="flex items-center justify-between">
                                       <span className="text-gray-700 truncate max-w-[55%]">{item.product?.name || "Unknown"}</span>
                                       {hasFixed && (
-                                        <span className="text-green-700 font-medium">£{parseFloat(item.customPrice).toFixed(2)}</span>
+                                        <span className="text-green-700 font-medium">{formatMoney(item.customPrice)}</span>
                                       )}
                                       {hasPct && !hasFixed && (
                                         <span className="text-green-700 font-medium">
-                                          {parseFloat(item.discountPercentage).toFixed(0)}% off → £{(base * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2)}
+                                          {parseFloat(item.discountPercentage).toFixed(0)}% off → {formatMoney(base * (1 - parseFloat(item.discountPercentage) / 100))}
                                         </span>
                                       )}
                                       {!hasFixed && !hasPct && (
@@ -2436,7 +2436,7 @@ export default function Customers() {
                         <div key={p.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
                           onClick={() => { addProductToPL(p); setPlProductSearch(""); }}>
                           <span>{p.name}</span>
-                          <span className="text-muted-foreground">£{parseFloat(p.price || "0").toFixed(2)}</span>
+                          <span className="text-muted-foreground">{formatMoney(p.price || "0")}</span>
                         </div>
                       ))}
                     {productsForPL.filter(p => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id)).length === 0 && (
@@ -2460,7 +2460,7 @@ export default function Customers() {
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">{product?.name}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Standard: £{standardPrice.toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">Standard: {formatMoney(standardPrice)}</span>
                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500"
                               onClick={() => removeProductFromPL(item.productId)}>
                               <X className="h-3 w-3" />
@@ -2484,17 +2484,17 @@ export default function Customers() {
                         </div>
                         {(item.customPrice || item.discountPercentage) && (
                           <p className="text-xs text-green-700 mt-1">
-                            Customer price: £{
+                            Customer price: {formatMoney(
                               item.customPrice
-                                ? parseFloat(item.customPrice).toFixed(2)
-                                : (standardPrice * (1 - parseFloat(item.discountPercentage) / 100)).toFixed(2)
-                            }
+                                ? parseFloat(item.customPrice)
+                                : (standardPrice * (1 - parseFloat(item.discountPercentage) / 100))
+                            )}
                           </p>
                         )}
                         {product?.palletPrice != null && (
                           <div className="mt-2 pt-2 border-t border-gray-200">
                             <p className="text-[10px] text-muted-foreground mb-1.5">
-                              Pallet price <span className="text-gray-400">(standard: £{parseFloat(product.palletPrice).toFixed(2)})</span>
+                              Pallet price <span className="text-gray-400">(standard: {formatMoney(product.palletPrice)})</span>
                             </p>
                             <div className="w-1/2 pr-1">
                               <Label className="text-xs">Custom Pallet Price (£)</Label>
@@ -2504,7 +2504,7 @@ export default function Customers() {
                             </div>
                             {item.customPalletPrice && (
                               <p className="text-xs text-green-700 mt-1">
-                                Pallet price: £{parseFloat(item.customPalletPrice).toFixed(2)}
+                                Pallet price: {formatMoney(item.customPalletPrice)}
                               </p>
                             )}
                           </div>
@@ -3393,7 +3393,7 @@ export default function Customers() {
                             </div>
                             <div className="text-right text-sm">
                               <p className="font-medium">{customer?.totalOrders || 0} orders</p>
-                              <p className="text-gray-500">£{(customer?.totalSpent || 0).toFixed(2)}</p>
+                              <p className="text-gray-500">{formatMoney(customer?.totalSpent || 0)}</p>
                             </div>
                           </div>
                         </div>
@@ -3459,7 +3459,7 @@ export default function Customers() {
                         </h5>
                         <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
                         {customer?.email && <p className="text-sm text-gray-600">{customer.email}</p>}
-                        <p className="text-sm text-gray-500">{customer?.totalOrders || 0} orders • £{(customer?.totalSpent || 0).toFixed(2)} spent</p>
+                        <p className="text-sm text-gray-500">{customer?.totalOrders || 0} orders • {formatMoney(customer?.totalSpent || 0)} spent</p>
                       </div>
                     </div>
                   </div>

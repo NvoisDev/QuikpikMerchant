@@ -2890,10 +2890,10 @@ export default function ProductManagement() {
                                   let label: string;
                                   switch (promo.type) {
                                     case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
-                                    case "fixed_price": label = `Now £${Number(promo.fixedPrice).toFixed(2)}`; break;
-                                    case "clearance": label = `Clearance £${Number(promo.fixedPrice).toFixed(2)}`; break;
+                                    case "fixed_price": label = `Now ${formatCurrency(promo.fixedPrice)}`; break;
+                                    case "clearance": label = `Clearance ${formatCurrency(promo.fixedPrice)}`; break;
                                     case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
-                                    case "bundle_deal": label = `${promo.minQuantity}+ at £${Number(promo.fixedPrice).toFixed(2)} each`; break;
+                                    case "bundle_deal": label = `${promo.minQuantity}+ at ${formatCurrency(promo.fixedPrice)} each`; break;
                                     default: label = promo.name || "Promo";
                                   }
                                   return (
@@ -3113,7 +3113,7 @@ export default function ProductManagement() {
                                         </span>
                                       ) : '—'}
                                     </td>
-                                    <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? `£${parseFloat(batch.costPrice).toFixed(2)}` : '—'}</td>
+                                    <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? formatCurrency(batch.costPrice) : '—'}</td>
                                     <td className="py-1.5 pr-3">
                                       {isDepleted ? (
                                         <Badge className="text-xs bg-gray-100 text-gray-500 border-0">Depleted</Badge>

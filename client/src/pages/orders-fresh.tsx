@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { formatCurrency } from "@/lib/currencies";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 
 interface Order {
@@ -590,7 +591,7 @@ export default function OrdersFresh() {
         setIsMarkAsPaidOpen(false);
         toast({
           title: 'Payment recorded',
-          description: `£${parsed.toFixed(2)} via ${markAsPaidMethod.replace('_', ' ')} has been recorded.`,
+          description: `${formatCurrency(parsed)} via ${markAsPaidMethod.replace('_', ' ')} has been recorded.`,
         });
       } else {
         toast({ title: 'Error', description: data.error || 'Failed to record payment', variant: 'destructive' });
