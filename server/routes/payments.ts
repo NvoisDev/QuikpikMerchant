@@ -1225,51 +1225,46 @@ export function registerPaymentRoutes(app: Express): void {
             message: 'Subscription upgraded successfully with proration applied'
           });
         } catch (upgradeError: any) {
-          console.error('❌ Failed to upgrade subscription directly — falling back to checkout session:', {
-            type: upgradeError?.type,
-            code: upgradeError?.code,
+          // Structured error log — every field here is useful for diagnosing which
+          // Stripe error caused the direct update to fail (e.g. resource_missing,
+          // subscription_update_forbidden, payment_method_unexpected_state, etc.)
+          console.error('❌ Direct subscription upgrade failed — attempting Billing Portal fallback:', {
+            stripeType: upgradeError?.type,
+            stripeCode: upgradeError?.code,
+            stripeDeclineCode: upgradeError?.decline_code ?? null,
             message: upgradeError?.message,
-            raw: upgradeError
+            subscriptionId: existingSubscription.stripeSubscriptionId,
+            customerId: stripeCustomerId,
+            targetPlanId: targetPlan.planId,
+            targetPriceId: priceId,
           });
 
-          // Fallback: create a Stripe Checkout Session so the user can complete
-          // the upgrade through Stripe's hosted page instead of hitting an error.
+          // Fallback: redirect the user to the Stripe Billing Portal so they can
+          // complete the upgrade there. The portal is the correct Stripe primitive
+          // for modifying an *existing* subscription — unlike a new Checkout Session
+          // (mode:'subscription') it never conflicts with an existing active sub.
+          const returnBase = process.env.FRONTEND_URL || 'https://quikpik.app';
           try {
-            const fallbackSessionOptions: any = {
+            const portalSession = await stripe.billingPortal.sessions.create({
               customer: stripeCustomerId,
-              payment_method_types: ['card'],
-              line_items: [{
-                price: priceId,
-                quantity: 1,
-              }],
-              mode: 'subscription',
-              success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-              cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
-              metadata: {
-                userId: userId,
-                planId: targetPlan.planId,
-                subscriptionType: 'upgrade_fallback'
-              }
-            };
-
-            const fallbackSession = idempotencyKey
-              ? await stripe.checkout.sessions.create(fallbackSessionOptions, { idempotencyKey: `fallback_${idempotencyKey}` })
-              : await stripe.checkout.sessions.create(fallbackSessionOptions);
-            console.log('✅ Fallback checkout session created for upgrade:', fallbackSession.id);
-
+              return_url: `${returnBase}/subscription-pricing`,
+            });
+            console.log('✅ Billing Portal session created as upgrade fallback:', portalSession.id);
             return res.json({
               success: true,
-              type: 'checkout',
-              sessionId: fallbackSession.id,
-              url: fallbackSession.url
+              type: 'portal',
+              url: portalSession.url,
             });
-          } catch (fallbackError: any) {
-            console.error('❌ Fallback checkout session also failed:', {
-              type: fallbackError?.type,
-              code: fallbackError?.code,
-              message: fallbackError?.message
+          } catch (portalError: any) {
+            console.error('❌ Billing Portal fallback also failed:', {
+              stripeType: portalError?.type,
+              stripeCode: portalError?.code,
+              message: portalError?.message,
             });
-            return res.status(500).json({ message: 'Failed to upgrade subscription' });
+            return res.status(500).json({
+              message: 'We could not process your upgrade automatically. Please contact support or try again later.',
+              stripeCode: portalError?.code ?? upgradeError?.code ?? 'unknown',
+            });
           }
         }
       } else {
