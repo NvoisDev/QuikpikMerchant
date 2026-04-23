@@ -1040,6 +1040,12 @@ export default function OrderDetail() {
                 </>
               );
             })()}
+            {order.paymentMethod && (
+              <div className="flex justify-between text-gray-600 text-xs mt-1">
+                <span>Method:</span>
+                <span className="font-medium">{getPaymentMethodLabel(order.paymentMethod)}</span>
+              </div>
+            )}
             <div className="border-t pt-1 mt-2">
               <div className="flex justify-between font-medium text-green-600">
                 <span>Your Net Amount:</span>
