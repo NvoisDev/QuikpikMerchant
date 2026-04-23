@@ -223,7 +223,7 @@ export default function ProductDetail() {
     mutationFn: ({ qty, type }: { qty: number; type: "increase" | "decrease" }) =>
       apiRequest("POST", `/api/products/${productId}/stock-adjustment`, {
         quantity: qty,
-        type,
+        adjustmentType: type,
         reason: stockReason || (type === "increase" ? "Manual increase" : "Manual decrease"),
       }),
     onSuccess: () => {
