@@ -792,12 +792,20 @@ export default function QuickQuote() {
                                   </div>
                                   {product.costPrice && (
                                     <div className="text-xs mt-1 text-gray-400">
-                                      Cost £{parseFloat(product.costPrice).toFixed(2)}
-                                      {parseFloat(product.price) > 0 && (
-                                        <span className={parseFloat(product.price) - parseFloat(product.costPrice) < 0 ? 'text-red-500 ml-1' : 'text-green-600 ml-1'}>
-                                          ({((( parseFloat(product.price) - parseFloat(product.costPrice)) / parseFloat(product.price)) * 100).toFixed(0)}% margin)
-                                        </span>
-                                      )}
+                                      {(() => {
+                                        const cost = parseFloat(product.costPrice);
+                                        const sell = parseFloat(product.price);
+                                        const mAmt = sell - cost;
+                                        const mPct = sell > 0 ? ((mAmt / sell) * 100).toFixed(0) : '0';
+                                        return (
+                                          <>
+                                            Cost £{cost.toFixed(2)} | Margin{' '}
+                                            <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
+                                              £{mAmt.toFixed(2)} ({mPct}%)
+                                            </span>
+                                          </>
+                                        );
+                                      })()}
                                     </div>
                                   )}
                                 </div>
@@ -839,12 +847,13 @@ export default function QuickQuote() {
                                       {(() => {
                                         const palletCost = parseFloat(product.costPrice) * product.unitsPerPallet;
                                         const palletSell = parseFloat(product.palletPrice!);
-                                        const mPct = palletSell > 0 ? (((palletSell - palletCost) / palletSell) * 100).toFixed(0) : '0';
+                                        const mAmt = palletSell - palletCost;
+                                        const mPct = palletSell > 0 ? ((mAmt / palletSell) * 100).toFixed(0) : '0';
                                         return (
                                           <>
-                                            Cost £{palletCost.toFixed(2)}
-                                            <span className={palletSell - palletCost < 0 ? 'text-red-500 ml-1' : 'text-green-600 ml-1'}>
-                                              ({mPct}% margin)
+                                            Cost £{palletCost.toFixed(2)} | Margin{' '}
+                                            <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
+                                              £{mAmt.toFixed(2)} ({mPct}%)
                                             </span>
                                           </>
                                         );
@@ -1025,8 +1034,9 @@ export default function QuickQuote() {
                       {(() => {
                         const costVal = costValues[index] ?? item.costPrice.toString();
                         const costNum = parseFloat(costVal) || 0;
-                        const marginAmt = item.customPrice - costNum;
-                        const marginPct = item.customPrice > 0 ? (marginAmt / item.customPrice) * 100 : 0;
+                        const livePrice = parseFloat(inputValues[index]?.price ?? item.customPrice.toString()) || item.customPrice;
+                        const marginAmt = livePrice - costNum;
+                        const marginPct = livePrice > 0 ? (marginAmt / livePrice) * 100 : 0;
                         const isNegative = marginAmt < 0;
                         return (
                           <div className="flex items-end gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
@@ -1110,7 +1120,7 @@ export default function QuickQuote() {
                 <span>£{calculateTotal().toFixed(2)}</span>
               </div>
 
-              {quoteItems.length > 0 && quoteItems.some(i => i.costPrice > 0) && (
+              {quoteItems.length > 0 && (
                 <>
                   <Separator />
                   <div className="space-y-1 text-sm">
