@@ -787,84 +787,130 @@ export class OrderStorage extends ProductStorage {
         if (currentProduct) {
           console.log(`📦 PRODUCT: ${currentProduct.name} (ID: ${item.productId})`);
           console.log(`📊 CURRENT STOCK: units: ${currentProduct.stock}, pallets: ${currentProduct.palletStock}`);
-          
+
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;
           const freeItemsQty = (item as any).freeItems || 0;
           const totalStockToReduce = orderedQuantity + freeItemsQty;
-          
+
           if (freeItemsQty > 0) {
             console.log(`🎁 BOGOF: ${orderedQuantity} ordered + ${freeItemsQty} free = ${totalStockToReduce} total stock reduction`);
           }
           console.log(`🛒 ORDER: ${totalStockToReduce} ${sellingType} (includes ${freeItemsQty} free items)`);
-          
-          const orderResult = InventoryCalculator.processOrder(totalStockToReduce, sellingType, {
-            stock: currentProduct.stock,
-            palletStock: currentProduct.palletStock,
-            quantityInPack: currentProduct.quantityInPack,
-            unitsPerPallet: currentProduct.unitsPerPallet
-          });
-          
-          const { newUnitStock, newPalletStock } = orderResult;
-          
-          console.log(`📊 NEW STOCK: units: ${newUnitStock}, pallets: ${newPalletStock}`);
-          
-          // Update SEPARATE stock fields (unit stock and pallet stock)
-          await trx
-            .update(products)
-            .set({ 
-              stock: newUnitStock,
-              palletStock: newPalletStock,
-              updatedAt: new Date()
-            })
-            .where(eq(products.id, item.productId));
-          
-          // Record stock movement with proper unit type
-          const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
-          const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
-          
-          await trx.insert(stockMovements).values({
-            productId: item.productId,
-            wholesalerId: orderData.wholesalerId,
-            movementType: 'purchase',
-            quantity: -totalStockToReduce,
-            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-            stockBefore: stockBefore,
-            stockAfter: stockAfter,
-            reason: freeItemsQty > 0 
-              ? `Order sale - ${orderedQuantity} ${sellingType} + ${freeItemsQty} free (promo)`
-              : `Order sale - ${orderedQuantity} ${sellingType}`,
-            orderId: newOrder.id
-          });
-          
-          console.log(`✅ STOCK MOVEMENT: Recorded ${orderedQuantity} ${sellingType} reduction`);
-          
-          console.log(`📦 SEPARATE Stock reduced for product ${item.productId}:`);
-          if (sellingType === 'pallets') {
-            console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
+
+          // ── FEFO batch allocation ────────────────────────────────────────────
+          const today = new Date().toISOString().split('T')[0];
+          const activeBatches = await trx
+            .select()
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(
+                  isNull(productBatches.expiryDate),
+                  sql`${productBatches.expiryDate} >= ${today}`
+                )
+              )
+            )
+            .orderBy(
+              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+              asc(productBatches.expiryDate),
+              asc(productBatches.createdAt)
+            );
+
+          const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
+          const baseUnitsNeeded = sellingType === 'pallets'
+            ? totalStockToReduce * unitsPerPallet
+            : totalStockToReduce;
+          const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
+
+          if (activeBatches.length > 0 && totalAvailable >= baseUnitsNeeded) {
+            // ── Batch-based FEFO deduction ──
+            let remaining = baseUnitsNeeded;
+            for (const batch of activeBatches) {
+              if (remaining <= 0) break;
+              const deduct = Math.min(remaining, batch.quantity);
+              const newQty = batch.quantity - deduct;
+              const newStatus = newQty === 0 ? 'depleted' : 'active';
+
+              await trx
+                .update(productBatches)
+                .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+                .where(eq(productBatches.id, batch.id));
+
+              await trx.insert(stockMovements).values({
+                productId: item.productId,
+                wholesalerId: orderData.wholesalerId,
+                movementType: 'purchase',
+                quantity: -deduct,
+                unitType: 'units',
+                stockBefore: batch.quantity,
+                stockAfter: newQty,
+                reason: freeItemsQty > 0
+                  ? `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units incl. ${freeItemsQty} free (promo)`
+                  : `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
+                orderId: newOrder.id,
+              });
+
+              remaining -= deduct;
+            }
+
+            // Sync products.stock + palletStock from batch totals (source of truth)
+            const [batchSumRow] = await trx
+              .select({ total: sum(productBatches.quantity) })
+              .from(productBatches)
+              .where(
+                and(
+                  eq(productBatches.productId, item.productId),
+                  eq(productBatches.status, 'active'),
+                  or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+                )
+              );
+            const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+            const newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+
+            await trx
+              .update(products)
+              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
+              .where(eq(products.id, item.productId));
+
+            console.log(`✅ FEFO STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets`);
           } else {
-            console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
+            // ── Legacy fallback for products not yet in the batch system ──
+            console.log(`⚠️ No active batches for product ${item.productId} — falling back to legacy InventoryCalculator`);
+            const orderResult = InventoryCalculator.processOrder(totalStockToReduce, sellingType, {
+              stock: currentProduct.stock,
+              palletStock: currentProduct.palletStock,
+              quantityInPack: currentProduct.quantityInPack,
+              unitsPerPallet: currentProduct.unitsPerPallet,
+            });
+            const { newUnitStock, newPalletStock } = orderResult;
+
+            await trx
+              .update(products)
+              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
+              .where(eq(products.id, item.productId));
+
+            const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
+            const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
+            await trx.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId: orderData.wholesalerId,
+              movementType: 'purchase',
+              quantity: -totalStockToReduce,
+              unitType: sellingType === 'pallets' ? 'pallets' : 'units',
+              stockBefore,
+              stockAfter,
+              reason: freeItemsQty > 0
+                ? `Order sale - ${orderedQuantity} ${sellingType} + ${freeItemsQty} free (promo)`
+                : `Order sale - ${orderedQuantity} ${sellingType}`,
+              orderId: newOrder.id,
+            });
+
+            console.log(`✅ LEGACY STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets`);
           }
-          
-          // Track stock movement for auditing
-          console.log(`📦 Stock movement tracked for product ${item.productId}: ${orderedQuantity} ${sellingType} ordered`);
-          
-          // Check for low stock and log warnings based on selling type
-          if (sellingType === 'pallets') {
-            if (newPalletStock <= 5) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product "${currentProduct.name}" now has ${newPalletStock} pallets remaining!`);
-            }
-            if (newPalletStock <= 0) {
-              console.log(`🚨 OUT OF PALLET STOCK: Product "${currentProduct.name}" is now out of pallet stock!`);
-            }
-          } else {
-            if (newUnitStock <= 10 && currentProduct.stock > 10) {
-              console.log(`⚠️ LOW UNIT STOCK ALERT: Product "${currentProduct.name}" now has ${newUnitStock} units remaining!`);
-            }
-            if (newUnitStock <= 0) {
-              console.log(`🚨 OUT OF UNIT STOCK: Product "${currentProduct.name}" is now out of unit stock!`);
-            }
-          }
+          // ────────────────────────────────────────────────────────────────────
         } else {
           console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
         }
