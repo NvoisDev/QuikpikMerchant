@@ -104,6 +104,7 @@ const productFormSchema = z.object({
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   lowStockThreshold: z.string().optional(),
   shelfLife: z.string().optional(),
   expiryDate: z.string().optional(),
@@ -272,6 +273,7 @@ export default function ProductManagement() {
       palletMoq: "",
       palletStock: "",
       palletWeight: "",
+      unitWeight: "",
       lowStockThreshold: String(user?.defaultLowStockThreshold || 50),
       shelfLife: "",
       expiryDate: "",
@@ -321,6 +323,7 @@ export default function ProductManagement() {
             palletMoq: String(editingProduct.palletMoq || ""),
             palletStock: String(editingProduct.palletStock || ""),
             palletWeight: String(editingProduct.palletWeight || ""),
+            unitWeight: String(editingProduct.unitWeight || ""),
             lowStockThreshold: String(editingProduct.lowStockThreshold || ""),
             shelfLife: String(editingProduct.shelfLife || ""),
             expiryDate: editingProduct.expiryDate ? String(editingProduct.expiryDate).substring(0, 10) : "",
@@ -812,6 +815,7 @@ export default function ProductManagement() {
         palletMoq: data.palletMoq && data.palletMoq !== "" ? parseInt(data.palletMoq) : null,
         palletStock: data.palletStock && data.palletStock !== "" ? parseInt(data.palletStock) : null,
         palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
+        unitWeight: data.unitWeight && data.unitWeight !== "" ? parseFloat(data.unitWeight) : null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
         costPrice: data.costPrice && data.costPrice !== "" ? parseFloat(data.costPrice) : null,
@@ -866,6 +870,7 @@ export default function ProductManagement() {
         palletMoq: productData.palletMoq && productData.palletMoq !== "" ? parseInt(productData.palletMoq) : null,
         palletStock: productData.palletStock && productData.palletStock !== "" ? parseInt(productData.palletStock) : null,
         palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
+        unitWeight: productData.unitWeight && productData.unitWeight !== "" ? parseFloat(productData.unitWeight) : null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
         sellingFormat: productData.sellingFormat || "units",
@@ -2297,6 +2302,28 @@ export default function ProductManagement() {
                                   <FormMessage />
                                   <div className="text-xs text-muted-foreground">
                                     {field.value ? `Auto-calculated: ${field.value}kg` : 'Complete package weight for shipping quotes'}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="unitWeight"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Unit Weight (kg)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.001"
+                                      placeholder="e.g. 2.5"
+                                      {...field}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Weight of one selling unit — used in quote weight totals
                                   </div>
                                 </FormItem>
                               )}
