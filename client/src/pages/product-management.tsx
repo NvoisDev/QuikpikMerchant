@@ -1180,20 +1180,26 @@ export default function ProductManagement() {
   };
 
   const handleBatchRemoval = () => {
-    if (!stockProduct || !selectedBatchId || !stockQuantity || !stockReason) return;
+    if (!stockProduct || !stockQuantity || !stockReason) return;
     const qty = parseInt(stockQuantity);
     if (isNaN(qty) || qty <= 0) {
       toast({ title: "Invalid quantity", description: "Please enter a positive number", variant: "destructive" });
       return;
     }
+    // Resolve batch against current modalBatches — hard-fail if not found (stale ID guard)
     const selectedBatch = (modalBatches as any[])?.find((b: any) => b.id === selectedBatchId);
-    if (selectedBatch && qty > selectedBatch.quantity) {
+    if (!selectedBatch) {
+      toast({ title: "Please select a batch", description: "Tap a batch from the list above", variant: "destructive" });
+      setSelectedBatchId(null);
+      return;
+    }
+    if (qty > selectedBatch.quantity) {
       toast({ title: "Insufficient batch stock", description: `This batch only has ${formatNumber(selectedBatch.quantity)} units`, variant: "destructive" });
       return;
     }
     removeBatchStockMutation.mutate({
       productId: stockProduct.id,
-      batchId: selectedBatchId,
+      batchId: selectedBatch.id,
       delta: -qty,
       reason: stockReason,
     });
@@ -3146,7 +3152,7 @@ export default function ProductManagement() {
           )}
       </div>
 
-      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) setStockProduct(null); }}>
+      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setStockQuantity(""); setStockReason(""); } }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -3314,59 +3320,63 @@ export default function ProductManagement() {
                 </div>
               ) : (
                 /* Remove Stock — batch-aware when batches exist, global otherwise */
-                (stockProduct.batchCount ?? 0) > 0 ? (
-                  <div className="space-y-3">
-                    {!selectedBatchId && (
-                      <p className="text-xs text-orange-600 font-medium text-center py-1">↑ Tap a batch above to select it</p>
-                    )}
-                    {selectedBatchId && (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="Enter quantity"
-                            value={stockQuantity}
-                            onChange={(e) => setStockQuantity(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
-                              <button
-                                key={preset}
-                                type="button"
-                                onClick={() => setStockReason(preset)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                  stockReason === preset
-                                    ? 'bg-orange-600 text-white border-orange-600'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                }`}
-                              >
-                                {preset}
-                              </button>
-                            ))}
+                (stockProduct.batchCount ?? 0) > 0 ? (() => {
+                  // Resolve against current modalBatches so stale IDs don't slip through
+                  const activeBatchList = (modalBatches as any[]) ?? [];
+                  const selectedBatch = activeBatchList.find((b: any) => b.id === selectedBatchId) ?? null;
+                  return (
+                    <div className="space-y-3">
+                      {!selectedBatch && (
+                        <p className="text-xs text-orange-600 font-medium text-center py-1">↑ Tap a batch above to select it</p>
+                      )}
+                      {selectedBatch && (
+                        <>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Enter quantity"
+                              value={stockQuantity}
+                              onChange={(e) => setStockQuantity(e.target.value)}
+                              className="mt-1"
+                            />
                           </div>
-                        </div>
-                        <Button
-                          onClick={handleBatchRemoval}
-                          disabled={!stockQuantity || !stockReason || removeBatchStockMutation.isPending}
-                          className="w-full bg-orange-600 hover:bg-orange-700"
-                        >
-                          {removeBatchStockMutation.isPending ? "Removing…" : (() => {
-                            const b = (modalBatches as any[])?.find((x: any) => x.id === selectedBatchId);
-                            const ref = b?.batchNumber || 'batch';
-                            const exp = b?.expiryDate ? ` · Exp ${new Date(b.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}` : '';
-                            return `Remove ${stockQuantity || 0} units from ${ref}${exp}`;
-                          })()}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
+                                <button
+                                  key={preset}
+                                  type="button"
+                                  onClick={() => setStockReason(preset)}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                    stockReason === preset
+                                      ? 'bg-orange-600 text-white border-orange-600'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {preset}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleBatchRemoval}
+                            disabled={!stockQuantity || !stockReason || removeBatchStockMutation.isPending}
+                            className="w-full bg-orange-600 hover:bg-orange-700"
+                          >
+                            {removeBatchStockMutation.isPending ? "Removing…" : (() => {
+                              const ref = selectedBatch.batchNumber || 'batch';
+                              const exp = selectedBatch.expiryDate ? ` · Exp ${new Date(selectedBatch.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}` : '';
+                              return `Remove ${stockQuantity || 0} units from ${ref}${exp}`;
+                            })()}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })() : (
                   /* Non-batch product — original global remove flow */
                   <>
                     <div>
