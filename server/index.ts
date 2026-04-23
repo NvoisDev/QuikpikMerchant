@@ -86,6 +86,30 @@ async function runStartupMigrations() {
     // runs first so by the time we reach this statement there are no pre-existing duplicates that
     // would cause the CREATE to fail.  IF NOT EXISTS makes it idempotent on every restart.
     `CREATE UNIQUE INDEX IF NOT EXISTS uniq_pending_reg_per_wholesaler_phone ON customer_registration_requests (wholesaler_id, RIGHT(regexp_replace(customer_phone, '\\D', '', 'g'), 10)) WHERE status = 'pending'`,
+    // Task #376: Batch-level inventory tracking
+    `CREATE TABLE IF NOT EXISTS product_batches (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      batch_number VARCHAR,
+      quantity INTEGER NOT NULL DEFAULT 0,
+      cost_price DECIMAL(10,2),
+      expiry_date DATE,
+      status VARCHAR NOT NULL DEFAULT 'active',
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS pb_product_id_idx ON product_batches(product_id)`,
+    `CREATE INDEX IF NOT EXISTS pb_product_expiry_idx ON product_batches(product_id, expiry_date)`,
+    `CREATE INDEX IF NOT EXISTS pb_status_idx ON product_batches(status)`,
+    `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(id)`,
+    // Backward-compat migration: seed one "Initial Stock" batch per product that has stock > 0
+    // and does not yet have any batch records (idempotent — runs as a no-op once seeded).
+    `INSERT INTO product_batches (product_id, batch_number, quantity, status, created_at)
+     SELECT id, 'Initial Stock', GREATEST(COALESCE(stock, 0), 0), 'active', NOW()
+     FROM products
+     WHERE COALESCE(stock, 0) > 0
+       AND id NOT IN (SELECT DISTINCT product_id FROM product_batches)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
@@ -279,6 +303,12 @@ app.use((req, res, next) => {
     cron.schedule('0 8 * * *', async () => {
       console.log('📦 Running daily stock level check...');
       try {
+        // Expire any batches whose expiry_date has passed before sending alerts
+        const { storage: storageInstance } = await import("./storage");
+        const expiredCount = await storageInstance.expireOldBatches();
+        if (expiredCount > 0) {
+          console.log(`🕒 Expired ${expiredCount} batch(es) whose expiry date has passed`);
+        }
         await stockAlertService.checkAndSendLowStockAlerts();
       } catch (error) {
         console.error('❌ Stock alert check failed:', error);

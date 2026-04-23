@@ -25,6 +25,9 @@ import {
   tabPermissions,
   deliveryAddresses,
   wholesalerCustomerRelationships,
+  productBatches,
+  type ProductBatch,
+  type InsertProductBatch,
   type User,
   type UpsertUser,
   type Product,
@@ -71,7 +74,7 @@ import {
   type InsertWholesalerCustomerRelationship,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
+import { eq, desc, asc, and, sql, sum, count, or, ilike, isNull, inArray, gt, lte } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../passwordUtils";
 import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 
@@ -419,6 +422,149 @@ export class ProductStorage extends UserStorageBase {
         )
       )
       .orderBy(products.stock);
+  }
+
+  // ── Batch-level inventory methods ────────────────────────────────────────
+
+  /**
+   * Return all batches for a product, FEFO order (earliest expiry first,
+   * nulls last), then depleted/expired batches at the very end.
+   */
+  async getProductBatches(productId: number): Promise<ProductBatch[]> {
+    return await db
+      .select()
+      .from(productBatches)
+      .where(eq(productBatches.productId, productId))
+      .orderBy(
+        // Active first, then depleted, then expired
+        sql`CASE status WHEN 'active' THEN 0 WHEN 'depleted' THEN 1 ELSE 2 END`,
+        // Within active: earliest expiry first (FEFO), no-expiry batches last
+        sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+        asc(productBatches.expiryDate),
+        asc(productBatches.createdAt)
+      );
+  }
+
+  /** Create a new batch (stock-in event). Updates product.stock to reflect new total. */
+  async createProductBatch(batch: InsertProductBatch): Promise<ProductBatch> {
+    const [newBatch] = await db.insert(productBatches).values(batch).returning();
+
+    // Keep product.stock in sync (sum of all active non-expired batches)
+    await this._syncProductStockFromBatches(batch.productId);
+
+    return newBatch;
+  }
+
+  /** Update batch fields (quantity, status, notes, etc.). Syncs product.stock. */
+  async updateProductBatch(batchId: number, updates: Partial<InsertProductBatch>): Promise<ProductBatch> {
+    const [updated] = await db
+      .update(productBatches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(productBatches.id, batchId))
+      .returning();
+
+    if (updated) {
+      await this._syncProductStockFromBatches(updated.productId);
+    }
+    return updated;
+  }
+
+  /**
+   * Apply a quantity delta to a batch (positive = increase, negative = decrease).
+   * Marks batch as 'depleted' when quantity reaches 0.
+   * Logs a stock_movement record. Syncs product.stock.
+   */
+  async adjustBatchQuantity(
+    batchId: number,
+    delta: number,
+    reason: string,
+    wholesalerId: string,
+    orderId?: number
+  ): Promise<void> {
+    const [batch] = await db.select().from(productBatches).where(eq(productBatches.id, batchId));
+    if (!batch) throw new Error(`Batch ${batchId} not found`);
+
+    const before = batch.quantity;
+    const after = Math.max(0, before + delta);
+    const newStatus = after === 0 ? 'depleted' : batch.status === 'depleted' ? 'active' : batch.status;
+
+    await db
+      .update(productBatches)
+      .set({ quantity: after, status: newStatus, updatedAt: new Date() })
+      .where(eq(productBatches.id, batchId));
+
+    // Log stock movement
+    await db.insert(stockMovements).values({
+      productId: batch.productId,
+      wholesalerId,
+      movementType: delta > 0 ? 'manual_increase' : 'manual_decrease',
+      quantity: delta,
+      unitType: 'units',
+      stockBefore: before,
+      stockAfter: after,
+      reason,
+      orderId: orderId ?? null,
+    });
+
+    await this._syncProductStockFromBatches(batch.productId);
+  }
+
+  /** Sum of active non-expired batch quantities for a product. */
+  async getProductTotalStock(productId: number): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db
+      .select({ total: sum(productBatches.quantity) })
+      .from(productBatches)
+      .where(and(
+        eq(productBatches.productId, productId),
+        eq(productBatches.status, 'active'),
+        or(
+          isNull(productBatches.expiryDate),
+          sql`${productBatches.expiryDate} >= ${today}`
+        )
+      ));
+    return Number(result[0]?.total ?? 0);
+  }
+
+  /**
+   * Mark all batches whose expiry_date has passed as 'expired'.
+   * Returns the count of newly-expired batches.
+   */
+  async expireOldBatches(): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    const expired = await db
+      .update(productBatches)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(and(
+        eq(productBatches.status, 'active'),
+        sql`${productBatches.expiryDate} < ${today}`
+      ))
+      .returning({ productId: productBatches.productId });
+
+    // Sync product.stock for every affected product
+    const affectedProductIds = [...new Set(expired.map(r => r.productId))];
+    for (const productId of affectedProductIds) {
+      await this._syncProductStockFromBatches(productId);
+    }
+    return expired.length;
+  }
+
+  /** Internal helper: set products.stock = SUM of active non-expired batches. */
+  private async _syncProductStockFromBatches(productId: number): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db
+      .select({ total: sum(productBatches.quantity) })
+      .from(productBatches)
+      .where(and(
+        eq(productBatches.productId, productId),
+        eq(productBatches.status, 'active'),
+        or(
+          isNull(productBatches.expiryDate),
+          sql`${productBatches.expiryDate} >= ${today}`
+        )
+      ));
+    const total = Number(result[0]?.total ?? 0);
+    await db.update(products).set({ stock: total }).where(eq(products.id, productId));
   }
 
   // Order operations - Optimized with joins to reduce database calls

@@ -24,6 +24,7 @@ import {
   tabPermissions,
   deliveryAddresses,
   wholesalerCustomerRelationships,
+  productBatches,
   type User,
   type UpsertUser,
   type Product,
@@ -70,7 +71,7 @@ import {
   type InsertWholesalerCustomerRelationship,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
+import { eq, desc, asc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../passwordUtils";
 import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 
@@ -424,10 +425,83 @@ export class OrderStorage extends ProductStorage {
       
       // Insert order items and reduce stock within transaction
       for (const item of items) {
-        // Insert order item
-        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id });
-        
-        // Get current product info before stock reduction
+        // ── FEFO batch pre-check ─────────────────────────────────────────────
+        let primaryBatchId: number | null = null;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (item.productId) {
+          // Fetch active non-expired batches in FEFO order (earliest expiry first, no-expiry last)
+          const activeBatches = await tx
+            .select()
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(
+                  isNull(productBatches.expiryDate),
+                  sql`${productBatches.expiryDate} >= ${today}`
+                )
+              )
+            )
+            .orderBy(
+              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+              asc(productBatches.expiryDate),
+              asc(productBatches.createdAt)
+            );
+
+          if (activeBatches.length > 0) {
+            // Get product for conversion factor
+            const [prod] = await tx.select().from(products).where(eq(products.id, item.productId));
+            const unitsPerPallet = (prod as any)?.unitsPerPallet || 1;
+            const sellingType = item.sellingType || 'units';
+            // Convert ordered quantity to base units
+            const baseUnitsNeeded = sellingType === 'pallets'
+              ? item.quantity * unitsPerPallet
+              : item.quantity;
+
+            let remaining = baseUnitsNeeded;
+            for (const batch of activeBatches) {
+              if (remaining <= 0) break;
+              const deduct = Math.min(remaining, batch.quantity);
+              const newQty = batch.quantity - deduct;
+              const newStatus = newQty === 0 ? 'depleted' : 'active';
+
+              await tx
+                .update(productBatches)
+                .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+                .where(eq(productBatches.id, batch.id));
+
+              if (primaryBatchId === null) primaryBatchId = batch.id;
+              remaining -= deduct;
+            }
+
+            // Sync product.stock = SUM of remaining active non-expired batches
+            const batchSum = await tx
+              .select({ total: sum(productBatches.quantity) })
+              .from(productBatches)
+              .where(
+                and(
+                  eq(productBatches.productId, item.productId),
+                  eq(productBatches.status, 'active'),
+                  or(
+                    isNull(productBatches.expiryDate),
+                    sql`${productBatches.expiryDate} >= ${today}`
+                  )
+                )
+              );
+            const newStock = Number(batchSum[0]?.total ?? 0);
+            await tx.update(products).set({ stock: newStock }).where(eq(products.id, item.productId));
+
+            console.log(`🗂 FEFO allocation: product ${item.productId} used batch ${primaryBatchId}, stock → ${newStock}`);
+          }
+        }
+        // ── End FEFO pre-check ───────────────────────────────────────────────
+
+        // Insert order item (with FEFO batchId if resolved, otherwise null)
+        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
+
+        // Get current product info before stock reduction (for legacy InventoryCalculator path)
         const [currentProduct] = await tx
           .select()
           .from(products)
@@ -442,35 +516,39 @@ export class OrderStorage extends ProductStorage {
           const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
           const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
           
-          // SEPARATE STOCK TRACKING: Units reduce unit stock, Pallets reduce pallet stock
           const { InventoryCalculator } = await import('../../shared/inventory-calculator.js');
           
-          const inventoryData = {
-            stock: currentProduct.stock || 0,
-            palletStock: currentProduct.palletStock || 0,
-            quantityInPack: (currentProduct as any).quantityInPack || 1,
-            unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
-          };
-          
-          // Calculate new stock levels using separate tracking
-          const orderResult = InventoryCalculator.processOrder(
-            orderedQuantity,
-            sellingType as 'units' | 'pallets',
-            inventoryData
-          );
-          
-          const newUnitStock = orderResult.newUnitStock;
-          const newPalletStock = orderResult.newPalletStock;
-          const decrementInfo = orderResult.decrementInfo;
-          
-          // Update SEPARATE stock fields (unit stock and pallet stock)
-          await tx
-            .update(products)
-            .set({ 
-              stock: newUnitStock,
-              palletStock: newPalletStock
-            })
-            .where(eq(products.id, item.productId));
+          let newUnitStock: number;
+          let newPalletStock: number;
+
+          if (primaryBatchId !== null) {
+            // Batch path: product.stock already synced from batches above;
+            // just derive palletStock from the updated unit stock
+            const unitsPerPallet = (currentProduct as any).unitsPerPallet || 1;
+            newUnitStock = currentProduct.stock ?? 0;
+            newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+          } else {
+            // Legacy path (no batches): use InventoryCalculator
+            const inventoryData = {
+              stock: currentProduct.stock || 0,
+              palletStock: currentProduct.palletStock || 0,
+              quantityInPack: (currentProduct as any).quantityInPack || 1,
+              unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
+            };
+            const orderResult = InventoryCalculator.processOrder(
+              orderedQuantity,
+              sellingType as 'units' | 'pallets',
+              inventoryData
+            );
+            newUnitStock = orderResult.newUnitStock;
+            newPalletStock = orderResult.newPalletStock;
+
+            // Update stock fields only on legacy path (batch path already did it)
+            await tx
+              .update(products)
+              .set({ stock: newUnitStock, palletStock: newPalletStock })
+              .where(eq(products.id, item.productId));
+          }
           
           // Record stock movement with proper unit type
           const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
@@ -480,7 +558,7 @@ export class OrderStorage extends ProductStorage {
             productId: item.productId,
             wholesalerId: order.wholesalerId,
             movementType: 'purchase',
-            quantity: -orderedQuantity, // Actual ordered quantity, not base units
+            quantity: -orderedQuantity,
             unitType: sellingType === 'pallets' ? 'pallets' : 'units',
             stockBefore: stockBefore,
             stockAfter: stockAfter,
@@ -489,7 +567,7 @@ export class OrderStorage extends ProductStorage {
             customerName: customerName
           });
           
-          console.log(`📦 SEPARATE Stock reduced for product ${item.productId}:`);
+          console.log(`📦 Stock reduced for product ${item.productId}:`);
           if (sellingType === 'pallets') {
             console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
           } else {

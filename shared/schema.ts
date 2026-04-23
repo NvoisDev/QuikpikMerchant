@@ -493,6 +493,32 @@ export const products = pgTable("products", {
   wholesalerIdIdx: index("products_wholesaler_id_idx").on(table.wholesalerId),
 }));
 
+// Batch-level inventory tracking — each delivery/restocking event creates a new batch
+export const productBatches = pgTable("product_batches", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  batchNumber: varchar("batch_number"),          // optional user-facing label / delivery ref
+  quantity: integer("quantity").notNull().default(0),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // optional per-batch cost
+  expiryDate: date("expiry_date"),               // null = no expiry
+  status: varchar("status").notNull().default("active"), // 'active' | 'depleted' | 'expired'
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  productIdIdx: index("pb_product_id_idx").on(table.productId),
+  productExpiryIdx: index("pb_product_expiry_idx").on(table.productId, table.expiryDate),
+  statusIdx: index("pb_status_idx").on(table.status),
+}));
+
+export const insertProductBatchSchema = createInsertSchema(productBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProductBatch = z.infer<typeof insertProductBatchSchema>;
+export type ProductBatch = typeof productBatches.$inferSelect;
+
 export const customerGroups = pgTable("customer_groups", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
@@ -619,6 +645,7 @@ export const orderItems = pgTable("order_items", {
   sellingType: varchar("selling_type", { length: 10 }).default('units'),
   appliedOfferLabel: varchar("applied_offer_label", { length: 255 }),
   freeItems: integer("free_items").default(0),
+  batchId: integer("batch_id").references(() => productBatches.id), // primary batch used (FEFO), null = no batch tracking
 }, (table) => ({
   orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
   productIdIdx: index("order_items_product_id_idx").on(table.productId),

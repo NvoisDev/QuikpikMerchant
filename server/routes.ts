@@ -17,6 +17,7 @@ import { registerCampaignRoutes } from "./routes/campaigns";
 import { registerPaymentRoutes } from "./routes/payments";
 import { registerAdminRoutes } from "./routes/admin";
 import { registerPriceListRoutes } from "./routes/price-lists";
+import { registerBatchRoutes } from "./routes/batches";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
@@ -42,6 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPaymentRoutes(app);
   registerAdminRoutes(app);
   registerPriceListRoutes(app);
+  registerBatchRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

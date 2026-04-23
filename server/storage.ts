@@ -24,6 +24,9 @@ import {
   tabPermissions,
   deliveryAddresses,
   wholesalerCustomerRelationships,
+  productBatches,
+  type ProductBatch,
+  type InsertProductBatch,
   type User,
   type UpsertUser,
   type Product,
@@ -108,6 +111,14 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
+
+  // Batch inventory operations
+  getProductBatches(productId: number): Promise<ProductBatch[]>;
+  createProductBatch(batch: InsertProductBatch): Promise<ProductBatch>;
+  updateProductBatch(batchId: number, updates: Partial<InsertProductBatch>): Promise<ProductBatch>;
+  adjustBatchQuantity(batchId: number, delta: number, reason: string, wholesalerId: string, orderId?: number): Promise<void>;
+  getProductTotalStock(productId: number): Promise<number>;
+  expireOldBatches(): Promise<number>;
   
   // Order operations
   getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
