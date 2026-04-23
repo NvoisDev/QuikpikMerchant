@@ -677,6 +677,28 @@ export default function ProductManagement() {
     enabled: true,
   });
 
+  // Auto-open edit/stock modal when navigated from the product detail page
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+    const stockId = params.get('stock');
+    if (editId) {
+      const found = products.find((p: any) => p.id === parseInt(editId));
+      if (found) {
+        setEditingProduct(found);
+        setIsDialogOpen(true);
+        window.history.replaceState({}, '', '/products');
+      }
+    } else if (stockId) {
+      const found = products.find((p: any) => p.id === parseInt(stockId));
+      if (found) {
+        setStockProduct(found);
+        window.history.replaceState({}, '', '/products');
+      }
+    }
+  }, [products]);
+
   // Debug logging
   console.log('Product management state:', {
     user: user?.id,

@@ -205,9 +205,10 @@ export default function ProductCard({
         className={`transition-all duration-200 overflow-hidden ${
           isLocked
             ? 'opacity-60 grayscale border-gray-200 cursor-not-allowed'
-            : 'hover:shadow-md hover:border-slate-300'
+            : 'hover:shadow-md hover:border-slate-300 cursor-pointer'
         }`}
         title={isLocked ? "Upgrade your plan to unlock this product" : undefined}
+        onClick={!isLocked ? () => navigate(`/products/${product.id}`) : undefined}
       >
         {/* Image area */}
         <div className="relative">
@@ -292,6 +293,7 @@ export default function ProductCard({
                   variant="ghost"
                   size="sm"
                   className={`px-2.5 py-1 rounded-full text-xs font-medium ${currentStatusConfig.className} hover:opacity-90`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className={`w-1.5 h-1.5 rounded-full ${currentStatusConfig.dotColor} mr-1.5`} />
                   {currentStatusConfig.label}

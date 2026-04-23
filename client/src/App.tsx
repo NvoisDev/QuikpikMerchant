@@ -49,6 +49,7 @@ const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 const Promotions = lazy(() => import("@/pages/promotions"));
 const Integrations = lazy(() => import("@/pages/integrations"));
 const OrderDetail = lazy(() => import("@/pages/order-detail"));
+const ProductDetail = lazy(() => import("@/pages/product-detail"));
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -115,6 +116,7 @@ function AuthenticatedRoutes() {
             <>
               <Route path="/" component={user?.role === 'team_member' ? OrdersFresh : WholesalerDashboard} />
               <Route path="/dashboard" component={WholesalerDashboard} />
+              <Route path="/products/:id" component={ProductDetail} />
               <Route path="/products" component={ProductManagement} />
               <Route path="/promotions" component={Promotions} />
               <Route path="/customers/:customerId" component={CustomerDetail} />
