@@ -1,0 +1,119 @@
+Prompt: Fix Invoice Numbering Logic (Prefix + Sequence Integrity)
+🎯 Objective
+
+Correct the invoice numbering system to ensure:
+
+Invoice numbers are unique, sequential, and audit-safe
+Changing company name or prefix does NOT reset numbering
+Existing invoices remain unchanged (no data loss)
+🧠 Core Principle
+Invoice sequence must be tied to:
+company_id (legal entity)
+
+NOT:
+
+company_name or prefix
+🧱 Required Data Structure
+
+Ensure the following fields exist:
+
+Companies Table
+companies
+- id (company_id)
+- name (editable)
+- invoice_prefix (editable, e.g. "LF")
+- invoice_counter (integer, persistent)
+Invoices Table
+invoices
+- id
+- company_id
+- invoice_number (FULL string, e.g. "LF-409")
+- sequence_number (integer, e.g. 409)
+- prefix_used (store snapshot, e.g. "LF")
+- created_at
+
+👉 Store both:
+
+sequence_number (for logic)
+prefix_used (for historical accuracy)
+🔄 Correct Invoice Generation Logic
+
+When creating a new invoice:
+
+Fetch:
+company.invoice_counter
+company.invoice_prefix
+Increment counter:
+new_sequence = invoice_counter + 1
+Generate invoice number:
+invoice_number = prefix + "-" + new_sequence
+Save:
+Update company.invoice_counter
+Store both sequence_number and prefix_used in invoice
+🚫 Critical Rules (MUST ENFORCE)
+Rule 1: Changing Company Name
+NO impact on invoice numbering
+Rule 2: Changing Prefix
+DO NOT reset sequence
+
+Example:
+
+LF-409 → LN-410
+Rule 3: Prevent Duplicate Invoice Numbers
+
+Add constraint:
+
+UNIQUE(company_id, sequence_number)
+Rule 4: Historical Accuracy
+
+Old invoices must:
+
+Keep original prefix
+Never be regenerated
+⚠️ Fix Existing Issue (Migration Required)
+Problem:
+
+Some companies restarted numbering when prefix changed
+
+Migration Steps:
+For each company:
+Find max existing sequence:
+SELECT MAX(sequence_number) FROM invoices WHERE company_id = X
+Update:
+company.invoice_counter = max_sequence
+Ensure all invoices have:
+sequence_number populated
+prefix_used stored
+🧪 Edge Cases to Handle
+Multiple invoices created at same time → use DB locking or transaction
+Deleted invoices → DO NOT reuse sequence numbers
+Draft invoices → optional: reserve or assign on finalisation
+🔐 Backward Compatibility
+Do NOT modify existing invoice numbers
+Only fix logic for future invoices
+Ensure all existing references (payments, exports) remain intact
+✅ Acceptance Criteria
+Changing company name does not affect numbering
+Changing prefix does not reset numbering
+No duplicate invoice numbers per company
+Invoice sequence is continuous and increasing
+Existing invoices remain unchanged
+💡 Optional (Recommended)
+
+Add setting:
+
+"allow_custom_prefix_change": true/false
+
+👉 Prevent accidental changes by users
+
+🧠 Sanity Check
+
+If implementation does:
+
+“Reset counter when prefix changes”
+
+🚫 Reject immediately
+
+Correct behaviour:
+
+“Prefix is display. Sequence is accounting truth.”
