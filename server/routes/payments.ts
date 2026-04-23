@@ -1247,7 +1247,7 @@ export function registerPaymentRoutes(app: Express): void {
           try {
             const portalSession = await stripe.billingPortal.sessions.create({
               customer: stripeCustomerId,
-              return_url: `${returnBase}/subscription-pricing`,
+              return_url: `${returnBase}/subscription-pricing?success=true`,
             });
             console.log('✅ Billing Portal session created as upgrade fallback:', portalSession.id);
             return res.json({
