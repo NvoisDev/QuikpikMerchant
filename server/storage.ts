@@ -181,12 +181,13 @@ export interface IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]>;
-  getCustomerDetails(customerId: string): Promise<(User & { 
+  getCustomerDetails(customerId: string, wholesalerId: string): Promise<(User & { 
     groups: CustomerGroup[];
     orders: Order[];
     totalOrders: number;
     totalSpent: number;
     totalUnpaid: number;
+    displayName?: string | null;
   }) | undefined>;
   searchCustomers(wholesalerId: string, searchTerm: string): Promise<User[]>;
   bulkUpdateCustomers(customerUpdates: { customerId: string; updates: Partial<User> }[]): Promise<void>;

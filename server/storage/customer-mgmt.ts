@@ -171,12 +171,25 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     });
   }
 
-  async getCustomerDetails(customerId: string): Promise<(User & { 
+  async getCustomerDetails(customerId: string, wholesalerId: string): Promise<(User & { 
     groups: CustomerGroup[];
     orders: Order[];
     totalOrders: number;
     totalSpent: number;
+    totalUnpaid: number;
+    displayName?: string | null;
   }) | undefined> {
+    // Verify this wholesaler has a relationship with the customer
+    const [relationship] = await db
+      .select()
+      .from(wholesalerCustomerRelationships)
+      .where(and(
+        eq(wholesalerCustomerRelationships.customerId, customerId),
+        eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+      ));
+
+    if (!relationship) return undefined;
+
     // Get customer basic info
     const [customer] = await db
       .select()
@@ -185,20 +198,26 @@ export class CustomerMgmtStorage extends BroadcastStorage {
 
     if (!customer) return undefined;
 
-    // Get customer groups
-    const customerGroups = await db
+    // Get customer groups scoped to this wholesaler only
+    const scopedGroups = await db
       .select({
         group: customerGroups
       })
       .from(customerGroupMembers)
       .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-      .where(eq(customerGroupMembers.customerId, customerId));
+      .where(and(
+        eq(customerGroupMembers.customerId, customerId),
+        eq(customerGroups.wholesalerId, wholesalerId)
+      ));
 
-    // Get customer orders
+    // Get customer orders scoped to this wholesaler only
     const customerOrders = await db
       .select()
       .from(orders)
-      .where(eq(orders.retailerId, customerId))
+      .where(and(
+        eq(orders.retailerId, customerId),
+        eq(orders.wholesalerId, wholesalerId)
+      ))
       .orderBy(desc(orders.createdAt));
 
     // Calculate stats (net amount: subtotal - platform fee)
@@ -222,7 +241,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
 
     return {
       ...customer,
-      groups: customerGroups.map(cg => cg.group),
+      displayName: relationship.displayName ?? null,
+      groups: scopedGroups.map(cg => cg.group),
       orders: customerOrders,
       totalOrders: customerOrders.length,
       totalSpent,

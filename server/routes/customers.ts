@@ -1022,8 +1022,11 @@ export function registerCustomerRoutes(app: Express): void {
   app.get('/api/customers/:id', requireAuth, async (req: any, res) => {
     try {
       const customerId = req.params.id;
-      
-      const customer = await storage.getCustomerDetails(customerId);
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const customer = await storage.getCustomerDetails(customerId, targetUserId);
       if (!customer) {
         return res.status(404).json({ error: 'Customer not found' });
       }
