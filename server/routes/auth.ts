@@ -166,7 +166,8 @@ export function registerAuthRoutes(app: Express): void {
         postalCode,
         country,
         preferredCurrency,
-        isFirstLogin
+        isFirstLogin,
+        orderNumberPrefix
       } = req.body;
 
       console.log(`🔄 Completing profile for user ${userId}:`, {
@@ -192,6 +193,14 @@ export function registerAuthRoutes(app: Express): void {
       if (postalCode) updateData.postalCode = postalCode;
       if (country) updateData.country = country;
       if (preferredCurrency) updateData.defaultCurrency = preferredCurrency;
+
+      if (orderNumberPrefix !== undefined) {
+        const prefix = String(orderNumberPrefix).trim().toUpperCase();
+        if (!/^[A-Z]{1,6}$/.test(prefix)) {
+          return res.status(400).json({ success: false, message: "Order number prefix must be 1–6 uppercase letters (A–Z) with no spaces or special characters." });
+        }
+        updateData.orderNumberPrefix = prefix;
+      }
 
       const updatedUser = await storage.updateUser(userId, updateData);
 
