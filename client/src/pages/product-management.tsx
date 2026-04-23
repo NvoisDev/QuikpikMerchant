@@ -1898,12 +1898,25 @@ export default function ProductManagement() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Expiry Date <span className="text-gray-400 font-normal">(optional)</span></FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Best-before or use-by date. Shown on the product card with colour-coded alerts.
-                            </p>
+                            {editingProduct?.batchCount > 0 ? (
+                              <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                                <span className="text-sm font-medium text-gray-700">
+                                  {editingProduct.nearestExpiry
+                                    ? new Date(editingProduct.nearestExpiry).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                    : 'No batch expiry set'}
+                                </span>
+                                <p className="text-xs text-gray-400 mt-0.5">Set per batch — manage in Manage Stock</p>
+                              </div>
+                            ) : (
+                              <>
+                                <FormControl>
+                                  <Input type="date" {...field} />
+                                </FormControl>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Best-before or use-by date. Shown on the product card with colour-coded alerts.
+                                </p>
+                              </>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -2709,12 +2722,16 @@ export default function ProductManagement() {
                           {/* Row 2: category + expiry + pack size */}
                           <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                            {product.expiryDate && (() => {
-                              const expiry = new Date(product.expiryDate);
+                            {(() => {
+                              const effectiveExpiry = product.batchCount > 0
+                                ? (product.nearestExpiry || product.expiryDate)
+                                : product.expiryDate;
+                              if (!effectiveExpiry) return null;
+                              const expiry = new Date(effectiveExpiry);
                               const now = new Date(); now.setHours(0, 0, 0, 0);
                               const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                              const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                              if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired</Badge>;
+                              const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                              if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired · {formatted}</Badge>;
                               if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
                               return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
                             })()}
@@ -2798,7 +2815,7 @@ export default function ProductManagement() {
                                     const exp = new Date(product.nearestExpiry);
                                     const now = new Date(); now.setHours(0, 0, 0, 0);
                                     const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                                    const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                    const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
                                     if (diff < 0) return <span className="text-red-600 font-medium"> · Exp: {fmt}</span>;
                                     if (diff <= 30) return <span className="text-amber-600 font-medium"> · Exp: {fmt}</span>;
                                     return <span> · Exp: {fmt}</span>;
@@ -2950,7 +2967,7 @@ export default function ProductManagement() {
                                 const isExpired = batch.expiryDate && new Date(batch.expiryDate) < new Date();
                                 const isDepleted = batch.status === 'depleted';
                                 const expiryFmt = batch.expiryDate
-                                  ? new Date(batch.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                  ? new Date(batch.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
                                   : '—';
                                 return (
                                   <tr key={batch.id} className={`border-b border-blue-50 last:border-0 ${isDepleted || isExpired ? 'opacity-50' : ''}`}>

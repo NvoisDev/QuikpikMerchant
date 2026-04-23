@@ -160,7 +160,11 @@ export default function ProductCard({
     return { label: `Exp: ${formatted}`, className: "bg-gray-100 text-gray-600 border-gray-200" };
   };
 
-  const expiryInfo = getExpiryInfo(product.expiryDate);
+  // Batch nearestExpiry takes priority over the product-level expiryDate
+  const effectiveExpiry = (product.batchCount ?? 0) > 0
+    ? (product.nearestExpiry || product.expiryDate)
+    : product.expiryDate;
+  const expiryInfo = getExpiryInfo(effectiveExpiry);
 
   const formatProductSize = () => {
     if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
@@ -378,23 +382,6 @@ export default function ProductCard({
                   </span>
                 </div>
               )}
-              {!expiryInfo && product.nearestExpiry && (() => {
-                const exp = new Date(product.nearestExpiry);
-                const now = new Date(); now.setHours(0, 0, 0, 0);
-                const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                if (diff > 30) return null;
-                const cls = diff < 0
-                  ? 'bg-red-100 text-red-700 border-red-200'
-                  : 'bg-amber-100 text-amber-700 border-amber-200';
-                const label = diff < 0 ? `Batch expired · ${fmt}` : `Batch exp: ${fmt}`;
-                return (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Batch expiry</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
-                  </div>
-                );
-              })()}
               {(product.batchCount ?? 0) > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Batches</span>
