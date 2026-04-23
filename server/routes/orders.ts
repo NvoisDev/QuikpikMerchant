@@ -1731,8 +1731,6 @@ export function registerOrderRoutes(app: Express): void {
             }
           }
           
-          // Use order.total (the full customer-facing charge) so the customer gets back
-          // their transaction fee (5.5% + £0.50) as well as the product/delivery value.
           custCancelAmountPaid = parseFloat(order.total || order.amountPaid || '0');
           
           if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe) {
@@ -1740,8 +1738,7 @@ export function registerOrderRoutes(app: Express): void {
               stripe,
               order.stripePaymentIntentId,
               custCancelAmountPaid,
-              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` },
-              true // customer-initiated full cancel — platform absorbs its fee
+              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` }
             );
             custCancelStripeRefunded = result.totalRefunded;
             if (result.totalRefunded > 0) {
