@@ -143,28 +143,22 @@ const PaymentFormContent = ({
             body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
           });
 
-          const metadata = (paymentIntent as any).metadata || {};
-          const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-          const actualShipping = parseFloat(metadata.shippingCost || '0');
-          const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-          const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
-
           if (response.ok) {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
             // Use server-returned financial values — paymentIntent.metadata is not
-            // populated by Stripe.js on the client side, so the actualSubtotal /
-            // actualTotal variables computed above are always 0.  The create-order
-            // endpoint retrieves the PaymentIntent server-side and returns the
-            // correct amounts in orderData.
+            // populated by Stripe.js on the client side.  The create-order endpoint
+            // retrieves the PaymentIntent server-side and returns the correct amounts.
+            // Fall back to pre-computed cart prop values (never 0) if the field is
+            // absent from orderData for any reason.
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
               cart: [],
               customerData: {},
-              totalAmount: orderData.totalAmount || actualTotal,
-              subtotal: orderData.subtotal || actualSubtotal,
-              transactionFee: orderData.transactionFee || actualTransactionFee,
-              shippingCost: orderData.shippingCost || actualShipping,
+              totalAmount: orderData.totalAmount ?? totalAmount,
+              subtotal: orderData.subtotal ?? subtotal,
+              transactionFee: orderData.transactionFee ?? transactionFee,
+              shippingCost: orderData.shippingCost ?? shippingCost,
             });
             toast({
               title: "Payment Successful!",
