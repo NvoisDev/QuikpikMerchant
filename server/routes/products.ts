@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import {
-  and, count, db, eq, generateProductImage, insertProductSchema, openai, or, products,
-  requireAuth, requireNotViewer, requireProductLimits, storage, users, z
+  and, asc, count, db, eq, generateProductImage, insertProductSchema, isNull, openai, or,
+  products, requireAuth, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
 import { productBatches } from "@shared/schema";
 
@@ -166,13 +166,38 @@ export function registerProductRoutes(app: Express): void {
             notes: `Stock adjustment batch (manual stock edit +${delta} units)`,
           });
         } else if (delta < 0) {
-          // Stock decrease: log for visibility; batch API should be used for
-          // precise FEFO-ordered reductions, but sync products.stock to match
-          console.warn(
-            `⚠️ Direct stock decrease on product ${id}: ` +
-            `requested ${newStock} < batch total ${currentBatchTotal}. ` +
-            `Use batch API for FEFO-ordered reductions.`
-          );
+          // Stock decrease: deduct from batches in FEFO order so the batch
+          // pool stays in sync with the new products.stock target.
+          const absDelta = Math.abs(delta);
+          const today = new Date().toISOString().split('T')[0];
+          const activeBatches = await db
+            .select()
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, id),
+                eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+              )
+            )
+            .orderBy(
+              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+              asc(productBatches.expiryDate),
+              asc(productBatches.createdAt)
+            );
+
+          let toDeduct = absDelta;
+          for (const batch of activeBatches) {
+            if (toDeduct <= 0) break;
+            const deduct = Math.min(toDeduct, batch.quantity);
+            const newQty = batch.quantity - deduct;
+            const newStatus = newQty === 0 ? 'depleted' : 'active';
+            await db.update(productBatches).set({ quantity: newQty, status: newStatus, updatedAt: new Date() }).where(eq(productBatches.id, batch.id));
+            toDeduct -= deduct;
+          }
+          if (toDeduct > 0) {
+            console.warn(`⚠️ Batch pool exhausted during stock-decrease reconciliation for product ${id}: ${toDeduct} units could not be accounted for.`);
+          }
         }
         // If delta === 0: already in sync — nothing to do
       }

@@ -775,8 +775,7 @@ export class OrderStorage extends ProductStorage {
       for (const item of items) {
         console.log(`📦 ITEM: ${item.productId}, qty: ${item.quantity}, type: ${item.sellingType}`);
         
-        // Insert order item
-        await trx.insert(orderItems).values({ ...item, orderId: newOrder.id });
+        // NOTE: batchId is populated after FEFO allocation below (order item is inserted there)
         
         // Get current product info before stock reduction
         const [currentProduct] = await trx
@@ -825,91 +824,77 @@ export class OrderStorage extends ProductStorage {
             : totalStockToReduce;
           const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
 
-          if (activeBatches.length > 0 && totalAvailable >= baseUnitsNeeded) {
-            // ── Batch-based FEFO deduction ──
-            let remaining = baseUnitsNeeded;
-            for (const batch of activeBatches) {
-              if (remaining <= 0) break;
-              const deduct = Math.min(remaining, batch.quantity);
-              const newQty = batch.quantity - deduct;
-              const newStatus = newQty === 0 ? 'depleted' : 'active';
+          // Abort if no active batches exist
+          if (activeBatches.length === 0) {
+            throw new Error(
+              `Product ${item.productId} (${currentProduct.name}) has no active batch stock. ` +
+              `Please add a new batch before ordering.`
+            );
+          }
 
-              await trx
-                .update(productBatches)
-                .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
-                .where(eq(productBatches.id, batch.id));
+          // Abort if total batch stock is insufficient
+          if (totalAvailable < baseUnitsNeeded) {
+            throw new Error(
+              `Insufficient batch stock for product ${item.productId} (${currentProduct.name}): ` +
+              `need ${baseUnitsNeeded} units but only ${totalAvailable} available`
+            );
+          }
 
-              await trx.insert(stockMovements).values({
-                productId: item.productId,
-                wholesalerId: orderData.wholesalerId,
-                movementType: 'purchase',
-                quantity: -deduct,
-                unitType: 'units',
-                stockBefore: batch.quantity,
-                stockAfter: newQty,
-                reason: freeItemsQty > 0
-                  ? `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units incl. ${freeItemsQty} free (promo)`
-                  : `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
-                orderId: newOrder.id,
-              });
-
-              remaining -= deduct;
-            }
-
-            // Sync products.stock + palletStock from batch totals (source of truth)
-            const [batchSumRow] = await trx
-              .select({ total: sum(productBatches.quantity) })
-              .from(productBatches)
-              .where(
-                and(
-                  eq(productBatches.productId, item.productId),
-                  eq(productBatches.status, 'active'),
-                  or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
-                )
-              );
-            const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
-            const newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+          // ── Batch-based FEFO deduction ──────────────────────────────────────
+          let remaining = baseUnitsNeeded;
+          let primaryBatchId: number | null = null;
+          for (const batch of activeBatches) {
+            if (remaining <= 0) break;
+            const deduct = Math.min(remaining, batch.quantity);
+            const newQty = batch.quantity - deduct;
+            const newStatus = newQty === 0 ? 'depleted' : 'active';
 
             await trx
-              .update(products)
-              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
-              .where(eq(products.id, item.productId));
+              .update(productBatches)
+              .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+              .where(eq(productBatches.id, batch.id));
 
-            console.log(`✅ FEFO STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets`);
-          } else {
-            // ── Legacy fallback for products not yet in the batch system ──
-            console.log(`⚠️ No active batches for product ${item.productId} — falling back to legacy InventoryCalculator`);
-            const orderResult = InventoryCalculator.processOrder(totalStockToReduce, sellingType, {
-              stock: currentProduct.stock,
-              palletStock: currentProduct.palletStock,
-              quantityInPack: currentProduct.quantityInPack,
-              unitsPerPallet: currentProduct.unitsPerPallet,
-            });
-            const { newUnitStock, newPalletStock } = orderResult;
-
-            await trx
-              .update(products)
-              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
-              .where(eq(products.id, item.productId));
-
-            const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
-            const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
             await trx.insert(stockMovements).values({
               productId: item.productId,
               wholesalerId: orderData.wholesalerId,
               movementType: 'purchase',
-              quantity: -totalStockToReduce,
-              unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-              stockBefore,
-              stockAfter,
+              quantity: -deduct,
+              unitType: 'units',
+              stockBefore: batch.quantity,
+              stockAfter: newQty,
               reason: freeItemsQty > 0
-                ? `Order sale - ${orderedQuantity} ${sellingType} + ${freeItemsQty} free (promo)`
-                : `Order sale - ${orderedQuantity} ${sellingType}`,
+                ? `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units incl. ${freeItemsQty} free (promo)`
+                : `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
               orderId: newOrder.id,
             });
 
-            console.log(`✅ LEGACY STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets`);
+            if (primaryBatchId === null) primaryBatchId = batch.id;
+            remaining -= deduct;
           }
+
+          // Insert order item with primary batch ID populated
+          await trx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
+
+          // Sync products.stock + palletStock from batch totals (source of truth)
+          const [batchSumRow] = await trx
+            .select({ total: sum(productBatches.quantity) })
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+              )
+            );
+          const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+          const newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+
+          await trx
+            .update(products)
+            .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
+            .where(eq(products.id, item.productId));
+
+          console.log(`✅ FEFO STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets (batch #${primaryBatchId})`);
           // ────────────────────────────────────────────────────────────────────
         } else {
           console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
