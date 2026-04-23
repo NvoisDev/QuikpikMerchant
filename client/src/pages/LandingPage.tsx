@@ -373,14 +373,19 @@ export default function LandingPage() {
                   {[
                     { title: "Free plan available", sub: "Start selling with £0/month" },
                     { title: "Cancel anytime, 1 click", sub: "Zero risk, full control" },
-                    { title: "WhatsApp messaging built in", sub: "Reach customers where they already are" },
+                    { title: "WhatsApp messaging built in", sub: "Reach customers where they already are", comingSoon: true },
                     { title: "Automated order management", sub: "Orders, payments and tracking in one place" },
                     { title: "4.6% on card orders only", sub: "Cash/offline orders: you keep 100%" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-4 py-4">
                       <span className="text-primary font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">✓</span>
                       <div>
-                        <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
+                          {item.comingSoon && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Coming soon</span>
+                          )}
+                        </div>
                         <p className="text-gray-500 text-xs mt-0.5">{item.sub}</p>
                       </div>
                     </div>
