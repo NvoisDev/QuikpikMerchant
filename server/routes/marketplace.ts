@@ -143,96 +143,41 @@ async function resolveCustomerProductPrice(opts: {
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/customer-orders/:wholesalerId/:phoneNumber
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
-    console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
-      const { wholesalerId, phoneNumber } = req.params;
+      const { wholesalerId } = req.params;
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      
-      if (!wholesalerId || !phoneNumber) {
-        console.log('❌ Missing parameters:', { wholesalerId, phoneNumber });
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
-      }
-      
-      console.log('✅ Parameters OK, checking customer registration...');
-      
-      // Find the correct customer using the same logic as authentication
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      console.log('🔍 Finding customer by last 4 digits:', lastFourDigits);
-      
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      
-      if (!customer) {
-        console.log('❌ Customer not found with last 4 digits:', lastFourDigits);
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler",
-          message: "You must be added to this wholesaler's customer group to access orders"
-        });
+
+      // Session guard: verify the caller is authenticated for this wholesaler
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
 
-      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id || customer.customer_id);
+      const customerId: string = sessionAuth.customerId;
+      const customerPhone: string = sessionAuth.phone || '';
 
-      // REMOVED: Customer group requirement - customers can see orders even without pre-registration
+      // Build phone variants to catch historical format inconsistencies
+      const normalizedPhone = customerPhone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+      const phoneVariants = [
+        customerPhone,
+        normalizedPhone,
+        normalizedPhone.length > 1 ? '+44' + normalizedPhone.substring(1) : '',
+      ].filter(Boolean);
 
-      // NEW: Allow access to orders even if customer is not in customer groups
-      // This fixes the issue where customers can't see their orders unless pre-registered
-      console.log('🔍 Searching for all orders by customer regardless of group membership...');
-      console.log(`🔍 Search params: customerId=${customer.id}, wholesalerId=${wholesalerId}, customerPhone=${customer.phone}`);
-      
-      // CRITICAL FIX: Search by multiple retailer ID patterns due to historical inconsistency
-      // Some orders have retailer_id as customer ID, others have wholesaler's Google ID
-      let orderResults = await db
+      const phoneConditions = phoneVariants.map(p => eq(orders.customerPhone, p));
+
+      // Query orders belonging to this customer only — no wildcard retailerId match
+      const orderResults = await db
         .select()
         .from(orders)
         .where(and(
           or(
-            eq(orders.retailerId, customer.id),
-            eq(orders.retailerId, wholesalerId), // Historical orders may have wholesaler ID as retailer ID
-            eq(orders.customerPhone, customer.phone) // Also search by phone directly
+            eq(orders.retailerId, customerId),
+            or.apply(null, phoneConditions as any)
           ),
           eq(orders.wholesalerId, wholesalerId)
         ))
         .orderBy(desc(orders.createdAt));
-        
-      console.log('🔍 Found orders by retailer ID and phone:', orderResults.length);
-      if (orderResults.length > 0) {
-        console.log('📋 Sample orders:', orderResults.slice(0, 3).map(o => ({ 
-          id: o.id, 
-          orderNumber: o.orderNumber, 
-          retailerId: o.retailerId, 
-          customerPhone: o.customerPhone 
-        })));
-      }
-      
-      // If no orders found by retailer ID, search by phone number variants (without wholesaler restriction)
-      if (orderResults.length === 0) {
-        console.log('🔍 No orders found by retailer ID, searching by phone number variants...');
-        
-        // Normalize customer phone number for matching
-        const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
-        const customerPhoneVariants = [
-          customer.phone, // Original format
-          normalizedCustomerPhone, // UK format (07...)
-          '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
-        ];
-        
-        console.log('🔍 Searching with phone variants:', customerPhoneVariants);
-        
-        const phoneConditions = customerPhoneVariants.map(phone => 
-          eq(orders.customerPhone, phone)
-        );
-        
-        orderResults = await db
-          .select()
-          .from(orders)
-          .where(and(
-            or.apply(null, phoneConditions),
-            eq(orders.wholesalerId, wholesalerId)
-          ))
-          .orderBy(desc(orders.createdAt));
-      }
-      
-      console.log('🔍 Total orders found:', orderResults.length);
 
       if (orderResults.length === 0) {
         return res.json([]);
@@ -538,26 +483,13 @@ export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/quick-order-templates/:wholesalerId/:phoneNumber
   app.get('/api/quick-order-templates/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      const { wholesalerId } = req.params;
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
-
-      // Find customer using the same logic as authentication
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-
-      if (!customer) {
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler" 
-        });
-      }
-
-      const templates = await quickOrderService.getQuickOrderTemplates(customer.id, wholesalerId);
+      const templates = await quickOrderService.getQuickOrderTemplates(sessionAuth.customerId, wholesalerId);
       res.json({ success: true, templates });
-
     } catch (error) {
       console.error("❌ Error fetching quick order templates:", error);
       res.status(500).json({ error: "Failed to fetch quick order templates" });
@@ -567,25 +499,13 @@ export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/frequently-ordered/:wholesalerId/:phoneNumber
   app.get('/api/frequently-ordered/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      const { wholesalerId } = req.params;
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
-
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-
-      if (!customer) {
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler" 
-        });
-      }
-
-      const patterns = await quickOrderService.getFrequentlyOrderedProducts(customer.id, wholesalerId);
+      const patterns = await quickOrderService.getFrequentlyOrderedProducts(sessionAuth.customerId, wholesalerId);
       res.json({ success: true, products: patterns });
-
     } catch (error) {
       console.error("❌ Error fetching frequently ordered products:", error);
       res.status(500).json({ error: "Failed to fetch frequently ordered products" });
@@ -595,25 +515,13 @@ export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/last-order-reorder/:wholesalerId/:phoneNumber
   app.get('/api/last-order-reorder/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      const { wholesalerId } = req.params;
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
-
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-
-      if (!customer) {
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler" 
-        });
-      }
-
-      const lastOrder = await quickOrderService.getLastOrderForReorder(customer.id, wholesalerId);
+      const lastOrder = await quickOrderService.getLastOrderForReorder(sessionAuth.customerId, wholesalerId);
       res.json({ success: true, lastOrder });
-
     } catch (error) {
       console.error("❌ Error fetching last order for reorder:", error);
       res.status(500).json({ error: "Failed to fetch last order for reorder" });
@@ -623,32 +531,33 @@ export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/customer-orders/stats/:wholesalerId/:phoneNumber
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
-      }
-      
-      // Find customer using same logic as order history
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      
-      if (!customer) {
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler"
-        });
+      const { wholesalerId } = req.params;
+
+      // Session guard
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
 
-      // Get order statistics
+      const customerId: string = sessionAuth.customerId;
+      const customerPhone: string = sessionAuth.phone || '';
+
+      const normalizedPhone = customerPhone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+      const phoneVariants = [
+        customerPhone,
+        normalizedPhone,
+        normalizedPhone.length > 1 ? '+44' + normalizedPhone.substring(1) : '',
+      ].filter(Boolean);
+      const phoneConditions = phoneVariants.map(p => eq(orders.customerPhone, p));
+
+      // Get order statistics — no wildcard retailerId match
       const orderResults = await db
         .select()
         .from(orders)
         .where(and(
           or(
-            eq(orders.retailerId, customer.id),
-            eq(orders.retailerId, wholesalerId),
-            eq(orders.customerPhone, customer.phone)
+            eq(orders.retailerId, customerId),
+            or.apply(null, phoneConditions as any)
           ),
           eq(orders.wholesalerId, wholesalerId)
         ))
@@ -3563,23 +3472,27 @@ https://quikpik.app`;
   // GET /api/customer-orders/:wholesalerId/:phoneNumber/:orderId/invoice
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber/:orderId/invoice', async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber, orderId } = req.params;
-      const decodedPhone = decodeURIComponent(phoneNumber);
-      const lastFour = decodedPhone.slice(-4);
+      const { wholesalerId, orderId } = req.params;
 
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFour);
-      if (!customer) return res.status(403).json({ message: "Customer not found" });
+      // Session guard
+      const sessionAuth = (req.session as any)?.customerAuth;
+      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const customerId: string = sessionAuth.customerId;
+      const customerPhone: string = sessionAuth.phone || '';
 
       const order = await storage.getOrder(parseInt(orderId));
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ message: "Not authorized" });
 
-      // Verify the order belongs to this customer (by phone or retailer ID)
-      const customerPhone = customer.phone || customer.phoneNumber || '';
+      // Verify the order belongs to this customer (by customerId or phone)
+      const normalizedSessionPhone = customerPhone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+      const normalizedOrderPhone = (order.customerPhone || '').replace(/^\+44/, '0').replace(/[^0-9]/g, '');
       const belongsToCustomer =
-        order.customerPhone === customerPhone ||
-        order.retailerId === customer.id ||
-        (customerPhone && order.customerPhone && order.customerPhone.slice(-4) === customerPhone.slice(-4));
+        order.retailerId === customerId ||
+        (normalizedOrderPhone.length >= 10 && normalizedOrderPhone === normalizedSessionPhone);
       if (!belongsToCustomer) return res.status(403).json({ message: "Not authorized" });
 
       const wholesaler = await storage.getUser(wholesalerId);
