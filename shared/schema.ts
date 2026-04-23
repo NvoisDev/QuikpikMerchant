@@ -484,8 +484,9 @@ export const products = pgTable("products", {
   expiryDate: date("expiry_date"), // Specific expiry / best-before date for this batch
   contentCategory: varchar("content_category").default("general"), // 'food', 'pharmaceuticals', 'electronics', 'textiles', 'general'
   
+  // Cost price for margin calculations (wholesaler internal — never shown to customers)
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
 
-  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

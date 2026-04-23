@@ -57,6 +57,8 @@ interface QuoteItem {
   sellingType: 'units' | 'pallets';
   unitsPerPallet?: number;
   promotionalOffers?: any[];
+  costPrice: number;
+  weightKg: number;
 }
 
 interface Customer {
@@ -87,6 +89,10 @@ interface Product {
   palletPrice?: string;
   palletStock?: number;
   unitsPerPallet?: number;
+  costPrice?: string | null;
+  unitWeight?: string | null;
+  palletWeight?: string | null;
+  promotionalOffers?: any[];
 }
 
 export default function QuickQuote() {
@@ -125,6 +131,7 @@ export default function QuickQuote() {
     label: '',
   });
   const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
+  const [costValues, setCostValues] = useState<Record<number, string>>({});
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
 
@@ -240,6 +247,11 @@ export default function QuickQuote() {
     const price = sellingType === 'pallets' && product.palletPrice 
       ? parseFloat(product.palletPrice) 
       : parseFloat(product.price);
+
+    const baseCost = product.costPrice ? parseFloat(product.costPrice) : 0;
+    const weightKg = sellingType === 'pallets'
+      ? (product.palletWeight ? parseFloat(product.palletWeight) : 0)
+      : (product.unitWeight ? parseFloat(product.unitWeight) : 0);
     
     // Check if already added with same product AND selling type
     const existingIndex = quoteItems.findIndex(
@@ -261,13 +273,25 @@ export default function QuickQuote() {
         sellingType,
         unitsPerPallet: product.unitsPerPallet,
         promotionalOffers: product.promotionalOffers || [],
+        costPrice: baseCost,
+        weightKg,
       }]);
       setInputValues(prev => ({
         ...prev,
         [newIndex]: { price: price.toString(), qty: '1' }
       }));
+      setCostValues(prev => ({
+        ...prev,
+        [newIndex]: baseCost.toString()
+      }));
     }
     setProductDialogOpen(false);
+  };
+
+  const updateItemCost = (index: number, newCost: number) => {
+    const updated = [...quoteItems];
+    updated[index].costPrice = newCost;
+    setQuoteItems(updated);
   };
 
   const updateItemPrice = (index: number, newPrice: number) => {
@@ -296,6 +320,22 @@ export default function QuickQuote() {
     const delivery = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
     return productSubtotal + delivery;
   };
+
+  const calculateTotalCost = () =>
+    quoteItems.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
+
+  const calculateTotalRevenue = () => calculateProductSubtotal();
+
+  const calculateTotalMarginAmount = () => calculateTotalRevenue() - calculateTotalCost();
+
+  const calculateTotalMarginPct = () => {
+    const revenue = calculateTotalRevenue();
+    if (revenue === 0) return 0;
+    return (calculateTotalMarginAmount() / revenue) * 100;
+  };
+
+  const calculateTotalWeight = () =>
+    quoteItems.reduce((sum, item) => sum + (item.weightKg * item.quantity), 0);
 
   const calculateSavings = () => {
     const originalTotal = quoteItems.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
@@ -750,6 +790,16 @@ export default function QuickQuote() {
                                   <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                     {unitInStock ? `${product.stock} units` : 'Out of stock'}
                                   </div>
+                                  {product.costPrice && (
+                                    <div className="text-xs mt-1 text-gray-400">
+                                      Cost £{parseFloat(product.costPrice).toFixed(2)}
+                                      {parseFloat(product.price) > 0 && (
+                                        <span className={parseFloat(product.price) - parseFloat(product.costPrice) < 0 ? 'text-red-500 ml-1' : 'text-green-600 ml-1'}>
+                                          ({((( parseFloat(product.price) - parseFloat(product.costPrice)) / parseFloat(product.price)) * 100).toFixed(0)}% margin)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               );
@@ -784,6 +834,23 @@ export default function QuickQuote() {
                                   <div className={`text-xs mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                     {palletInStock ? `${product.palletStock} pallets` : 'Out of stock'}
                                   </div>
+                                  {product.costPrice && product.unitsPerPallet && (
+                                    <div className="text-xs mt-1 text-gray-400">
+                                      {(() => {
+                                        const palletCost = parseFloat(product.costPrice) * product.unitsPerPallet;
+                                        const palletSell = parseFloat(product.palletPrice!);
+                                        const mPct = palletSell > 0 ? (((palletSell - palletCost) / palletSell) * 100).toFixed(0) : '0';
+                                        return (
+                                          <>
+                                            Cost £{palletCost.toFixed(2)}
+                                            <span className={palletSell - palletCost < 0 ? 'text-red-500 ml-1' : 'text-green-600 ml-1'}>
+                                              ({mPct}% margin)
+                                            </span>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
                                 </div>
                                 {product.unitsPerPallet && (
                                   <div className="text-xs text-gray-400 mt-1">
@@ -875,7 +942,7 @@ export default function QuickQuote() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      {/* Price, Qty, Total - row below on mobile */}
+                      {/* Price, Qty, Total row */}
                       <div className="flex items-end gap-3">
                         <div className="flex-1">
                           <Label className="text-xs text-gray-500">Price</Label>
@@ -953,6 +1020,54 @@ export default function QuickQuote() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Cost + Margin row */}
+                      {(() => {
+                        const costVal = costValues[index] ?? item.costPrice.toString();
+                        const costNum = parseFloat(costVal) || 0;
+                        const marginAmt = item.customPrice - costNum;
+                        const marginPct = item.customPrice > 0 ? (marginAmt / item.customPrice) * 100 : 0;
+                        const isNegative = marginAmt < 0;
+                        return (
+                          <div className="flex items-end gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
+                            <div className="w-24">
+                              <Label className="text-xs text-gray-400">Cost (£)</Label>
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*\.?[0-9]*"
+                                value={costVal}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                    setCostValues(prev => ({ ...prev, [index]: val }));
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  const newCost = !isNaN(val) && val >= 0 ? val : 0;
+                                  updateItemCost(index, newCost);
+                                  setCostValues(prev => ({ ...prev, [index]: newCost.toString() }));
+                                }}
+                                className="h-8 text-xs"
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="flex-1 text-xs">
+                              <Label className="text-xs text-gray-400">Margin / unit</Label>
+                              <div className={`font-medium mt-1.5 ${isNegative ? 'text-red-600' : 'text-green-700'}`}>
+                                £{marginAmt.toFixed(2)} ({marginPct.toFixed(1)}%)
+                              </div>
+                            </div>
+                            {item.weightKg > 0 && (
+                              <div className="text-xs text-gray-400 text-right">
+                                <Label className="text-xs text-gray-400">Weight</Label>
+                                <div className="mt-1.5">{(item.weightKg * item.quantity).toFixed(2)} kg</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -994,6 +1109,33 @@ export default function QuickQuote() {
                 <span>Total</span>
                 <span>£{calculateTotal().toFixed(2)}</span>
               </div>
+
+              {quoteItems.length > 0 && quoteItems.some(i => i.costPrice > 0) && (
+                <>
+                  <Separator />
+                  <div className="space-y-1 text-sm">
+                    <div className="font-medium text-gray-700 mb-1.5">Margin Overview</div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Total Cost</span>
+                      <span>£{calculateTotalCost().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Revenue</span>
+                      <span>£{calculateTotalRevenue().toFixed(2)}</span>
+                    </div>
+                    <div className={`flex justify-between font-semibold ${calculateTotalMarginAmount() < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                      <span>Margin</span>
+                      <span>£{calculateTotalMarginAmount().toFixed(2)} ({calculateTotalMarginPct().toFixed(1)}%)</span>
+                    </div>
+                    {calculateTotalWeight() > 0 && (
+                      <div className="flex justify-between text-gray-500 text-xs mt-1 pt-1 border-t border-dashed border-gray-200">
+                        <span>Total Weight</span>
+                        <span>{calculateTotalWeight().toFixed(2)} kg</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <Separator />
 

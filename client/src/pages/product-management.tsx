@@ -121,6 +121,9 @@ const productFormSchema = z.object({
   
   // Promotional offers
   promotionalOffers: z.array(z.any()).optional(),
+
+  // Cost price for margin calculations (wholesaler internal)
+  costPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -266,6 +269,7 @@ export default function ProductManagement() {
         hazardous: false,
       },
       promotionalOffers: [],
+      costPrice: "",
     },
   });
 
@@ -314,6 +318,7 @@ export default function ProductManagement() {
               hazardous: false,
             },
             promotionalOffers: Array.isArray(editingProduct.promotionalOffers) ? editingProduct.promotionalOffers : [],
+            costPrice: String(editingProduct.costPrice || ""),
           };
           
           console.log('📝 Safe data being set:', safeData);
@@ -760,6 +765,7 @@ export default function ProductManagement() {
         palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
+        costPrice: data.costPrice && data.costPrice !== "" ? parseFloat(data.costPrice) : null,
         // Include promotional offers
         promotionalOffers: data.promotionalOffers || [],
       };
@@ -814,6 +820,7 @@ export default function ProductManagement() {
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : (user?.defaultLowStockThreshold || 50),
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
         sellingFormat: productData.sellingFormat || "units",
+        costPrice: productData.costPrice && productData.costPrice !== "" ? parseFloat(productData.costPrice) : null,
         // Include promotional offers
         promotionalOffers: productData.promotionalOffers || [],
       };
@@ -1663,7 +1670,20 @@ export default function ProductManagement() {
                           name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Regular Price</FormLabel>
+                              <FormLabel>Selling Price (£)</FormLabel>
+                              <FormControl>
+                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="costPrice"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Cost Price (£) <span className="text-gray-400 font-normal text-xs">optional</span></FormLabel>
                               <FormControl>
                                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
                               </FormControl>
