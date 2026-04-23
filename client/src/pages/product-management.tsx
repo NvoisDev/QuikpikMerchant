@@ -172,6 +172,8 @@ export default function ProductManagement() {
   const [batchCostPrice, setBatchCostPrice] = useState("");
   const [expandedBatchProductId, setExpandedBatchProductId] = useState<number | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
+  const [topUpQuantity, setTopUpQuantity] = useState("");
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -1121,7 +1123,10 @@ export default function ProductManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${expandedBatchProductId}/batches`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/batches`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
       queryClient.invalidateQueries({ queryKey: ['/api/batches/expiring-soon'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
       toast({ title: "Batch updated", description: "Batch quantity adjusted" });
     },
     onError: () => {
@@ -1203,6 +1208,25 @@ export default function ProductManagement() {
       delta: -qty,
       reason: stockReason,
     });
+  };
+
+  const handleBatchTopUp = () => {
+    if (!stockProduct || !topUpBatchId || !topUpQuantity) return;
+    const qty = Number(topUpQuantity);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      toast({ title: "Invalid quantity", description: "Please enter a positive whole number", variant: "destructive" });
+      return;
+    }
+    adjustBatchMutation.mutate(
+      { productId: stockProduct.id, batchId: topUpBatchId, delta: qty, reason: 'Manual top-up' },
+      {
+        onSuccess: () => {
+          setStockProduct((prev: any) => prev ? { ...prev, stock: (prev.stock ?? 0) + qty } : null);
+          setTopUpBatchId(null);
+          setTopUpQuantity("");
+        },
+      }
+    );
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -3152,7 +3176,7 @@ export default function ProductManagement() {
           )}
       </div>
 
-      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setStockQuantity(""); setStockReason(""); } }}>
+      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setStockQuantity(""); setStockReason(""); } }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -3176,7 +3200,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "increase" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); }}
+                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); }}
                 >
                   <ArrowUpCircle className="h-4 w-4 mr-1" />
                   Add New Batch
@@ -3185,7 +3209,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); }}
+                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); }}
                 >
                   <ArrowDownCircle className="h-4 w-4 mr-1" />
                   Remove Stock
@@ -3202,6 +3226,7 @@ export default function ProductManagement() {
                   if (!b.expiryDate) return -1;
                   return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
                 });
+                const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
                 const activeBatches = sortedBatches.filter((b: any) => b.status !== 'depleted' && b.quantity > 0);
 
                 const fmtExpiry = (d: string | null) =>
@@ -3246,15 +3271,56 @@ export default function ProductManagement() {
                               </button>
                             );
                           } else {
+                            const isExpired = batch.status !== 'active' || (batch.expiryDate && new Date(batch.expiryDate) < todayDate);
+                            const isTopUp = topUpBatchId === batch.id;
                             return (
-                              <div key={batch.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-                                  <span className="font-medium text-gray-700">{label}</span>
-                                  <span className="text-gray-300">·</span>
-                                  <span className="text-gray-400 text-xs">Exp: {expiry}</span>
+                              <div key={batch.id} className="rounded-lg border border-gray-200 overflow-hidden">
+                                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isExpired ? 'bg-red-400' : 'bg-green-400'}`} />
+                                    <span className={`font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>{label}</span>
+                                    <span className="text-gray-300">·</span>
+                                    <span className={`text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}`}>Exp: {expiry}</span>
+                                    {isExpired && <span className="text-xs text-red-500 font-medium">(expired)</span>}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`font-semibold ${isExpired ? 'text-gray-400' : 'text-gray-500'}`}>{formatNumber(batch.quantity)} units</span>
+                                    {!isExpired && (
+                                      <button
+                                        type="button"
+                                        onClick={() => { setTopUpBatchId(isTopUp ? null : batch.id); setTopUpQuantity(""); }}
+                                        className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
+                                          isTopUp
+                                            ? 'bg-green-600 text-white border-green-600'
+                                            : 'bg-white text-green-700 border-green-400 hover:bg-green-50'
+                                        }`}
+                                      >
+                                        {isTopUp ? 'Cancel' : 'Add to batch'}
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                                <span className="font-semibold text-gray-500 flex-shrink-0">{formatNumber(batch.quantity)} units</span>
+                                {isTopUp && (
+                                  <div className="px-3 py-2.5 bg-green-50 border-t border-green-100 flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      placeholder="Units to add"
+                                      value={topUpQuantity}
+                                      onChange={(e) => setTopUpQuantity(e.target.value)}
+                                      className="h-8 text-sm flex-1"
+                                      autoFocus
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={handleBatchTopUp}
+                                      disabled={!topUpQuantity || adjustBatchMutation.isPending}
+                                      className="h-8 bg-green-600 hover:bg-green-700 flex-shrink-0"
+                                    >
+                                      {adjustBatchMutation.isPending ? "Adding…" : `Add ${topUpQuantity || 0}`}
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             );
                           }
