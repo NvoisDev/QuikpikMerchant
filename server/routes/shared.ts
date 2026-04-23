@@ -363,7 +363,10 @@ export async function refundAcrossPaymentIntents(
         reason: 'requested_by_customer',
         metadata,
       };
-      if (refundApplicationFee) refundParams['refund_application_fee'] = true;
+      if (refundApplicationFee) {
+        refundParams['refund_application_fee'] = true;
+        refundParams['reverse_transfer'] = true;
+      }
       const refund = await stripeClient.refunds.create(refundParams as any);
       totalRefundedPence += refund.amount;
       remainingPence -= refund.amount;
