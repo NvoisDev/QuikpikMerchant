@@ -954,6 +954,11 @@ export default function QuickQuote() {
                               </Badge>
                             )}
                           </div>
+                          {item.weightKg > 0 && (
+                            <span className="text-xs text-gray-400">
+                              {item.weightKg.toFixed(2)} kg/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}
+                            </span>
+                          )}
                           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
                             const now = new Date();
                             const activeOffers = item.promotionalOffers.filter((o: any) => {
