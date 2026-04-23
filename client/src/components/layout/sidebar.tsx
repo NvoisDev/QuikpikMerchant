@@ -114,7 +114,11 @@ export default function Sidebar() {
             <div className="flex items-center justify-between gap-2">
               {/* Logo + business name */}
               <div className={cn("flex flex-col gap-1 min-w-0 flex-1", dc && "lg:hidden")}>
-                <Logo size="lg" />
+                {user?.logoType === "url" && user?.logoUrl ? (
+                  <Logo size="lg" />
+                ) : (
+                  <img src="/quikpik-logo.png" alt="Quikpik" className="h-12 w-12 object-contain" />
+                )}
                 <p className="text-xs text-slate-400 font-medium truncate max-w-[170px]">
                   {user?.businessName || "Wholesale Business"}
                 </p>
@@ -123,7 +127,11 @@ export default function Sidebar() {
               {/* Icon-only logo shown on desktop when collapsed */}
               {dc && (
                 <div className="hidden lg:flex w-full justify-center">
-                  <Logo size="lg" variant="icon-only" />
+                  {user?.logoType === "url" && user?.logoUrl ? (
+                    <Logo size="lg" variant="icon-only" />
+                  ) : (
+                    <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
+                  )}
                 </div>
               )}
 
