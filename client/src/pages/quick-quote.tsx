@@ -130,8 +130,8 @@ export default function QuickQuote() {
     state: '',
     label: '',
   });
-  const [inputValues, setInputValues] = useState<Record<number, { price: string; qty: string }>>({});
-  const [costValues, setCostValues] = useState<Record<number, string>>({});
+  const [inputValues, setInputValues] = useState<Record<string, { price: string; qty: string }>>({});
+  const [costValues, setCostValues] = useState<Record<string, string>>({});
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
 
@@ -262,13 +262,13 @@ export default function QuickQuote() {
       item => item.productId === product.id && item.sellingType === sellingType
     );
     
+    const stableKey = `${product.id}-${sellingType}`;
     if (existingIndex >= 0) {
       const updated = [...quoteItems];
       updated[existingIndex].quantity += 1;
       setQuoteItems(updated);
     } else {
-      const newIndex = quoteItems.length;
-      setQuoteItems([...quoteItems, {
+      setQuoteItems(prev => [...prev, {
         productId: product.id,
         productName: product.name + (sellingType === 'pallets' ? ' (Pallet)' : ''),
         originalPrice: price,
@@ -282,11 +282,11 @@ export default function QuickQuote() {
       }]);
       setInputValues(prev => ({
         ...prev,
-        [newIndex]: { price: price.toString(), qty: '1' }
+        [stableKey]: { price: price.toString(), qty: '1' }
       }));
       setCostValues(prev => ({
         ...prev,
-        [newIndex]: baseCost.toString()
+        [stableKey]: baseCost.toString()
       }));
     }
     setProductDialogOpen(false);
@@ -449,6 +449,7 @@ export default function QuickQuote() {
     setSelectedCustomer(null);
     setQuoteItems([]);
     setInputValues({});
+    setCostValues({});
     setCreatedQuote(null);
     setSendMethod('sms');
     setDepositPercentage(100);
@@ -892,7 +893,7 @@ export default function QuickQuote() {
               ) : (
                 <div className="space-y-4">
                   {quoteItems.map((item, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={`${item.productId}-${item.sellingType}`} className="p-3 bg-gray-50 rounded-lg">
                       {/* Product name and original price - full width on mobile */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
@@ -963,28 +964,30 @@ export default function QuickQuote() {
                             type="text"
                             inputMode="decimal"
                             pattern="[0-9]*\.?[0-9]*"
-                            value={inputValues[index]?.price ?? item.customPrice.toString()}
+                            value={inputValues[`${item.productId}-${item.sellingType}`]?.price ?? item.customPrice.toString()}
                             onChange={(e) => {
                               const val = e.target.value;
+                              const sk = `${item.productId}-${item.sellingType}`;
                               if (val === '' || /^\d*\.?\d*$/.test(val)) {
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], price: val }
+                                  [sk]: { ...prev[sk], price: val }
                                 }));
                               }
                             }}
                             onBlur={(e) => {
                               const val = parseFloat(e.target.value);
+                              const sk = `${item.productId}-${item.sellingType}`;
                               if (!isNaN(val) && val >= 0) {
                                 updateItemPrice(index, val);
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], price: val.toString() }
+                                  [sk]: { ...prev[sk], price: val.toString() }
                                 }));
                               } else {
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], price: item.customPrice.toString() }
+                                  [sk]: { ...prev[sk], price: item.customPrice.toString() }
                                 }));
                               }
                             }}
@@ -997,29 +1000,31 @@ export default function QuickQuote() {
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            value={inputValues[index]?.qty ?? item.quantity.toString()}
+                            value={inputValues[`${item.productId}-${item.sellingType}`]?.qty ?? item.quantity.toString()}
                             onChange={(e) => {
                               const val = e.target.value;
+                              const sk = `${item.productId}-${item.sellingType}`;
                               if (val === '' || /^\d*$/.test(val)) {
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], qty: val }
+                                  [sk]: { ...prev[sk], qty: val }
                                 }));
                               }
                             }}
                             onBlur={(e) => {
                               const val = parseInt(e.target.value);
+                              const sk = `${item.productId}-${item.sellingType}`;
                               if (!isNaN(val) && val >= 1) {
                                 updateItemQuantity(index, val);
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], qty: val.toString() }
+                                  [sk]: { ...prev[sk], qty: val.toString() }
                                 }));
                               } else {
                                 updateItemQuantity(index, 1);
                                 setInputValues(prev => ({
                                   ...prev,
-                                  [index]: { ...prev[index], qty: '1' }
+                                  [sk]: { ...prev[sk], qty: '1' }
                                 }));
                               }
                             }}
@@ -1036,9 +1041,10 @@ export default function QuickQuote() {
 
                       {/* Cost + Margin row */}
                       {(() => {
-                        const costVal = costValues[index] ?? item.costPrice.toString();
+                        const sk = `${item.productId}-${item.sellingType}`;
+                        const costVal = costValues[sk] ?? item.costPrice.toString();
                         const costNum = parseFloat(costVal) || 0;
-                        const livePrice = parseFloat(inputValues[index]?.price ?? item.customPrice.toString()) || item.customPrice;
+                        const livePrice = parseFloat(inputValues[sk]?.price ?? item.customPrice.toString()) || item.customPrice;
                         const marginAmt = livePrice - costNum;
                         const marginPct = livePrice > 0 ? (marginAmt / livePrice) * 100 : 0;
                         const isNegative = marginAmt < 0;
@@ -1054,14 +1060,14 @@ export default function QuickQuote() {
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                    setCostValues(prev => ({ ...prev, [index]: val }));
+                                    setCostValues(prev => ({ ...prev, [sk]: val }));
                                   }
                                 }}
                                 onBlur={(e) => {
                                   const val = parseFloat(e.target.value);
                                   const newCost = !isNaN(val) && val >= 0 ? val : 0;
                                   updateItemCost(index, newCost);
-                                  setCostValues(prev => ({ ...prev, [index]: newCost.toString() }));
+                                  setCostValues(prev => ({ ...prev, [sk]: newCost.toString() }));
                                 }}
                                 className="h-8 text-xs"
                                 placeholder="0.00"
