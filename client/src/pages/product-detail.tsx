@@ -723,8 +723,7 @@ export default function ProductDetail() {
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} maxLength={100} />
-              <p className="text-xs text-gray-400">{editDescription.length}/100</p>
+              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} />
             </div>
             <p className="text-xs text-gray-500">
               For full product configuration (pricing tiers, weight, batches) use{" "}

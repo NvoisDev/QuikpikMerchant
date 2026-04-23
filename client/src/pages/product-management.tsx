@@ -684,14 +684,14 @@ export default function ProductManagement() {
     const editId = params.get('edit');
     const stockId = params.get('stock');
     if (editId) {
-      const found = products.find((p: any) => p.id === parseInt(editId));
+      const found = products.find((p) => p.id === parseInt(editId));
       if (found) {
         setEditingProduct(found);
         setIsDialogOpen(true);
         window.history.replaceState({}, '', '/products');
       }
     } else if (stockId) {
-      const found = products.find((p: any) => p.id === parseInt(stockId));
+      const found = products.find((p) => p.id === parseInt(stockId));
       if (found) {
         setStockProduct(found);
         window.history.replaceState({}, '', '/products');
