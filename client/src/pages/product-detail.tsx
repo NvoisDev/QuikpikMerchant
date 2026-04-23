@@ -1,31 +1,70 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy, Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
+  Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
+  Plus, Minus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@shared/schema";
+import type { PromotionalOffer } from "@shared/schema";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface ProductDetail {
+  id: number;
+  name: string;
+  description: string | null;
+  price: string;
+  costPrice: string | null;
+  currency: string;
+  moq: number;
+  stock: number;
+  imageUrl: string | null;
+  images: string[];
+  category: string | null;
+  status: "active" | "inactive" | "out_of_stock" | "locked";
+  priceVisible: boolean;
+  negotiationEnabled: boolean;
+  sellingFormat: "units" | "pallets" | "both";
+  palletPrice: string | null;
+  palletMoq: number | null;
+  palletStock: number | null;
+  palletWeight: string | null;
+  unitsPerPallet: number | null;
+  totalPackageWeight: string | null;
+  packQuantity: number | null;
+  unitOfMeasure: string | null;
+  sizePerUnit: string | null;
+  temperatureRequirement: string | null;
+  promotionalOffers: PromotionalOffer[];
+  totalBatchStock: number | null;
+  batchCount: number;
+  nearestExpiry: string | null;
+  expiryDate: string | null;
+}
 
 interface Batch {
   id: number;
@@ -33,19 +72,29 @@ interface Batch {
   quantity: number;
   expiryDate: string | null;
   status: "active" | "depleted" | "expired";
-  notes?: string | null;
+  notes: string | null;
 }
 
-const formatMoney = (val: string | number | null | undefined, currency = "GBP") => {
+interface StockSummary {
+  openingStock: number;
+  totalPurchases: number;
+  totalIncreases: number;
+  totalDecreases: number;
+  currentStock: number;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const fmt = (val: string | number | null | undefined, currency = "GBP") => {
   if (val === null || val === undefined || val === "") return "—";
   const n = typeof val === "string" ? parseFloat(val) : val;
   if (!isFinite(n)) return "—";
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n);
 };
 
-const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
-  const p = parseFloat(String(price));
-  const c = parseFloat(String(costPrice));
+const calcMarginPct = (price: string, costPrice: string): number | null => {
+  const p = parseFloat(price);
+  const c = parseFloat(costPrice);
   if (!isFinite(p) || !isFinite(c) || p <= 0) return null;
   return ((p - c) / p) * 100;
 };
@@ -62,7 +111,7 @@ const getBatchExpiryInfo = (expiryDate: string | null) => {
   return { label: formatted, className: "bg-green-50 text-green-700 border-green-200" };
 };
 
-const getActivePromos = (offers: any[]) => {
+const getActivePromos = (offers: PromotionalOffer[]): PromotionalOffer[] => {
   if (!Array.isArray(offers)) return [];
   const now = new Date();
   return offers.filter((o) => {
@@ -73,27 +122,46 @@ const getActivePromos = (offers: any[]) => {
   });
 };
 
-const formatPromoLabel = (promo: any): string => {
+const formatPromoLabel = (promo: PromotionalOffer): string => {
   switch (promo.type) {
     case "percentage_discount": return `${promo.discountPercentage}% off`;
-    case "fixed_price": return `Now ${formatMoney(promo.fixedPrice)}`;
-    case "clearance": return `Clearance ${formatMoney(promo.fixedPrice)}`;
+    case "fixed_price": return `Now ${fmt(promo.fixedPrice)}`;
+    case "clearance": return `Clearance ${fmt(promo.fixedPrice)}`;
     case "buy_x_get_y_free": return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
-    case "bundle_deal": return `${promo.minQuantity}+ at ${formatMoney(promo.fixedPrice)} each`;
+    case "bundle_deal": return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice)} each`;
     default: return promo.name || "Promotion";
   }
 };
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [showAllBatches, setShowAllBatches] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const productId = parseInt(id || "0");
 
-  const { data: product, isLoading: productLoading } = useQuery<Product>({
+  // Modal states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showAllBatches, setShowAllBatches] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
+
+  // Edit form state (simplified key fields)
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStatus, setEditStatus] = useState<"active" | "inactive" | "out_of_stock">("active");
+
+  // Manage stock state
+  const [stockMode, setStockMode] = useState<"increase" | "decrease">("increase");
+  const [stockQty, setStockQty] = useState("1");
+  const [stockReason, setStockReason] = useState("");
+
+  // ── Queries ──────────────────────────────────────────────────────────────────
+
+  const { data: product, isLoading: productLoading } = useQuery<ProductDetail>({
     queryKey: ["/api/products", productId],
     queryFn: async () => {
       const res = await fetch(`/api/products/${productId}`);
@@ -113,30 +181,91 @@ export default function ProductDetail() {
     enabled: !!productId,
   });
 
-  const statusChangeMutation = useMutation({
-    mutationFn: (status: string) =>
-      apiRequest("PATCH", `/api/products/${productId}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Status updated" });
+  const { data: stockSummary } = useQuery<StockSummary>({
+    queryKey: ["/api/products", productId, "stock-summary"],
+    queryFn: async () => {
+      const res = await fetch(`/api/products/${productId}/stock-summary`);
+      if (!res.ok) return null;
+      return res.json();
     },
+    enabled: !!productId,
+  });
+
+  // ── Mutations ─────────────────────────────────────────────────────────────────
+
+  const invalidateProduct = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
+    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => apiRequest("PATCH", `/api/products/${productId}`, { status }),
+    onSuccess: () => { invalidateProduct(); toast({ title: "Status updated" }); },
     onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/products/${productId}`, {
+      name: editName,
+      price: editPrice,
+      description: editDescription,
+      status: editStatus,
+    }),
+    onSuccess: () => {
+      invalidateProduct();
+      setEditOpen(false);
+      toast({ title: "Product updated" });
+    },
+    onError: () => toast({ title: "Failed to save changes", variant: "destructive" }),
+  });
+
+  const stockMutation = useMutation({
+    mutationFn: ({ qty, type }: { qty: number; type: "increase" | "decrease" }) =>
+      apiRequest("POST", `/api/products/${productId}/stock-adjustment`, {
+        quantity: qty,
+        type,
+        reason: stockReason || (type === "increase" ? "Manual increase" : "Manual decrease"),
+      }),
+    onSuccess: () => {
+      invalidateProduct();
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "batches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "stock-summary"] });
+      setStockOpen(false);
+      setStockQty("1");
+      setStockReason("");
+      toast({ title: "Stock updated" });
+    },
+    onError: () => toast({ title: "Failed to adjust stock", variant: "destructive" }),
   });
 
   const duplicateMutation = useMutation({
     mutationFn: async () => {
       if (!product) throw new Error("No product");
-      const { id: _id, createdAt: _c, updatedAt: _u, wholesalerId: _w, ...rest } = product as any;
       return apiRequest("POST", "/api/products", {
-        ...rest,
         name: `${product.name} (Copy)`,
+        description: product.description,
+        price: product.price,
+        currency: product.currency,
+        moq: product.moq,
         stock: 0,
+        category: product.category,
+        imageUrl: product.imageUrl,
+        images: product.images,
+        priceVisible: product.priceVisible,
+        negotiationEnabled: product.negotiationEnabled,
+        sellingFormat: product.sellingFormat,
+        palletPrice: product.palletPrice,
+        palletMoq: product.palletMoq,
+        unitsPerPallet: product.unitsPerPallet,
+        totalPackageWeight: product.totalPackageWeight,
+        palletWeight: product.palletWeight,
+        costPrice: product.costPrice,
+        status: "active",
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Product duplicated", description: "A copy has been added to your catalogue." });
+      toast({ title: "Product duplicated" });
       navigate("/products");
     },
     onError: () => toast({ title: "Failed to duplicate", variant: "destructive" }),
@@ -152,10 +281,23 @@ export default function ProductDetail() {
     onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
   });
 
+  // ── Open edit dialog pre-filled ───────────────────────────────────────────────
+
+  const openEdit = () => {
+    if (!product) return;
+    setEditName(product.name);
+    setEditPrice(product.price);
+    setEditDescription(product.description || "");
+    setEditStatus(product.status === "locked" ? "inactive" : product.status as "active" | "inactive" | "out_of_stock");
+    setEditOpen(true);
+  };
+
+  // ── Loading / not found ───────────────────────────────────────────────────────
+
   if (productLoading) {
     return (
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {[...Array(4)].map((_, i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
         ))}
       </div>
@@ -174,28 +316,30 @@ export default function ProductDetail() {
     );
   }
 
-  const currency = (product as any).currency || "GBP";
+  // ── Derived values ────────────────────────────────────────────────────────────
+
+  const currency = product.currency || "GBP";
   const margin = product.costPrice ? calcMarginPct(product.price, product.costPrice) : null;
-  const activePromos = getActivePromos((product as any).promotionalOffers || []);
+  const activePromos = getActivePromos(product.promotionalOffers || []);
   const isLocked = product.status === "locked";
 
-  const activeBatches = batches.filter(b => b.status === "active" && (!b.expiryDate || new Date(b.expiryDate) >= new Date()));
-  const otherBatches = batches.filter(b => !activeBatches.includes(b));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const activeBatches = batches.filter(
+    (b) => b.status === "active" && (!b.expiryDate || new Date(b.expiryDate) >= today)
+  );
+  const otherBatches = batches.filter((b) => !activeBatches.includes(b));
   const displayBatches = showAllBatches ? batches : activeBatches;
 
-  const sellingFormat = (product as any).sellingFormat || "units";
-  const totalPackageWeight = (product as any).totalPackageWeight;
-  const palletWeight = (product as any).palletWeight;
-  const unitsPerPallet = (product as any).unitsPerPallet;
-  const palletPrice = (product as any).palletPrice;
-  const palletMoq = (product as any).palletMoq;
-  const totalBatchStock = (product as any).totalBatchStock;
-  const batchCount = (product as any).batchCount ?? 0;
-  const nearestExpiry = (product as any).nearestExpiry || (product as any).expiryDate;
+  // Use stock-summary current stock when available, else fall back to product.stock
+  const totalStock = stockSummary?.currentStock ?? product.totalBatchStock ?? product.stock;
+  const batchCountDisplay = product.batchCount ?? activeBatches.length;
+  const nearestExpiry = product.nearestExpiry || product.expiryDate;
 
-  const productImage = ((product as any).images?.length > 0)
-    ? (product as any).images[0]
-    : (product as any).imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400";
+  const productImage =
+    (product.images?.length > 0 ? product.images[0] : null) ||
+    product.imageUrl ||
+    "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400";
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     active: { label: "Active", className: "bg-green-100 text-green-800 border-green-200" },
@@ -203,7 +347,7 @@ export default function ProductDetail() {
     out_of_stock: { label: "Out of Stock", className: "bg-red-100 text-red-700 border-red-200" },
     locked: { label: "Locked", className: "bg-orange-100 text-orange-700 border-orange-200" },
   };
-  const currentStatus = statusConfig[product.status] || statusConfig.active;
+  const currentStatus = statusConfig[product.status] ?? statusConfig.active;
 
   const marginBadgeClass =
     margin === null ? "" :
@@ -214,12 +358,11 @@ export default function ProductDetail() {
   return (
     <>
       <div className="max-w-2xl mx-auto pb-16">
-        {/* Back bar */}
+        {/* ── Back bar + 3-dot menu ── */}
         <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate("/products")} className="gap-1.5 -ml-1 text-gray-600">
             <ArrowLeft className="h-4 w-4" /> Products
           </Button>
-          {/* 3-dot menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5" disabled={isLocked}>
@@ -227,13 +370,13 @@ export default function ProductDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate(`/products?edit=${productId}`)}>
+              <DropdownMenuItem onClick={openEdit}>
                 <Edit className="h-4 w-4 mr-2" /> Edit product
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/products?stock=${productId}`)}>
+              <DropdownMenuItem onClick={() => setStockOpen(true)}>
                 <PackagePlus className="h-4 w-4 mr-2" /> Manage stock
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => statusChangeMutation.mutate(product.status === "active" ? "inactive" : "active")}>
+              <DropdownMenuItem onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}>
                 {product.status === "active"
                   ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set inactive</>
                   : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set active</>}
@@ -252,22 +395,18 @@ export default function ProductDetail() {
           </DropdownMenu>
         </div>
 
-        {/* Hero image */}
+        {/* ── Hero image ── */}
         <div className="relative">
-          <img
-            src={productImage}
-            alt={product.name}
-            className="w-full h-56 object-cover"
-          />
+          <img src={productImage} alt={product.name} className="w-full h-56 object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <div className="flex flex-wrap gap-1.5 mb-2">
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${currentStatus.className}`}>
                 {currentStatus.label}
               </span>
-              {(product as any).category && (
+              {product.category && (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/90 text-gray-700 border border-white/50">
-                  {(product as any).category}
+                  {product.category}
                 </span>
               )}
               {margin !== null && (
@@ -291,16 +430,16 @@ export default function ProductDetail() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500 mb-0.5">
-                    {sellingFormat === "pallets" ? "Per pallet" : "Per unit"}
+                    {product.sellingFormat === "pallets" ? "Per pallet" : "Per unit"}
                   </p>
                   <p className="text-xl font-bold text-gray-900">
-                    {(product as any).priceVisible !== false ? formatMoney(product.price, currency) : "Hidden"}
+                    {product.priceVisible ? fmt(product.price, currency) : "Hidden"}
                   </p>
                 </div>
                 {product.costPrice && (
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Cost price</p>
-                    <p className="text-xl font-bold text-gray-900">{formatMoney(product.costPrice, currency)}</p>
+                    <p className="text-xl font-bold text-gray-900">{fmt(product.costPrice, currency)}</p>
                   </div>
                 )}
               </div>
@@ -311,7 +450,7 @@ export default function ProductDetail() {
                   <p className="text-2xl font-bold">{margin.toFixed(1)}%</p>
                   {product.costPrice && (
                     <p className="text-xs mt-0.5 opacity-70">
-                      {formatMoney(parseFloat(String(product.price)) - parseFloat(String(product.costPrice)), currency)} per unit
+                      {fmt(parseFloat(product.price) - parseFloat(product.costPrice), currency)} per unit
                     </p>
                   )}
                 </div>
@@ -322,27 +461,29 @@ export default function ProductDetail() {
                   <Separator />
                   <div>
                     <p className="text-xs text-gray-500 mb-1.5">Active promotion</p>
-                    {activePromos.map((p, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 text-sm bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-3 py-1">
-                        🏷 {formatPromoLabel(p)}
-                      </span>
-                    ))}
+                    <div className="flex flex-wrap gap-1.5">
+                      {activePromos.map((p, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-sm bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-3 py-1">
+                          🏷 {formatPromoLabel(p)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
 
-              {(sellingFormat === "pallets" || sellingFormat === "both") && palletPrice && (
+              {(product.sellingFormat === "pallets" || product.sellingFormat === "both") && product.palletPrice && (
                 <>
                   <Separator />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Pallet price</p>
-                      <p className="text-lg font-bold text-gray-900">{formatMoney(palletPrice, currency)}</p>
+                      <p className="text-lg font-bold text-gray-900">{fmt(product.palletPrice, currency)}</p>
                     </div>
-                    {palletMoq && (
+                    {product.palletMoq && (
                       <div>
                         <p className="text-xs text-gray-500 mb-0.5">Pallet MOQ</p>
-                        <p className="text-lg font-bold text-gray-900">{palletMoq} pallets</p>
+                        <p className="text-lg font-bold text-gray-900">{product.palletMoq} pallets</p>
                       </div>
                     )}
                   </div>
@@ -359,17 +500,17 @@ export default function ProductDetail() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-gray-900">{(totalBatchStock ?? product.stock).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalStock.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Total stock</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-gray-900">{batchCount}</p>
+                  <p className="text-2xl font-bold text-gray-900">{batchCountDisplay}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Active batches</p>
                 </div>
                 {nearestExpiry ? (
-                  <div className={`rounded-lg p-3 border ${getBatchExpiryInfo(nearestExpiry)?.className || "bg-gray-50"}`}>
-                    <p className="text-xs font-medium mb-0.5">Nearest expiry</p>
-                    <p className="text-xs font-semibold">{getBatchExpiryInfo(nearestExpiry)?.label}</p>
+                  <div className={`rounded-lg p-3 border text-left ${getBatchExpiryInfo(nearestExpiry)?.className ?? "bg-gray-50"}`}>
+                    <p className="text-xs font-medium mb-0.5 opacity-70">Nearest expiry</p>
+                    <p className="text-xs font-semibold leading-tight">{getBatchExpiryInfo(nearestExpiry)?.label}</p>
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-lg p-3">
@@ -379,8 +520,7 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* Stock alert */}
-              {product.stock === 0 && (
+              {totalStock === 0 && (
                 <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">
                   <AlertTriangle className="h-4 w-4 shrink-0" /> Out of stock
                 </div>
@@ -393,10 +533,12 @@ export default function ProductDetail() {
                     <p className="text-xs font-semibold text-gray-600">Batches</p>
                     {otherBatches.length > 0 && (
                       <button
-                        onClick={() => setShowAllBatches(v => !v)}
+                        onClick={() => setShowAllBatches((v) => !v)}
                         className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
                       >
-                        {showAllBatches ? <><ChevronUp className="h-3 w-3" /> Show active only</> : <><ChevronDown className="h-3 w-3" /> Show all ({batches.length})</>}
+                        {showAllBatches
+                          ? <><ChevronUp className="h-3 w-3" /> Active only</>
+                          : <><ChevronDown className="h-3 w-3" /> All ({batches.length})</>}
                       </button>
                     )}
                   </div>
@@ -413,23 +555,33 @@ export default function ProductDetail() {
                       <tbody className="divide-y divide-gray-100">
                         {displayBatches.map((batch) => {
                           const expiryInfo = getBatchExpiryInfo(batch.expiryDate);
-                          const isExpiredBatch = batch.status === "expired" || (batch.expiryDate && new Date(batch.expiryDate) < new Date());
+                          const isExpiredBatch =
+                            batch.status === "expired" ||
+                            (batch.expiryDate != null && new Date(batch.expiryDate) < today);
                           return (
                             <tr key={batch.id} className={isExpiredBatch ? "opacity-50" : ""}>
-                              <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[100px]">{batch.batchNumber || `#${batch.id}`}</td>
+                              <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[90px]">
+                                {batch.batchNumber || `#${batch.id}`}
+                              </td>
                               <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
                               <td className="px-3 py-2 text-right">
                                 {expiryInfo ? (
                                   <span className={`inline-block px-1.5 py-0.5 rounded text-xs border ${expiryInfo.className}`}>
-                                    {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
+                                    {batch.expiryDate
+                                      ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+                                      : "—"}
                                   </span>
-                                ) : <span className="text-gray-400">No expiry</span>}
+                                ) : (
+                                  <span className="text-gray-400">No expiry</span>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <span className={`inline-block px-1.5 py-0.5 rounded-full text-xs capitalize ${
-                                  batch.status === "active" && !isExpiredBatch ? "bg-green-100 text-green-700"
-                                  : batch.status === "depleted" ? "bg-gray-100 text-gray-500"
-                                  : "bg-red-100 text-red-600"
+                                  isExpiredBatch && batch.status !== "depleted"
+                                    ? "bg-red-100 text-red-600"
+                                    : batch.status === "depleted"
+                                      ? "bg-gray-100 text-gray-500"
+                                      : "bg-green-100 text-green-700"
                                 }`}>
                                   {isExpiredBatch && batch.status !== "depleted" ? "expired" : batch.status}
                                 </span>
@@ -455,43 +607,49 @@ export default function ProductDetail() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Selling format</span>
                   <span className="font-medium text-gray-800">
-                    {sellingFormat === "units" ? "Units only" : sellingFormat === "pallets" ? "Pallets only" : "Units & Pallets"}
+                    {product.sellingFormat === "units" ? "Units only"
+                      : product.sellingFormat === "pallets" ? "Pallets only"
+                      : "Units & Pallets"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">MOQ</span>
-                  <span className="font-medium text-gray-800">{product.moq} {sellingFormat === "pallets" ? "pallets" : "units"}</span>
+                  <span className="font-medium text-gray-800">
+                    {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "units"}
+                  </span>
                 </div>
-                {unitsPerPallet && (
+                {product.unitsPerPallet != null && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Units per pallet</span>
-                    <span className="font-medium text-gray-800">{unitsPerPallet}</span>
+                    <span className="font-medium text-gray-800">{product.unitsPerPallet}</span>
                   </div>
                 )}
-                {(product as any).packQuantity && (product as any).unitOfMeasure && (
+                {product.packQuantity != null && product.unitOfMeasure && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pack size</span>
                     <span className="font-medium text-gray-800">
-                      {(product as any).packQuantity} × {(product as any).sizePerUnit || ""}{(product as any).unitOfMeasure}
+                      {product.packQuantity} × {product.sizePerUnit ?? ""}{product.unitOfMeasure}
                     </span>
                   </div>
                 )}
-                {totalPackageWeight && parseFloat(totalPackageWeight) > 0 && (
+                {product.totalPackageWeight != null && parseFloat(product.totalPackageWeight) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pack weight</span>
-                    <span className="font-medium text-gray-800">{parseFloat(totalPackageWeight).toFixed(2)} kg</span>
+                    <span className="font-medium text-gray-800">{parseFloat(product.totalPackageWeight).toFixed(2)} kg</span>
                   </div>
                 )}
-                {palletWeight && parseFloat(palletWeight) > 0 && (sellingFormat === "pallets" || sellingFormat === "both") && (
+                {product.palletWeight != null &&
+                  parseFloat(product.palletWeight) > 0 &&
+                  (product.sellingFormat === "pallets" || product.sellingFormat === "both") && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pallet weight</span>
-                    <span className="font-medium text-gray-800">{parseFloat(palletWeight).toFixed(2)} kg</span>
+                    <span className="font-medium text-gray-800">{parseFloat(product.palletWeight).toFixed(2)} kg</span>
                   </div>
                 )}
-                {(product as any).temperatureRequirement && (product as any).temperatureRequirement !== "ambient" && (
+                {product.temperatureRequirement && product.temperatureRequirement !== "ambient" && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Temperature</span>
-                    <span className="font-medium text-gray-800 capitalize">{(product as any).temperatureRequirement}</span>
+                    <span className="font-medium text-gray-800 capitalize">{product.temperatureRequirement}</span>
                   </div>
                 )}
               </div>
@@ -506,15 +664,13 @@ export default function ProductDetail() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {activePromos.map((promo, i) => (
-                  <div key={i} className="flex items-start justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-semibold text-orange-800">🏷 {formatPromoLabel(promo)}</p>
-                      {promo.startDate && promo.endDate && (
-                        <p className="text-xs text-orange-600 mt-0.5">
-                          {new Date(promo.startDate).toLocaleDateString("en-GB")} – {new Date(promo.endDate).toLocaleDateString("en-GB")}
-                        </p>
-                      )}
-                    </div>
+                  <div key={i} className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5">
+                    <p className="text-sm font-semibold text-orange-800">🏷 {formatPromoLabel(promo)}</p>
+                    {promo.startDate && promo.endDate && (
+                      <p className="text-xs text-orange-600 mt-0.5">
+                        {new Date(promo.startDate).toLocaleDateString("en-GB")} – {new Date(promo.endDate).toLocaleDateString("en-GB")}
+                      </p>
+                    )}
                   </div>
                 ))}
                 <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => navigate(`/promotions?productId=${productId}`)}>
@@ -525,13 +681,13 @@ export default function ProductDetail() {
           )}
 
           {/* ── Description ── */}
-          {(product as any).description && (
+          {product.description && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{(product as any).description}</p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
               </CardContent>
             </Card>
           )}
@@ -539,7 +695,110 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* Delete confirmation */}
+      {/* ── Edit dialog (key fields) ── */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit product</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Price (£)</Label>
+              <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} min="0" step="0.01" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={editStatus} onValueChange={(v) => setEditStatus(v as "active" | "inactive" | "out_of_stock")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="out_of_stock">Out of stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} maxLength={100} />
+              <p className="text-xs text-gray-400">{editDescription.length}/100</p>
+            </div>
+            <p className="text-xs text-gray-500">
+              For full product configuration (pricing tiers, weight, batches) use{" "}
+              <button className="underline text-blue-600" onClick={() => { setEditOpen(false); navigate(`/products?edit=${productId}`); }}>
+                full edit
+              </button>.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending || !editName || !editPrice}>
+              {editMutation.isPending ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Manage stock dialog ── */}
+      <Dialog open={stockOpen} onOpenChange={setStockOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Manage stock — {product.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex rounded-lg border overflow-hidden">
+              <button
+                className={`flex-1 py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${stockMode === "increase" ? "bg-green-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                onClick={() => setStockMode("increase")}
+              >
+                <Plus className="h-4 w-4" /> Add stock
+              </button>
+              <button
+                className={`flex-1 py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${stockMode === "decrease" ? "bg-red-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                onClick={() => setStockMode("decrease")}
+              >
+                <Minus className="h-4 w-4" /> Remove stock
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-gray-500">Current stock</p>
+              <p className="text-2xl font-bold text-gray-900">{totalStock.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                value={stockQty}
+                onChange={(e) => setStockQty(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason <span className="text-gray-400">(optional)</span></Label>
+              <Input
+                placeholder={stockMode === "increase" ? "e.g. New delivery" : "e.g. Damaged goods"}
+                value={stockReason}
+                onChange={(e) => setStockReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStockOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => stockMutation.mutate({ qty: parseInt(stockQty) || 1, type: stockMode })}
+              disabled={stockMutation.isPending || !stockQty || parseInt(stockQty) <= 0}
+              className={stockMode === "increase" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+            >
+              {stockMutation.isPending ? "Saving…" : stockMode === "increase" ? "Add stock" : "Remove stock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete confirmation ── */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
