@@ -101,6 +101,11 @@ export function UnitSelectionModal({
                         <p className="text-xs text-gray-500 mt-1">
                           Minimum: {moq} units
                         </p>
+                        {(() => {
+                          const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
+                          if (pw > 0) return <p className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</p>;
+                          return null;
+                        })()}
                       </div>
                       <div className="text-right">
                         {hasDiscount && (
@@ -143,6 +148,11 @@ export function UnitSelectionModal({
                         ` • Minimum: ${(selectedProductForModal as any).palletMoq} pallets`
                       }
                     </p>
+                    {(() => {
+                      const palw = selectedProductForModal.palletWeight ? parseFloat(String(selectedProductForModal.palletWeight)) : 0;
+                      if (palw > 0) return <p className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</p>;
+                      return null;
+                    })()}
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold text-blue-600">
@@ -259,6 +269,16 @@ export function UnitSelectionModal({
                       {(selectedProductForModal as any).unitsPerPallet} units per pallet
                     </div>
                   )}
+                  {(() => {
+                    if (selectedModalType === 'units') {
+                      const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
+                      if (pw > 0) return <div className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</div>;
+                    } else {
+                      const palw = selectedProductForModal.palletWeight ? parseFloat(String(selectedProductForModal.palletWeight)) : 0;
+                      if (palw > 0) return <div className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</div>;
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
 

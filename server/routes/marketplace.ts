@@ -3751,6 +3751,8 @@ https://quikpik.app`;
           total: currentTotal.toFixed(2),
           sellingType: item.sellingType || 'units',
           inStock: product ? (product.stock || 0) >= item.quantity : false,
+          totalPackageWeight: product?.totalPackageWeight || null,
+          palletWeight: product?.palletWeight || null,
         };
       });
 

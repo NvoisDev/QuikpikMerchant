@@ -290,6 +290,8 @@ interface ReorderPreview {
     total: string;
     sellingType: string;
     inStock: boolean;
+    totalPackageWeight?: string | null;
+    palletWeight?: string | null;
   }>;
   subtotal: string;
   transactionFee: string;
@@ -426,6 +428,16 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                     <p className="text-xs text-gray-500">
                       {item.quantity} {item.sellingType} x {fmt(item.unitPrice)}
                     </p>
+                    {(() => {
+                      if (item.sellingType === 'pallets') {
+                        const palw = item.palletWeight ? parseFloat(String(item.palletWeight)) : 0;
+                        if (palw > 0) return <p className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</p>;
+                      } else {
+                        const pw = item.totalPackageWeight ? parseFloat(String(item.totalPackageWeight)) : 0;
+                        if (pw > 0) return <p className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</p>;
+                      }
+                      return null;
+                    })()}
                     {!item.inStock && (
                       <p className="text-xs text-orange-600 mt-0.5">Stock may have changed</p>
                     )}
