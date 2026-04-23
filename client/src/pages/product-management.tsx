@@ -686,6 +686,7 @@ export default function ProductManagement() {
     const stockId = params.get('stock');
     const from = params.get('from');
     if (from) setNavigateBackTo(from);
+    else setNavigateBackTo(null);
     if (editId) {
       const found = products.find((p) => p.id === parseInt(editId));
       if (found) {
@@ -1817,6 +1818,7 @@ export default function ProductManagement() {
                 onOpenChange={(open) => {
                   console.log('🔄 Dialog onOpenChange called:', { open, currentState: isDialogOpen });
                   setIsDialogOpen(open);
+                  if (!open) setNavigateBackTo(null);
                 }}
               >
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
