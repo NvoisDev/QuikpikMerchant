@@ -894,6 +894,11 @@ export default function ProductManagement() {
         title: "Saved",
         description: "Product updated successfully",
       });
+      if (navigateBackTo) {
+        const dest = navigateBackTo;
+        setNavigateBackTo(null);
+        navigate(dest);
+      }
     },
     onError: (error: any) => {
       toast({
