@@ -90,6 +90,9 @@ export interface StripeCheckoutFormProps {
   customerData: CustomerData;
   wholesaler: any;
   totalAmount: number;
+  subtotal: number;
+  transactionFee: number;
+  shippingCost: number;
   clientSecret: string;
   onSuccess: (orderData: {
     orderNumber: string;

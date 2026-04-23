@@ -16,10 +16,16 @@ export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 const PaymentFormContent = ({
   onSuccess,
   totalAmount,
+  subtotal,
+  transactionFee,
+  shippingCost,
   wholesaler,
 }: {
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
+  subtotal: number;
+  transactionFee: number;
+  shippingCost: number;
   wholesaler: any;
 }) => {
   const stripe = useStripe();
@@ -166,14 +172,16 @@ const PaymentFormContent = ({
             });
           } else {
             console.error('❌ Order creation failed:', response.status);
+            // Order DB write failed after successful Stripe payment — use the
+            // pre-computed cart values passed as props (always non-zero).
             onSuccess({
               orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
               cart: [],
               customerData: {},
-              totalAmount: actualTotal,
-              subtotal: actualSubtotal,
-              transactionFee: actualTransactionFee,
-              shippingCost: actualShipping,
+              totalAmount: totalAmount,
+              subtotal: subtotal,
+              transactionFee: transactionFee,
+              shippingCost: shippingCost,
             });
             toast({
               title: "Payment Successful!",
@@ -182,19 +190,16 @@ const PaymentFormContent = ({
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
-          const metadata = (paymentIntent as any).metadata || {};
-          const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-          const actualShipping = parseFloat(metadata.shippingCost || '0');
-          const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-          const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
+          // Network error — order creation request never reached the server.
+          // Use the pre-computed cart values passed as props (always non-zero).
           onSuccess({
             orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
             cart: [],
             customerData: {},
-            totalAmount: actualTotal,
-            subtotal: actualSubtotal,
-            transactionFee: actualTransactionFee,
-            shippingCost: actualShipping,
+            totalAmount: totalAmount,
+            subtotal: subtotal,
+            transactionFee: transactionFee,
+            shippingCost: shippingCost,
           });
           toast({
             title: "Payment Successful!",
@@ -264,7 +269,7 @@ const PaymentFormContent = ({
   );
 };
 
-export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clientSecret, onSuccess }: StripeCheckoutFormProps) => {
+export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, transactionFee, shippingCost, clientSecret, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { toast } = useToast();
 
@@ -313,6 +318,9 @@ export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount
       <PaymentFormContent
         onSuccess={onSuccess}
         totalAmount={totalAmount}
+        subtotal={subtotal}
+        transactionFee={transactionFee}
+        shippingCost={shippingCost}
         wholesaler={wholesaler}
       />
     </Elements>

@@ -742,6 +742,9 @@ export function CheckoutDialog({
                       customerData={customerData}
                       wholesaler={wholesaler}
                       clientSecret={clientSecret}
+                      subtotal={cartStats.subtotal}
+                      shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
+                      transactionFee={((cartStats.subtotal + (customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0)) * 0.055) + 0.50}
                       totalAmount={(() => {
                         const subtotal = cartStats.subtotal;
                         const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
