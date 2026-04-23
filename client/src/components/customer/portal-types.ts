@@ -47,6 +47,7 @@ export interface Product {
   unitSize?: string;
   unitWeight?: string;
   totalPackageWeight?: string;
+  palletWeight?: string | null;
 
   unit_weight?: string;
   total_package_weight?: string;

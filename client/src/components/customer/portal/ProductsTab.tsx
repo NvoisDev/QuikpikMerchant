@@ -428,6 +428,18 @@ export function ProductsTab({
                             <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{(product as any).brand}</span>
                           )}
                         </div>
+                        {(() => {
+                          const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+                          const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
+                          const parts: string[] = [];
+                          if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+                          if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
+                            parts.push(`${palw.toFixed(2)} kg/pallet`);
+                          }
+                          return parts.length ? (
+                            <span className="text-xs text-gray-400">{parts.join(' · ')}</span>
+                          ) : null;
+                        })()}
 
                         {/* Stock Indicator */}
                         <div className="mb-2 flex items-center gap-3">
@@ -821,6 +833,18 @@ export function ProductsTab({
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">Limited availability</span>
                             )}
                           </div>
+                          {(() => {
+                            const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+                            const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
+                            const parts: string[] = [];
+                            if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+                            if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
+                              parts.push(`${palw.toFixed(2)} kg/pallet`);
+                            }
+                            return parts.length ? (
+                              <span className="text-xs text-gray-400 mt-1 block">{parts.join(' · ')}</span>
+                            ) : null;
+                          })()}
                         </div>
                         <div className="mt-1.5">
                           <PriceDisplay

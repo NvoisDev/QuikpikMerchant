@@ -59,6 +59,7 @@ interface Product {
   palletMoq?: number;
   palletStock?: number;
   palletWeight?: number;
+  totalPackageWeight?: string | null;
   expiryDate?: string | null;
   promotionalOffers?: PromotionalOffer[];
   batchCount?: number;
@@ -175,6 +176,17 @@ export default function ProductCard({
   };
 
   const productSize = formatProductSize();
+
+  const weightLabel = (() => {
+    const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+    const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
+    const parts: string[] = [];
+    if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+    if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
+      parts.push(`${palw.toFixed(2)} kg/pallet`);
+    }
+    return parts.length ? parts.join(' · ') : null;
+  })();
 
   const getStockStatus = () => {
     const threshold = product.lowStockThreshold || 50;
@@ -336,6 +348,9 @@ export default function ProductCard({
               <h3 className="font-semibold text-gray-900 text-base line-clamp-1">{product.name}</h3>
               {productSize && (
                 <p className="text-xs text-blue-600 font-medium mt-0.5">{productSize}</p>
+              )}
+              {weightLabel && (
+                <span className="text-xs text-gray-400">{weightLabel}</span>
               )}
               {product.category && (
                 <p className="text-xs text-gray-400 mt-0.5">{product.category}</p>
