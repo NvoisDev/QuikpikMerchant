@@ -20,6 +20,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -631,13 +632,19 @@ export default function QuickQuote() {
               </div>
             </CardHeader>
             <CardContent>
-              <Sheet open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
+              <Sheet
+                open={customerDropdownOpen}
+                onOpenChange={(open) => {
+                  setCustomerDropdownOpen(open);
+                  if (!open) setCustomerSearch('');
+                }}
+              >
+                <SheetTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={customerDropdownOpen}
                   className="w-full justify-between font-normal"
-                  onClick={() => setCustomerDropdownOpen(true)}
                 >
                   {selectedCustomer ? (
                     <span className="flex flex-col items-start text-left">
@@ -649,6 +656,7 @@ export default function QuickQuote() {
                   )}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
+                </SheetTrigger>
                 <SheetContent side="bottom" className="h-[70vh] flex flex-col p-0">
                   <SheetHeader className="px-4 pt-4 pb-2 border-b border-slate-200">
                     <SheetTitle className="text-base">Select Customer</SheetTitle>
