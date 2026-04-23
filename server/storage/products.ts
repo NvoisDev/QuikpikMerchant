@@ -116,7 +116,7 @@ export class ProductStorage extends UserStorageBase {
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
           base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
           unit, unit_format, pallet_weight, unit_weight,
-          promotional_offers, expiry_date,
+          promotional_offers, expiry_date, cost_price,
           created_at, updated_at
         FROM products 
         WHERE wholesaler_id = ${wholesalerId} 
@@ -192,6 +192,7 @@ export class ProductStorage extends UserStorageBase {
         shelfLife: null,
         contentCategory: null,
         expiryDate: row.expiry_date ? String(row.expiry_date) : null,
+        costPrice: row.cost_price ? String(row.cost_price) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       });
