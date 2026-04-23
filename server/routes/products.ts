@@ -222,8 +222,25 @@ export function registerProductRoutes(app: Express): void {
                 .where(eq(productBatches.id, batch.id));
               toDeduct -= deduct;
             }
+            // Re-sync products.stock from actual batch sum so the row always
+            // reflects the true source of truth, even when the batch pool could
+            // not cover the full requested decrease.
+            const today2 = new Date().toISOString().split('T')[0];
+            const [actualSumRow] = await tx
+              .select({ total: sql<number>`COALESCE(SUM(${productBatches.quantity}),0)` })
+              .from(productBatches)
+              .where(and(
+                eq(productBatches.productId, id),
+                eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today2}`)
+              ));
+            const actualStock = Number(actualSumRow?.total ?? 0);
+            await tx.update(products)
+              .set({ stock: actualStock, updatedAt: new Date() })
+              .where(eq(products.id, id));
+
             if (toDeduct > 0) {
-              console.warn(`⚠️ Batch pool exhausted during stock-decrease reconciliation for product ${id}: ${toDeduct} units unaccounted.`);
+              console.warn(`⚠️ Batch pool exhausted for product ${id}: ${toDeduct} units unaccounted. products.stock synced to actual batch total: ${actualStock}.`);
             }
           }
         }

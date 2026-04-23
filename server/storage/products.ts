@@ -632,18 +632,20 @@ export class ProductStorage extends UserStorageBase {
       .set({ quantity: after, status: newStatus, updatedAt: new Date() })
       .where(eq(productBatches.id, batchId));
 
-    // Log stock movement with actual applied delta (not the requested one)
-    await db.insert(stockMovements).values({
-      productId: batch.productId,
-      wholesalerId,
-      movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
-      quantity: actualDelta,   // actual change, not requested delta
-      unitType: 'units',
-      stockBefore: before,
-      stockAfter: after,
-      reason,
-      orderId: orderId ?? null,
-    });
+    // Log stock movement only when the quantity actually changed (skip no-ops)
+    if (actualDelta !== 0) {
+      await db.insert(stockMovements).values({
+        productId: batch.productId,
+        wholesalerId,
+        movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
+        quantity: actualDelta,   // actual change, not requested delta
+        unitType: 'units',
+        stockBefore: before,
+        stockAfter: after,
+        reason,
+        orderId: orderId ?? null,
+      });
+    }
 
     await this._syncProductStockFromBatches(batch.productId);
   }
