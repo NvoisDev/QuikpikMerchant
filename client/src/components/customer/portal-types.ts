@@ -56,6 +56,7 @@ export interface Product {
   customPrice?: string;
   standardPrice?: string;
   hasPriceList?: boolean;
+  isExpiringSoon?: boolean;
 
   wholesaler: {
     id: string;

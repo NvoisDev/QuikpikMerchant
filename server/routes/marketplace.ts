@@ -2555,8 +2555,15 @@ export function registerMarketplaceRoutes(app: Express): void {
                  p.price_visible, p.minimum_bid_price, p.pack_quantity, p.unit_of_measure,
                  p.unit_size, p.selling_format, p.delivery_excluded,
                  p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock, p.pallet_weight,
-                 'Surulere Foods Wholesale' as business_name
+                 'Surulere Foods Wholesale' as business_name,
+                 b.nearest_expiry
           FROM products p
+          LEFT JOIN (
+            SELECT product_id, MIN(expiry_date) AS nearest_expiry
+            FROM product_batches
+            WHERE status = 'active' AND expiry_date IS NOT NULL AND expiry_date >= CURRENT_DATE
+            GROUP BY product_id
+          ) b ON b.product_id = p.id
           WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
           ORDER BY p.created_at DESC
           LIMIT ${effectiveLimit}
@@ -2632,6 +2639,13 @@ export function registerMarketplaceRoutes(app: Express): void {
           promoActive: livePromoActive,
           promotionalOffers: parsedOffers,
           createdAt: row.created_at,
+          isExpiringSoon: (() => {
+            if (!row.nearest_expiry) return false;
+            const expiry = new Date(row.nearest_expiry);
+            const now = new Date();
+            const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays <= 30;
+          })(),
           wholesaler: {
             id: row.wholesaler_id,
             businessName: row.business_name,

@@ -369,13 +369,18 @@ export function ProductsTab({
                           </div>
                         );
                       })()}
-                      {pricing.promoLabel && (
-                        <div className="absolute top-2 left-2">
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {pricing.promoLabel && (
                           <Badge className={`text-xs text-white ${pricing.promoType === 'clearance' ? 'bg-orange-500' : pricing.promoType === 'buy_x_get_y_free' ? 'bg-purple-500' : pricing.promoType === 'bundle_deal' ? 'bg-blue-500' : 'bg-red-500'}`}>
                             {pricing.promoLabel}
                           </Badge>
-                        </div>
-                      )}
+                        )}
+                        {product.isExpiringSoon && (
+                          <Badge className="text-xs text-white bg-amber-500">
+                            Limited availability
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     {/* Product Info */}
@@ -811,6 +816,9 @@ export function ProductsTab({
                             )}
                             {(product as any).brand && (
                               <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">{(product as any).brand}</span>
+                            )}
+                            {product.isExpiringSoon && (
+                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">Limited availability</span>
                             )}
                           </div>
                         </div>
