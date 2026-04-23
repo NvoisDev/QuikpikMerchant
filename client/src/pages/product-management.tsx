@@ -160,6 +160,7 @@ export default function ProductManagement() {
   };
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [navigateBackTo, setNavigateBackTo] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
@@ -683,6 +684,8 @@ export default function ProductManagement() {
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
     const stockId = params.get('stock');
+    const from = params.get('from');
+    if (from) setNavigateBackTo(from);
     if (editId) {
       const found = products.find((p) => p.id === parseInt(editId));
       if (found) {
@@ -890,6 +893,11 @@ export default function ProductManagement() {
         title: "Saved",
         description: "Product updated successfully",
       });
+      if (navigateBackTo) {
+        const dest = navigateBackTo;
+        setNavigateBackTo(null);
+        navigate(dest);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -3198,7 +3206,7 @@ export default function ProductManagement() {
           )}
       </div>
 
-      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setStockQuantity(""); setStockReason(""); } }}>
+      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setStockQuantity(""); setStockReason(""); if (navigateBackTo) { const dest = navigateBackTo; setNavigateBackTo(null); navigate(dest); } } }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

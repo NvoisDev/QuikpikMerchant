@@ -4,34 +4,23 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
-  Plus, Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { PromotionalOffer } from "@shared/schema";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ProductDetail {
   id: number;
@@ -76,10 +65,6 @@ interface Batch {
 }
 
 interface StockSummary {
-  openingStock: number;
-  totalPurchases: number;
-  totalIncreases: number;
-  totalDecreases: number;
   currentStock: number;
 }
 
@@ -142,24 +127,10 @@ export default function ProductDetail() {
 
   const productId = parseInt(id || "0");
 
-  // Modal states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showAllBatches, setShowAllBatches] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [stockOpen, setStockOpen] = useState(false);
 
-  // Edit form state (simplified key fields)
-  const [editName, setEditName] = useState("");
-  const [editPrice, setEditPrice] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editStatus, setEditStatus] = useState<"active" | "inactive" | "out_of_stock">("active");
-
-  // Manage stock state
-  const [stockMode, setStockMode] = useState<"increase" | "decrease">("increase");
-  const [stockQty, setStockQty] = useState("1");
-  const [stockReason, setStockReason] = useState("");
-
-  // ── Queries ──────────────────────────────────────────────────────────────────
+  // ── Queries ───────────────────────────────────────────────────────────────
 
   const { data: product, isLoading: productLoading } = useQuery<ProductDetail>({
     queryKey: ["/api/products", productId],
@@ -191,7 +162,7 @@ export default function ProductDetail() {
     enabled: !!productId,
   });
 
-  // ── Mutations ─────────────────────────────────────────────────────────────────
+  // ── Mutations ─────────────────────────────────────────────────────────────
 
   const invalidateProduct = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
@@ -202,40 +173,6 @@ export default function ProductDetail() {
     mutationFn: (status: string) => apiRequest("PATCH", `/api/products/${productId}`, { status }),
     onSuccess: () => { invalidateProduct(); toast({ title: "Status updated" }); },
     onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
-  });
-
-  const editMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", `/api/products/${productId}`, {
-      name: editName,
-      price: editPrice,
-      description: editDescription,
-      status: editStatus,
-    }),
-    onSuccess: () => {
-      invalidateProduct();
-      setEditOpen(false);
-      toast({ title: "Product updated" });
-    },
-    onError: () => toast({ title: "Failed to save changes", variant: "destructive" }),
-  });
-
-  const stockMutation = useMutation({
-    mutationFn: ({ qty, type }: { qty: number; type: "increase" | "decrease" }) =>
-      apiRequest("POST", `/api/products/${productId}/stock-adjustment`, {
-        quantity: qty,
-        adjustmentType: type,
-        reason: stockReason || (type === "increase" ? "Manual increase" : "Manual decrease"),
-      }),
-    onSuccess: () => {
-      invalidateProduct();
-      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "batches"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "stock-summary"] });
-      setStockOpen(false);
-      setStockQty("1");
-      setStockReason("");
-      toast({ title: "Stock updated" });
-    },
-    onError: () => toast({ title: "Failed to adjust stock", variant: "destructive" }),
   });
 
   const duplicateMutation = useMutation({
@@ -281,18 +218,11 @@ export default function ProductDetail() {
     onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
   });
 
-  // ── Open edit dialog pre-filled ───────────────────────────────────────────────
+  // Navigate to product-management opening the exact existing modal, then return here
+  const openEditModal = () => navigate(`/products?edit=${productId}&from=${encodeURIComponent(`/products/${productId}`)}`);
+  const openStockModal = () => navigate(`/products?stock=${productId}&from=${encodeURIComponent(`/products/${productId}`)}`);
 
-  const openEdit = () => {
-    if (!product) return;
-    setEditName(product.name);
-    setEditPrice(product.price);
-    setEditDescription(product.description || "");
-    setEditStatus(product.status === "locked" ? "inactive" : product.status as "active" | "inactive" | "out_of_stock");
-    setEditOpen(true);
-  };
-
-  // ── Loading / not found ───────────────────────────────────────────────────────
+  // ── Loading / not found ───────────────────────────────────────────────────
 
   if (productLoading) {
     return (
@@ -316,7 +246,7 @@ export default function ProductDetail() {
     );
   }
 
-  // ── Derived values ────────────────────────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────
 
   const currency = product.currency || "GBP";
   const margin = product.costPrice ? calcMarginPct(product.price, product.costPrice) : null;
@@ -331,7 +261,6 @@ export default function ProductDetail() {
   const otherBatches = batches.filter((b) => !activeBatches.includes(b));
   const displayBatches = showAllBatches ? batches : activeBatches;
 
-  // Use stock-summary current stock when available, else fall back to product.stock
   const totalStock = stockSummary?.currentStock ?? product.totalBatchStock ?? product.stock;
   const batchCountDisplay = product.batchCount ?? activeBatches.length;
   const nearestExpiry = product.nearestExpiry || product.expiryDate;
@@ -358,6 +287,7 @@ export default function ProductDetail() {
   return (
     <>
       <div className="max-w-2xl mx-auto pb-16">
+
         {/* ── Back bar + 3-dot menu ── */}
         <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate("/products")} className="gap-1.5 -ml-1 text-gray-600">
@@ -370,10 +300,10 @@ export default function ProductDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={openEdit}>
+              <DropdownMenuItem onClick={openEditModal}>
                 <Edit className="h-4 w-4 mr-2" /> Edit product
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStockOpen(true)}>
+              <DropdownMenuItem onClick={openStockModal}>
                 <PackagePlus className="h-4 w-4 mr-2" /> Manage stock
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}>
@@ -526,7 +456,6 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* Batch table */}
               {!batchesLoading && batches.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -694,108 +623,6 @@ export default function ProductDetail() {
 
         </div>
       </div>
-
-      {/* ── Edit dialog (key fields) ── */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit product</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Price (£)</Label>
-              <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} min="0" step="0.01" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={editStatus} onValueChange={(v) => setEditStatus(v as "active" | "inactive" | "out_of_stock")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="out_of_stock">Out of stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} />
-            </div>
-            <p className="text-xs text-gray-500">
-              For full product configuration (pricing tiers, weight, batches) use{" "}
-              <button className="underline text-blue-600" onClick={() => { setEditOpen(false); navigate(`/products?edit=${productId}`); }}>
-                full edit
-              </button>.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending || !editName || !editPrice}>
-              {editMutation.isPending ? "Saving…" : "Save changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Manage stock dialog ── */}
-      <Dialog open={stockOpen} onOpenChange={setStockOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Manage stock — {product.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="flex rounded-lg border overflow-hidden">
-              <button
-                className={`flex-1 py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${stockMode === "increase" ? "bg-green-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                onClick={() => setStockMode("increase")}
-              >
-                <Plus className="h-4 w-4" /> Add stock
-              </button>
-              <button
-                className={`flex-1 py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${stockMode === "decrease" ? "bg-red-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                onClick={() => setStockMode("decrease")}
-              >
-                <Minus className="h-4 w-4" /> Remove stock
-              </button>
-            </div>
-            <div className="bg-gray-50 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs text-gray-500">Current stock</p>
-              <p className="text-2xl font-bold text-gray-900">{totalStock.toLocaleString()}</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                min="1"
-                value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Reason <span className="text-gray-400">(optional)</span></Label>
-              <Input
-                placeholder={stockMode === "increase" ? "e.g. New delivery" : "e.g. Damaged goods"}
-                value={stockReason}
-                onChange={(e) => setStockReason(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStockOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => stockMutation.mutate({ qty: parseInt(stockQty) || 1, type: stockMode })}
-              disabled={stockMutation.isPending || !stockQty || parseInt(stockQty) <= 0}
-              className={stockMode === "increase" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
-            >
-              {stockMutation.isPending ? "Saving…" : stockMode === "increase" ? "Add stock" : "Remove stock"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ── Delete confirmation ── */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
