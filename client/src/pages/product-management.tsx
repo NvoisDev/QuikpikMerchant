@@ -3203,7 +3203,6 @@ export default function ProductManagement() {
                   return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
                 });
                 const activeBatches = sortedBatches.filter((b: any) => b.status !== 'depleted' && b.quantity > 0);
-                if (activeBatches.length === 0 && !isLoadingModalBatches) return null;
 
                 const fmtExpiry = (d: string | null) =>
                   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'No expiry';
@@ -3217,6 +3216,8 @@ export default function ProductManagement() {
                     </p>
                     {isLoadingModalBatches ? (
                       <p className="text-xs text-gray-400 py-2 text-center">Loading batches…</p>
+                    ) : activeBatches.length === 0 ? (
+                      <p className="text-xs text-gray-400 py-2 text-center italic">All batches depleted — add a new batch to restock</p>
                     ) : (
                       <div className="space-y-1">
                         {activeBatches.map((batch: any, idx: number) => {
