@@ -9,6 +9,7 @@ import {
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, stripe, sum, users, validatePhoneNumber,
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
+  wholesalerCustomerRelationships,
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
 
@@ -761,13 +762,26 @@ export function registerMarketplaceRoutes(app: Express): void {
             if (cu) {
               customerIdForPriceList = cu.id;
             } else {
-              // findCustomerByPhoneAndWholesaler requires group membership — fall back to
-              // a direct phone lookup so customers with direct price-list assignments
-              // (not in any group) still get their price-list pricing.
-              const fallbackUser = await storage.getUserByPhone(customerPhone);
-              customerIdForPriceList = fallbackUser?.id ?? null;
+              // findCustomerByPhoneAndWholesaler requires group membership — fall back to a
+              // wholesaler-scoped lookup via the relationship table so customers with direct
+              // price-list assignments (not in any group) still get their price-list pricing.
+              const formattedPhone = formatPhoneToInternational(customerPhone);
+              const fallbackRows = await db
+                .select({ userId: users.id })
+                .from(users)
+                .innerJoin(
+                  wholesalerCustomerRelationships,
+                  and(
+                    eq(wholesalerCustomerRelationships.customerId, users.id),
+                    eq(wholesalerCustomerRelationships.wholesalerId, product.wholesalerId),
+                    eq(wholesalerCustomerRelationships.status, 'active'),
+                  ),
+                )
+                .where(eq(users.phoneNumber, formattedPhone))
+                .limit(1);
+              customerIdForPriceList = fallbackRows[0]?.userId ?? null;
               if (customerIdForPriceList) {
-                console.log(`[create-payment] price-list fallback: resolved customer ${customerIdForPriceList} via getUserByPhone`);
+                console.log(`[create-payment] price-list fallback: resolved customer ${customerIdForPriceList} via wholesaler relationship`);
               }
             }
           } catch {
