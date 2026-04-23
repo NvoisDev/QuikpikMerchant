@@ -100,7 +100,7 @@ export function registerProductRoutes(app: Express): void {
         if ((newProduct.stock ?? 0) > 0) {
           await tx.insert(productBatches).values({
             productId: newProduct.id,
-            batchNumber: 'INIT',
+            batchNumber: 'Initial Stock',
             quantity: newProduct.stock ?? 0,
             status: 'active',
             notes: 'Initial stock batch (auto-created on product creation)',

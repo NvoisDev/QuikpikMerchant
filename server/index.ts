@@ -109,12 +109,14 @@ async function runStartupMigrations() {
        WHERE batch_number = 'Initial Stock'`,
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(id)`,
     // Backward-compat migration: seed one "Initial Stock" batch per product that has stock > 0
-    // and does not yet have any batch records. ON CONFLICT DO NOTHING is race-safe because the
-    // partial unique index above prevents duplicate rows even under concurrent startup.
+    // and has NO existing batches of any kind (NOT EXISTS guards against products already
+    // seeded via POST /api/products or a previous restart). ON CONFLICT DO NOTHING + the
+    // partial unique index are extra insurance against concurrent duplicate inserts.
     `INSERT INTO product_batches (product_id, batch_number, quantity, status, created_at)
      SELECT id, 'Initial Stock', GREATEST(COALESCE(stock, 0), 0), 'active', NOW()
      FROM products
      WHERE COALESCE(stock, 0) > 0
+       AND NOT EXISTS (SELECT 1 FROM product_batches pb WHERE pb.product_id = products.id)
      ON CONFLICT DO NOTHING`,
   ];
   for (const stmt of migrations) {
