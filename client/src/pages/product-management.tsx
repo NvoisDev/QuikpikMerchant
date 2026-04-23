@@ -149,6 +149,14 @@ export default function ProductManagement() {
     localStorage.setItem("productsViewMode", mode);
     setViewMode(mode);
   };
+  const [marginSort, setMarginSort] = useState<"none" | "asc" | "desc">(() => {
+    const saved = localStorage.getItem("productsMarginSort");
+    return saved === "asc" || saved === "desc" ? saved : "none";
+  });
+  const handleSetMarginSort = (value: "none" | "asc" | "desc") => {
+    localStorage.setItem("productsMarginSort", value);
+    setMarginSort(value);
+  };
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -1344,6 +1352,20 @@ export default function ProductManagement() {
     const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
     return matchesSearch && matchesStatus;
   }) || []).sort((a: any, b: any) => {
+    if (marginSort !== "none") {
+      const getMargin = (p: any): number | null => {
+        const price = parseFloat(String(p.price));
+        const cost = parseFloat(String(p.costPrice));
+        if (!isFinite(price) || !isFinite(cost) || price <= 0 || p.costPrice === null || p.costPrice === undefined || p.costPrice === "") return null;
+        return ((price - cost) / price) * 100;
+      };
+      const ma = getMargin(a);
+      const mb = getMargin(b);
+      if (ma === null && mb === null) return 0;
+      if (ma === null) return 1;
+      if (mb === null) return -1;
+      return marginSort === "asc" ? ma - mb : mb - ma;
+    }
     if (statusFilter === "expiring") {
       const dateA = a.expiryDate ? new Date(a.expiryDate).getTime() : Infinity;
       const dateB = b.expiryDate ? new Date(b.expiryDate).getTime() : Infinity;
@@ -2501,6 +2523,16 @@ export default function ProductManagement() {
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                 <SelectItem value="expiring">Expiring Products</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "none" | "asc" | "desc")}>
+              <SelectTrigger className="w-[160px] h-8 border-slate-200 rounded-lg">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Default order</SelectItem>
+                <SelectItem value="asc">Margin (low → high)</SelectItem>
+                <SelectItem value="desc">Margin (high → low)</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
