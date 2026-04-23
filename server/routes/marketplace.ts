@@ -758,7 +758,18 @@ export function registerMarketplaceRoutes(app: Express): void {
           try {
             const lastFour = customerPhone.replace(/[^0-9]/g, '').slice(-4);
             const cu = await storage.findCustomerByPhoneAndWholesaler(product.wholesalerId, customerPhone, lastFour);
-            customerIdForPriceList = cu?.id ?? null;
+            if (cu) {
+              customerIdForPriceList = cu.id;
+            } else {
+              // findCustomerByPhoneAndWholesaler requires group membership — fall back to
+              // a direct phone lookup so customers with direct price-list assignments
+              // (not in any group) still get their price-list pricing.
+              const fallbackUser = await storage.getUserByPhone(customerPhone);
+              customerIdForPriceList = fallbackUser?.id ?? null;
+              if (customerIdForPriceList) {
+                console.log(`[create-payment] price-list fallback: resolved customer ${customerIdForPriceList} via getUserByPhone`);
+              }
+            }
           } catch {
             // non-fatal — fall back to catalog pricing
           }
