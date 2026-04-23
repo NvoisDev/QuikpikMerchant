@@ -147,7 +147,37 @@ export function registerProductRoutes(app: Express): void {
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
       const product = await storage.updateProduct(id, productData);
-      
+
+      // ── Batch reconciliation on direct stock edit ──────────────────────────
+      // When `stock` is patched directly we reconcile the batch pool so
+      // products.stock (source of truth from batches) stays consistent.
+      if (req.body.stock !== undefined) {
+        const newStock = Number(req.body.stock) || 0;
+        const currentBatchTotal = await storage.getProductTotalStock(id);
+        const delta = newStock - currentBatchTotal;
+
+        if (delta > 0) {
+          // Stock increase: create an adjustment batch for the additional units
+          await storage.createProductBatch({
+            productId: id,
+            batchNumber: `ADJ-${Date.now()}`,
+            quantity: delta,
+            status: 'active',
+            notes: `Stock adjustment batch (manual stock edit +${delta} units)`,
+          });
+        } else if (delta < 0) {
+          // Stock decrease: log for visibility; batch API should be used for
+          // precise FEFO-ordered reductions, but sync products.stock to match
+          console.warn(
+            `⚠️ Direct stock decrease on product ${id}: ` +
+            `requested ${newStock} < batch total ${currentBatchTotal}. ` +
+            `Use batch API for FEFO-ordered reductions.`
+          );
+        }
+        // If delta === 0: already in sync — nothing to do
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
