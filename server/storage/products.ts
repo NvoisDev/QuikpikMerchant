@@ -549,11 +549,29 @@ export class ProductStorage extends UserStorageBase {
     return newBatch;
   }
 
-  /** Update batch fields (quantity, status, notes, etc.). Syncs product.stock. */
+  /**
+   * Update batch fields (notes, expiryDate, status, etc.).
+   * For quantity changes, prefer `adjustBatchQuantity` which also logs a stock movement.
+   * Guards applied here: quantity must be >= 0; when quantity = 0 the status is forced
+   * to 'depleted'; when a depleted batch is given quantity > 0 status reverts to 'active'.
+   */
   async updateProductBatch(batchId: number, updates: Partial<InsertProductBatch>): Promise<ProductBatch> {
+    const safeUpdates = { ...updates };
+
+    // Quantity invariants
+    if (safeUpdates.quantity !== undefined) {
+      safeUpdates.quantity = Math.max(0, Number(safeUpdates.quantity));
+      // Auto-normalise status from quantity
+      if (safeUpdates.quantity === 0 && safeUpdates.status !== 'expired') {
+        safeUpdates.status = 'depleted';
+      } else if (safeUpdates.quantity > 0 && safeUpdates.status === 'depleted') {
+        safeUpdates.status = 'active';
+      }
+    }
+
     const [updated] = await db
       .update(productBatches)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...safeUpdates, updatedAt: new Date() })
       .where(eq(productBatches.id, batchId))
       .returning();
 

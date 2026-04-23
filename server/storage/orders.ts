@@ -554,7 +554,15 @@ export class OrderStorage extends ProductStorage {
             newUnitStock = refreshed?.stock ?? 0;
             newPalletStock = refreshed?.palletStock ?? 0;
           } else {
-            // Legacy path (no batches): use InventoryCalculator
+            // ── Legacy / transitional fallback ──────────────────────────────
+            // When a product has no active batches we fall back to the
+            // InventoryCalculator path so that existing products (migrated via
+            // the "Initial Stock" seed batch) that have been fully depleted can
+            // still be ordered while transitioning.  Once a wholesaler is fully
+            // on batch-tracked inventory this path is intentionally unreachable
+            // for their products (FEFO will always have at least one active batch).
+            // A strict-mode flag can be added here in the future to reject orders
+            // for products with zero active batches.
             const inventoryData = {
               stock: currentProduct.stock || 0,
               palletStock: currentProduct.palletStock || 0,
