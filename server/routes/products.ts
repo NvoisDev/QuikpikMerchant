@@ -3,6 +3,7 @@ import {
   and, count, db, eq, generateProductImage, insertProductSchema, openai, or, products,
   requireAuth, requireNotViewer, requireProductLimits, storage, users, z
 } from "./shared";
+import { productBatches } from "@shared/schema";
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -90,18 +91,23 @@ export function registerProductRoutes(app: Express): void {
         wholesalerId: targetUserId,
         lowStockThreshold: req.body.lowStockThreshold ?? defaultThreshold,
       });
-      const product = await storage.createProduct(productData);
+      // Create product + initial batch atomically so a batch-insert failure
+      // never leaves a product without batch coverage.
+      const product = await db.transaction(async (tx) => {
+        const [newProduct] = await tx.insert(products).values(productData).returning();
 
-      // Auto-create an initial batch so the product is immediately trackable via FEFO
-      if ((product.stock ?? 0) > 0) {
-        await storage.createProductBatch({
-          productId: product.id,
-          batchNumber: 'INIT',
-          quantity: product.stock ?? 0,
-          status: 'active',
-          notes: 'Initial stock batch (auto-created on product creation)',
-        });
-      }
+        // Auto-create an initial batch so the product is immediately FEFO-trackable
+        if ((newProduct.stock ?? 0) > 0) {
+          await tx.insert(productBatches).values({
+            productId: newProduct.id,
+            batchNumber: 'INIT',
+            quantity: newProduct.stock ?? 0,
+            status: 'active',
+            notes: 'Initial stock batch (auto-created on product creation)',
+          });
+        }
+        return newProduct;
+      });
 
       res.json(product);
     } catch (error) {
