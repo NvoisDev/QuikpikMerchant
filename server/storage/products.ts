@@ -598,6 +598,8 @@ export class ProductStorage extends UserStorageBase {
 
     const before = batch.quantity;
     const after = Math.max(0, before + delta);
+    // actualDelta is the real change applied (may be smaller than requested when clamped)
+    const actualDelta = after - before;
     const newStatus = after === 0 ? 'depleted' : batch.status === 'depleted' ? 'active' : batch.status;
 
     await db
@@ -605,12 +607,12 @@ export class ProductStorage extends UserStorageBase {
       .set({ quantity: after, status: newStatus, updatedAt: new Date() })
       .where(eq(productBatches.id, batchId));
 
-    // Log stock movement
+    // Log stock movement with actual applied delta (not the requested one)
     await db.insert(stockMovements).values({
       productId: batch.productId,
       wholesalerId,
-      movementType: delta > 0 ? 'manual_increase' : 'manual_decrease',
-      quantity: delta,
+      movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
+      quantity: actualDelta,   // actual change, not requested delta
       unitType: 'units',
       stockBefore: before,
       stockAfter: after,

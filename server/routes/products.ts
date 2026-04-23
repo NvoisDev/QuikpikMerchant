@@ -91,6 +91,18 @@ export function registerProductRoutes(app: Express): void {
         lowStockThreshold: req.body.lowStockThreshold ?? defaultThreshold,
       });
       const product = await storage.createProduct(productData);
+
+      // Auto-create an initial batch so the product is immediately trackable via FEFO
+      if ((product.stock ?? 0) > 0) {
+        await storage.createProductBatch({
+          productId: product.id,
+          batchNumber: 'INIT',
+          quantity: product.stock ?? 0,
+          status: 'active',
+          notes: 'Initial stock batch (auto-created on product creation)',
+        });
+      }
+
       res.json(product);
     } catch (error) {
       console.error("Error creating product:", error);

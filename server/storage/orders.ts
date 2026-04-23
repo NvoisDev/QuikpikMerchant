@@ -429,7 +429,6 @@ export class OrderStorage extends ProductStorage {
         ? (`${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer')
         : 'Unknown Customer';
 
-      const { InventoryCalculator } = await import('../../shared/inventory-calculator.js');
       const today = new Date().toISOString().split('T')[0];
 
       // Insert order items and reduce stock within transaction
@@ -467,146 +466,107 @@ export class OrderStorage extends ProductStorage {
               asc(productBatches.createdAt)
             );
 
-          if (activeBatches.length > 0) {
-            const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
-            // Convert ordered quantity to base units
-            const baseUnitsNeeded = sellingType === 'pallets'
-              ? orderedQuantity * unitsPerPallet
-              : orderedQuantity;
-
-            // Pre-check: abort if total batch stock is insufficient
-            const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
-            if (totalAvailable < baseUnitsNeeded) {
-              throw new Error(
-                `Insufficient batch stock for product ${item.productId}: ` +
-                `need ${baseUnitsNeeded} units but only ${totalAvailable} available in active batches`
-              );
-            }
-
-            // FEFO deduction: walk batches earliest-expiry first
-            let remaining = baseUnitsNeeded;
-            for (const batch of activeBatches) {
-              if (remaining <= 0) break;
-              const deduct = Math.min(remaining, batch.quantity);
-              const newQty = batch.quantity - deduct;
-              const newStatus = newQty === 0 ? 'depleted' : 'active';
-
-              await tx
-                .update(productBatches)
-                .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
-                .where(eq(productBatches.id, batch.id));
-
-              // Record a stock_movement for each individual batch touched
-              await tx.insert(stockMovements).values({
-                productId: item.productId,
-                wholesalerId: order.wholesalerId,
-                movementType: 'purchase',
-                quantity: -deduct,
-                unitType: 'units',
-                stockBefore: batch.quantity,
-                stockAfter: newQty,
-                reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
-                orderId: newOrder.id,
-                customerName,
-              });
-
-              if (primaryBatchId === null) primaryBatchId = batch.id;
-              remaining -= deduct;
-            }
-
-            // Sync product.stock = SUM of remaining active non-expired batches
-            const batchSum = await tx
-              .select({ total: sum(productBatches.quantity) })
-              .from(productBatches)
-              .where(
-                and(
-                  eq(productBatches.productId, item.productId),
-                  eq(productBatches.status, 'active'),
-                  or(
-                    isNull(productBatches.expiryDate),
-                    sql`${productBatches.expiryDate} >= ${today}`
-                  )
-                )
-              );
-            const newStock = Number(batchSum[0]?.total ?? 0);
-            const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
-            await tx.update(products)
-              .set({ stock: newStock, palletStock: newPalletStock })
-              .where(eq(products.id, item.productId));
-
-            console.log(`🗂 FEFO allocation: product ${item.productId} used batch ${primaryBatchId}, stock → ${newStock}`);
-          }
-        }
-        // ── End FEFO block ────────────────────────────────────────────────────
-
-        // Insert order item (with FEFO batchId if resolved, otherwise null)
-        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
-        
-        // STOCK DECREMENTING: reduce product stock (legacy path when no active batches)
-        if (currentProduct) {
-          let newUnitStock: number;
-          let newPalletStock: number;
-
-          if (primaryBatchId !== null) {
-            // Batch path: stock already synced from batches above; read the refreshed value
-            const [refreshed] = await tx.select({ stock: products.stock, palletStock: products.palletStock })
-              .from(products).where(eq(products.id, item.productId));
-            newUnitStock = refreshed?.stock ?? 0;
-            newPalletStock = refreshed?.palletStock ?? 0;
-          } else {
-            // ── Legacy / transitional fallback ──────────────────────────────
-            // When a product has no active batches we fall back to the
-            // InventoryCalculator path so that existing products (migrated via
-            // the "Initial Stock" seed batch) that have been fully depleted can
-            // still be ordered while transitioning.  Once a wholesaler is fully
-            // on batch-tracked inventory this path is intentionally unreachable
-            // for their products (FEFO will always have at least one active batch).
-            // A strict-mode flag can be added here in the future to reject orders
-            // for products with zero active batches.
-            const inventoryData = {
-              stock: currentProduct.stock || 0,
-              palletStock: currentProduct.palletStock || 0,
-              quantityInPack: currentProduct.quantityInPack ?? 1,
-              unitsPerPallet: currentProduct.unitsPerPallet ?? 1,
-            };
-            const orderResult = InventoryCalculator.processOrder(
-              orderedQuantity,
-              sellingType as 'units' | 'pallets',
-              inventoryData
+          // ── Batch-only stock allocation: no legacy fallback ──────────────
+          // All products MUST have at least one active non-expired batch.
+          // If none exist (all depleted/expired or product never batch-seeded),
+          // the transaction is aborted. The startup migration seeds an "Initial
+          // Stock" batch for every existing product; new products created via
+          // POST /api/products auto-receive an initial batch when stock > 0.
+          if (activeBatches.length === 0) {
+            throw new Error(
+              `Product ${item.productId} (${currentProduct.name}) has no active batch stock. ` +
+              `Please add a new batch before ordering.`
             );
-            newUnitStock = orderResult.newUnitStock;
-            newPalletStock = orderResult.newPalletStock;
+          }
 
-            // Update stock fields (batch path already did it)
+          const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
+          // Convert ordered quantity to base units
+          const baseUnitsNeeded = sellingType === 'pallets'
+            ? orderedQuantity * unitsPerPallet
+            : orderedQuantity;
+
+          // Pre-check: abort if total batch stock is insufficient
+          const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
+          if (totalAvailable < baseUnitsNeeded) {
+            throw new Error(
+              `Insufficient batch stock for product ${item.productId} (${currentProduct.name}): ` +
+              `need ${baseUnitsNeeded} units but only ${totalAvailable} available`
+            );
+          }
+
+          // FEFO deduction: walk batches earliest-expiry first
+          let remaining = baseUnitsNeeded;
+          for (const batch of activeBatches) {
+            if (remaining <= 0) break;
+            const deduct = Math.min(remaining, batch.quantity);
+            const newQty = batch.quantity - deduct;
+            const newStatus = newQty === 0 ? 'depleted' : 'active';
+
             await tx
-              .update(products)
-              .set({ stock: newUnitStock, palletStock: newPalletStock })
-              .where(eq(products.id, item.productId));
+              .update(productBatches)
+              .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+              .where(eq(productBatches.id, batch.id));
 
-            // Record aggregate stock movement for legacy path
-            const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
-            const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
+            // Record a stock_movement for each individual batch touched
             await tx.insert(stockMovements).values({
               productId: item.productId,
               wholesalerId: order.wholesalerId,
               movementType: 'purchase',
-              quantity: -orderedQuantity,
-              unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-              stockBefore,
-              stockAfter,
-              reason: `Order sale - ${orderedQuantity} ${sellingType}`,
+              quantity: -deduct,          // actual units removed from this batch
+              unitType: 'units',
+              stockBefore: batch.quantity,
+              stockAfter: newQty,
+              reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
               orderId: newOrder.id,
               customerName,
             });
+
+            if (primaryBatchId === null) primaryBatchId = batch.id;
+            remaining -= deduct;
           }
-          
+
+          // Sync product.stock + palletStock from batch sum (source of truth)
+          const batchSum = await tx
+            .select({ total: sum(productBatches.quantity) })
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(
+                  isNull(productBatches.expiryDate),
+                  sql`${productBatches.expiryDate} >= ${today}`
+                )
+              )
+            );
+          const newStock = Number(batchSum[0]?.total ?? 0);
+          const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
+          await tx.update(products)
+            .set({ stock: newStock, palletStock: newPalletStock })
+            .where(eq(products.id, item.productId));
+
+          console.log(`🗂 FEFO allocation: product ${item.productId} used batch ${primaryBatchId}, stock → ${newStock}`);
+        }
+        // ── End FEFO block ────────────────────────────────────────────────────
+
+        // Insert order item — primaryBatchId is always set when we reach here
+        // (we throw above if no active batches exist)
+        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
+
+        // Read refreshed stock for low-stock console warnings
+        if (currentProduct) {
+          const [refreshed] = await tx.select({ stock: products.stock, palletStock: products.palletStock })
+            .from(products).where(eq(products.id, item.productId));
+          const newUnitStock = refreshed?.stock ?? 0;
+          const newPalletStock = refreshed?.palletStock ?? 0;
+
           console.log(`📦 Stock reduced for product ${item.productId}:`);
           if (sellingType === 'pallets') {
             console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
           } else {
             console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
           }
-          
+
           // Low-stock warnings
           if (sellingType === 'pallets') {
             if (newPalletStock <= 5) console.log(`⚠️ LOW PALLET STOCK: Product ${item.productId} (${currentProduct.name}) → ${newPalletStock} pallets`);
