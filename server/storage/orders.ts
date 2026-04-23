@@ -423,13 +423,30 @@ export class OrderStorage extends ProductStorage {
         throw error;
       }
       
+      // Pre-fetch customer name once for all items
+      const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
+      const customerName = customer[0]
+        ? (`${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer')
+        : 'Unknown Customer';
+
+      const { InventoryCalculator } = await import('../../shared/inventory-calculator.js');
+      const today = new Date().toISOString().split('T')[0];
+
       // Insert order items and reduce stock within transaction
       for (const item of items) {
-        // ── FEFO batch pre-check ─────────────────────────────────────────────
-        let primaryBatchId: number | null = null;
-        const today = new Date().toISOString().split('T')[0];
+        // ── Fetch current product (needed for both FEFO and legacy paths) ─────
+        const [currentProduct] = await tx
+          .select()
+          .from(products)
+          .where(eq(products.id, item.productId));
 
-        if (item.productId) {
+        const orderedQuantity = item.quantity;
+        const sellingType = item.sellingType || 'units';
+
+        // ── FEFO batch allocation ─────────────────────────────────────────────
+        let primaryBatchId: number | null = null;
+
+        if (item.productId && currentProduct) {
           // Fetch active non-expired batches in FEFO order (earliest expiry first, no-expiry last)
           const activeBatches = await tx
             .select()
@@ -451,15 +468,22 @@ export class OrderStorage extends ProductStorage {
             );
 
           if (activeBatches.length > 0) {
-            // Get product for conversion factor
-            const [prod] = await tx.select().from(products).where(eq(products.id, item.productId));
-            const unitsPerPallet = (prod as any)?.unitsPerPallet || 1;
-            const sellingType = item.sellingType || 'units';
+            const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
             // Convert ordered quantity to base units
             const baseUnitsNeeded = sellingType === 'pallets'
-              ? item.quantity * unitsPerPallet
-              : item.quantity;
+              ? orderedQuantity * unitsPerPallet
+              : orderedQuantity;
 
+            // Pre-check: abort if total batch stock is insufficient
+            const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
+            if (totalAvailable < baseUnitsNeeded) {
+              throw new Error(
+                `Insufficient batch stock for product ${item.productId}: ` +
+                `need ${baseUnitsNeeded} units but only ${totalAvailable} available in active batches`
+              );
+            }
+
+            // FEFO deduction: walk batches earliest-expiry first
             let remaining = baseUnitsNeeded;
             for (const batch of activeBatches) {
               if (remaining <= 0) break;
@@ -471,6 +495,20 @@ export class OrderStorage extends ProductStorage {
                 .update(productBatches)
                 .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
                 .where(eq(productBatches.id, batch.id));
+
+              // Record a stock_movement for each individual batch touched
+              await tx.insert(stockMovements).values({
+                productId: item.productId,
+                wholesalerId: order.wholesalerId,
+                movementType: 'purchase',
+                quantity: -deduct,
+                unitType: 'units',
+                stockBefore: batch.quantity,
+                stockAfter: newQty,
+                reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
+                orderId: newOrder.id,
+                customerName,
+              });
 
               if (primaryBatchId === null) primaryBatchId = batch.id;
               remaining -= deduct;
@@ -491,49 +529,37 @@ export class OrderStorage extends ProductStorage {
                 )
               );
             const newStock = Number(batchSum[0]?.total ?? 0);
-            await tx.update(products).set({ stock: newStock }).where(eq(products.id, item.productId));
+            const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
+            await tx.update(products)
+              .set({ stock: newStock, palletStock: newPalletStock })
+              .where(eq(products.id, item.productId));
 
             console.log(`🗂 FEFO allocation: product ${item.productId} used batch ${primaryBatchId}, stock → ${newStock}`);
           }
         }
-        // ── End FEFO pre-check ───────────────────────────────────────────────
+        // ── End FEFO block ────────────────────────────────────────────────────
 
         // Insert order item (with FEFO batchId if resolved, otherwise null)
         await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
-
-        // Get current product info before stock reduction (for legacy InventoryCalculator path)
-        const [currentProduct] = await tx
-          .select()
-          .from(products)
-          .where(eq(products.id, item.productId));
         
-        // STOCK DECREMENTING: Reduce product stock based on ordered quantity and selling type
+        // STOCK DECREMENTING: reduce product stock (legacy path when no active batches)
         if (currentProduct) {
-          const orderedQuantity = item.quantity;
-          const sellingType = item.sellingType || 'units'; // Default to units if not specified
-          
-          // Get customer name for stock movement tracking
-          const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
-          const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
-          
-          const { InventoryCalculator } = await import('../../shared/inventory-calculator.js');
-          
           let newUnitStock: number;
           let newPalletStock: number;
 
           if (primaryBatchId !== null) {
-            // Batch path: product.stock already synced from batches above;
-            // just derive palletStock from the updated unit stock
-            const unitsPerPallet = (currentProduct as any).unitsPerPallet || 1;
-            newUnitStock = currentProduct.stock ?? 0;
-            newPalletStock = unitsPerPallet > 0 ? Math.floor(newUnitStock / unitsPerPallet) : 0;
+            // Batch path: stock already synced from batches above; read the refreshed value
+            const [refreshed] = await tx.select({ stock: products.stock, palletStock: products.palletStock })
+              .from(products).where(eq(products.id, item.productId));
+            newUnitStock = refreshed?.stock ?? 0;
+            newPalletStock = refreshed?.palletStock ?? 0;
           } else {
             // Legacy path (no batches): use InventoryCalculator
             const inventoryData = {
               stock: currentProduct.stock || 0,
               palletStock: currentProduct.palletStock || 0,
-              quantityInPack: (currentProduct as any).quantityInPack || 1,
-              unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
+              quantityInPack: currentProduct.quantityInPack ?? 1,
+              unitsPerPallet: currentProduct.unitsPerPallet ?? 1,
             };
             const orderResult = InventoryCalculator.processOrder(
               orderedQuantity,
@@ -543,29 +569,28 @@ export class OrderStorage extends ProductStorage {
             newUnitStock = orderResult.newUnitStock;
             newPalletStock = orderResult.newPalletStock;
 
-            // Update stock fields only on legacy path (batch path already did it)
+            // Update stock fields (batch path already did it)
             await tx
               .update(products)
               .set({ stock: newUnitStock, palletStock: newPalletStock })
               .where(eq(products.id, item.productId));
+
+            // Record aggregate stock movement for legacy path
+            const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
+            const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
+            await tx.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId: order.wholesalerId,
+              movementType: 'purchase',
+              quantity: -orderedQuantity,
+              unitType: sellingType === 'pallets' ? 'pallets' : 'units',
+              stockBefore,
+              stockAfter,
+              reason: `Order sale - ${orderedQuantity} ${sellingType}`,
+              orderId: newOrder.id,
+              customerName,
+            });
           }
-          
-          // Record stock movement with proper unit type
-          const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
-          const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
-          
-          await tx.insert(stockMovements).values({
-            productId: item.productId,
-            wholesalerId: order.wholesalerId,
-            movementType: 'purchase',
-            quantity: -orderedQuantity,
-            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-            stockBefore: stockBefore,
-            stockAfter: stockAfter,
-            reason: `Order sale - ${orderedQuantity} ${sellingType}`,
-            orderId: newOrder.id,
-            customerName: customerName
-          });
           
           console.log(`📦 Stock reduced for product ${item.productId}:`);
           if (sellingType === 'pallets') {
@@ -574,21 +599,13 @@ export class OrderStorage extends ProductStorage {
             console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
           }
           
-          // Log warnings based on selling type
+          // Low-stock warnings
           if (sellingType === 'pallets') {
-            if (newPalletStock <= 5) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newPalletStock} pallets remaining`);
-            }
-            if (newPalletStock === 0) {
-              console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name}) has no pallets remaining`);
-            }
+            if (newPalletStock <= 5) console.log(`⚠️ LOW PALLET STOCK: Product ${item.productId} (${currentProduct.name}) → ${newPalletStock} pallets`);
+            if (newPalletStock === 0) console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name})`);
           } else {
-            if (newUnitStock <= (currentProduct.lowStockThreshold || 10)) {
-              console.log(`⚠️ LOW UNIT STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newUnitStock} units remaining`);
-            }
-            if (newUnitStock === 0) {
-              console.log(`🚨 OUT OF UNIT STOCK: Product ${item.productId} (${currentProduct.name}) is now out of unit stock`);
-            }
+            if (newUnitStock <= (currentProduct.lowStockThreshold || 10)) console.log(`⚠️ LOW UNIT STOCK: Product ${item.productId} (${currentProduct.name}) → ${newUnitStock} units`);
+            if (newUnitStock === 0) console.log(`🚨 OUT OF UNIT STOCK: Product ${item.productId} (${currentProduct.name})`);
           }
         } else {
           console.log(`⚠️ Product ${item.productId} not found - cannot reduce stock`);

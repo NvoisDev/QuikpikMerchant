@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { storage, requireAuth, requireNotViewer, z, db, eq, and, sql } from "./shared";
 import { products, productBatches, insertProductBatchSchema } from "@shared/schema";
+import type { ProductBatch } from "@shared/schema";
 
 export function registerBatchRoutes(app: Express): void {
 
@@ -18,6 +19,19 @@ export function registerBatchRoutes(app: Express): void {
       .from(products)
       .where(and(eq(products.id, productId), eq(products.wholesalerId, wholesalerId)));
     return !!product;
+  }
+
+  /**
+   * Fetch batch and verify it belongs to the given productId.
+   * Returns the batch if valid, null if the batch doesn't exist or doesn't belong
+   * to this product (prevents IDOR where a user could mutate another wholesaler's batch).
+   */
+  async function verifyBatchBelongsToProduct(batchId: number, productId: number): Promise<ProductBatch | null> {
+    const [batch] = await db
+      .select()
+      .from(productBatches)
+      .where(and(eq(productBatches.id, batchId), eq(productBatches.productId, productId)));
+    return batch ?? null;
   }
 
   // GET /api/products/:id/batches
@@ -80,6 +94,12 @@ export function registerBatchRoutes(app: Express): void {
         return res.status(404).json({ error: 'Product not found' });
       }
 
+      // Verify batchId belongs to this product (prevents IDOR)
+      const existingBatch = await verifyBatchBelongsToProduct(batchId, productId);
+      if (!existingBatch) {
+        return res.status(404).json({ error: 'Batch not found' });
+      }
+
       // If the caller sent a `delta` field, use adjustBatchQuantity; otherwise, use updateProductBatch
       if (req.body.delta !== undefined) {
         const delta = Number(req.body.delta);
@@ -114,6 +134,12 @@ export function registerBatchRoutes(app: Express): void {
       const wholesalerId = getWholesalerId(req);
       if (!(await verifyProductOwnership(productId, wholesalerId))) {
         return res.status(404).json({ error: 'Product not found' });
+      }
+
+      // Verify batchId belongs to this product (prevents IDOR)
+      const existingBatch = await verifyBatchBelongsToProduct(batchId, productId);
+      if (!existingBatch) {
+        return res.status(404).json({ error: 'Batch not found' });
       }
 
       await storage.updateProductBatch(batchId, { status: 'depleted', quantity: 0 });
