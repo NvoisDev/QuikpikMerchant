@@ -206,13 +206,10 @@ export async function generateOrderNumber(wholesalerId: string, trx?: any): Prom
       throw new Error(`Wholesaler ${wholesalerId} not found when generating order number`);
     }
     const counter = parseInt(row.order_number_counter as string);
-    // Use the stored prefix; fall back to business-name initials only if no prefix has been set yet.
-    const storedPrefix = (row.order_number_prefix as string) || null;
-    const prefix = storedPrefix && storedPrefix.trim()
-      ? storedPrefix.trim().toUpperCase()
-      : (row.business_name as string)
-        ? (row.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
-        : 'ORD';
+    // Always use the stored prefix; fall back to 'ORD' when none is set.
+    // Business name is deliberately NOT used — it changes independently of numbering.
+    const storedPrefix = (row.order_number_prefix as string) || '';
+    const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
     const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
     console.log(`🏢 Generated order number: ${orderNumber} (counter=${counter})`);
     return orderNumber;

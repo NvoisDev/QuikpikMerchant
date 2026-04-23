@@ -124,12 +124,14 @@ async function runStartupMigrations() {
     // 2. Add audit columns to orders — auto-populated by trigger below
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sequence_number INTEGER`,
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS prefix_used VARCHAR(20)`,
-    // 3. Back-fill sequence_number and prefix_used for existing orders
+    // 3. Back-fill sequence_number and prefix_used for existing orders.
+    //    Guard: SPLIT_PART(...,2) must be all-digits so non-matching formats are skipped safely.
     `UPDATE orders SET
        sequence_number = CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER),
        prefix_used     = SPLIT_PART(order_number, '-', 1)
      WHERE sequence_number IS NULL
-       AND order_number ~ '^[A-Z]+-[0-9]+'`,
+       AND order_number LIKE '%-%'
+       AND SPLIT_PART(order_number, '-', 2) ~ '^[0-9]+$'`,
     // 4. Seed order_number_counter per wholesaler = MAX(sequence_number) of their orders
     //    Only runs when counter is still 0 so it becomes a no-op on subsequent restarts.
     `UPDATE users SET order_number_counter = sub.max_seq
@@ -145,7 +147,8 @@ async function runStartupMigrations() {
     `CREATE OR REPLACE FUNCTION fn_parse_order_number_parts()
      RETURNS TRIGGER AS $$
      BEGIN
-       IF NEW.sequence_number IS NULL AND NEW.order_number ~ '^[A-Z]+-[0-9]+' THEN
+       IF NEW.sequence_number IS NULL AND NEW.order_number LIKE '%-%'
+          AND SPLIT_PART(NEW.order_number, '-', 2) ~ '^[0-9]+$' THEN
          NEW.prefix_used     := SPLIT_PART(NEW.order_number, '-', 1);
          BEGIN
            NEW.sequence_number := CAST(SPLIT_PART(NEW.order_number, '-', 2) AS INTEGER);

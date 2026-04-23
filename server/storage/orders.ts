@@ -328,12 +328,9 @@ export class OrderStorage extends ProductStorage {
     const row = result.rows[0];
     if (!row) throw new Error(`Wholesaler ${wholesalerId} not found when generating order number`);
     const counter = parseInt(row.order_number_counter as string);
-    const storedPrefix = (row.order_number_prefix as string) || null;
-    const prefix = storedPrefix && storedPrefix.trim()
-      ? storedPrefix.trim().toUpperCase()
-      : (row.business_name as string)
-        ? (row.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
-        : 'ORD';
+    // Always use the stored prefix; fall back to 'ORD' — never derive from business name.
+    const storedPrefix = (row.order_number_prefix as string) || '';
+    const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
     const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
     console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter})`);
     return orderNumber;
@@ -355,12 +352,9 @@ export class OrderStorage extends ProductStorage {
         const genRow = genResult.rows[0];
         if (!genRow) throw new Error(`Wholesaler ${order.wholesalerId} not found when generating order number`);
         const counter = parseInt(genRow.order_number_counter as string);
-        const storedPrefix = (genRow.order_number_prefix as string) || null;
-        const prefix = storedPrefix && storedPrefix.trim()
-          ? storedPrefix.trim().toUpperCase()
-          : (genRow.business_name as string)
-            ? (genRow.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
-            : 'ORD';
+        // Always use the stored prefix; fall back to 'ORD' — never derive from business name.
+        const storedPrefix = (genRow.order_number_prefix as string) || '';
+        const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
         orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
         console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter}) inside createOrder transaction`);
       }
