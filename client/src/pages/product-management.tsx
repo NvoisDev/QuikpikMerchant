@@ -1352,6 +1352,17 @@ export default function ProductManagement() {
     return 0;
   });
 
+  const hasCostPrice = filteredProducts.some(
+    (p: any) => p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== ""
+  );
+
+  const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
+    const p = parseFloat(String(price));
+    const c = parseFloat(String(costPrice));
+    if (!isFinite(p) || !isFinite(c) || p <= 0) return null;
+    return ((p - c) / p) * 100;
+  };
+
   return (
     <>
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -2623,7 +2634,7 @@ export default function ProductManagement() {
                           {product.description && (
                             <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
                           )}
-                          <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-3 text-xs sm:text-sm">
+                          <div className={`grid gap-2 sm:gap-4 mt-3 text-xs sm:text-sm ${hasCostPrice ? 'grid-cols-4' : 'grid-cols-3'}`}>
                             <div>
                               <span className="text-gray-500">Price:</span>
                               <div className="font-semibold">
@@ -2655,6 +2666,33 @@ export default function ProductManagement() {
                                 {formatNumber(product.stock)} units
                               </div>
                             </div>
+                            {hasCostPrice && (() => {
+                              const margin = (product.costPrice !== null && product.costPrice !== undefined && product.costPrice !== "")
+                                ? calcMarginPct(product.price, product.costPrice)
+                                : null;
+                              if (margin === null) {
+                                return (
+                                  <div>
+                                    <span className="text-gray-500">Margin %:</span>
+                                    <div className="text-gray-400 font-semibold">—</div>
+                                  </div>
+                                );
+                              }
+                              const marginColor = margin < 0
+                                ? 'text-red-600'
+                                : margin < 15
+                                  ? 'text-amber-600'
+                                  : 'text-green-600';
+                              return (
+                                <div>
+                                  <span className="text-gray-500">Margin %:</span>
+                                  <div className={`font-semibold flex items-center gap-1 ${marginColor}`}>
+                                    {margin.toFixed(1)}%
+                                    {margin < 0 && <AlertTriangle className="h-3 w-3" />}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                           {/* Action icons below the stats */}
                           {!isViewer && (
