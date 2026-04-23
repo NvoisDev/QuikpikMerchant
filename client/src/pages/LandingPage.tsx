@@ -389,7 +389,7 @@ export default function LandingPage() {
               </div>
               <div className="bg-green-50 border-t border-green-100 px-6 sm:px-8 py-5">
                 <p className="text-sm text-green-700 font-medium mb-1">Quikpik Cost:</p>
-                <p className="text-2xl font-bold text-primary">Start free — only 4.6% on card orders</p>
+                <p className="text-2xl font-bold text-primary">Start free</p>
               </div>
             </div>
 
