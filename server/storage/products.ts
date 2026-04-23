@@ -643,10 +643,15 @@ export class ProductStorage extends UserStorageBase {
     return expired.length;
   }
 
-  /** Internal helper: set products.stock = SUM of active non-expired batches. */
+  /**
+   * Internal helper: set products.stock AND products.palletStock from the SUM
+   * of active non-expired batch quantities.
+   * palletStock = floor(stock / unitsPerPallet), matching the FEFO order path.
+   */
   private async _syncProductStockFromBatches(productId: number): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
-    const result = await db
+
+    const [{ total }] = await db
       .select({ total: sum(productBatches.quantity) })
       .from(productBatches)
       .where(and(
@@ -657,8 +662,20 @@ export class ProductStorage extends UserStorageBase {
           sql`${productBatches.expiryDate} >= ${today}`
         )
       ));
-    const total = Number(result[0]?.total ?? 0);
-    await db.update(products).set({ stock: total }).where(eq(products.id, productId));
+
+    const newStock = Number(total ?? 0);
+
+    // Derive palletStock so both fields stay in sync
+    const [prod] = await db
+      .select({ unitsPerPallet: products.unitsPerPallet })
+      .from(products)
+      .where(eq(products.id, productId));
+    const unitsPerPallet = prod?.unitsPerPallet ?? 1;
+    const newPalletStock = unitsPerPallet > 0 ? Math.floor(newStock / unitsPerPallet) : 0;
+
+    await db.update(products)
+      .set({ stock: newStock, palletStock: newPalletStock })
+      .where(eq(products.id, productId));
   }
 
   // Order operations - Optimized with joins to reduce database calls
