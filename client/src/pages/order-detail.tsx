@@ -257,7 +257,7 @@ export default function OrderDetail() {
         setOrder(data);
         setLoading(false);
         const params = new URLSearchParams(window.location.search);
-        if (params.get('action') === 'cancel' && data.items) {
+        if (params.get('action') === 'cancel' && data.items && data.status !== 'cancelled') {
           setReturnItems(data.items.map((item: OrderItem) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -270,6 +270,8 @@ export default function OrderDetail() {
           if (requestId) {
             setPendingCancellationRequestId(parseInt(requestId, 10));
           }
+        } else if (params.get('action') === 'cancel' && data.status === 'cancelled') {
+          window.history.replaceState({}, '', window.location.pathname);
         }
       })
       .catch(() => setLoading(false));
@@ -433,6 +435,7 @@ export default function OrderDetail() {
         const updatedOrder = data.order || { ...order, status: 'cancelled' };
         setOrder(updatedOrder);
         setShowCancelForm(false);
+        window.history.replaceState({}, '', window.location.pathname);
         setCancelReason('');
         setCancelReasonCategory('');
         setProcessRefund(true);
