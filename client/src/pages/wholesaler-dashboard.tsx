@@ -11,7 +11,6 @@ import { formatNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
-import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
@@ -391,7 +390,6 @@ export default function WholesalerDashboard() {
         {/* Priority Setup Alerts */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {user?.role !== 'team_member' && <StripeSetupAlert />}
-          {user?.role !== 'team_member' && <WhatsAppSetupAlert />}
         </div>
 
         {/* Dashboard Content */}
