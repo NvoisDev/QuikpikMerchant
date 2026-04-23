@@ -658,7 +658,7 @@ export default function Settings() {
                           <dt className="text-sm font-medium text-gray-500">Order Number Prefix</dt>
                           <dd className="mt-1 text-sm text-gray-900">
                             {user.orderNumberPrefix || 'ORD'}
-                            <span className="ml-2 text-gray-400 text-xs">(e.g. {user.orderNumberPrefix || 'ORD'}-001)</span>
+                            <span className="ml-2 text-gray-400 text-xs">(e.g. {(user.orderNumberPrefix || 'ORD').toUpperCase()}-{String((user.orderNumberCounter ?? 0) + 1).padStart(3, '0')})</span>
                           </dd>
                         </div>
                         <div className="sm:col-span-2">
