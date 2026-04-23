@@ -160,7 +160,8 @@ export default function Settings() {
     timezone: user?.timezone || 'UTC',
     logoType: user?.logoType || 'business',
     logoUrl: user?.logoUrl || '',
-    pickupAddress: user?.pickupAddress || ''
+    pickupAddress: user?.pickupAddress || '',
+    orderNumberPrefix: user?.orderNumberPrefix || 'ORD'
   });
 
   // Sync form state with user data when user loads
@@ -183,7 +184,8 @@ export default function Settings() {
         timezone: user.timezone || 'UTC',
         logoType: user.logoType || 'business',
         logoUrl: user.logoUrl || '',
-        pickupAddress: user.pickupAddress || ''
+        pickupAddress: user.pickupAddress || '',
+        orderNumberPrefix: user.orderNumberPrefix || 'ORD'
       });
       setUseCustomCollectionAddress(!!user.pickupAddress);
       setDeliveryEnabled((user as any).enableDelivery ?? true);
@@ -247,8 +249,21 @@ export default function Settings() {
   };
 
   const handleSaveBusiness = async () => {
+    const prefixVal = businessForm.orderNumberPrefix.trim().toUpperCase();
+    if (!/^[A-Z]{1,6}$/.test(prefixVal)) {
+      toast({
+        title: "Invalid prefix",
+        description: "Order number prefix must be 1–6 uppercase letters (A–Z) with no spaces or special characters.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
-      const payload = { ...businessForm, pickupAddress: businessForm.pickupAddress.trim() || null };
+      const payload = {
+        ...businessForm,
+        pickupAddress: businessForm.pickupAddress.trim() || null,
+        orderNumberPrefix: prefixVal,
+      };
       const response = await apiRequest('PUT', '/api/user/profile', payload);
       const data = await response.json();
       
@@ -576,7 +591,8 @@ export default function Settings() {
                               timezone: user?.timezone || 'UTC',
                               logoType: user?.logoType || 'business',
                               logoUrl: user?.logoUrl || '',
-                              pickupAddress: user?.pickupAddress || ''
+                              pickupAddress: user?.pickupAddress || '',
+                              orderNumberPrefix: user?.orderNumberPrefix || 'ORD'
                             });
                             setUseCustomCollectionAddress(!!user?.pickupAddress);
                           }}
@@ -630,6 +646,13 @@ export default function Settings() {
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Timezone</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.timezone || 'UTC'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Order Number Prefix</dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {user.orderNumberPrefix || 'ORD'}
+                            <span className="ml-2 text-gray-400 text-xs">(e.g. {user.orderNumberPrefix || 'ORD'}-001)</span>
+                          </dd>
                         </div>
                         <div className="sm:col-span-2">
                           <dt className="text-sm font-medium text-gray-500">Company Logo / Business Initials</dt>
@@ -724,6 +747,18 @@ export default function Settings() {
                             <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
                             <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
                           </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Order Number Prefix</label>
+                          <input
+                            type="text"
+                            value={businessForm.orderNumberPrefix}
+                            onChange={(e) => setBusinessForm({...businessForm, orderNumberPrefix: e.target.value.toUpperCase()})}
+                            maxLength={6}
+                            placeholder="ORD"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 uppercase"
+                          />
+                          <p className="mt-1 text-xs text-gray-400">1–6 uppercase letters. Orders will be numbered e.g. {(businessForm.orderNumberPrefix || 'ORD').toUpperCase()}-001</p>
                         </div>
 
                         <div className="sm:col-span-2 border-t pt-4">

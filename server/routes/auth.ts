@@ -14,6 +14,17 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const user = req.user;
       const updates = req.body;
+
+      if (updates.orderNumberPrefix !== undefined) {
+        if (user.role !== 'wholesaler' && user.role !== 'team_member') {
+          return res.status(403).json({ success: false, message: "Only wholesaler accounts can set an order number prefix." });
+        }
+        const prefix = String(updates.orderNumberPrefix).trim().toUpperCase();
+        if (!/^[A-Z]{1,6}$/.test(prefix)) {
+          return res.status(400).json({ success: false, message: "Order number prefix must be 1–6 uppercase letters (A–Z) with no spaces or special characters." });
+        }
+        updates.orderNumberPrefix = prefix;
+      }
       
       console.log('👤 Updating profile for user:', user.id, updates);
 
