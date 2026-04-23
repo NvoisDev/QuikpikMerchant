@@ -54,6 +54,8 @@ async function runStartupMigrations() {
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
     // Task #73: Add expiry date to products
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE`,
+    // Task #431: Add unit weight per selling unit (kg) for Quick Quote weight calculation
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_weight DECIMAL(10, 2)`,
     // Task #88: Add payment method to orders for display in order detail
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method varchar`,
     // Task #154: Update Premium plan display price to £49.99
