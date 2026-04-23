@@ -190,24 +190,34 @@ export function extractSessionId(cookieString?: string): string | null {
 }
 
 export async function generateOrderNumber(wholesalerId: string, trx?: any): Promise<string> {
-  const wholesaler = await storage.getUser(wholesalerId);
-  const businessPrefix = wholesaler?.businessName
-    ? wholesaler.businessName.split(' ').map((word: string) => word.charAt(0)).join('').substring(0, 2).toUpperCase()
-    : 'WS';
   const dbConnection = trx || db;
-  const likePattern = `${businessPrefix}-%`;
   try {
+    // Atomically increment the wholesaler's counter and read back the new value + current prefix.
+    // UPDATE … RETURNING is a single atomic operation — no separate SELECT or LIKE scan needed.
+    // The counter never resets: changing orderNumberPrefix only affects the label, not the sequence.
     const result = await dbConnection.execute(sql`
-      SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-      FROM orders WHERE wholesaler_id = ${wholesalerId} AND order_number LIKE ${likePattern}
+      UPDATE users
+      SET order_number_counter = order_number_counter + 1
+      WHERE id = ${wholesalerId}
+      RETURNING order_number_counter, order_number_prefix, business_name
     `);
-    const maxNumber = result.rows[0]?.max_number || 0;
-    const nextNumber = parseInt(maxNumber.toString()) + 1;
-    const orderNumber = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
-    console.log(`🏢 Generated order number: ${orderNumber} for ${wholesaler?.businessName || 'Unknown Business'}`);
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error(`Wholesaler ${wholesalerId} not found when generating order number`);
+    }
+    const counter = parseInt(row.order_number_counter as string);
+    // Use the stored prefix; fall back to business-name initials only if no prefix has been set yet.
+    const storedPrefix = (row.order_number_prefix as string) || null;
+    const prefix = storedPrefix && storedPrefix.trim()
+      ? storedPrefix.trim().toUpperCase()
+      : (row.business_name as string)
+        ? (row.business_name as string).split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase()
+        : 'ORD';
+    const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
+    console.log(`🏢 Generated order number: ${orderNumber} (counter=${counter})`);
     return orderNumber;
   } catch (error: any) {
-    console.error(`❌ CRITICAL: generateOrderNumber SQL error:`, { error: error.message, wholesalerId, businessPrefix });
+    console.error(`❌ CRITICAL: generateOrderNumber error:`, { message: error.message, wholesalerId });
     throw error;
   }
 }

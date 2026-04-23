@@ -118,6 +118,49 @@ async function runStartupMigrations() {
      WHERE COALESCE(stock, 0) > 0
        AND NOT EXISTS (SELECT 1 FROM product_batches pb WHERE pb.product_id = products.id)
      ON CONFLICT DO NOTHING`,
+    // Task #393: Order number prefix/sequence integrity
+    // 1. Add persistent counter to users — incremented atomically per order, never resets on prefix change
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS order_number_counter INTEGER NOT NULL DEFAULT 0`,
+    // 2. Add audit columns to orders — auto-populated by trigger below
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sequence_number INTEGER`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS prefix_used VARCHAR(20)`,
+    // 3. Back-fill sequence_number and prefix_used for existing orders
+    `UPDATE orders SET
+       sequence_number = CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER),
+       prefix_used     = SPLIT_PART(order_number, '-', 1)
+     WHERE sequence_number IS NULL
+       AND order_number ~ '^[A-Z]+-[0-9]+'`,
+    // 4. Seed order_number_counter per wholesaler = MAX(sequence_number) of their orders
+    //    Only runs when counter is still 0 so it becomes a no-op on subsequent restarts.
+    `UPDATE users SET order_number_counter = sub.max_seq
+     FROM (
+       SELECT wholesaler_id, MAX(sequence_number) AS max_seq
+       FROM orders
+       WHERE sequence_number IS NOT NULL
+       GROUP BY wholesaler_id
+     ) sub
+     WHERE users.id = sub.wholesaler_id
+       AND users.order_number_counter = 0`,
+    // 5. Trigger function: automatically parse sequence_number and prefix_used on every INSERT
+    `CREATE OR REPLACE FUNCTION fn_parse_order_number_parts()
+     RETURNS TRIGGER AS $$
+     BEGIN
+       IF NEW.sequence_number IS NULL AND NEW.order_number ~ '^[A-Z]+-[0-9]+' THEN
+         NEW.prefix_used     := SPLIT_PART(NEW.order_number, '-', 1);
+         BEGIN
+           NEW.sequence_number := CAST(SPLIT_PART(NEW.order_number, '-', 2) AS INTEGER);
+         EXCEPTION WHEN OTHERS THEN
+           NEW.sequence_number := NULL;
+         END;
+       END IF;
+       RETURN NEW;
+     END;
+     $$ LANGUAGE plpgsql`,
+    // 6. Attach trigger (drop-create is idempotent via DROP IF EXISTS)
+    `DROP TRIGGER IF EXISTS trg_parse_order_number ON orders`,
+    `CREATE TRIGGER trg_parse_order_number
+     BEFORE INSERT ON orders
+     FOR EACH ROW EXECUTE FUNCTION fn_parse_order_number_parts()`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

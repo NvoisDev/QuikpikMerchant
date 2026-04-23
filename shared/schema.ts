@@ -177,6 +177,7 @@ export const users = pgTable("users", {
   
   storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
   orderNumberPrefix: varchar("order_number_prefix").default("ORD"), // Prefix for order numbers (e.g., "SF", "QP")
+  orderNumberCounter: integer("order_number_counter").default(0), // Persistent counter — never resets when prefix changes
   
   // Marketplace settings
   showPricesToWholesalers: boolean("show_prices_to_wholesalers").default(false), // Whether to show prices to other wholesalers in marketplace
@@ -559,6 +560,8 @@ export const stockMovements = pgTable("stock_movements", {
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderNumber: varchar("order_number").notNull(), // Unique order number per wholesaler (e.g., "QP-001", "QP-002")
+  sequenceNumber: integer("sequence_number"), // Numeric part of the order number (e.g., 1 for "QP-001") — auto-populated by DB trigger
+  prefixUsed: varchar("prefix_used"), // Prefix active when the order was created (e.g., "QP") — auto-populated by DB trigger
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   retailerId: varchar("retailer_id").notNull().references(() => users.id),
   customerName: varchar("customer_name"), // Store customer name for guest checkouts
