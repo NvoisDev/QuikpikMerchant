@@ -3181,7 +3181,7 @@ export default function ProductManagement() {
                                           }}
                                         />
                                       ) : (
-                                        <span className="flex items-center gap-1 group">
+                                        <span className="flex items-center gap-1">
                                           {batch.expiryDate ? (
                                             <span className={isExpired ? 'text-red-600 font-medium' : new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) ? 'text-amber-600 font-medium' : 'text-gray-600'}>
                                               {expiryFmt}
@@ -3190,9 +3190,9 @@ export default function ProductManagement() {
                                             </span>
                                           ) : <span className="text-gray-400">—</span>}
                                           <button
-                                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity"
+                                            className="text-gray-400 hover:text-gray-600"
                                             onClick={() => {
-                                              const iso = batch.expiryDate ? new Date(batch.expiryDate).toISOString().split('T')[0] : '';
+                                              const iso = batch.expiryDate ? String(batch.expiryDate).split('T')[0] : '';
                                               setEditingExpiryValue(iso);
                                               setEditingExpiryBatchId(batch.id);
                                             }}
