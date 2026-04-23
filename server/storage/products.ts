@@ -118,7 +118,7 @@ export class ProductStorage extends UserStorageBase {
           pack_quantity, unit_of_measure, size_per_unit, currency,
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
           base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
-          unit, unit_format, pallet_weight, unit_weight,
+          unit, unit_format, pallet_weight, unit_weight, total_package_weight,
           promotional_offers, expiry_date, cost_price,
           created_at, updated_at
         FROM products 
@@ -184,7 +184,7 @@ export class ProductStorage extends UserStorageBase {
         sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
         baseUnitStock: Number(row.base_unit_stock || 0),
         quantityInPack: Number(row.quantity_in_pack || 1),
-        totalPackageWeight: null,
+        totalPackageWeight: row.total_package_weight ? String(row.total_package_weight) : null,
         individualUnitWeight: null,
         packageDimensions: {},
         unitConfiguration: {},
@@ -322,7 +322,7 @@ export class ProductStorage extends UserStorageBase {
         pack_quantity, unit_of_measure, size_per_unit, currency,
         selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
         base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
-        unit, unit_format, pallet_weight, unit_weight,
+        unit, unit_format, pallet_weight, unit_weight, total_package_weight,
         promotional_offers, expiry_date,
         created_at, updated_at
       FROM products
@@ -381,7 +381,7 @@ export class ProductStorage extends UserStorageBase {
         sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
         baseUnitStock: Number(row.base_unit_stock || 0),
         quantityInPack: Number(row.quantity_in_pack || 1),
-        totalPackageWeight: null,
+        totalPackageWeight: row.total_package_weight ? String(row.total_package_weight) : null,
         individualUnitWeight: null,
         packageDimensions: {},
         unitConfiguration: {},
