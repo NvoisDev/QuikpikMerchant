@@ -8,15 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +15,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -634,70 +631,75 @@ export default function QuickQuote() {
               </div>
             </CardHeader>
             <CardContent>
-              <Popover open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={customerDropdownOpen}
-                    className="w-full justify-between font-normal"
-                  >
-                    {selectedCustomer ? (
-                      <span className="flex flex-col items-start text-left">
-                        <span>{selectedCustomer.firstName} {selectedCustomer.lastName || ''}</span>
-                        <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Choose a customer...</span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                  <Command>
-                    <CommandInput
+              <Sheet open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={customerDropdownOpen}
+                  className="w-full justify-between font-normal"
+                  onClick={() => setCustomerDropdownOpen(true)}
+                >
+                  {selectedCustomer ? (
+                    <span className="flex flex-col items-start text-left">
+                      <span>{selectedCustomer.firstName} {selectedCustomer.lastName || ''}</span>
+                      <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Choose a customer...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                <SheetContent side="bottom" className="h-[70vh] flex flex-col p-0">
+                  <SheetHeader className="px-4 pt-4 pb-2 border-b border-slate-200">
+                    <SheetTitle className="text-base">Select Customer</SheetTitle>
+                    <Input
+                      autoFocus
                       placeholder="Search by name or number..."
                       value={customerSearch}
-                      onValueChange={setCustomerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      className="mt-2"
                     />
-                    <CommandList>
-                      <CommandEmpty>No customers found.</CommandEmpty>
-                      <CommandGroup>
-                        {customers
-                          .filter((c) => {
-                            if (!customerSearch) return true;
-                            const q = customerSearch.toLowerCase();
-                            const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
-                            const phone = (c.phoneNumber || '').toLowerCase();
-                            return name.includes(q) || phone.includes(q);
-                          })
-                          .map((customer) => (
-                            <CommandItem
-                              key={customer.id}
-                              value={`${customer.firstName} ${customer.lastName || ''} ${customer.phoneNumber}`}
-                              onSelect={() => {
-                                setSelectedCustomer(customer);
-                                setDeliveryAddressId(null);
-                                setDeliveryAddressText('');
-                                setUseCustomAddress(false);
-                                setCustomerSearch('');
-                                setCustomerDropdownOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
-                              />
-                              <div className="flex flex-col">
-                                <span>{customer.firstName} {customer.lastName || ''}</span>
-                                <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto">
+                    {(() => {
+                      const filtered = customers.filter((c) => {
+                        if (!customerSearch) return true;
+                        const q = customerSearch.toLowerCase();
+                        const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
+                        const phone = (c.phoneNumber || '').toLowerCase();
+                        return name.includes(q) || phone.includes(q);
+                      });
+                      if (filtered.length === 0) {
+                        return (
+                          <p className="text-sm text-slate-500 text-center py-8">No customers found.</p>
+                        );
+                      }
+                      return filtered.map((customer) => (
+                        <button
+                          key={customer.id}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-slate-100 hover:bg-slate-50 transition-colors ${selectedCustomer?.id === customer.id ? 'bg-green-50' : ''}`}
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setDeliveryAddressId(null);
+                            setDeliveryAddressText('');
+                            setUseCustomAddress(false);
+                            setCustomerSearch('');
+                            setCustomerDropdownOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">{customer.firstName} {customer.lastName || ''}</span>
+                            <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
+                          </div>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                </SheetContent>
+              </Sheet>
 
               {selectedCustomer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
