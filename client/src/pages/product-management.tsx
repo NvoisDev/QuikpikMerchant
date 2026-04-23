@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -175,6 +175,7 @@ export default function ProductManagement() {
   const [expandedBatchProductId, setExpandedBatchProductId] = useState<number | null>(null);
   const [editingExpiryBatchId, setEditingExpiryBatchId] = useState<number | null>(null);
   const [editingExpiryValue, setEditingExpiryValue] = useState<string>("");
+  const expiryEditCancelledRef = useRef(false);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
   const [topUpQuantity, setTopUpQuantity] = useState("");
@@ -3164,12 +3165,18 @@ export default function ProductManagement() {
                                           onChange={e => setEditingExpiryValue(e.target.value)}
                                           onKeyDown={e => {
                                             if (e.key === 'Enter') {
+                                              expiryEditCancelledRef.current = true; // prevent double-fire from blur
                                               updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
                                             } else if (e.key === 'Escape') {
+                                              expiryEditCancelledRef.current = true;
                                               setEditingExpiryBatchId(null);
                                             }
                                           }}
                                           onBlur={() => {
+                                            if (expiryEditCancelledRef.current) {
+                                              expiryEditCancelledRef.current = false;
+                                              return;
+                                            }
                                             updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
                                           }}
                                         />
