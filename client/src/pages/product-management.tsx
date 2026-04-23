@@ -1062,7 +1062,11 @@ export default function ProductManagement() {
     }) => {
       return apiRequest('PATCH', `/api/products/${productId}/batches/${batchId}`, { delta, reason });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Mirror the same local-state update pattern as stockAdjustmentMutation so the
+      // modal header "Current Stock" reflects the change immediately (delta is negative).
+      const newStock = Math.max(0, (stockProduct?.stock ?? 0) + variables.delta);
+      setStockProduct((prev: any) => prev ? { ...prev, stock: newStock } : null);
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/batches`] });
