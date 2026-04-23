@@ -105,6 +105,13 @@ export default function Settings() {
 
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+
+  const { data: orderCounterData, isLoading: isLoadingCounter } = useQuery<{ counter: number; prefix: string }>({
+    queryKey: ["/api/settings/order-counter"],
+    enabled: isEditingBusiness,
+    staleTime: 0,
+  });
+
   const [useCustomCollectionAddress, setUseCustomCollectionAddress] = useState(!!user?.pickupAddress);
   const [deliveryEnabled, setDeliveryEnabled] = useState((user as any)?.enableDelivery ?? true);
   const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
@@ -758,7 +765,16 @@ export default function Settings() {
                             placeholder="ORD"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 uppercase"
                           />
-                          <p className="mt-1 text-xs text-gray-400">1–6 uppercase letters. Orders will be numbered e.g. {(businessForm.orderNumberPrefix || 'ORD').toUpperCase()}-001</p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            1–6 uppercase letters. Next order:{' '}
+                            {isLoadingCounter ? (
+                              <span className="font-medium text-gray-400">…</span>
+                            ) : (
+                              <span className="font-medium text-gray-600">
+                                {(businessForm.orderNumberPrefix.trim() || 'ORD').toUpperCase()}-{String((orderCounterData?.counter ?? 0) + 1).padStart(3, '0')}
+                              </span>
+                            )}
+                          </p>
                         </div>
 
                         <div className="sm:col-span-2 border-t pt-4">

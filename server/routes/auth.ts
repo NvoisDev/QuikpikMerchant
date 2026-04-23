@@ -621,6 +621,25 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
+  // GET /api/settings/order-counter — returns current counter without incrementing
+  app.get('/api/settings/order-counter', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const result = await db.select({
+        orderNumberCounter: users.orderNumberCounter,
+        orderNumberPrefix: users.orderNumberPrefix,
+      }).from(users).where(eq(users.id, userId)).limit(1);
+      if (!result[0]) return res.status(404).json({ message: "User not found" });
+      res.json({
+        counter: result[0].orderNumberCounter ?? 0,
+        prefix: result[0].orderNumberPrefix || 'ORD',
+      });
+    } catch (error) {
+      console.error("Error fetching order counter:", error);
+      res.status(500).json({ message: "Failed to fetch order counter" });
+    }
+  });
+
   // PATCH /api/settings/default-low-stock-threshold
   app.patch('/api/settings/default-low-stock-threshold', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
