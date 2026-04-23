@@ -1272,7 +1272,7 @@ export function registerOrderRoutes(app: Express): void {
         const refundAmountToProcess = isFullCancellation && orderTotal > 0
           ? orderTotal   // full cancel → return everything the customer paid
           : refundAmount; // partial → return item value only
-        const refundCeiling = isFullCancellation ? orderTotal : amountPaid;
+        const refundCeiling = isFullCancellation ? (orderTotal > 0 ? orderTotal : amountPaid) : amountPaid;
         if (refundAmountToProcess > 0 && refundAmountToProcess <= refundCeiling) {
           const result = await refundAcrossPaymentIntents(
             stripe,
