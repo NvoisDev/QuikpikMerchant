@@ -1575,9 +1575,14 @@ export function registerOrderRoutes(app: Express): void {
       const partialNote = result.remaining > 0.01 ? ` (£${result.remaining.toFixed(2)} could not be recovered automatically)` : '';
       console.log(`💳 Stripe retry refund processed: £${refundedAmount.toFixed(2)} for order ${order.orderNumber}${partialNote}`);
 
+      const currentRefunded = parseFloat(order.amountRefunded || '0');
+      const newRefunded = Math.min(currentRefunded + result.totalRefunded, parseFloat(order.amountPaid || '0'));
+      const isFullyRefunded = result.remaining <= 0.01;
+
       await db.update(orders)
         .set({
-          amountRefunded: result.remaining > 0.01 ? result.remaining.toFixed(2) : order.amountRefunded,
+          amountRefunded: newRefunded.toFixed(2),
+          ...(isFullyRefunded ? { refundedAt: new Date() } : {}),
           notes: order.notes
             ? `${order.notes}\n[${new Date().toISOString()}] Stripe retry refund submitted: £${refundedAmount.toFixed(2)}${partialNote}`
             : `[${new Date().toISOString()}] Stripe retry refund submitted: £${refundedAmount.toFixed(2)}${partialNote}`
