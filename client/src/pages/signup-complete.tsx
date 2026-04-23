@@ -21,6 +21,13 @@ const profileCompletionSchema = z.object({
   businessPhone: z.string().optional(),
   businessType: z.string().optional(),
   estimatedMonthlyVolume: z.string().optional(),
+  orderNumberPrefix: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[A-Z]{1,6}$/.test(val),
+      { message: "Must be 1–6 uppercase letters (e.g. ORD, SF)" }
+    ),
   
   // Address Information
   streetAddress: z.string().optional(),
@@ -77,6 +84,7 @@ export default function SignupComplete() {
       businessPhone: "",
       businessType: "",
       estimatedMonthlyVolume: "",
+      orderNumberPrefix: "",
       streetAddress: "",
       city: "",
       state: "",
@@ -97,6 +105,7 @@ export default function SignupComplete() {
         businessPhone: user.businessPhone || "",
         businessType: user.businessType || "",
         estimatedMonthlyVolume: user.estimatedMonthlyVolume || "",
+        orderNumberPrefix: user.orderNumberPrefix || "",
         streetAddress: user.streetAddress || "",
         city: user.city || "",
         state: user.state || "",
@@ -130,16 +139,21 @@ export default function SignupComplete() {
     
     setIsSubmitting(true);
     try {
+      const payload: Record<string, unknown> = {
+        ...data,
+        isFirstLogin: false,
+      };
+      if (!payload.orderNumberPrefix) {
+        delete payload.orderNumberPrefix;
+      }
+
       const response = await fetch('/api/auth/complete-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          ...data,
-          isFirstLogin: false // Mark as profile completed
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -354,6 +368,34 @@ export default function SignupComplete() {
                         </FormItem>
                       )}
                     />
+
+                    {user.role === 'wholesaler' && (
+                      <FormField
+                        control={form.control}
+                        name="orderNumberPrefix"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Order Number Prefix</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="ORD"
+                                maxLength={6}
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value.toUpperCase())
+                                }
+                                className="bg-white"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">
+                              1–6 uppercase letters. Orders will be numbered e.g.{" "}
+                              {field.value ? field.value : "ORD"}-001
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                 )}
 
