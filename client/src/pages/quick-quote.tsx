@@ -1175,12 +1175,12 @@ export default function QuickQuote() {
                   <div className="space-y-1 text-sm">
                     <div className="font-medium text-gray-700 mb-1.5">Margin Overview</div>
                     <div className="flex justify-between text-gray-600">
-                      <span>Total Cost</span>
-                      <span>£{calculateTotalCost().toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
                       <span>Revenue</span>
                       <span>£{calculateTotalRevenue().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Total Cost</span>
+                      <span>£{calculateTotalCost().toFixed(2)}</span>
                     </div>
                     <div className={`flex justify-between font-semibold ${calculateTotalMarginAmount() < 0 ? 'text-red-600' : 'text-green-700'}`}>
                       <span>Margin</span>
