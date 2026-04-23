@@ -822,7 +822,7 @@ export class OrderStorage extends ProductStorage {
           const baseUnitsNeeded = sellingType === 'pallets'
             ? totalStockToReduce * unitsPerPallet
             : totalStockToReduce;
-          const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
+          const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
 
           // Abort if no active batches exist
           if (activeBatches.length === 0) {

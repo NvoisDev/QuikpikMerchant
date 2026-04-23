@@ -464,10 +464,10 @@ export class ProductStorage extends UserStorageBase {
    *
    * @param activeOnly  When true (FEFO path): return only active, non-expired batches
    *                    sorted by earliest expiry first (nulls last).
-   *                    When false (history/admin view, the default): return ALL batches
+   *                    When false (history/admin view): return ALL batches
    *                    ordered active → depleted → expired, then by expiry ASC.
    */
-  async getProductBatches(productId: number, activeOnly = false): Promise<ProductBatch[]> {
+  async getProductBatches(productId: number, activeOnly = true): Promise<ProductBatch[]> {
     const today = new Date().toISOString().split('T')[0];
 
     if (activeOnly) {

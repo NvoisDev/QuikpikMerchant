@@ -46,7 +46,7 @@ export function registerBatchRoutes(app: Express): void {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      const batches = await storage.getProductBatches(productId);
+      const batches = await storage.getProductBatches(productId, false); // false = history view (all statuses)
       res.json(batches);
     } catch (error) {
       console.error('Error fetching batches:', error);
@@ -106,7 +106,7 @@ export function registerBatchRoutes(app: Express): void {
         const reason = String(req.body.reason || 'Manual adjustment');
         if (isNaN(delta) || delta === 0) return res.status(400).json({ error: 'delta must be a non-zero number' });
         await storage.adjustBatchQuantity(batchId, delta, reason, wholesalerId);
-        const updated = await storage.getProductBatches(productId);
+        const updated = await storage.getProductBatches(productId, false); // false = include depleted batch in response
         const batch = updated.find(b => b.id === batchId);
         return res.json(batch ?? { id: batchId });
       }
