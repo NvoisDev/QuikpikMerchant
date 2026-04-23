@@ -43,7 +43,8 @@ import {
   ArrowLeft,
   UserPlus,
   Truck,
-  MapPin
+  MapPin,
+  Search
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -101,6 +102,7 @@ export default function QuickQuote() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -720,7 +722,7 @@ export default function QuickQuote() {
                   <Package className="h-5 w-5" />
                   Quote Items
                 </CardTitle>
-                <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+                <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) setProductSearch(""); }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-green-600 hover:bg-green-700">
                       <Plus className="h-4 w-4 mr-1" /> Add Product
@@ -730,8 +732,25 @@ export default function QuickQuote() {
                     <DialogHeader>
                       <DialogTitle>Select Product</DialogTitle>
                     </DialogHeader>
+                    <div className="relative mt-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search products..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    {(() => {
+                      const filteredProducts = products.filter((p) =>
+                        p.name.toLowerCase().includes(productSearch.toLowerCase())
+                      );
+                      return (
                     <div className="grid grid-cols-1 gap-3 mt-4">
-                      {products.map((product) => {
+                      {filteredProducts.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-6">No products found</p>
+                      ) : null}
+                      {filteredProducts.map((product) => {
                         const now = new Date();
                         const activePromos = (product.promotionalOffers || []).filter((o: any) => {
                           if (o.isActive === false) return false;
@@ -879,6 +898,8 @@ export default function QuickQuote() {
                         );
                       })}
                     </div>
+                      );
+                    })()}
                   </DialogContent>
                 </Dialog>
               </div>
