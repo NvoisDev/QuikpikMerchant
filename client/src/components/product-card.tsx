@@ -205,13 +205,15 @@ export default function ProductCard({
         className={`transition-all duration-200 overflow-hidden ${
           isLocked
             ? 'opacity-60 grayscale border-gray-200 cursor-not-allowed'
-            : 'hover:shadow-md hover:border-slate-300 cursor-pointer'
+            : 'hover:shadow-md hover:border-slate-300'
         }`}
         title={isLocked ? "Upgrade your plan to unlock this product" : undefined}
-        onClick={!isLocked ? () => navigate(`/products/${product.id}`) : undefined}
       >
-        {/* Image area */}
-        <div className="relative">
+        {/* Image area — clickable body target (action buttons stop propagation) */}
+        <div
+          className={`relative${!isLocked ? ' cursor-pointer' : ''}`}
+          onClick={!isLocked ? () => navigate(`/products/${product.id}`) : undefined}
+        >
           <img
             src={
               (product.images && product.images.length > 0)
@@ -314,7 +316,10 @@ export default function ProductCard({
           </div>
         </div>
 
-        <CardContent className="p-4">
+        <CardContent
+          className={`p-4${!isLocked ? ' cursor-pointer' : ''}`}
+          onClick={!isLocked ? () => navigate(`/products/${product.id}`) : undefined}
+        >
           {/* Locked notice — compact inline */}
           {isLocked && (
             <div className="mb-2 text-xs text-gray-500 flex items-center gap-1.5">

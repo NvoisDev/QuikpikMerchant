@@ -894,11 +894,6 @@ export default function ProductManagement() {
         title: "Saved",
         description: "Product updated successfully",
       });
-      if (navigateBackTo) {
-        const dest = navigateBackTo;
-        setNavigateBackTo(null);
-        navigate(dest);
-      }
     },
     onError: (error: any) => {
       toast({
@@ -1818,7 +1813,13 @@ export default function ProductManagement() {
                 onOpenChange={(open) => {
                   console.log('🔄 Dialog onOpenChange called:', { open, currentState: isDialogOpen });
                   setIsDialogOpen(open);
-                  if (!open) setNavigateBackTo(null);
+                  if (!open && navigateBackTo) {
+                    const dest = navigateBackTo;
+                    setNavigateBackTo(null);
+                    navigate(dest);
+                  } else if (!open) {
+                    setNavigateBackTo(null);
+                  }
                 }}
               >
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">

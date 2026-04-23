@@ -1,0 +1,108 @@
+🧾 Prompt: Add Margin to Dashboard (STRICTLY NON-BREAKING)
+🎯 Objective
+
+Display margin metrics on the dashboard for quotes and online orders without modifying or breaking any existing functionality, data, or flows.
+
+🚨 NON-NEGOTIABLE RULES
+1. NO changes to existing logic
+Do NOT modify:
+Order creation flow
+Quote flow
+Payment flow
+Product pricing logic
+2. NO schema breaking changes
+Do NOT:
+Rename fields
+Delete fields
+Change existing data types
+3. ADDITIVE ONLY
+Only:
+Read existing data
+Add new optional fields if absolutely required
+Add new endpoints or queries
+🧠 Data Handling Strategy (SAFE MODE)
+Use existing fields where possible:
+selling_price
+cost_price
+quantity
+Margin Calculation (READ-ONLY)
+revenue = selling_price × quantity
+
+cost = cost_price × quantity
+
+margin_value = revenue - cost
+
+margin_percent = (margin_value / revenue) × 100
+
+👉 These calculations must:
+
+Run at query level or service layer
+NOT be stored unless already supported
+⚠️ If cost_price is missing
+
+DO NOT:
+
+Guess values
+Backfill automatically
+
+Instead:
+
+mark as "No cost data"
+exclude from margin totals
+📊 Dashboard Changes (UI ONLY)
+Add new section:
+
+“Margin Overview”
+
+Display:
+
+Total Revenue  
+Total Estimated Cost  
+Total Margin (£)  
+Margin (%)
+Add breakdown:
+Quotes → Revenue / Margin / %  
+Online → Revenue / Margin / %
+Optional (SAFE):
+Product margin table (read-only)
+🔒 Data Integrity Rules
+Use existing order data only
+Do NOT recompute historical orders differently
+Do NOT overwrite any stored values
+⚙️ Backend Implementation
+
+Create NEW endpoint:
+
+GET /dashboard/margin-summary
+
+👉 Must:
+
+Be isolated from existing endpoints
+Not affect current dashboard responses
+🧪 Performance Requirement
+Must not slow dashboard load
+Use aggregation queries (SQL SUM, GROUP BY)
+Avoid per-row heavy computation in loops
+🧯 Rollback Safety
+Feature must be:
+Easily removable
+Feature-flagged if possible
+✅ Acceptance Criteria
+Existing dashboard works exactly the same
+No existing feature behaves differently
+Margin data is visible but non-intrusive
+No data corruption or overwrites
+Can be disabled without impact
+🧠 Sanity Check
+
+If implementation involves:
+
+“Updating orders to include margin”
+
+🚫 STOP — not allowed
+
+If implementation involves:
+
+“Reading existing data and calculating margin in a new layer”
+
+✅ Correct
