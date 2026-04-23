@@ -428,7 +428,15 @@ export default function ProductDetail() {
           {/* ── Inventory ── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Inventory</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Inventory</CardTitle>
+                <button
+                  onClick={openStockModal}
+                  className="text-xs text-green-700 hover:text-green-900 border border-green-200 hover:border-green-400 rounded px-2 py-1 flex items-center gap-1"
+                >
+                  <PackagePlus className="h-3 w-3" /> Manage Stock
+                </button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-3 text-center">

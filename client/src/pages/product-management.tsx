@@ -173,6 +173,8 @@ export default function ProductManagement() {
   const [batchRef, setBatchRef] = useState("");
   const [batchCostPrice, setBatchCostPrice] = useState("");
   const [expandedBatchProductId, setExpandedBatchProductId] = useState<number | null>(null);
+  const [editingExpiryBatchId, setEditingExpiryBatchId] = useState<number | null>(null);
+  const [editingExpiryValue, setEditingExpiryValue] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
   const [topUpQuantity, setTopUpQuantity] = useState("");
@@ -1167,6 +1169,22 @@ export default function ProductManagement() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to adjust batch", variant: "destructive" });
+    },
+  });
+
+  const updateExpiryMutation = useMutation({
+    mutationFn: async ({ productId, batchId, expiryDate }: { productId: number; batchId: number; expiryDate: string | null }) => {
+      return apiRequest('PATCH', `/api/products/${productId}/batches/${batchId}`, { expiryDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${expandedBatchProductId}/batches`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batches/expiring-soon'] });
+      setEditingExpiryBatchId(null);
+      toast({ title: "Expiry updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update expiry date", variant: "destructive" });
     },
   });
 
@@ -3137,13 +3155,45 @@ export default function ProductManagement() {
                                     <td className="py-1.5 pr-3 text-gray-700">{batch.batchNumber || 'Initial Stock'}</td>
                                     <td className="py-1.5 pr-3 text-right font-medium">{formatNumber(batch.quantity)}</td>
                                     <td className="py-1.5 pr-3">
-                                      {batch.expiryDate ? (
-                                        <span className={isExpired ? 'text-red-600 font-medium' : new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) ? 'text-amber-600 font-medium' : 'text-gray-600'}>
-                                          {expiryFmt}
-                                          {isExpired && ' 🔴'}
-                                          {!isExpired && new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) && ' 🟠'}
+                                      {editingExpiryBatchId === batch.id ? (
+                                        <input
+                                          type="date"
+                                          autoFocus
+                                          className="text-xs border rounded px-1 py-0.5 w-28"
+                                          value={editingExpiryValue}
+                                          onChange={e => setEditingExpiryValue(e.target.value)}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                              updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
+                                            } else if (e.key === 'Escape') {
+                                              setEditingExpiryBatchId(null);
+                                            }
+                                          }}
+                                          onBlur={() => {
+                                            updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
+                                          }}
+                                        />
+                                      ) : (
+                                        <span className="flex items-center gap-1 group">
+                                          {batch.expiryDate ? (
+                                            <span className={isExpired ? 'text-red-600 font-medium' : new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) ? 'text-amber-600 font-medium' : 'text-gray-600'}>
+                                              {expiryFmt}
+                                              {isExpired && ' 🔴'}
+                                              {!isExpired && new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) && ' 🟠'}
+                                            </span>
+                                          ) : <span className="text-gray-400">—</span>}
+                                          <button
+                                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity"
+                                            onClick={() => {
+                                              const iso = batch.expiryDate ? new Date(batch.expiryDate).toISOString().split('T')[0] : '';
+                                              setEditingExpiryValue(iso);
+                                              setEditingExpiryBatchId(batch.id);
+                                            }}
+                                          >
+                                            <Pencil className="h-3 w-3" />
+                                          </button>
                                         </span>
-                                      ) : '—'}
+                                      )}
                                     </td>
                                     <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? formatCurrency(batch.costPrice) : '—'}</td>
                                     <td className="py-1.5 pr-3">
