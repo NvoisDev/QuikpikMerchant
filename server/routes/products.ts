@@ -146,32 +146,33 @@ export function registerProductRoutes(app: Express): void {
 
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
-      const product = await storage.updateProduct(id, productData);
 
-      // ── Batch reconciliation on direct stock edit ──────────────────────────
-      // When `stock` is patched directly we reconcile the batch pool so
-      // products.stock (source of truth from batches) stays consistent.
+      // ── Stock validation ────────────────────────────────────────────────────
       if (req.body.stock !== undefined) {
-        const newStock = Number(req.body.stock) || 0;
-        const currentBatchTotal = await storage.getProductTotalStock(id);
-        const delta = newStock - currentBatchTotal;
+        const requestedStock = Number(req.body.stock);
+        if (!Number.isFinite(requestedStock) || requestedStock < 0) {
+          return res.status(400).json({ message: "Stock must be a non-negative number" });
+        }
+      }
 
-        if (delta > 0) {
-          // Stock increase: create an adjustment batch for the additional units
-          await storage.createProductBatch({
-            productId: id,
-            batchNumber: `ADJ-${Date.now()}`,
-            quantity: delta,
-            status: 'active',
-            notes: `Stock adjustment batch (manual stock edit +${delta} units)`,
-          });
-        } else if (delta < 0) {
-          // Stock decrease: deduct from batches in FEFO order so the batch
-          // pool stays in sync with the new products.stock target.
-          const absDelta = Math.abs(delta);
+      // ── Atomic product update + batch reconciliation ────────────────────────
+      // When `stock` is being patched we reconcile the batch pool in the SAME
+      // transaction so product.stock and batch totals are never out of sync.
+      const product = await db.transaction(async (tx) => {
+        // Update the product row
+        const [updatedProduct] = await tx
+          .update(products)
+          .set({ ...productData, updatedAt: new Date() })
+          .where(eq(products.id, id))
+          .returning();
+
+        if (req.body.stock !== undefined) {
+          const newStock = Number(req.body.stock) || 0;
           const today = new Date().toISOString().split('T')[0];
-          const activeBatches = await db
-            .select()
+
+          // Current batch total (active non-expired batches only)
+          const [batchSumRow] = await tx
+            .select({ total: sql<number>`COALESCE(SUM(${productBatches.quantity}),0)` })
             .from(productBatches)
             .where(
               and(
@@ -179,28 +180,56 @@ export function registerProductRoutes(app: Express): void {
                 eq(productBatches.status, 'active'),
                 or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
               )
-            )
-            .orderBy(
-              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
-              asc(productBatches.expiryDate),
-              asc(productBatches.createdAt)
             );
+          const currentBatchTotal = Number(batchSumRow?.total ?? 0);
+          const delta = newStock - currentBatchTotal;
 
-          let toDeduct = absDelta;
-          for (const batch of activeBatches) {
-            if (toDeduct <= 0) break;
-            const deduct = Math.min(toDeduct, batch.quantity);
-            const newQty = batch.quantity - deduct;
-            const newStatus = newQty === 0 ? 'depleted' : 'active';
-            await db.update(productBatches).set({ quantity: newQty, status: newStatus, updatedAt: new Date() }).where(eq(productBatches.id, batch.id));
-            toDeduct -= deduct;
-          }
-          if (toDeduct > 0) {
-            console.warn(`⚠️ Batch pool exhausted during stock-decrease reconciliation for product ${id}: ${toDeduct} units could not be accounted for.`);
+          if (delta > 0) {
+            // Stock increase: create an adjustment batch for the additional units
+            await tx.insert(productBatches).values({
+              productId: id,
+              batchNumber: `ADJ-${Date.now()}`,
+              quantity: delta,
+              status: 'active',
+              notes: `Stock adjustment batch (manual stock edit +${delta} units)`,
+            });
+          } else if (delta < 0) {
+            // Stock decrease: deduct from batches in FEFO order
+            const activeBatches = await tx
+              .select()
+              .from(productBatches)
+              .where(
+                and(
+                  eq(productBatches.productId, id),
+                  eq(productBatches.status, 'active'),
+                  or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+                )
+              )
+              .orderBy(
+                sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+                asc(productBatches.expiryDate),
+                asc(productBatches.createdAt)
+              );
+
+            let toDeduct = Math.abs(delta);
+            for (const batch of activeBatches) {
+              if (toDeduct <= 0) break;
+              const deduct = Math.min(toDeduct, batch.quantity);
+              const newQty = batch.quantity - deduct;
+              const newStatus = newQty === 0 ? 'depleted' : 'active';
+              await tx.update(productBatches)
+                .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+                .where(eq(productBatches.id, batch.id));
+              toDeduct -= deduct;
+            }
+            if (toDeduct > 0) {
+              console.warn(`⚠️ Batch pool exhausted during stock-decrease reconciliation for product ${id}: ${toDeduct} units unaccounted.`);
+            }
           }
         }
-        // If delta === 0: already in sync — nothing to do
-      }
+
+        return updatedProduct;
+      });
       // ──────────────────────────────────────────────────────────────────────
 
       res.json(product);

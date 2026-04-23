@@ -575,9 +575,10 @@ export class ProductStorage extends UserStorageBase {
       .where(eq(productBatches.id, batchId))
       .returning();
 
-    if (updated) {
-      await this._syncProductStockFromBatches(updated.productId);
+    if (!updated) {
+      throw new Error(`Batch ${batchId} not found`);
     }
+    await this._syncProductStockFromBatches(updated.productId);
     return updated;
   }
 
