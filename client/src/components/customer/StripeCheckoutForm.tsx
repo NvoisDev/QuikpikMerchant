@@ -146,14 +146,19 @@ const PaymentFormContent = ({
           if (response.ok) {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
+            // Use server-returned financial values — paymentIntent.metadata is not
+            // populated by Stripe.js on the client side, so the actualSubtotal /
+            // actualTotal variables computed above are always 0.  The create-order
+            // endpoint retrieves the PaymentIntent server-side and returns the
+            // correct amounts in orderData.
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
               cart: [],
               customerData: {},
-              totalAmount: actualTotal,
-              subtotal: actualSubtotal,
-              transactionFee: actualTransactionFee,
-              shippingCost: actualShipping,
+              totalAmount: orderData.totalAmount || actualTotal,
+              subtotal: orderData.subtotal || actualSubtotal,
+              transactionFee: orderData.transactionFee || actualTransactionFee,
+              shippingCost: orderData.shippingCost || actualShipping,
             });
             toast({
               title: "Payment Successful!",
