@@ -1601,6 +1601,44 @@ export function registerOrderRoutes(app: Express): void {
     }
   });
 
+  // POST /api/orders/:id/mark-refunded
+  app.post('/api/orders/:id/mark-refunded', requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ message: "Not authorized" });
+      if (order.status !== 'cancelled') return res.status(400).json({ message: "Order is not cancelled" });
+
+      const amountRefunded = parseFloat(order.amountRefunded || '0');
+      if (amountRefunded <= 0) return res.status(400).json({ message: "No refund amount recorded on this order" });
+      if (order.refundedAt) return res.status(400).json({ message: "Refund already marked as processed on " + new Date(order.refundedAt).toLocaleDateString() });
+      if (!order.stripePaymentIntentId) return res.status(400).json({ message: "No Stripe payment recorded for this order" });
+
+      await db.update(orders)
+        .set({
+          refundedAt: new Date(),
+          notes: order.notes
+            ? `${order.notes}\n[${new Date().toISOString()}] Manually marked as refunded`
+            : `[${new Date().toISOString()}] Manually marked as refunded`
+        })
+        .where(eq(orders.id, id));
+
+      const updatedOrder = await storage.getOrder(id);
+      res.json({
+        message: "Order marked as refunded",
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error("Error marking order as refunded:", error);
+      res.status(500).json({ message: "Failed to mark order as refunded" });
+    }
+  });
+
   // GET /api/cancellation-requests
   app.get('/api/cancellation-requests', requireAuth, async (req: any, res) => {
     try {

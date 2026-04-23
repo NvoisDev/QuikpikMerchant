@@ -223,6 +223,7 @@ export default function OrderDetail() {
   const [cancelReasonCategory, setCancelReasonCategory] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetryingRefund, setIsRetryingRefund] = useState(false);
+  const [isMarkingRefunded, setIsMarkingRefunded] = useState(false);
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [processRefund, setProcessRefund] = useState(true);
@@ -509,6 +510,32 @@ export default function OrderDetail() {
       toast({ title: "Error", description: "Network error — please try again", variant: "destructive" });
     } finally {
       setIsRetryingRefund(false);
+    }
+  };
+
+  const markAsRefunded = async () => {
+    if (!order) return;
+    setIsMarkingRefunded(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/mark-refunded`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ title: "Marked as Refunded", description: data.message });
+        if (data.order) setOrder(data.order);
+      } else {
+        toast({
+          title: "Failed",
+          description: data.error || data.message || "Could not mark order as refunded",
+          variant: "destructive"
+        });
+      }
+    } catch {
+      toast({ title: "Error", description: "Network error — please try again", variant: "destructive" });
+    } finally {
+      setIsMarkingRefunded(false);
     }
   };
 
@@ -1457,13 +1484,24 @@ export default function OrderDetail() {
                       <div className="text-xs text-gray-400 mt-0.5">{order.refundReason}</div>
                     )}
                     {canRetry && !isViewer && (
-                      <button
-                        onClick={retryRefund}
-                        disabled={isRetryingRefund}
-                        className="mt-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
-                      >
-                        {isRetryingRefund ? 'Sending...' : 'Retry Refund to Card'}
-                      </button>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        <button
+                          onClick={retryRefund}
+                          disabled={isRetryingRefund || isMarkingRefunded}
+                          className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
+                        >
+                          {isRetryingRefund ? 'Sending...' : 'Retry Refund to Card'}
+                        </button>
+                        {order.status === 'cancelled' && (
+                          <button
+                            onClick={markAsRefunded}
+                            disabled={isMarkingRefunded || isRetryingRefund}
+                            className="text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
+                          >
+                            {isMarkingRefunded ? 'Saving...' : 'Mark Refunded'}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
