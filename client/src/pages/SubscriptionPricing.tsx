@@ -135,7 +135,7 @@ export default function SubscriptionPricing() {
       console.error('Checkout error:', error);
       toast({
         title: "Payment Error",
-        description: "Failed to start checkout process. Please try again.",
+        description: "There was an issue processing your payment. Please check your payment method and try again, or contact support.",
         variant: "destructive",
       });
     },

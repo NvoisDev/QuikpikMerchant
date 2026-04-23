@@ -205,8 +205,13 @@ export class SubscriptionService {
 
       console.log('✅ Subscription upgraded with proration:', updatedSubscription.id);
       return updatedSubscription;
-    } catch (error) {
-      console.error('❌ Failed to upgrade subscription with proration:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to upgrade subscription with proration:', {
+        type: error?.type,
+        code: error?.code,
+        message: error?.message,
+        raw: error
+      });
       throw error;
     }
   }
@@ -320,7 +325,8 @@ export class SubscriptionService {
       if (user.stripeSubscriptionId) {
         // Verify subscription is still active in Stripe
         const stripeSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-        if (stripeSubscription.status === 'active') {
+        const activeStatuses = ['active', 'trialing', 'past_due'];
+        if (activeStatuses.includes(stripeSubscription.status)) {
           return {
             userId: user.id,
             stripeSubscriptionId: user.stripeSubscriptionId,

@@ -1224,9 +1224,53 @@ export function registerPaymentRoutes(app: Express): void {
             },
             message: 'Subscription upgraded successfully with proration applied'
           });
-        } catch (error) {
-          console.error('❌ Failed to upgrade subscription:', error);
-          return res.status(500).json({ message: 'Failed to upgrade subscription' });
+        } catch (upgradeError: any) {
+          console.error('❌ Failed to upgrade subscription directly — falling back to checkout session:', {
+            type: upgradeError?.type,
+            code: upgradeError?.code,
+            message: upgradeError?.message,
+            raw: upgradeError
+          });
+
+          // Fallback: create a Stripe Checkout Session so the user can complete
+          // the upgrade through Stripe's hosted page instead of hitting an error.
+          try {
+            const fallbackSessionOptions: any = {
+              customer: stripeCustomerId,
+              payment_method_types: ['card'],
+              line_items: [{
+                price: priceId,
+                quantity: 1,
+              }],
+              mode: 'subscription',
+              success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+              cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
+              metadata: {
+                userId: userId,
+                planId: targetPlan.planId,
+                subscriptionType: 'upgrade_fallback'
+              }
+            };
+
+            const fallbackSession = idempotencyKey
+              ? await stripe.checkout.sessions.create(fallbackSessionOptions, { idempotencyKey: `fallback_${idempotencyKey}` })
+              : await stripe.checkout.sessions.create(fallbackSessionOptions);
+            console.log('✅ Fallback checkout session created for upgrade:', fallbackSession.id);
+
+            return res.json({
+              success: true,
+              type: 'checkout',
+              sessionId: fallbackSession.id,
+              url: fallbackSession.url
+            });
+          } catch (fallbackError: any) {
+            console.error('❌ Fallback checkout session also failed:', {
+              type: fallbackError?.type,
+              code: fallbackError?.code,
+              message: fallbackError?.message
+            });
+            return res.status(500).json({ message: 'Failed to upgrade subscription' });
+          }
         }
       } else {
         // NEW SUBSCRIPTION FLOW: User has no existing subscription - use checkout session
