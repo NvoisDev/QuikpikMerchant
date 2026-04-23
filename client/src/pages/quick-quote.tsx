@@ -1186,12 +1186,10 @@ export default function QuickQuote() {
                       <span>Margin</span>
                       <span>£{calculateTotalMarginAmount().toFixed(2)} ({calculateTotalMarginPct().toFixed(1)}%)</span>
                     </div>
-                    {calculateTotalWeight() > 0 && (
-                      <div className="flex justify-between text-gray-500 text-xs mt-1 pt-1 border-t border-dashed border-gray-200">
-                        <span>Total Weight</span>
-                        <span>{calculateTotalWeight().toFixed(2)} kg</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between text-gray-600">
+                      <span>Weight</span>
+                      <span>{calculateTotalWeight().toFixed(2)} kg</span>
+                    </div>
                   </div>
                 </>
               )}
