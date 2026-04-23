@@ -124,6 +124,55 @@ export function registerBatchRoutes(app: Express): void {
     }
   });
 
+  // GET /api/batches/expiring-soon
+  // Returns products that have at least one active batch expiring within 30 days (or already expired)
+  app.get('/api/batches/expiring-soon', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const today = new Date().toISOString().split('T')[0];
+      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const rows = await db.execute(sql`
+        SELECT
+          pb.id AS batch_id,
+          pb.product_id,
+          pb.batch_number,
+          pb.quantity,
+          pb.expiry_date,
+          pb.cost_price,
+          pb.status,
+          p.name AS product_name,
+          p.image_url,
+          p.stock AS product_stock
+        FROM product_batches pb
+        JOIN products p ON p.id = pb.product_id
+        WHERE p.wholesaler_id = ${wholesalerId}
+          AND pb.status = 'active'
+          AND pb.expiry_date IS NOT NULL
+          AND pb.expiry_date <= ${in30Days}
+        ORDER BY pb.expiry_date ASC
+        LIMIT 100
+      `);
+
+      res.json(rows.rows.map(r => ({
+        batchId: Number(r.batch_id),
+        productId: Number(r.product_id),
+        productName: String(r.product_name),
+        productStock: Number(r.product_stock || 0),
+        imageUrl: r.image_url ? String(r.image_url) : null,
+        batchNumber: String(r.batch_number || ''),
+        quantity: Number(r.quantity || 0),
+        expiryDate: String(r.expiry_date),
+        costPrice: r.cost_price ? String(r.cost_price) : null,
+        status: String(r.status),
+        isExpired: String(r.expiry_date) < today,
+      })));
+    } catch (error) {
+      console.error('Error fetching expiring batches:', error);
+      res.status(500).json({ error: 'Failed to fetch expiring batches' });
+    }
+  });
+
   // DELETE /api/products/:id/batches/:batchId  — soft-delete (mark as depleted)
   app.delete('/api/products/:id/batches/:batchId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
