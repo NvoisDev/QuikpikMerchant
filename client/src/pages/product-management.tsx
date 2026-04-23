@@ -171,6 +171,7 @@ export default function ProductManagement() {
   const [batchRef, setBatchRef] = useState("");
   const [batchCostPrice, setBatchCostPrice] = useState("");
   const [expandedBatchProductId, setExpandedBatchProductId] = useState<number | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -1050,6 +1051,34 @@ export default function ProductManagement() {
     enabled: !!expandedBatchProductId,
   });
 
+  const { data: modalBatches, isLoading: isLoadingModalBatches } = useQuery({
+    queryKey: [`/api/products/${stockProduct?.id}/batches`],
+    enabled: !!stockProduct && (stockProduct.batchCount ?? 0) > 0,
+  });
+
+  const removeBatchStockMutation = useMutation({
+    mutationFn: async ({ productId, batchId, delta, reason }: {
+      productId: number; batchId: number; delta: number; reason: string;
+    }) => {
+      return apiRequest('PATCH', `/api/products/${productId}/batches/${batchId}`, { delta, reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/batches`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${expandedBatchProductId}/batches`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/batches/expiring-soon'] });
+      toast({ title: "Stock removed", description: "Batch updated and stock movement recorded" });
+      setStockQuantity("");
+      setStockReason("");
+      setSelectedBatchId(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to remove stock from batch", variant: "destructive" });
+    },
+  });
+
   const createBatchMutation = useMutation({
     mutationFn: async ({ productId, quantity, expiryDate, batchNumber, costPrice }: {
       productId: number; quantity: number; expiryDate?: string; batchNumber?: string; costPrice?: string;
@@ -1142,6 +1171,26 @@ export default function ProductManagement() {
       productId: stockProduct.id,
       adjustmentType: stockAdjustmentType,
       quantity: qty,
+      reason: stockReason,
+    });
+  };
+
+  const handleBatchRemoval = () => {
+    if (!stockProduct || !selectedBatchId || !stockQuantity || !stockReason) return;
+    const qty = parseInt(stockQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: "Invalid quantity", description: "Please enter a positive number", variant: "destructive" });
+      return;
+    }
+    const selectedBatch = (modalBatches as any[])?.find((b: any) => b.id === selectedBatchId);
+    if (selectedBatch && qty > selectedBatch.quantity) {
+      toast({ title: "Insufficient batch stock", description: `This batch only has ${formatNumber(selectedBatch.quantity)} units`, variant: "destructive" });
+      return;
+    }
+    removeBatchStockMutation.mutate({
+      productId: stockProduct.id,
+      batchId: selectedBatchId,
+      delta: -qty,
       reason: stockReason,
     });
   };
@@ -3111,12 +3160,13 @@ export default function ProductManagement() {
                 </span>
               </div>
 
+              {/* Tab buttons */}
               <div className="flex gap-2">
                 <Button
                   variant={stockAdjustmentType === "increase" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); }}
+                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); }}
                 >
                   <ArrowUpCircle className="h-4 w-4 mr-1" />
                   Add New Batch
@@ -3125,13 +3175,86 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); }}
+                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); }}
                 >
                   <ArrowDownCircle className="h-4 w-4 mr-1" />
                   Remove Stock
                 </Button>
               </div>
 
+              {/* Shared FEFO-sorted batch list for both modes (batch-tracked products only) */}
+              {(() => {
+                const hasBatches = (stockProduct.batchCount ?? 0) > 0;
+                if (!hasBatches) return null;
+                const sortedBatches = [...((modalBatches as any[]) || [])].sort((a: any, b: any) => {
+                  if (!a.expiryDate && !b.expiryDate) return 0;
+                  if (!a.expiryDate) return 1;
+                  if (!b.expiryDate) return -1;
+                  return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+                });
+                const activeBatches = sortedBatches.filter((b: any) => b.status !== 'depleted' && b.quantity > 0);
+                if (activeBatches.length === 0 && !isLoadingModalBatches) return null;
+
+                const fmtExpiry = (d: string | null) =>
+                  d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'No expiry';
+
+                const isRemove = stockAdjustmentType === "decrease";
+
+                return (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      {isRemove ? 'Select batch to remove from' : 'Existing batches (FEFO order)'}
+                    </p>
+                    {isLoadingModalBatches ? (
+                      <p className="text-xs text-gray-400 py-2 text-center">Loading batches…</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {activeBatches.map((batch: any, idx: number) => {
+                          const label = batch.batchNumber || `Batch ${idx + 1}`;
+                          const expiry = fmtExpiry(batch.expiryDate);
+                          const isSelected = selectedBatchId === batch.id;
+                          if (isRemove) {
+                            return (
+                              <button
+                                key={batch.id}
+                                type="button"
+                                onClick={() => setSelectedBatchId(isSelected ? null : batch.id)}
+                                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left ${
+                                  isSelected
+                                    ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-400'
+                                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isSelected ? 'bg-orange-500' : 'bg-gray-300'}`} />
+                                  <span className="font-medium text-gray-800">{label}</span>
+                                  <span className="text-gray-400">·</span>
+                                  <span className="text-gray-500 text-xs">Exp: {expiry}</span>
+                                </div>
+                                <span className="font-semibold text-gray-700 flex-shrink-0">{formatNumber(batch.quantity)} units</span>
+                              </button>
+                            );
+                          } else {
+                            return (
+                              <div key={batch.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                                  <span className="font-medium text-gray-700">{label}</span>
+                                  <span className="text-gray-300">·</span>
+                                  <span className="text-gray-400 text-xs">Exp: {expiry}</span>
+                                </div>
+                                <span className="font-semibold text-gray-500 flex-shrink-0">{formatNumber(batch.quantity)} units</span>
+                              </div>
+                            );
+                          }
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Add New Batch form */}
               {stockAdjustmentType === "increase" ? (
                 <div className="space-y-3 p-3 bg-green-50 rounded-lg border border-green-100">
                   <p className="text-xs text-green-700 font-medium">Stock is tracked per batch for FEFO (first-expired, first-out) picking.</p>
@@ -3186,53 +3309,109 @@ export default function ProductManagement() {
                   </Button>
                 </div>
               ) : (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Enter quantity"
-                      value={stockQuantity}
-                      onChange={(e) => setStockQuantity(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setStockReason(preset)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            stockReason === preset
-                              ? 'bg-orange-600 text-white border-orange-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                          }`}
+                /* Remove Stock — batch-aware when batches exist, global otherwise */
+                (stockProduct.batchCount ?? 0) > 0 ? (
+                  <div className="space-y-3">
+                    {!selectedBatchId && (
+                      <p className="text-xs text-orange-600 font-medium text-center py-1">↑ Tap a batch above to select it</p>
+                    )}
+                    {selectedBatchId && (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Enter quantity"
+                            value={stockQuantity}
+                            onChange={(e) => setStockQuantity(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => setStockReason(preset)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                  stockReason === preset
+                                    ? 'bg-orange-600 text-white border-orange-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleBatchRemoval}
+                          disabled={!stockQuantity || !stockReason || removeBatchStockMutation.isPending}
+                          className="w-full bg-orange-600 hover:bg-orange-700"
                         >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
+                          {removeBatchStockMutation.isPending ? "Removing…" : (() => {
+                            const b = (modalBatches as any[])?.find((x: any) => x.id === selectedBatchId);
+                            const ref = b?.batchNumber || 'batch';
+                            const exp = b?.expiryDate ? ` · Exp ${new Date(b.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}` : '';
+                            return `Remove ${stockQuantity || 0} units from ${ref}${exp}`;
+                          })()}
+                        </Button>
+                      </>
+                    )}
                   </div>
-                  {stockQuantity && (
-                    <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                      <span className="text-gray-600">New stock will be: </span>
-                      <span className="font-bold text-blue-700">
-                        {formatNumber(Math.max(0, stockProduct.stock - parseInt(stockQuantity || "0")))} units
-                      </span>
+                ) : (
+                  /* Non-batch product — original global remove flow */
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Enter quantity"
+                        value={stockQuantity}
+                        onChange={(e) => setStockQuantity(e.target.value)}
+                        className="mt-1"
+                      />
                     </div>
-                  )}
-                  <Button
-                    onClick={handleStockAdjustment}
-                    disabled={!stockQuantity || !stockReason || stockAdjustmentMutation.isPending}
-                    className="w-full bg-orange-600 hover:bg-orange-700"
-                  >
-                    {stockAdjustmentMutation.isPending ? "Updating..." : `Remove ${stockQuantity || 0} units`}
-                  </Button>
-                </>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setStockReason(preset)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              stockReason === preset
+                                ? 'bg-orange-600 text-white border-orange-600'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {stockQuantity && (
+                      <div className="p-3 bg-blue-50 rounded-lg text-sm">
+                        <span className="text-gray-600">New stock will be: </span>
+                        <span className="font-bold text-blue-700">
+                          {formatNumber(Math.max(0, stockProduct.stock - parseInt(stockQuantity || "0")))} units
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleStockAdjustment}
+                      disabled={!stockQuantity || !stockReason || stockAdjustmentMutation.isPending}
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                    >
+                      {stockAdjustmentMutation.isPending ? "Updating..." : `Remove ${stockQuantity || 0} units`}
+                    </Button>
+                  </>
+                )
               )}
 
               <div className="border-t pt-4">
