@@ -37,6 +37,7 @@ interface Product {
   description?: string;
   price: string;
   currency?: string;
+  costPrice?: string | null;
   moq: number;
   stock: number;
   imageUrl?: string;
@@ -88,6 +89,13 @@ function formatPromoLabel(promo: PromotionalOffer): string {
       return promo.name || "Promotion";
   }
 }
+
+const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
+  const p = parseFloat(String(price));
+  const c = parseFloat(String(costPrice));
+  if (!isFinite(p) || !isFinite(c) || p <= 0) return null;
+  return ((p - c) / p) * 100;
+};
 
 interface ProductCardProps {
   product: Product;
@@ -167,6 +175,19 @@ export default function ProductCard({
 
   const stockStatus = getStockStatus();
   const activePromos = getActivePromos(product.promotionalOffers || []);
+
+  const margin =
+    product.costPrice !== null && product.costPrice !== undefined && product.costPrice !== ""
+      ? calcMarginPct(product.price, product.costPrice)
+      : null;
+  const marginBadgeClass =
+    margin === null
+      ? ""
+      : margin < 0
+        ? "border-red-300 text-red-700 bg-red-50"
+        : margin < 15
+          ? "border-amber-300 text-amber-700 bg-amber-50"
+          : "border-green-300 text-green-700 bg-green-50";
 
   return (
     <>
@@ -392,6 +413,11 @@ export default function ProductCard({
               )}
               {!product.priceVisible && (
                 <Badge variant="outline" className="text-xs">Price Hidden</Badge>
+              )}
+              {margin !== null && (
+                <Badge variant="outline" className={`text-xs ${marginBadgeClass}`}>
+                  Margin {margin.toFixed(1)}%
+                </Badge>
               )}
               {activePromos.map((promo, i) => (
                 <Badge key={i} className="text-xs bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
