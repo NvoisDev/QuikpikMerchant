@@ -1855,9 +1855,16 @@ export default function ProductManagement() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Stock</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="0" {...field} />
-                              </FormControl>
+                              {editingProduct?.batchCount > 0 ? (
+                                <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                                  <span className="text-sm font-medium text-gray-700">{field.value || 0}</span>
+                                  <p className="text-xs text-gray-400 mt-0.5">Managed by batches — use Manage Stock to adjust</p>
+                                </div>
+                              ) : (
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} />
+                                </FormControl>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}

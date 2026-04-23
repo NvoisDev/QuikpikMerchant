@@ -74,7 +74,7 @@ export function registerBatchRoutes(app: Express): void {
         return res.status(400).json({ error: 'Batch quantity must be greater than 0' });
       }
 
-      const batch = await storage.createProductBatch(parsed.data);
+      const batch = await storage.createProductBatch(parsed.data, wholesalerId);
       res.status(201).json(batch);
     } catch (error) {
       console.error('Error creating batch:', error);

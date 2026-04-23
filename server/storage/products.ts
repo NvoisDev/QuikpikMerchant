@@ -540,11 +540,40 @@ export class ProductStorage extends UserStorageBase {
   }
 
   /** Create a new batch (stock-in event). Updates product.stock to reflect new total. */
-  async createProductBatch(batch: InsertProductBatch): Promise<ProductBatch> {
+  async createProductBatch(batch: InsertProductBatch, wholesalerId?: string): Promise<ProductBatch> {
+    // Capture stock before so we can compute the before→after delta for the movement log
+    const [productBefore] = await db
+      .select({ stock: products.stock })
+      .from(products)
+      .where(eq(products.id, batch.productId));
+    const stockBefore = Number(productBefore?.stock ?? 0);
+
     const [newBatch] = await db.insert(productBatches).values(batch).returning();
 
     // Keep product.stock in sync (sum of all active non-expired batches)
     await this._syncProductStockFromBatches(batch.productId);
+
+    // Log a stock movement so the history panel shows the restock event
+    if (wholesalerId) {
+      const [productAfter] = await db
+        .select({ stock: products.stock })
+        .from(products)
+        .where(eq(products.id, batch.productId));
+      const stockAfter = Number(productAfter?.stock ?? 0);
+      const reason = newBatch.batchNumber
+        ? `New batch stock-in (ref: ${newBatch.batchNumber})`
+        : 'New batch stock-in';
+      await db.insert(stockMovements).values({
+        productId: batch.productId,
+        wholesalerId,
+        movementType: 'manual_increase',
+        quantity: Number(batch.quantity),
+        unitType: 'units',
+        stockBefore,
+        stockAfter,
+        reason,
+      });
+    }
 
     return newBatch;
   }

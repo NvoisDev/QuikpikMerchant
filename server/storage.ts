@@ -114,7 +114,7 @@ export interface IStorage {
 
   // Batch inventory operations
   getProductBatches(productId: number, activeOnly?: boolean /* default: true */): Promise<ProductBatch[]>;
-  createProductBatch(batch: InsertProductBatch): Promise<ProductBatch>;
+  createProductBatch(batch: InsertProductBatch, wholesalerId?: string): Promise<ProductBatch>;
   updateProductBatch(batchId: number, updates: Partial<InsertProductBatch>, wholesalerId?: string): Promise<ProductBatch>;
   adjustBatchQuantity(batchId: number, delta: number, reason: string, wholesalerId: string, orderId?: number): Promise<void>;
   getProductTotalStock(productId: number): Promise<number>;
