@@ -135,7 +135,7 @@ export class ProductStorage extends UserStorageBase {
       const queryTime = Date.now() - startTime;
       console.log(`⚡ PERFORMANCE: Wholesaler products query: ${result.rows.length} rows in ${queryTime}ms`);
       
-      return result.rows.map(row => {
+      const mapped = result.rows.map(row => {
         let parsedOffers: any[] = [];
         try {
           if (!row.promotional_offers) parsedOffers = [];
@@ -200,6 +200,18 @@ export class ProductStorage extends UserStorageBase {
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       });
       });
+
+      // ── Enrich with derived batch stats (active non-expired batches only) ──
+      const batchSummaries = await this._getBatchSummaries(mapped.map(p => p.id));
+      return mapped.map(p => {
+        const bs = batchSummaries.get(p.id);
+        return {
+          ...p,
+          totalBatchStock: bs?.totalBatchStock ?? null,
+          nearestExpiry: bs?.nearestExpiry ?? null,
+          batchCount: bs?.batchCount ?? 0,
+        };
+      }) as Product[];
     }
     
     // General query optimization for all products
@@ -225,7 +237,7 @@ export class ProductStorage extends UserStorageBase {
     const queryTime = Date.now() - startTime;
     console.log(`⚡ PERFORMANCE: All products query: ${result.rows.length} rows in ${queryTime}ms`);
     
-    return result.rows.map(row => {
+    const mapped = result.rows.map(row => {
       let parsedOffers: any[] = [];
       try {
         if (!row.promotional_offers) parsedOffers = [];
@@ -286,6 +298,18 @@ export class ProductStorage extends UserStorageBase {
       updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
     });
     });
+
+    // ── Enrich with derived batch stats ──────────────────────────────────────
+    const batchSummaries = await this._getBatchSummaries(mapped.map(p => p.id));
+    return mapped.map(p => {
+      const bs = batchSummaries.get(p.id);
+      return {
+        ...p,
+        totalBatchStock: bs?.totalBatchStock ?? null,
+        nearestExpiry: bs?.nearestExpiry ?? null,
+        batchCount: bs?.batchCount ?? 0,
+      };
+    }) as Product[];
   }
 
   async getExpiringProducts(wholesalerId: string): Promise<Product[]> {
@@ -376,7 +400,16 @@ export class ProductStorage extends UserStorageBase {
 
   async getProduct(id: number): Promise<Product | undefined> {
     const [product] = await db.select().from(products).where(eq(products.id, id));
-    return product;
+    if (!product) return undefined;
+    // Enrich with derived batch stats (active non-expired batches only)
+    const batchSummaries = await this._getBatchSummaries([id]);
+    const bs = batchSummaries.get(id);
+    return {
+      ...product,
+      totalBatchStock: bs?.totalBatchStock ?? null,
+      nearestExpiry: bs?.nearestExpiry ?? null,
+      batchCount: bs?.batchCount ?? 0,
+    } as Product;
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
@@ -427,10 +460,34 @@ export class ProductStorage extends UserStorageBase {
   // ── Batch-level inventory methods ────────────────────────────────────────
 
   /**
-   * Return all batches for a product, FEFO order (earliest expiry first,
-   * nulls last), then depleted/expired batches at the very end.
+   * Return batches for a product.
+   *
+   * @param activeOnly  When true (FEFO path): return only active, non-expired batches
+   *                    sorted by earliest expiry first (nulls last).
+   *                    When false (history/admin view, the default): return ALL batches
+   *                    ordered active → depleted → expired, then by expiry ASC.
    */
-  async getProductBatches(productId: number): Promise<ProductBatch[]> {
+  async getProductBatches(productId: number, activeOnly = false): Promise<ProductBatch[]> {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(productBatches)
+        .where(
+          and(
+            eq(productBatches.productId, productId),
+            eq(productBatches.status, 'active'),
+            or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+          )
+        )
+        .orderBy(
+          sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+          asc(productBatches.expiryDate),
+          asc(productBatches.createdAt)
+        );
+    }
+
     return await db
       .select()
       .from(productBatches)
@@ -438,11 +495,48 @@ export class ProductStorage extends UserStorageBase {
       .orderBy(
         // Active first, then depleted, then expired
         sql`CASE status WHEN 'active' THEN 0 WHEN 'depleted' THEN 1 ELSE 2 END`,
-        // Within active: earliest expiry first (FEFO), no-expiry batches last
+        // Within status group: earliest expiry first (FEFO), no-expiry last
         sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
         asc(productBatches.expiryDate),
         asc(productBatches.createdAt)
       );
+  }
+
+  /**
+   * Fetch batch summary (totalBatchStock, nearestExpiry, batchCount) for a set
+   * of product IDs in a single query.  Only counts active, non-expired batches.
+   */
+  private async _getBatchSummaries(
+    productIds: number[]
+  ): Promise<Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number }>> {
+    if (productIds.length === 0) return new Map();
+    const today = new Date().toISOString().split('T')[0];
+    const rows = await db
+      .select({
+        productId: productBatches.productId,
+        totalBatchStock: sum(productBatches.quantity),
+        nearestExpiry: sql<string | null>`MIN(${productBatches.expiryDate})`,
+        batchCount: count(productBatches.id),
+      })
+      .from(productBatches)
+      .where(
+        and(
+          inArray(productBatches.productId, productIds),
+          eq(productBatches.status, 'active'),
+          or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+        )
+      )
+      .groupBy(productBatches.productId);
+
+    const map = new Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number }>();
+    for (const row of rows) {
+      map.set(row.productId, {
+        totalBatchStock: Number(row.totalBatchStock ?? 0),
+        nearestExpiry: row.nearestExpiry ? String(row.nearestExpiry) : null,
+        batchCount: Number(row.batchCount ?? 0),
+      });
+    }
+    return map;
   }
 
   /** Create a new batch (stock-in event). Updates product.stock to reflect new total. */
