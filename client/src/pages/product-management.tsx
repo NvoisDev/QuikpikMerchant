@@ -3360,7 +3360,7 @@ export default function ProductManagement() {
       </div>
 
       <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); setStockQuantity(""); setStockReason(""); if (navigateBackTo) { const dest = navigateBackTo; setNavigateBackTo(null); navigate(dest); } } }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PackagePlus className="h-5 w-5 text-green-600" />
@@ -3438,7 +3438,7 @@ export default function ProductManagement() {
                                 key={batch.id}
                                 type="button"
                                 onClick={() => setSelectedBatchId(isSelected ? null : batch.id)}
-                                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors text-left ${
+                                className={`w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors text-left min-h-[44px] ${
                                   isSelected
                                     ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-400'
                                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -3449,12 +3449,14 @@ export default function ProductManagement() {
                                   <span className="font-medium text-gray-800">{label}</span>
                                   <span className="text-gray-400">·</span>
                                   <span className="text-gray-500 text-xs">Exp: {expiry}</span>
-                                  <span className="text-gray-400">·</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 sm:mt-0 pl-4 sm:pl-0">
                                   <span className="text-gray-500 text-xs">
                                     Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
                                   </span>
+                                  <span className="text-gray-400">·</span>
+                                  <span className="font-semibold text-gray-700">{formatNumber(batch.quantity)} units</span>
                                 </div>
-                                <span className="font-semibold text-gray-700 flex-shrink-0">{formatNumber(batch.quantity)} units</span>
                               </button>
                             );
                           } else {
@@ -3463,14 +3465,15 @@ export default function ProductManagement() {
                             const isEditingCost = editCostPriceBatchId === batch.id;
                             return (
                               <div key={batch.id} className="rounded-lg border border-gray-200 overflow-hidden">
-                                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 text-sm">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 py-2.5 bg-gray-50 text-sm min-h-[44px] gap-1.5 sm:gap-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isExpired ? 'bg-red-400' : 'bg-green-400'}`} />
                                     <span className={`font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>{label}</span>
                                     <span className="text-gray-300">·</span>
                                     <span className={`text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}`}>Exp: {expiry}</span>
                                     {isExpired && <span className="text-xs text-red-500 font-medium">(expired)</span>}
-                                    <span className="text-gray-300">·</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0 pl-4 sm:pl-0">
                                     {isViewer ? (
                                       <span className="text-xs text-gray-400">
                                         Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
@@ -3484,20 +3487,19 @@ export default function ProductManagement() {
                                           setEditCostPriceBatchId(isEditingCost ? null : batch.id);
                                           if (isTopUp) { setTopUpBatchId(null); setTopUpQuantity(""); }
                                         }}
-                                        className="text-xs text-gray-400 hover:text-green-600 transition-colors"
+                                        className="text-xs text-gray-400 hover:text-green-600 transition-colors py-2.5 min-h-[44px] inline-flex items-center"
                                         title="Edit cost price"
                                       >
                                         Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"} ✎
                                       </button>
                                     )}
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-gray-300">·</span>
                                     <span className={`font-semibold ${isExpired ? 'text-gray-400' : 'text-gray-500'}`}>{formatNumber(batch.quantity)} units</span>
                                     {!isExpired && (
                                       <button
                                         type="button"
                                         onClick={() => { setTopUpBatchId(isTopUp ? null : batch.id); setTopUpQuantity(""); setEditCostPriceBatchId(null); }}
-                                        className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
+                                        className={`px-3 py-2.5 rounded text-xs font-medium border transition-colors min-h-[44px] ${
                                           isTopUp
                                             ? 'bg-green-600 text-white border-green-600'
                                             : 'bg-white text-green-700 border-green-400 hover:bg-green-50'
@@ -3599,24 +3601,26 @@ export default function ProductManagement() {
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Best Before / Expiry <span className="text-gray-400 text-xs">(optional)</span></label>
-                    <Input
-                      type="date"
-                      value={batchExpiry}
-                      onChange={(e) => setBatchExpiry(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Batch Reference <span className="text-gray-400 text-xs">(optional — invoice or delivery ref)</span></label>
-                    <Input
-                      type="text"
-                      placeholder="e.g. INV-2024-001"
-                      value={batchRef}
-                      onChange={(e) => setBatchRef(e.target.value)}
-                      className="mt-1"
-                    />
+                  <div className="sm:grid sm:grid-cols-2 sm:gap-3 space-y-3 sm:space-y-0">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Best Before / Expiry <span className="text-gray-400 text-xs">(optional)</span></label>
+                      <Input
+                        type="date"
+                        value={batchExpiry}
+                        onChange={(e) => setBatchExpiry(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Batch Reference <span className="text-gray-400 text-xs">(optional)</span></label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. INV-2024-001"
+                        value={batchRef}
+                        onChange={(e) => setBatchRef(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Cost Price per Unit <span className="text-gray-400 text-xs">(optional)</span></label>
@@ -3767,7 +3771,7 @@ export default function ProductManagement() {
                         : 'Updated';
                       return (
                         <div key={movement.id} className={`p-2.5 rounded-lg text-xs border-l-3 ${isIncrease ? 'bg-green-50 border-l-green-500' : 'bg-red-50 border-l-red-500'}`}>
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0">
                             <div className="flex items-center gap-1.5">
                               {isIncrease ? (
                                 <ArrowUpCircle className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
@@ -3779,15 +3783,15 @@ export default function ProductManagement() {
                               </span>
                               <span className="text-gray-500 font-medium">· {typeLabel}</span>
                             </div>
-                            <span className="text-gray-400 flex-shrink-0">
+                            <span className="text-gray-400 sm:flex-shrink-0">
                               {new Date(movement.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                             </span>
                           </div>
-                          <div className="mt-1 flex items-center justify-between text-gray-500">
-                            <span className="truncate">
+                          <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-0.5 sm:gap-0">
+                            <span>
                               {movement.reason || (movement.customerName ? `Customer: ${movement.customerName}` : '')}
                             </span>
-                            <span className="flex-shrink-0 ml-2 font-medium">
+                            <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
                               {movement.stockBefore} → {movement.stockAfter}
                             </span>
                           </div>
