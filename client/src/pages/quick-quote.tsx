@@ -466,6 +466,8 @@ export default function QuickQuote() {
     setCustomAddressFields({ addressLine1: '', city: '', postalCode: '', state: '', label: '' });
   };
 
+  const totalWeight = calculateTotalWeight();
+
   if (createdQuote) {
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto">
@@ -1180,6 +1182,12 @@ export default function QuickQuote() {
                   </div>
                 )}
               </div>
+              {totalWeight > 0 && (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Total Weight</span>
+                  <span>{totalWeight.toFixed(2)} kg</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
                 <span>{formatCurrency(calculateTotal())}</span>
@@ -1202,10 +1210,12 @@ export default function QuickQuote() {
                       <span>Margin</span>
                       <span>{formatCurrency(calculateTotalMarginAmount())} ({calculateTotalMarginPct().toFixed(1)}%)</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Weight</span>
-                      <span>{calculateTotalWeight().toFixed(2)} kg</span>
-                    </div>
+                    {totalWeight > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Weight</span>
+                        <span>{totalWeight.toFixed(2)} kg</span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
