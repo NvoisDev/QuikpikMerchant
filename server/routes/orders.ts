@@ -2521,7 +2521,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // GET /api/orders/:id/invoice/customer
-  app.get('/api/orders/:id/invoice/customer', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.get('/api/orders/:id/invoice/customer', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const user = req.user;
