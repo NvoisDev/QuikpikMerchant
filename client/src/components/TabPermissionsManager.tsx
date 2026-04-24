@@ -21,7 +21,8 @@ import {
   Lock,
   Shield,
   Puzzle,
-  Banknote
+  Banknote,
+  Tag
 } from 'lucide-react';
 
 const TAB_CONFIGS = [
@@ -54,6 +55,12 @@ const TAB_CONFIGS = [
     label: 'Broadcast', 
     icon: MessageSquare,
     description: 'WhatsApp broadcasting and messaging'
+  },
+  { 
+    name: 'promotions', 
+    label: 'Promotions', 
+    icon: Tag,
+    description: 'Product promotions and special offers'
   },
   { 
     name: 'integrations', 

@@ -311,7 +311,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // GET /api/promotions
-  app.get('/api/promotions', requireAuth, async (req: any, res) => {
+  app.get('/api/promotions', requireAuth, requireMemberPermission('promotions'), async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
