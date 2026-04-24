@@ -1320,16 +1320,25 @@ export function registerOrderRoutes(app: Express): void {
       // For partial returns refund only the item value (fee is not proportionally refunded).
       const orderTotal = parseFloat(order.total || '0');
 
+      // Read current refunded amount before issuing any new refund (used for idempotency and totalling below)
+      const currentRefunded = parseFloat(order.amountRefunded || '0');
+
       if (processRefund && amountPaid > 0 && order.stripePaymentIntentId && stripe) {
         const refundAmountToProcess = isFullCancellation && orderTotal > 0
           ? orderTotal   // full cancel → return everything the customer paid
           : refundAmount; // partial → return item value only
         const refundCeiling = isFullCancellation ? (orderTotal > 0 ? orderTotal : amountPaid) : amountPaid;
-        if (refundAmountToProcess > 0 && refundAmountToProcess <= refundCeiling) {
+        // Idempotency guard: cap at remaining refundable amount to prevent double-charging
+        // on retries while still allowing subsequent legitimate partial returns.
+        const remainingRefundable = Math.max(0, refundCeiling - currentRefunded);
+        const effectiveRefundAmount = Math.min(refundAmountToProcess, remainingRefundable);
+        if (remainingRefundable <= 0.01) {
+          console.log(`⚠️ Skipping Stripe refund for order ${order.orderNumber} — already refunded up to ceiling (£${currentRefunded.toFixed(2)} of £${refundCeiling.toFixed(2)})`);
+        } else if (effectiveRefundAmount > 0 && effectiveRefundAmount <= refundCeiling) {
           const result = await refundAcrossPaymentIntents(
             stripe,
             order.stripePaymentIntentId,
-            refundAmountToProcess,
+            effectiveRefundAmount,
             { order_id: id.toString(), reason: reason || 'Order cancelled' }
           );
           stripeRefundTotalPounds = result.totalRefunded;
@@ -1345,7 +1354,6 @@ export function registerOrderRoutes(app: Express): void {
       const newStatus = isFullCancellation ? 'cancelled' : order.status;
 
       // Update order with cancellation details
-      const currentRefunded = parseFloat(order.amountRefunded || '0');
       const amountPaidNum = parseFloat(order.amountPaid || '0');
       
       // Calculate total refunded: Stripe refund amount (card only)
@@ -1797,24 +1805,47 @@ export function registerOrderRoutes(app: Express): void {
           }
           
           custCancelAmountPaid = parseFloat(order.total || order.amountPaid || '0');
+
+          // Idempotency guard: skip Stripe refund if one has already been recorded on this order
+          const custAlreadyRefunded = parseFloat(order.amountRefunded || '0') > 0;
+          if (custAlreadyRefunded) {
+            console.log(`⚠️ Skipping Stripe refund for order ${order.orderNumber} (customer request) — amountRefunded already recorded (£${order.amountRefunded})`);
+          }
           
-          if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe) {
+          if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe && !custAlreadyRefunded) {
+            // Idempotency key tied to the specific cancellation request so a retry
+            // of the same approval returns the existing Stripe refund, not a new one.
+            const custRefundIdempotencyKey = `cancellation-request-${requestId}-refund`;
             const result = await refundAcrossPaymentIntents(
               stripe,
               order.stripePaymentIntentId,
               custCancelAmountPaid,
-              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` }
+              { order_id: order.id.toString(), reason: `Customer request: ${request.reasonCategory}` },
+              custRefundIdempotencyKey
             );
             custCancelStripeRefunded = result.totalRefunded;
             if (result.totalRefunded > 0) {
               console.log(`💳 Stripe refund processed for customer cancellation: £${result.totalRefunded.toFixed(2)}`);
             }
           }
+
+          // Determine the amountRefunded value to persist:
+          // - New Stripe refund processed → use that amount
+          // - Guard fired (custAlreadyRefunded) → preserve existing recorded amount
+          // - Refund type is 'later' → record what should be refunded for display
+          // - Otherwise → '0.00'
+          const custCancelAmountRefunded = custCancelStripeRefunded > 0
+            ? custCancelStripeRefunded.toFixed(2)
+            : custAlreadyRefunded
+              ? (order.amountRefunded || '0.00')
+              : refundType === 'later'
+                ? custCancelAmountPaid.toFixed(2)
+                : '0.00';
           
           await db.update(orders)
             .set({
               status: 'cancelled',
-              amountRefunded: custCancelStripeRefunded > 0 ? custCancelStripeRefunded.toFixed(2) : refundType === 'later' ? custCancelAmountPaid.toFixed(2) : '0.00',
+              amountRefunded: custCancelAmountRefunded,
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
               restockStatus: 'completed',

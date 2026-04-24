@@ -352,7 +352,8 @@ export async function refundAcrossPaymentIntents(
   stripeClient: Stripe,
   piIdsStr: string,
   totalAmountPounds: number,
-  metadata: Record<string, string>
+  metadata: Record<string, string>,
+  idempotencyKey?: string
 ): Promise<{ totalRefunded: number; remaining: number; lastError: string | null }> {
   const piIds = piIdsStr.split(',').map((s: string) => s.trim()).filter(Boolean).reverse();
   let remainingPence = Math.round(totalAmountPounds * 100);
@@ -376,7 +377,12 @@ export async function refundAcrossPaymentIntents(
         reason: 'requested_by_customer',
         metadata,
       };
-      const refund = await stripeClient.refunds.create(refundParams as any);
+      // Idempotency key scoped per PI so a retry of the same request returns the
+      // existing Stripe refund object instead of creating a duplicate.
+      const requestOptions = idempotencyKey
+        ? { idempotencyKey: `${idempotencyKey}-${piId}` }
+        : undefined;
+      const refund = await stripeClient.refunds.create(refundParams as any, requestOptions);
       totalRefundedPence += refund.amount;
       remainingPence -= refund.amount;
       console.log(`💳 Refunded £${(refund.amount / 100).toFixed(2)} from PI ${piId}, remaining: £${(remainingPence / 100).toFixed(2)}`);
