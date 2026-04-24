@@ -3431,6 +3431,10 @@ export default function ProductManagement() {
                                   <span className="font-medium text-gray-800">{label}</span>
                                   <span className="text-gray-400">·</span>
                                   <span className="text-gray-500 text-xs">Exp: {expiry}</span>
+                                  <span className="text-gray-400">·</span>
+                                  <span className="text-gray-500 text-xs">
+                                    Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
+                                  </span>
                                 </div>
                                 <span className="font-semibold text-gray-700 flex-shrink-0">{formatNumber(batch.quantity)} units</span>
                               </button>
@@ -3447,6 +3451,10 @@ export default function ProductManagement() {
                                     <span className="text-gray-300">·</span>
                                     <span className={`text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}`}>Exp: {expiry}</span>
                                     {isExpired && <span className="text-xs text-red-500 font-medium">(expired)</span>}
+                                    <span className="text-gray-300">·</span>
+                                    <span className="text-xs text-gray-400">
+                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     <span className={`font-semibold ${isExpired ? 'text-gray-400' : 'text-gray-500'}`}>{formatNumber(batch.quantity)} units</span>

@@ -65,6 +65,7 @@ interface Batch {
   expiryDate: string | null;
   status: "active" | "depleted" | "expired";
   notes: string | null;
+  costPrice: string | number | null;
 }
 
 interface StockSummary {
@@ -528,6 +529,7 @@ export default function ProductDetail() {
                         <tr>
                           <th className="text-left px-3 py-2 text-gray-500 font-medium">Batch</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Qty</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Cost</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Expiry</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Status</th>
                         </tr>
@@ -548,6 +550,11 @@ export default function ProductDetail() {
                                 {batch.batchNumber || `#${batch.id}`}
                               </td>
                               <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right text-gray-700">
+                                {batch.costPrice != null && batch.costPrice !== ""
+                                  ? fmt(batch.costPrice, currency)
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
                               <td className="px-3 py-2 text-right">
                                 {isViewer ? (
                                   expiryInfo ? (
