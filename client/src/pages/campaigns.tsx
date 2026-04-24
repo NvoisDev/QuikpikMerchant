@@ -1,9 +1,31 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, MessageSquare, Package, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 
 export default function Campaigns() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('campaigns')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Campaigns page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
+
   return (
     <div className="bg-white min-h-screen">
       <PageHeader title="Broadcast" description="Broadcast messaging is coming soon" />

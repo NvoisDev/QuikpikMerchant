@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSidebarPermissions } from '@/hooks/useSidebarPermissions';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,11 +45,26 @@ export default function SubscriptionPricing() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [targetDowngradePlan, setTargetDowngradePlan] = useState<string>('free');
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   const [showUpgradeWarningModal, setShowUpgradeWarningModal] = useState(false);
   const [pendingUpgrade, setPendingUpgrade] = useState<{ priceId: string; planName: string; planId: string } | null>(null);
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('subscription')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Subscription page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
+
   // Handle success/cancel URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
+import { useAuth } from "@/hooks/useAuth";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,6 +22,21 @@ import {
 
 export default function Integrations() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('integrations')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Integrations page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
 
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);

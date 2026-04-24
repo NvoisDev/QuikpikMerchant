@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
 import {
   Store,
   Package,
@@ -119,6 +120,21 @@ function formatPlanFeature(feature: string) {
 export default function Marketplace() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('marketplace')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Marketplace page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
+
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
   const { data: plans = [], isLoading: plansLoading, isError: plansError } = useQuery<SubscriptionPlan[]>({

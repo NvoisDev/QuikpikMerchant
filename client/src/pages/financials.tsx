@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/PageHeader";
+import { useToast } from "@/hooks/use-toast";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
 import { Banknote, ChevronRight, CreditCard, Package, AlertCircle } from "lucide-react";
 
 interface Payout {
@@ -88,7 +90,22 @@ function PayoutStatusBadge({ status }: { status: string }) {
 
 export default function Financials() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
   const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('finance')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Finance page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
 
   const { data, isLoading, isError } = useQuery<{ pendingBalance: number; payouts: Payout[] }>({
     queryKey: ["/api/stripe/payouts"],

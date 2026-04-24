@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +100,21 @@ function getStatusBadgeVariant(status: string) {
 export default function TeamManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('team-management')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Team Management page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
+
   // Subscription system removed
   // Subscription system removed - defaulting to premium tier
   const simpleTier = 'premium';
