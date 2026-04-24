@@ -325,8 +325,8 @@ export default function StockAlerts() {
               <div className="text-center space-y-3">
                 <Package className="h-10 w-10 text-gray-300 mx-auto" />
                 <div>
-                  <h3 className="text-base font-medium text-gray-700">No stock alerts</h3>
-                  <p className="text-sm text-gray-500">All your products have healthy stock levels</p>
+                  <h3 className="text-base font-medium text-gray-700">No low stock alerts</h3>
+                  <p className="text-sm text-gray-500">All your stock quantities are above their alert thresholds</p>
                 </div>
               </div>
             </CardContent>
