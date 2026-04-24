@@ -564,11 +564,11 @@ export default function ProductDetail() {
                     <span className="font-medium text-gray-800">{product.unitsPerPallet}</span>
                   </div>
                 )}
-                {product.packQuantity != null && product.unitOfMeasure && (
+                {product.packQuantity != null && product.unitSize && product.unitOfMeasure && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pack size</span>
                     <span className="font-medium text-gray-800">
-                      {product.packQuantity} × {product.sizePerUnit ?? ""}{product.unitOfMeasure}
+                      {product.packQuantity} × {product.unitSize}{product.unitOfMeasure}
                     </span>
                   </div>
                 )}
