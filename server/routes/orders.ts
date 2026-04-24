@@ -1207,6 +1207,7 @@ export function registerOrderRoutes(app: Express): void {
       const orderItems = await storage.getOrderItems(id);
       let stockRestoredCount = 0;
       let refundAmount = 0;
+      const skipRestock = order.restockStatus === 'completed';
       
       // Calculate refund amount and restore stock for returned items
       if (returnedItems && returnedItems.length > 0) {
@@ -1218,33 +1219,34 @@ export function registerOrderRoutes(app: Express): void {
             if (product) {
               const returnQty = Math.min(returnItem.quantity, orderItem.quantity);
               
-              // Restore stock based on selling type
-              if (returnItem.sellingType === 'pallets') {
-                const stockBefore = product.palletStock || 0;
-                const stockAfter = stockBefore + returnQty;
-                await db.update(products)
-                  .set({ palletStock: stockAfter })
-                  .where(eq(products.id, product.id));
-                await db.insert(stockMovements).values({
-                  productId: product.id,
-                  wholesalerId: order.wholesalerId,
-                  movementType: 'return',
-                  quantity: returnQty,
-                  unitType: 'pallets',
-                  stockBefore,
-                  stockAfter,
-                  reason: `Order cancellation - ${returnQty} pallets returned`,
-                  orderId: id,
-                });
-              } else {
-                await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber);
+              if (!skipRestock) {
+                // Restore stock based on selling type
+                if (returnItem.sellingType === 'pallets') {
+                  const stockBefore = product.palletStock || 0;
+                  const stockAfter = stockBefore + returnQty;
+                  await db.update(products)
+                    .set({ palletStock: stockAfter })
+                    .where(eq(products.id, product.id));
+                  await db.insert(stockMovements).values({
+                    productId: product.id,
+                    wholesalerId: order.wholesalerId,
+                    movementType: 'return',
+                    quantity: returnQty,
+                    unitType: 'pallets',
+                    stockBefore,
+                    stockAfter,
+                    reason: `Order cancellation - ${returnQty} pallets returned`,
+                    orderId: id,
+                  });
+                } else {
+                  await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber);
+                }
+                stockRestoredCount += returnQty;
+                console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
               }
               
-              // Calculate refund for this item
+              // Calculate refund for this item (always, regardless of restock guard)
               refundAmount += parseFloat(orderItem.unitPrice) * returnQty;
-              stockRestoredCount += returnQty;
-              
-              console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
             }
           }
         }
@@ -1264,27 +1266,29 @@ export function registerOrderRoutes(app: Express): void {
         for (const item of orderItems) {
           const product = await storage.getProduct(item.productId);
           if (product) {
-            if (item.sellingType === 'pallets') {
-              const stockBefore = product.palletStock || 0;
-              const stockAfter = stockBefore + item.quantity;
-              await db.update(products)
-                .set({ palletStock: stockAfter })
-                .where(eq(products.id, product.id));
-              await db.insert(stockMovements).values({
-                productId: product.id,
-                wholesalerId: order.wholesalerId,
-                movementType: 'return',
-                quantity: item.quantity,
-                unitType: 'pallets',
-                stockBefore,
-                stockAfter,
-                reason: `Order cancelled - ${item.quantity} pallets returned`,
-                orderId: id,
-              });
-            } else if (item.productId) {
+            if (!skipRestock) {
+              if (item.sellingType === 'pallets') {
+                const stockBefore = product.palletStock || 0;
+                const stockAfter = stockBefore + item.quantity;
+                await db.update(products)
+                  .set({ palletStock: stockAfter })
+                  .where(eq(products.id, product.id));
+                await db.insert(stockMovements).values({
+                  productId: product.id,
+                  wholesalerId: order.wholesalerId,
+                  movementType: 'return',
+                  quantity: item.quantity,
+                  unitType: 'pallets',
+                  stockBefore,
+                  stockAfter,
+                  reason: `Order cancelled - ${item.quantity} pallets returned`,
+                  orderId: id,
+                });
+              } else if (item.productId) {
                 await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, id, order.orderNumber);
+              }
+              stockRestoredCount += item.quantity;
             }
-            stockRestoredCount += item.quantity;
           }
         }
         // Full refund for full cancellation
@@ -1380,6 +1384,7 @@ export function registerOrderRoutes(app: Express): void {
           cancelledAt: isFullCancellation ? new Date() : undefined,
           stockRestored: (order.stockRestoredCount || 0) + stockRestoredCount > 0,
           stockRestoredCount: (order.stockRestoredCount || 0) + stockRestoredCount,
+          restockStatus: 'completed',
           notes: order.notes 
             ? `${order.notes}\n[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}` 
             : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}`
@@ -1761,17 +1766,32 @@ export function registerOrderRoutes(app: Express): void {
         const order = await storage.getOrder(request.orderId);
         if (order) {
           const orderItems = await storage.getOrderItems(order.id);
+          const skipCustRestock = order.restockStatus === 'completed';
           
-          for (const item of orderItems) {
-            const product = await storage.getProduct(item.productId);
-            if (product) {
-              if (item.sellingType === 'pallets') {
-                const currentPalletStock = product.palletStock || 0;
-                await db.update(products)
-                  .set({ palletStock: currentPalletStock + item.quantity })
-                  .where(eq(products.id, product.id));
-              } else {
-                await storage.updateProductStock(item.productId, product.stock + item.quantity);
+          if (!skipCustRestock) {
+            for (const item of orderItems) {
+              const product = await storage.getProduct(item.productId);
+              if (product) {
+                if (item.sellingType === 'pallets') {
+                  const stockBefore = product.palletStock || 0;
+                  const stockAfter = stockBefore + item.quantity;
+                  await db.update(products)
+                    .set({ palletStock: stockAfter })
+                    .where(eq(products.id, product.id));
+                  await db.insert(stockMovements).values({
+                    productId: product.id,
+                    wholesalerId: order.wholesalerId,
+                    movementType: 'return',
+                    quantity: item.quantity,
+                    unitType: 'pallets',
+                    stockBefore,
+                    stockAfter,
+                    reason: `Order cancellation (customer request) — ${item.quantity} pallets returned`,
+                    orderId: order.id,
+                  });
+                } else {
+                  await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, order.id, order.orderNumber);
+                }
               }
             }
           }
@@ -1797,6 +1817,7 @@ export function registerOrderRoutes(app: Express): void {
               amountRefunded: custCancelStripeRefunded > 0 ? custCancelStripeRefunded.toFixed(2) : refundType === 'later' ? custCancelAmountPaid.toFixed(2) : '0.00',
               refundReason: `Customer request: ${request.reasonCategory}${request.reasonNotes ? ` - ${request.reasonNotes}` : ''}`,
               cancelledAt: new Date(),
+              restockStatus: 'completed',
               notes: order.notes 
                 ? `${order.notes}\n[${new Date().toISOString()}] Order cancelled via customer request (${request.reasonCategory}). Refund: ${refundType}`
                 : `[${new Date().toISOString()}] Order cancelled via customer request (${request.reasonCategory}). Refund: ${refundType}`,
