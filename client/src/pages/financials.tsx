@@ -23,7 +23,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
-import { Banknote, ChevronRight, CreditCard, Package, AlertCircle } from "lucide-react";
+import { Banknote, ChevronRight, CreditCard, Package, AlertCircle, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Payout {
   id: string;
@@ -294,7 +300,21 @@ export default function Financials() {
                             <TableCell className="font-medium text-sm">
                               {txn.orderNumber
                                 ? `#${txn.orderNumber}`
-                                : <span className="text-gray-400 text-xs">—</span>}
+                                : (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="inline-flex items-center gap-1 text-gray-400 text-xs cursor-default">
+                                          Unknown
+                                          <Info className="w-3 h-3 text-gray-400" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs text-xs">
+                                        This transaction couldn't be linked to an order. It may have been processed before order tracking began.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                             </TableCell>
                             <TableCell className="text-sm text-gray-700">
                               {txn.customerName ?? <span className="text-gray-400 text-xs">—</span>}
