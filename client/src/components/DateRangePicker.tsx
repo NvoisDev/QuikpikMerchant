@@ -140,12 +140,12 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           <ChevronDown className="ml-2 h-4 w-4 text-gray-500" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(calc(100vw-2rem),420px)] p-0 shadow-lg border-gray-200" align="end">
+      <PopoverContent className="w-[min(calc(100vw-2rem),420px)] p-0 shadow-lg border-gray-200 overflow-hidden" align="end">
         <Card className="border-0">
           <CardContent className="p-0">
-            <div className="flex flex-col sm:flex-row">
+            <div className="flex flex-col sm:flex-row min-w-0">
               {/* Presets list */}
-              <div className="w-full sm:w-48 border-b border-gray-100 sm:border-b-0 sm:border-r bg-gray-50">
+              <div className="w-full sm:w-48 border-b border-gray-100 sm:border-b-0 sm:border-r bg-gray-50 max-h-48 overflow-y-auto sm:max-h-none">
                 <div className="p-3 space-y-1">
                   {predefinedRanges.map((range, index) => {
                     const rangeValue = range.getValue();
