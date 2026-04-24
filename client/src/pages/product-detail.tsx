@@ -257,6 +257,8 @@ export default function ProductDetail() {
     if (expiryPopoverBatchId === null) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (expiryPopoverRef.current && !expiryPopoverRef.current.contains(e.target as Node)) {
+        const dateInput = expiryPopoverRef.current.querySelector('input[type="date"]');
+        if (dateInput && document.activeElement === dateInput) return;
         setExpiryPopoverBatchId(null);
       }
     };
@@ -700,21 +702,31 @@ export default function ProductDetail() {
                                           type="date"
                                           autoFocus
                                           value={expiryInputValue}
-                                          disabled={updateExpiryMutation.isPending}
-                                          onChange={(e) => {
-                                            const newVal = e.target.value;
-                                            setExpiryInputValue(newVal);
-                                            if (newVal) {
-                                              updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: newVal });
-                                            }
-                                          }}
-                                          className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2 disabled:opacity-50"
+                                          onChange={(e) => setExpiryInputValue(e.target.value)}
+                                          className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2"
                                         />
                                         <div className="flex gap-1.5 justify-end">
+                                          <button
+                                            onClick={() => {
+                                              if (expiryInputValue) {
+                                                updateExpiryMutation.mutate(
+                                                  { batchId: batch.id, expiryDate: expiryInputValue },
+                                                  { onSuccess: () => setExpiryPopoverBatchId(null) }
+                                                );
+                                              }
+                                            }}
+                                            disabled={!expiryInputValue || updateExpiryMutation.isPending}
+                                            className="text-xs text-white bg-green-600 hover:bg-green-700 rounded px-2 py-1.5 disabled:opacity-50"
+                                          >
+                                            {updateExpiryMutation.isPending ? "Saving…" : "Save"}
+                                          </button>
                                           {batch.expiryDate && (
                                             <button
                                               onClick={() =>
-                                                updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: null })
+                                                updateExpiryMutation.mutate(
+                                                  { batchId: batch.id, expiryDate: null },
+                                                  { onSuccess: () => setExpiryPopoverBatchId(null) }
+                                                )
                                               }
                                               disabled={updateExpiryMutation.isPending}
                                               className="text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded px-2 py-1.5 disabled:opacity-50"
