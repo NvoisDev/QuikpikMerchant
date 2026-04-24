@@ -24,6 +24,7 @@ import {
   priceLists, priceListItems, priceListAssignments,
   cancellationRefundTypeToEmailStatus,
   customerPhoneVerifications,
+  productBatches, subscriptionAuditLogs,
 } from "@shared/schema";
 import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
@@ -99,6 +100,7 @@ export {
   priceLists, priceListItems, priceListAssignments,
   cancellationRefundTypeToEmailStatus,
   customerPhoneVerifications,
+  productBatches, subscriptionAuditLogs,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,

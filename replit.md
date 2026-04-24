@@ -25,6 +25,21 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Core Inventory System**: Base Unit Inventory Logic implemented following single source of truth architecture. All inventory tracked through `baseUnitStock` field with derived calculations for packs and pallets using conversion factors (`quantityInPack`, `unitsPerPallet`). Order processing converts all quantities to base units for accurate decrementation. Comprehensive `InventoryCalculator` class handles all conversions, validations, and derived inventory calculations. Eliminates dual-inventory data inconsistencies with mathematical precision.
 - **Key Features**: Product management (catalog, stock, promotions, AI), customer & order management (grouping, multi-fulfillment, Stripe, email notifications), WhatsApp marketing (Twilio, WhatsApp Business API, AI personalization), subscription & team management (tiered plans, permissions, usage tracking), business intelligence (campaign analytics, financial reporting, stock analysis), robust order processing logic with atomic transactions and duplicate detection, and a comprehensive subscription system. Critical fixes for Stripe API version and authentication flow simplification. Implementation of comprehensive customer onboarding and access management system with SMS, email, WhatsApp notifications, customer analytics, dynamic pricing optimization, and a customer registration request review system. Wholesaler preview store access implemented. Advanced business intelligence capabilities including comprehensive customer insights service with behavioral analytics, dynamic pricing optimization based on demand patterns, and marketplace expansion opportunities identification. Immediate business impact features including comprehensive order tracking notifications via SMS/WhatsApp/email, intelligent quick order templates, frequently ordered products analysis, and one-click reorder functionality. Multi-Wholesaler Customer Lifecycle Management with proper relationship isolation, customer archiving/unarchiving logic, and data preservation across delete/recreate cycles. Parcel2Go integration removed — all shipping routes that called the P2G API are deleted; `server/parcel2go.ts` is gone; shipping creation falls back to local reference generation. Delivery cost (shippingCost) on the Thank You page now correctly reads from Stripe metadata instead of defaulting to £0.
 
+### Admin Control Centre (`/admin`, `/super-admin`)
+- Sidebar-driven layout (separate from wholesaler `AppLayout`) with 8 sections: Overview, Wholesalers, Customers, Orders, Products, Financials, System Settings, Customer Map
+- **Overview**: Live KPI cards (active wholesalers, orders this month, GMV, MRR) + alert strip for stuck orders, plan breakdown, revenue breakdown
+- **Wholesalers**: Table with status toggles + detail drawer showing recent 10 orders, GMV, plan, last-active date
+- **Customers**: Free-text/phone search across all retailers (`GET /api/admin/customers`), results table, side panel with order history, "Flag as suspicious" toggle (`PATCH /api/admin/customers/:id/flag`)
+- **Orders**: Global order list with status/wholesaler/date-range filters, Resend Invoice per row (`POST /api/admin/orders/:id/resend-invoice`)
+- **Products Oversight**: Cross-wholesaler product table (`GET /api/admin/products`) with missing cost price / low margin (<10%) / zero stock visual badges, sort by margin ascending
+- **Financials**: Revenue breakdown with wholesaler-level drill-down, date presets, per-order breakdown
+- **System Settings**: Read-only fee config cards, subscription plan info, subscription activation utility
+- **Customer Map**: Preserved geocoding map with type filters and re-geocode
+- **Quick Actions**: Modal for Resend Invoice (order ID input) + Contact Wholesaler (mailto)
+- Responsive: sidebar collapses to hamburger on mobile, main content fills viewport
+- New schema column: `users.is_suspicious` (boolean, default false)
+- New endpoints: `GET /api/admin/customers`, `GET /api/admin/customers/:id/orders`, `PATCH /api/admin/customers/:id/flag`, `GET /api/admin/products`, `GET /api/admin/alerts`, `GET /api/admin/wholesalers/:id/orders`, `POST /api/admin/orders/:id/resend-invoice`
+
 ### Data Storage
 - **Primary Database**: PostgreSQL via Neon serverless.
 - **Schema Management**: Drizzle migrations.

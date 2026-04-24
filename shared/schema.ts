@@ -249,6 +249,8 @@ export const users = pgTable("users", {
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
   geocodeStatus: varchar("geocode_status", { length: 10 }), // 'success' | 'flagged'
 
+  isSuspicious: boolean("is_suspicious").default(false), // Admin-flagged suspicious customer
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
