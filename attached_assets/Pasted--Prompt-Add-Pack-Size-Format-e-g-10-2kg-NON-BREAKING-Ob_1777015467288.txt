@@ -1,0 +1,116 @@
+🧾 Prompt: Add Pack Size Format (e.g. “10 × 2kg”) – NON-BREAKING
+🎯 Objective
+
+Display product pack size in the format:
+
+"10 × 2kg"
+"24 × 250mL"
+
+across:
+
+Product information card
+Product detail (full view) page
+Invoices
+Quotes
+
+This is display-only metadata and must NOT affect any calculations or existing logic.
+
+🚨 NON-NEGOTIABLE RULES
+1. NO impact on logic
+Do NOT modify:
+Pricing calculations
+Stock calculations
+Order quantities
+Batch logic
+
+👉 This is informational only
+
+2. NO breaking schema changes
+Do NOT rename or remove existing fields
+Only add optional fields if required
+3. NO behavioural changes
+Orders, invoices, and quotes must behave exactly the same
+This must not affect totals, weights, or units used in logic
+🧠 Data Structure (SAFE APPROACH)
+Option A (Preferred – structured)
+
+Add optional fields to products:
+
+pack_quantity   (e.g. 10)
+pack_unit_size  (e.g. 2)
+pack_unit_type  (e.g. "kg", "g", "mL", "L")
+Option B (Fallback – simple)
+pack_display = "10 × 2kg"
+
+👉 Use only if structured fields are not feasible
+
+🧮 Display Logic
+
+If structured fields exist:
+
+pack_display = pack_quantity + " × " + pack_unit_size + pack_unit_type
+
+Example:
+
+10 × 2kg
+24 × 250mL
+📍 Where to Display (Subtle Placement)
+1. Product Card (List View)
+Show under product name or near unit type
+Smaller font / muted colour
+
+Example:
+
+Heineken Beer
+24 × 250mL
+2. Product Detail Page
+Include in Product Info section
+Pack Size: 24 × 250mL
+3. Invoice
+Show under product name in line item
+Heineken Beer  
+24 × 250mL
+
+👉 Do NOT affect line totals or layout structure
+
+4. Quotes
+Same as invoice placement
+Subtle, secondary text
+🎨 UX Guidelines
+Use muted/secondary text style
+Do NOT bold or highlight
+Keep it informative, not dominant
+⚠️ Edge Cases
+If pack data is missing:
+DO NOT display anything
+Avoid showing:
+"0 × 0"
+⚙️ Backend / API
+Add pack fields to product response:
+{
+  "pack_quantity": 24,
+  "pack_unit_size": 250,
+  "pack_unit_type": "mL"
+}
+
+👉 No changes to existing endpoints required beyond optional fields
+
+🧪 Acceptance Criteria
+Pack size displays correctly across all listed areas
+No change to pricing, stock, or calculations
+No UI breakage on invoices or quotes
+Hidden if no data exists
+Consistent formatting across platform
+🧠 Sanity Check
+
+If implementation:
+
+“Uses pack size in calculations”
+
+🚫 WRONG
+
+If implementation:
+
+“Displays pack size as additional product info only”
+
+✅ Correct
