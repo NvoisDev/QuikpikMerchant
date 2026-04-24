@@ -95,6 +95,7 @@ interface Product {
   costPrice?: string | null;
   unitWeight?: string | null;
   palletWeight?: string | null;
+  totalPackageWeight?: string | null;
   quantityInPack?: number;
   unitSize?: string | null;
   unitOfMeasure?: string | null;
@@ -263,9 +264,12 @@ export default function QuickQuote() {
     const baseCost = sellingType === 'pallets' && product.unitsPerPallet
       ? unitCost * product.unitsPerPallet
       : unitCost;
+    const parsedUnitWeight = parseFloat(product.unitWeight ?? '0') || 0;
     const weightKg = sellingType === 'pallets'
       ? (product.palletWeight ? parseFloat(product.palletWeight) : 0)
-      : (product.unitWeight ? parseFloat(product.unitWeight) * (product.quantityInPack || 1) : 0);
+      : parsedUnitWeight > 0
+        ? parsedUnitWeight * (product.quantityInPack || 1)
+        : parseFloat(product.totalPackageWeight ?? '0') || 0;
     
     // Check if already added with same product AND selling type
     const existingIndex = quoteItems.findIndex(
