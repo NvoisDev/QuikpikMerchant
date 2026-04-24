@@ -22,7 +22,8 @@ import {
   Calendar, MapPin, AlertTriangle, RefreshCw, Package, DollarSign, Settings,
   ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
-  Activity, LogIn, Terminal, Clock, UserCheck, Zap,
+  Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
+  BadgeCheck,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
@@ -56,7 +57,7 @@ const planBadge = (tier: string | null) => {
   return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Free</span>;
 };
 
-type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "map" | "logs";
+type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "plans" | "map" | "logs";
 
 // ── Shared data interfaces ────────────────────────────────────────────────────
 interface PlatformStats {
@@ -79,6 +80,7 @@ interface WholesalerRow {
   id: string; email: string; firstName: string | null; lastName: string | null;
   businessName: string | null; phoneNumber: string | null;
   subscriptionTier: string | null; subscriptionStatus: string | null;
+  currentPlan: string | null; stripeSubscriptionId: string | null;
   archived: boolean; createdAt: string;
   orderCount: number; totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
 }
@@ -128,6 +130,7 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType<{ clas
   { id: "products",    label: "Products",          icon: Package },
   { id: "financials",  label: "Financials",        icon: TrendingUp },
   { id: "settings",    label: "System Settings",   icon: Settings },
+  { id: "plans",       label: "Plans",             icon: CreditCard },
   { id: "map",         label: "Customer Map",      icon: MapPin },
   { id: "logs",        label: "Support & Logs",    icon: Activity },
 ];
@@ -173,6 +176,241 @@ function Row({ label, value, bold, color }: { label: string; value: string | num
     <div className="flex items-center justify-between">
       <span className="text-xs text-gray-500">{label}</span>
       <span className={`text-xs ${bold ? "font-bold" : "font-medium"}`} style={{ color: color || "#374151" }}>{value}</span>
+    </div>
+  );
+}
+
+// ── Plans Section ─────────────────────────────────────────────────────────────
+interface AdminPlanRow {
+  id: number; name: string; planId: string; monthlyPrice: string;
+  billingInterval: string | null; version: number | null;
+  isActive: boolean; sortOrder: number; subscriberCount: number; mrr: number;
+  features: string[]; limits: Record<string, number>;
+  stripeProductId: string | null; stripePriceId: string | null;
+  createdAt: string;
+}
+
+function PlansSection({ isAdmin }: { isAdmin: boolean }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<AdminPlanRow | null>(null);
+  const [form, setForm] = useState({
+    name: "", price: "", billingInterval: "monthly",
+    description: "", featuresRaw: "", limitsProducts: "", limitsTeamMembers: "",
+    limitsPriceLists: "", limitsCustomGroups: "", limitsBroadcasts: "",
+  });
+
+  const { data, isLoading } = useQuery<{ plans: AdminPlanRow[] }>({
+    queryKey: ["/api/admin/plans"],
+    enabled: isAdmin,
+  });
+  const plans = data?.plans ?? [];
+
+  const createPlan = useMutation({
+    mutationFn: async (body: object) => {
+      const r = await apiRequest("POST", "/api/admin/plans", body);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plans"] });
+      toast({ title: "Plan created" });
+      setNewPlanOpen(false);
+      setForm({ name: "", price: "", billingInterval: "monthly", description: "", featuresRaw: "", limitsProducts: "", limitsTeamMembers: "", limitsPriceLists: "", limitsCustomGroups: "", limitsBroadcasts: "" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const archivePlan = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("PATCH", `/api/admin/plans/${id}/archive`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plans"] });
+      toast({ title: "Plan archived — hidden from new signups" });
+      setArchiveTarget(null);
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const handleCreate = () => {
+    const featuresList = form.featuresRaw.split("\n").map(s => s.trim()).filter(Boolean);
+    const toLimit = (v: string) => v.trim() === "" || v.trim() === "∞" || v.trim() === "-1" ? -1 : parseInt(v) || 0;
+    const limits: Record<string, number> = {};
+    if (form.limitsProducts.trim())     limits.products     = toLimit(form.limitsProducts);
+    if (form.limitsTeamMembers.trim())  limits.teamMembers  = toLimit(form.limitsTeamMembers);
+    if (form.limitsPriceLists.trim())   limits.priceLists   = toLimit(form.limitsPriceLists);
+    if (form.limitsCustomGroups.trim()) limits.customGroups = toLimit(form.limitsCustomGroups);
+    if (form.limitsBroadcasts.trim())   limits.broadcasts   = toLimit(form.limitsBroadcasts);
+    createPlan.mutate({ name: form.name, price: form.price, billingInterval: form.billingInterval, description: form.description, features: featuresList, limits });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Subscription Plans</h2>
+          <p className="text-xs text-gray-400">Manage plan tiers, pricing, and limits. Existing plans are immutable — create new versions instead.</p>
+        </div>
+        <Button size="sm" className="text-white text-xs gap-1.5" style={{ background: GREEN }} onClick={() => setNewPlanOpen(true)}>
+          <PlusCircle className="h-3.5 w-3.5" />New Plan
+        </Button>
+      </div>
+
+      <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-gray-400">Loading plans…</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent bg-[#f0faf4]">
+                    {["Plan","Price","Interval","Subscribers","MRR","Status",""].map((h, i) => (
+                      <TableHead key={i} className="text-xs font-semibold" style={{ color: GREEN }}>{h}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plans.map(p => (
+                    <TableRow key={p.id} className={p.isActive ? "hover:bg-green-50/30" : "opacity-50 bg-gray-50"}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold text-gray-800">{p.name}</p>
+                          {p.version && p.version > 1 && <span className="text-xs text-gray-400">v{p.version}</span>}
+                        </div>
+                        {p.planId && <p className="text-xs text-gray-400 font-mono">{p.planId}</p>}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-gray-800">
+                        {parseFloat(p.monthlyPrice) === 0 ? "Free" : `£${parseFloat(p.monthlyPrice).toFixed(2)}`}
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-500 capitalize">{p.billingInterval || "monthly"}</TableCell>
+                      <TableCell className="text-xs text-right text-gray-700 font-medium">{p.subscriberCount}</TableCell>
+                      <TableCell className="text-xs text-right font-bold" style={{ color: GREEN }}>
+                        {p.mrr > 0 ? fmt(p.mrr) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {p.isActive
+                          ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 border border-green-200" style={{ color: GREEN }}><BadgeCheck className="h-3 w-3" />Active</span>
+                          : <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-gray-500"><Archive className="h-3 w-3" />Archived</span>
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {p.isActive && p.planId !== 'free' && (
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200"
+                            onClick={() => setArchiveTarget(p)}>
+                            Archive
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* New Plan Modal */}
+      <Dialog open={newPlanOpen} onOpenChange={setNewPlanOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" style={{ color: GREEN }} />Create New Plan
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-lg p-3">
+              Creating a new plan does <strong>not</strong> affect existing subscribers. A new Stripe Product + Price will be created automatically for paid plans.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-600">Plan name *</Label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Growth" className="h-8 text-xs mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Price (£) *</Label>
+                <Input value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0 for free" type="number" min="0" step="0.01" className="h-8 text-xs mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Billing interval</Label>
+                <select value={form.billingInterval} onChange={e => setForm(f => ({ ...f, billingInterval: e.target.value }))} className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 mt-1 bg-white focus:outline-none">
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-600">Description</Label>
+                <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description shown to wholesalers" className="h-8 text-xs mt-1" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-600">Features (one per line)</Label>
+                <textarea value={form.featuresRaw} onChange={e => setForm(f => ({ ...f, featuresRaw: e.target.value }))}
+                  placeholder={"Up to 10 products\nUnlimited price lists\nPriority support"} rows={4}
+                  className="w-full text-xs border border-gray-200 rounded-md px-3 py-2 mt-1 focus:outline-none resize-none" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-2">Limits <span className="text-gray-400 font-normal">(leave blank = inherit default, -1 or ∞ = unlimited)</span></p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { field: "limitsProducts" as const, label: "Products" },
+                  { field: "limitsTeamMembers" as const, label: "Team members" },
+                  { field: "limitsPriceLists" as const, label: "Price lists" },
+                  { field: "limitsCustomGroups" as const, label: "Customer groups" },
+                  { field: "limitsBroadcasts" as const, label: "Broadcasts/mo" },
+                ].map(({ field, label }) => (
+                  <div key={field}>
+                    <Label className="text-xs text-gray-500">{label}</Label>
+                    <Input value={form[field]} onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))} placeholder="—" className="h-7 text-xs mt-0.5" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setNewPlanOpen(false)}>Cancel</Button>
+            <Button size="sm" className="text-xs text-white" style={{ background: GREEN }}
+              disabled={!form.name.trim() || !form.price.trim() || createPlan.isPending}
+              onClick={handleCreate}>
+              {createPlan.isPending ? "Creating…" : "Create plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive confirmation dialog */}
+      <Dialog open={!!archiveTarget} onOpenChange={open => { if (!open) setArchiveTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Archive className="h-4 w-4 text-amber-600" />Archive plan
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-gray-700">Archive <strong>{archiveTarget?.name}</strong>?</p>
+            {(archiveTarget?.subscriberCount ?? 0) > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
+                <strong>{archiveTarget?.subscriberCount}</strong> wholesaler{archiveTarget?.subscriberCount !== 1 ? "s" : ""} currently on this plan. They will remain on it and continue to be billed — archiving only hides it from new signups.
+              </div>
+            )}
+            <p className="text-xs text-gray-500">This plan will no longer appear on the pricing page for new wholesalers.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setArchiveTarget(null)}>Cancel</Button>
+            <Button size="sm" className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={archivePlan.isPending}
+              onClick={() => archiveTarget && archivePlan.mutate(archiveTarget.id)}>
+              {archivePlan.isPending ? "Archiving…" : "Archive plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -410,6 +648,30 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [selectedWholesaler, setSelectedWholesaler] = useState<WholesalerRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [impersonateTarget, setImpersonateTarget] = useState<WholesalerRow | null>(null);
+  const [changePlanId, setChangePlanId] = useState("");
+  const [changePlanConfirm, setChangePlanConfirm] = useState(false);
+
+  const { data: allPlansData } = useQuery<{ plans: AdminPlanRow[] }>({
+    queryKey: ["/api/admin/plans"],
+    enabled: isAdmin,
+  });
+  const activePlans = (allPlansData?.plans ?? []).filter(p => p.isActive);
+
+  const changePlanMutation = useMutation({
+    mutationFn: async ({ id, planId }: { id: string; planId: string }) => {
+      const r = await apiRequest("POST", `/api/admin/wholesalers/${id}/change-plan`, { planId });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      toast({ title: "Plan changed successfully" });
+      setChangePlanConfirm(false);
+      setChangePlanId("");
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
 
   const impersonateMutation = useMutation({
     mutationFn: async (id: string): Promise<{ success: boolean; wholesalerId: string; businessName: string; token: string }> => {
@@ -594,6 +856,35 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   </div>
                 )}
               </div>
+              {/* Change Plan */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5" style={{ color: GREEN }} />Change Plan
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={changePlanId}
+                    onChange={e => setChangePlanId(e.target.value)}
+                    className="flex-1 h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none"
+                  >
+                    <option value="">— Select new plan —</option>
+                    {activePlans.map(p => (
+                      <option key={p.planId} value={p.planId}>
+                        {p.name} {parseFloat(p.monthlyPrice) > 0 ? `(£${parseFloat(p.monthlyPrice).toFixed(2)}/${p.billingInterval || "mo"})` : "(Free)"}
+                        {p.planId === (selectedWholesaler.currentPlan || "free") ? " ✓ current" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button size="sm" className="h-8 text-xs text-white gap-1" style={{ background: GREEN }}
+                    disabled={!changePlanId || changePlanId === (selectedWholesaler.currentPlan || "free") || changePlanMutation.isPending}
+                    onClick={() => setChangePlanConfirm(true)}>
+                    Apply
+                  </Button>
+                </div>
+                {changePlanId && changePlanId === (selectedWholesaler.currentPlan || "free") && (
+                  <p className="text-xs text-amber-600 mt-1">This is already their current plan.</p>
+                )}
+              </div>
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="outline" className="text-xs flex-1" onClick={() => { toggleStatus.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
                   {selectedWholesaler.archived ? "Activate account" : "Suspend account"}
@@ -608,6 +899,39 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Change Plan Confirmation Dialog */}
+      <Dialog open={changePlanConfirm} onOpenChange={open => { if (!open) { setChangePlanConfirm(false); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4" style={{ color: GREEN }} />Change Subscription Plan
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-gray-700">
+              Change <strong>{selectedWholesaler?.businessName || selectedWholesaler?.email}</strong> from <strong>{selectedWholesaler?.currentPlan || "free"}</strong> to <strong>{changePlanId}</strong>?
+            </p>
+            {selectedWholesaler?.stripeSubscriptionId ? (
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700">
+                This wholesaler has an active Stripe subscription. The plan will be swapped with proration applied immediately.
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700">
+                No active Stripe subscription found. This is an admin override — the plan will be set directly without Stripe billing.
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setChangePlanConfirm(false)}>Cancel</Button>
+            <Button size="sm" className="text-xs text-white" style={{ background: GREEN }}
+              disabled={changePlanMutation.isPending}
+              onClick={() => selectedWholesaler && changePlanMutation.mutate({ id: selectedWholesaler.id, planId: changePlanId })}>
+              {changePlanMutation.isPending ? "Changing…" : "Confirm change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Impersonation confirmation dialog */}
       <Dialog open={!!impersonateTarget} onOpenChange={open => { if (!open) setImpersonateTarget(null); }}>
@@ -2411,6 +2735,9 @@ export default function SuperAdmin() {
           )}
           {activeSection === "settings" && (
             <SystemSettingsSection isAdmin={isAdmin} />
+          )}
+          {activeSection === "plans" && (
+            <PlansSection isAdmin={isAdmin} />
           )}
           {activeSection === "logs" && (
             <SupportLogsSection isAdmin={isAdmin} wholesalers={wholesalers} />

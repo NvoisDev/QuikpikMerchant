@@ -34,6 +34,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Products Oversight**: Cross-wholesaler product table (`GET /api/admin/products`) with missing cost price / low margin (<10%) / zero stock visual badges, sort by margin ascending
 - **Financials**: Revenue breakdown with wholesaler-level drill-down, date presets, per-order breakdown
 - **System Settings**: Read-only fee config cards, subscription plan info, subscription activation utility
+- **Plans**: Full subscription plan management — table of all plans with subscriber count + MRR, "New Plan" modal (creates Stripe Product+Price for paid plans, derives planId slug, stores billingInterval and version), Archive plan (non-destructive, hides from new signups), Change Plan from wholesaler drawer (proration via Stripe if sub exists, admin override if no Stripe sub)
 - **Customer Map**: Preserved geocoding map with type filters and re-geocode
 - **Quick Actions**: Modal for Resend Invoice (order ID input) + Contact Wholesaler (mailto)
 - Responsive: sidebar collapses to hamburger on mobile, main content fills viewport

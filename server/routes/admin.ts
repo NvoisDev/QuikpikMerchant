@@ -4,7 +4,7 @@ import {
   ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
-  adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications,
+  adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
 } from "./shared";
 
 // Helper: get the effective admin email (handles impersonation mode)
@@ -1176,6 +1176,212 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin errors error:', error);
       res.status(500).json({ error: 'Failed to fetch error log' });
+    }
+  });
+
+  // ── Subscription Plan Management (admin-only) ────────────────────────────────
+
+  // GET /api/admin/plans — list all plans with subscriber count + MRR
+  app.get('/api/admin/plans', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const plans = await db.select().from(subscriptionPlans).orderBy(asc(subscriptionPlans.sortOrder), asc(subscriptionPlans.createdAt));
+
+      // Count active subscribers per planId
+      const subCounts = await db
+        .select({ planId: userSubscriptions.planId, cnt: count() })
+        .from(userSubscriptions)
+        .where(and(
+          sql`${userSubscriptions.status} IN ('active','trialing','past_due')`,
+        ))
+        .groupBy(userSubscriptions.planId);
+      const countMap: Record<string, number> = {};
+      for (const row of subCounts) { if (row.planId) countMap[row.planId] = Number(row.cnt); }
+
+      const result = plans.map(p => ({
+        ...p,
+        subscriberCount: countMap[p.planId] || 0,
+        mrr: (countMap[p.planId] || 0) * parseFloat(p.monthlyPrice as string),
+      }));
+
+      res.json({ plans: result });
+    } catch (error) {
+      console.error('Admin plans error:', error);
+      res.status(500).json({ error: 'Failed to fetch plans' });
+    }
+  });
+
+  // POST /api/admin/plans — create new plan + Stripe Product + Price
+  app.post('/api/admin/plans', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { name, price, billingInterval = 'monthly', features = [], limits = {}, description = '' } = req.body;
+      if (!name || price === undefined || price === null) return res.status(400).json({ error: 'name and price are required' });
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ error: 'price must be a non-negative number' });
+
+      // Derive a planId slug from the name
+      const basePlanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+      // Determine version: check if same planId base already exists
+      const existing = await db.select({ planId: subscriptionPlans.planId })
+        .from(subscriptionPlans)
+        .where(sql`${subscriptionPlans.planId} LIKE ${basePlanId + '%'}`);
+      const version = existing.length > 0 ? existing.length + 1 : 1;
+      const planId = version === 1 ? basePlanId : `${basePlanId}_v${version}`;
+
+      // Determine sortOrder (after existing plans)
+      const maxSort = await db.select({ s: sql<number>`MAX(${subscriptionPlans.sortOrder})` }).from(subscriptionPlans);
+      const sortOrder = (Number(maxSort[0]?.s) || 0) + 1;
+
+      let stripeProductId: string | null = null;
+      let stripePriceId: string | null = null;
+
+      // For paid plans, create Stripe Product + Price
+      if (priceNum > 0) {
+        try {
+          const product = await stripe.products.create({
+            name,
+            description: description || `Quikpik ${name} plan`,
+            metadata: { planId, platform: 'quikpik' },
+          });
+          stripeProductId = product.id;
+
+          const stripeInterval = billingInterval === 'yearly' ? 'year' : 'month';
+          const stripePrice = await stripe.prices.create({
+            product: product.id,
+            unit_amount: Math.round(priceNum * 100),
+            currency: 'gbp',
+            recurring: { interval: stripeInterval },
+            metadata: { planId, platform: 'quikpik' },
+          });
+          stripePriceId = stripePrice.id;
+        } catch (stripeError: any) {
+          console.error('Stripe product/price creation failed:', stripeError?.message);
+          return res.status(502).json({ error: `Stripe error: ${stripeError?.message || 'unknown'}` });
+        }
+      }
+
+      const [created] = await db.insert(subscriptionPlans).values({
+        name,
+        planId,
+        stripeProductId,
+        stripePriceId,
+        monthlyPrice: priceNum.toFixed(2),
+        currency: 'GBP',
+        description,
+        features: Array.isArray(features) ? features : [],
+        limits,
+        billingInterval,
+        version,
+        isActive: true,
+        sortOrder,
+      }).returning();
+
+      res.status(201).json({ plan: created });
+    } catch (error) {
+      console.error('Admin create plan error:', error);
+      res.status(500).json({ error: 'Failed to create plan' });
+    }
+  });
+
+  // PATCH /api/admin/plans/:id/archive — set isActive = false (safe, non-destructive)
+  app.patch('/api/admin/plans/:id/archive', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const planRecord = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, parseInt(req.params.id))).limit(1);
+      if (!planRecord[0]) return res.status(404).json({ error: 'Plan not found' });
+
+      await db.update(subscriptionPlans)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(subscriptionPlans.id, parseInt(req.params.id)));
+
+      res.json({ success: true, planId: planRecord[0].planId });
+    } catch (error) {
+      console.error('Admin archive plan error:', error);
+      res.status(500).json({ error: 'Failed to archive plan' });
+    }
+  });
+
+  // POST /api/admin/wholesalers/:id/change-plan — manual plan reassignment
+  app.post('/api/admin/wholesalers/:id/change-plan', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { planId: newPlanId } = req.body;
+      if (!newPlanId) return res.status(400).json({ error: 'planId is required' });
+
+      const [targetUser] = await db.select().from(users)
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
+      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
+
+      const [targetPlan] = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, newPlanId));
+      if (!targetPlan) return res.status(400).json({ error: 'Plan not found' });
+
+      const limits = (targetPlan.limits as { products?: number } | null);
+      const productLimit = (limits?.products ?? 2);
+      const currentStripeSubId = targetUser.stripeSubscriptionId;
+
+      if (currentStripeSubId) {
+        if (newPlanId === 'free') {
+          // Downgrade to free: cancel the Stripe subscription with proration
+          await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id);
+        } else if (targetPlan.stripePriceId) {
+          // Paid → paid: swap price with proration
+          await SubscriptionService.upgradeSubscriptionWithProration(
+            currentStripeSubId,
+            targetPlan.stripePriceId,
+            newPlanId,
+          );
+          // Update DB to reflect new plan
+          await storage.updateUser(targetUser.id, {
+            currentPlan: newPlanId,
+            subscriptionTier: newPlanId,
+            subscriptionStatus: 'active',
+            productLimit,
+          });
+          await db.update(userSubscriptions).set({
+            planId: newPlanId,
+            status: 'active',
+            cancelAtPeriodEnd: false,
+            updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, targetUser.id));
+        }
+      } else {
+        // No active Stripe subscription — admin comped / force-set
+        await storage.updateUser(targetUser.id, {
+          currentPlan: newPlanId,
+          subscriptionTier: newPlanId,
+          subscriptionStatus: newPlanId === 'free' ? 'free' : 'active',
+          productLimit,
+          stripeSubscriptionId: null,
+        });
+        // Upsert userSubscriptions record
+        const [existingSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, targetUser.id));
+        if (existingSub) {
+          await db.update(userSubscriptions).set({
+            planId: newPlanId,
+            status: newPlanId === 'free' ? 'canceled' : 'active',
+            updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, targetUser.id));
+        } else if (newPlanId !== 'free') {
+          await db.insert(userSubscriptions).values({
+            userId: targetUser.id,
+            planId: newPlanId,
+            status: 'active',
+          });
+        }
+      }
+
+      res.json({ success: true, userId: targetUser.id, newPlanId });
+    } catch (error) {
+      console.error('Admin change-plan error:', error);
+      res.status(500).json({ error: 'Failed to change plan' });
     }
   });
 
