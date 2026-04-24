@@ -166,6 +166,10 @@ async function runStartupMigrations() {
     `CREATE TRIGGER trg_parse_order_number
      BEFORE INSERT ON orders
      FOR EACH ROW EXECUTE FUNCTION fn_parse_order_number_parts()`,
+    // Task #479: Drop stale negotiation schema — negotiations table and its two columns on products
+    `DROP TABLE IF EXISTS negotiations`,
+    `ALTER TABLE products DROP COLUMN IF EXISTS negotiation_enabled`,
+    `ALTER TABLE products DROP COLUMN IF EXISTS minimum_bid_price`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
