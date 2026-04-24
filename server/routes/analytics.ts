@@ -159,15 +159,16 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       if (hoursDifference <= 24) {
         // Hourly — today or yesterday
-        const currentHour = now.getHours();
         const isToday = actualEndDate.toDateString() === now.toDateString();
-        const maxHour = isToday ? currentHour : 23;
+        // Use elapsed hours from startDate so we stay timezone-safe
+        // (setHours would use server UTC and produce the wrong day for UTC-offset clients)
+        const maxHour = isToday
+          ? Math.floor((now.getTime() - startDate.getTime()) / 3_600_000)
+          : 23;
 
         for (let hour = 0; hour <= maxHour; hour++) {
-          const hourStart = new Date(startDate);
-          hourStart.setHours(hour, 0, 0, 0);
-          const hourEnd = new Date(startDate);
-          hourEnd.setHours(hour, 59, 59, 999);
+          const hourStart = new Date(startDate.getTime() + hour * 3_600_000);
+          const hourEnd   = new Date(startDate.getTime() + (hour + 1) * 3_600_000 - 1);
 
           const hourOrders = orders.filter(order => {
             const orderDate = new Date(order.createdAt || Date.now());
@@ -184,11 +185,8 @@ export function registerAnalyticsRoutes(app: Express): void {
         // Daily with weekday names — 2 to 7 days
         const daysDiff = Math.ceil(hoursDifference / 24);
         for (let i = 0; i < daysDiff; i++) {
-          const dayStart = new Date(startDate);
-          dayStart.setDate(startDate.getDate() + i);
-          dayStart.setHours(0, 0, 0, 0);
-          const dayEnd = new Date(dayStart);
-          dayEnd.setHours(23, 59, 59, 999);
+          const dayStart = new Date(startDate.getTime() + i * 86_400_000);
+          const dayEnd   = new Date(startDate.getTime() + (i + 1) * 86_400_000 - 1);
 
           if (dayStart > now) break;
 
@@ -207,11 +205,8 @@ export function registerAnalyticsRoutes(app: Express): void {
         // Daily with date labels — 8 to 31 days
         const daysDiff = Math.ceil(hoursDifference / 24);
         for (let i = 0; i < daysDiff; i++) {
-          const dayStart = new Date(startDate);
-          dayStart.setDate(startDate.getDate() + i);
-          dayStart.setHours(0, 0, 0, 0);
-          const dayEnd = new Date(dayStart);
-          dayEnd.setHours(23, 59, 59, 999);
+          const dayStart = new Date(startDate.getTime() + i * 86_400_000);
+          const dayEnd   = new Date(startDate.getTime() + (i + 1) * 86_400_000 - 1);
 
           if (dayStart > now) break;
 
@@ -230,12 +225,8 @@ export function registerAnalyticsRoutes(app: Express): void {
         // Weekly buckets with date label — 32 to 90 days
         const weeks = Math.ceil(hoursDifference / (24 * 7));
         for (let i = 0; i < weeks; i++) {
-          const weekStart = new Date(startDate);
-          weekStart.setDate(startDate.getDate() + (i * 7));
-          weekStart.setHours(0, 0, 0, 0);
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
-          weekEnd.setHours(23, 59, 59, 999);
+          const weekStart = new Date(startDate.getTime() + i * 7 * 86_400_000);
+          const weekEnd   = new Date(startDate.getTime() + (i + 1) * 7 * 86_400_000 - 1);
 
           if (weekStart > now) break;
 
