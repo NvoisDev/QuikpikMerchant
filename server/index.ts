@@ -174,7 +174,7 @@ async function runStartupMigrations() {
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
   }
-  console.log("✅ Startup DB migrations applied (customer map columns)");
+  console.log(`✅ Startup DB migrations applied successfully (${migrations.length} statements)`);
 }
 
 // Idempotent fix: ensures the Stripe Price objects for Standard and Premium match the
