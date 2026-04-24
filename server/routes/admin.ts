@@ -134,6 +134,8 @@ export function registerAdminRoutes(app: Express): void {
           businessName: w.businessName,
           phoneNumber: w.phoneNumber,
           subscriptionTier: w.subscriptionTier || 'free',
+          currentPlan: w.currentPlan || w.subscriptionTier || 'free',
+          stripeSubscriptionId: w.stripeSubscriptionId || null,
           createdAt: w.createdAt,
           archived: w.archived,
           orderCount: stats.count,
@@ -1225,10 +1227,13 @@ export function registerAdminRoutes(app: Express): void {
       // Derive a planId slug from the name
       const basePlanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
-      // Determine version: check if same planId base already exists
+      // Determine version: match exact base slug OR versioned variants (e.g. "growth", "growth_v2")
       const existing = await db.select({ planId: subscriptionPlans.planId })
         .from(subscriptionPlans)
-        .where(sql`${subscriptionPlans.planId} LIKE ${basePlanId + '%'}`);
+        .where(or(
+          eq(subscriptionPlans.planId, basePlanId),
+          sql`${subscriptionPlans.planId} LIKE ${basePlanId + '_v%'}`,
+        ));
       const version = existing.length > 0 ? existing.length + 1 : 1;
       const planId = version === 1 ? basePlanId : `${basePlanId}_v${version}`;
 
@@ -1332,12 +1337,27 @@ export function registerAdminRoutes(app: Express): void {
           // Downgrade to free: cancel the Stripe subscription with proration
           await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id);
         } else if (targetPlan.stripePriceId) {
-          // Paid → paid: swap price with proration
-          await SubscriptionService.upgradeSubscriptionWithProration(
-            currentStripeSubId,
-            targetPlan.stripePriceId,
-            newPlanId,
-          );
+          // Paid → paid: branch upgrade vs downgrade by comparing prices
+          const [currentPlan] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
+            .from(subscriptionPlans)
+            .where(eq(subscriptionPlans.planId, targetUser.currentPlan || targetUser.subscriptionTier || 'free'));
+          const currentPrice = parseFloat((currentPlan?.monthlyPrice as string) || '0');
+          const newPrice = parseFloat(targetPlan.monthlyPrice as string);
+          const isDowngrade = newPrice < currentPrice;
+
+          if (isDowngrade) {
+            await SubscriptionService.immediateDowngradeWithProration(
+              currentStripeSubId,
+              targetPlan.stripePriceId,
+              newPlanId,
+            );
+          } else {
+            await SubscriptionService.upgradeSubscriptionWithProration(
+              currentStripeSubId,
+              targetPlan.stripePriceId,
+              newPlanId,
+            );
+          }
           // Update DB to reflect new plan
           await storage.updateUser(targetUser.id, {
             currentPlan: newPlanId,
