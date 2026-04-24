@@ -155,7 +155,10 @@ export default function Promotions() {
   useEffect(() => {
     if (!urlProductId || promosLoading || products.length === 0) return;
     setProductFilter(urlProductId);
-    if (isViewer) return; // viewers see the filtered list only — no dialog
+    if (isViewer) {
+      setIsDialogOpen(false); // ensure dialog stays closed even if auth resolves late
+      return;
+    }
     const existingPromos = promotions.filter((p) => String(p.productId) === urlProductId);
     if (existingPromos.length === 0) {
       setEditingPromo(null);
@@ -165,7 +168,7 @@ export default function Promotions() {
       openEdit(existingPromos[0]);
     }
     // 2+ promos: just show filtered list, no dialog
-  }, [urlProductId, promosLoading, products.length, promotions.length]);
+  }, [urlProductId, promosLoading, products.length, promotions.length, isViewer]);
 
   const createMutation = useMutation({
     mutationFn: async (data: { productId: string; body: Record<string, unknown> }) => {
