@@ -1,0 +1,137 @@
+🧾 Prompt: Customer Role Classification + Admin Map Filtering (NON-BREAKING)
+🎯 Objective
+
+Enable clear classification of users into:
+
+Wholesaler
+Retailer
+Individual
+
+So that the Admin → Customer Map can:
+
+Filter users by role
+Display meaningful segments
+Support platform insights and operations
+
+All changes must be additive and non-breaking.
+
+🧠 Core Principle
+
+Role should be explicit when possible, inferred when needed, and never block user flow
+
+🧱 PART 1: Data Model (SAFE ADDITION)
+Add field to users table:
+user_role = "wholesaler" | "retailer" | "individual" | null
+Optional (recommended for flexibility):
+business_type = "retailer" | "restaurant" | "shop" | "personal" | etc.
+
+👉 Helps later segmentation
+
+🧍‍♂️ PART 2: How Roles Are Assigned
+1. Wholesalers (Already Known) ✅
+Automatically assign:
+user_role = "wholesaler"
+
+👉 Based on:
+
+Business account creation
+Access to wholesaler dashboard
+2. Customers (Retailer vs Individual)
+Option A (BEST – Lightweight Prompt)
+
+During onboarding or first order:
+
+Ask:
+
+"Are you buying for a business or personal use?"
+
+Options:
+
+Business → retailer
+Personal → individual
+
+👉 Store response in user_role
+
+Option B (Zero friction fallback)
+
+If user skips:
+
+user_role = null
+
+👉 Then infer later (see below)
+
+3. Smart Inference (Background Logic)
+
+If user:
+
+Orders in bulk
+Uses business name
+Orders frequently
+
+👉 Auto-suggest:
+
+user_role = "retailer"
+
+⚠️ Do NOT auto-overwrite without confirmation
+
+🗺️ PART 3: Admin Map Enhancements
+Add Filters:
+[ All ] [ Wholesalers ] [ Retailers ] [ Individuals ]
+Map Markers:
+
+Use different styles:
+
+🏪 Wholesalers
+🛒 Retailers
+👤 Individuals
+Marker Info (on click):
+Name  
+Role  
+Location  
+Total Orders  
+Last Activity  
+🔍 PART 4: Filtering Logic
+WHERE user_role = selected_filter
+
+If:
+
+user_role IS NULL
+
+👉 Show under:
+
+"Unclassified"
+⚙️ PART 5: Admin Override (IMPORTANT)
+
+Allow admin to manually update role:
+
+user_role = retailer / individual
+
+👉 This ensures:
+
+Data can be corrected
+No reliance on user input only
+🚨 NON-NEGOTIABLE RULES
+Do NOT block onboarding with required role selection
+Do NOT break OTP login flow
+Do NOT change existing user flows
+Do NOT assume role without fallback
+🧪 Acceptance Criteria
+Users can be classified into roles
+Admin map can filter by role
+Wholesalers automatically identified
+Customers can be classified with minimal friction
+Existing users remain unaffected
+Unclassified users handled safely
+🧠 Sanity Check
+
+If implementation:
+
+“Forces all users to select role before using platform”
+
+🚫 WRONG (friction)
+
+If implementation:
+
+“Captures role naturally + allows admin override”
+
+✅ Correct
