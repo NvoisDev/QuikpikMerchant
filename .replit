@@ -69,4 +69,4 @@ APP_URL = "https://quikpik.app"
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 60000
+timeoutMs = 180000
