@@ -176,6 +176,9 @@ export default function ProductManagement() {
   const [editingExpiryBatchId, setEditingExpiryBatchId] = useState<number | null>(null);
   const [editingExpiryValue, setEditingExpiryValue] = useState<string>("");
   const expiryEditCancelledRef = useRef(false);
+  // Tracks the last value we auto-filled into unitWeight so we can allow subsequent
+  // auto-fills without trampling over a value the user manually typed
+  const lastAutoFilledUnitWeight = useRef('');
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
   const [topUpQuantity, setTopUpQuantity] = useState("");
@@ -348,18 +351,22 @@ export default function ProductManagement() {
           form.reset(safeData);
           console.log('✅ Form safely populated with complete data');
 
-          // Auto-fill unit weight on load if it's blank but unit of measure is weight-based
-          if (!safeData.unitWeight && safeData.unitSize && safeData.unitOfMeasure) {
-            const unit = BASE_UNITS.find(u => u.value === safeData.unitOfMeasure);
-            if (unit && unit.category === 'Weight' && unit.baseWeightKg) {
-              const size = parseFloat(safeData.unitSize as string);
-              if (size > 0) {
-                const autoKg = Math.round(size * unit.baseWeightKg * 1000) / 1000;
-                if (autoKg > 0) {
-                  form.setValue('unitWeight', autoKg.toString(), { shouldValidate: false });
-                }
+          // Auto-fill unit weight on load if it's blank but unit of measure is kg/g/lb/oz
+          const WEIGHT_TO_KG: Record<string, number> = { kg: 1, g: 0.001, lb: 0.453592, oz: 0.0283495 };
+          const loadConversionFactor = safeData.unitOfMeasure ? WEIGHT_TO_KG[safeData.unitOfMeasure as string] : undefined;
+          if (!safeData.unitWeight && safeData.unitSize && loadConversionFactor) {
+            const size = parseFloat(safeData.unitSize as string);
+            if (size > 0) {
+              const autoKg = Math.round(size * loadConversionFactor * 1000) / 1000;
+              if (autoKg > 0) {
+                const autoStr = autoKg.toString();
+                form.setValue('unitWeight', autoStr, { shouldValidate: false });
+                lastAutoFilledUnitWeight.current = autoStr;
               }
             }
+          } else {
+            // DB has a value the user set manually — don't track it as auto-filled
+            lastAutoFilledUnitWeight.current = '';
           }
         } catch (error) {
           console.error('❌ Safe form population failed:', error);
@@ -441,39 +448,50 @@ export default function ProductManagement() {
     return () => subscription.unsubscribe();
   }, [form, toast]);
 
-  // Auto-fill Unit Weight from Size per Unit when unit of measure is weight-based (kg, g, tonnes)
+  // Auto-fill Unit Weight from Size per Unit when unit of measure is kg / g / lb / oz
+  // Only overwrites unitWeight when it is blank OR when it still holds the last value we
+  // auto-filled (i.e. the user hasn't manually changed it since).
   useEffect(() => {
+    const WEIGHT_TO_KG: Record<string, number> = {
+      kg: 1,
+      g: 0.001,
+      lb: 0.453592,
+      oz: 0.0283495,
+    };
+
     const subscription = form.watch((values, { name }) => {
-      if (name === 'unitSize' || name === 'unitOfMeasure') {
-        const { unitSize = '', unitOfMeasure = '' } = values;
+      if (name !== 'unitSize' && name !== 'unitOfMeasure') return;
 
-        if (!unitSize || !unitOfMeasure) return;
+      const { unitSize = '', unitOfMeasure = '' } = values;
+      if (!unitSize || !unitOfMeasure) return;
 
-        const size = parseFloat(unitSize as string);
-        if (!size || size <= 0) return;
+      const conversionFactor = WEIGHT_TO_KG[unitOfMeasure as string];
+      if (!conversionFactor) return; // non-weight unit — leave unitWeight alone
 
-        const unit = BASE_UNITS.find(u => u.value === unitOfMeasure);
-        if (!unit || unit.category !== 'Weight' || !unit.baseWeightKg) return;
+      const size = parseFloat(unitSize as string);
+      if (!size || size <= 0) return;
 
-        const calculatedKg = Math.round(size * unit.baseWeightKg * 1000) / 1000;
-        if (calculatedKg <= 0) return;
+      const calculatedKg = Math.round(size * conversionFactor * 1000) / 1000;
+      if (calculatedKg <= 0) return;
 
-        const currentUnitWeight = form.getValues('unitWeight');
-        const newUnitWeight = calculatedKg.toString();
+      const currentUnitWeight = form.getValues('unitWeight');
+      const newUnitWeight = calculatedKg.toString();
 
-        if (currentUnitWeight !== newUnitWeight) {
-          form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
-          toast({
-            title: "Unit Weight Auto-Filled",
-            description: `${calculatedKg}kg per unit (${size}${unitOfMeasure})`,
-            duration: 2000,
-          });
-        }
-      }
+      // Only auto-fill if the field is blank or still holds our last auto-filled value
+      const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+      if (!canOverwrite || currentUnitWeight === newUnitWeight) return;
+
+      form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
+      lastAutoFilledUnitWeight.current = newUnitWeight;
+      toast({
+        title: "Unit Weight Auto-Filled",
+        description: `${calculatedKg}kg per unit (${size}${unitOfMeasure})`,
+        duration: 2000,
+      });
     });
 
     return () => subscription.unsubscribe();
-  }, [form, toast]);
+  }, [form, toast, lastAutoFilledUnitWeight]);
 
   // DISABLED: Auto-determine selling format - now controlled manually by dropdown
   // useEffect(() => {
