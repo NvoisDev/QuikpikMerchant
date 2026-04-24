@@ -109,6 +109,7 @@ interface ProductCardProps {
   onDuplicate?: (product: Product) => void;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
   onManageStock?: (product: Product) => void;
+  isViewer?: boolean;
 }
 
 export default function ProductCard({
@@ -118,6 +119,7 @@ export default function ProductCard({
   onDuplicate,
   onStatusChange,
   onManageStock,
+  isViewer = false,
 }: ProductCardProps) {
   const [, navigate] = useLocation();
 
@@ -236,95 +238,107 @@ export default function ProductCard({
             className="w-full h-36 object-cover"
           />
 
-          {/* ⋯ Actions menu — top-left floating pill */}
-          <div className="absolute top-2 left-2">
-            <DropdownMenu open={actionsMenuOpen} onOpenChange={setActionsMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 bg-white/85 backdrop-blur-sm hover:bg-white shadow-sm rounded-full"
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={(e) => { e.stopPropagation(); setActionsMenuOpen(prev => !prev); }}
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem
-                  onClick={() => !isLocked && onEdit(product)}
-                  disabled={isLocked}
-                  className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                >
-                  <Edit className="h-4 w-4 mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => !isLocked && onManageStock?.(product)}
-                  disabled={isLocked}
-                  className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                >
-                  <PackagePlus className="h-4 w-4 mr-2" /> Manage Stock
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => !isLocked && handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}
-                  disabled={isLocked}
-                  className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                >
-                  {product.status === 'active'
-                    ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set Inactive</>
-                    : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set Active</>}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => !isLocked && navigate(`/promotions?productId=${product.id}`)}
-                  disabled={isLocked}
-                  className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                >
-                  <Tag className="h-4 w-4 mr-2" /> Promotions
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => !isLocked && handleDuplicate()}
-                  disabled={isLocked}
-                  className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                >
-                  <Copy className="h-4 w-4 mr-2" /> Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => onDelete(product.id)}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* ⋯ Actions menu — top-left floating pill (hidden for viewers) */}
+          {!isViewer && (
+            <div className="absolute top-2 left-2">
+              <DropdownMenu open={actionsMenuOpen} onOpenChange={setActionsMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 bg-white/85 backdrop-blur-sm hover:bg-white shadow-sm rounded-full"
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={(e) => { e.stopPropagation(); setActionsMenuOpen(prev => !prev); }}
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem
+                    onClick={() => !isLocked && onEdit(product)}
+                    disabled={isLocked}
+                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <Edit className="h-4 w-4 mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => !isLocked && onManageStock?.(product)}
+                    disabled={isLocked}
+                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <PackagePlus className="h-4 w-4 mr-2" /> Manage Stock
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => !isLocked && handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}
+                    disabled={isLocked}
+                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    {product.status === 'active'
+                      ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set Inactive</>
+                      : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set Active</>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => !isLocked && navigate(`/promotions?productId=${product.id}`)}
+                    disabled={isLocked}
+                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <Tag className="h-4 w-4 mr-2" /> Promotions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => !isLocked && handleDuplicate()}
+                    disabled={isLocked}
+                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDelete(product.id)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
 
-          {/* Status badge dropdown — top-right */}
+          {/* Status badge — dropdown for non-viewers, static for viewers */}
           <div className="absolute top-2 right-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium ${currentStatusConfig.className} hover:opacity-90`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${currentStatusConfig.dotColor} mr-1.5`} />
-                  {currentStatusConfig.label}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={() => handleStatusChange("active")} className="cursor-pointer">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mr-2" /> Active
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("inactive")} className="cursor-pointer">
-                  <div className="w-2 h-2 rounded-full bg-gray-500 mr-2" /> Inactive
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("out_of_stock")} className="cursor-pointer">
-                  <div className="w-2 h-2 rounded-full bg-red-500 mr-2" /> Out of Stock
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isViewer ? (
+              <span
+                className={`px-2.5 py-1 rounded-full text-xs font-medium inline-flex items-center ${currentStatusConfig.className}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${currentStatusConfig.dotColor} mr-1.5`} />
+                {currentStatusConfig.label}
+              </span>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${currentStatusConfig.className} hover:opacity-90`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${currentStatusConfig.dotColor} mr-1.5`} />
+                    {currentStatusConfig.label}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => handleStatusChange("active")} className="cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-green-500 mr-2" /> Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange("inactive")} className="cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-gray-500 mr-2" /> Inactive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange("out_of_stock")} className="cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mr-2" /> Out of Stock
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 

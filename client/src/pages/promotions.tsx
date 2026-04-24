@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { Plus, Pencil, Trash2, Tag, Percent, Package, ShoppingCart, Flame, Calendar, ToggleLeft, ToggleRight, TrendingUp, Clock, AlertCircle, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
@@ -133,6 +134,8 @@ function formatDate(dateStr?: string): string {
 
 export default function Promotions() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const search = useSearch();
   const urlProductId = new URLSearchParams(search).get("productId") || "";
   const [filter, setFilter] = useState<"all" | "active" | "scheduled" | "expired">("all");
@@ -152,6 +155,7 @@ export default function Promotions() {
   useEffect(() => {
     if (!urlProductId || promosLoading || products.length === 0) return;
     setProductFilter(urlProductId);
+    if (isViewer) return; // viewers see the filtered list only — no dialog
     const existingPromos = promotions.filter((p) => String(p.productId) === urlProductId);
     if (existingPromos.length === 0) {
       setEditingPromo(null);
@@ -313,13 +317,15 @@ export default function Promotions() {
     <PageHeader title="Promotions" description="Manage promotional offers across your products" />
     <div className="px-4 sm:px-6 py-5 max-w-6xl mx-auto">
 
-      <div className="flex items-center justify-end gap-3 mb-5">
-        <Button size="sm" onClick={openCreate} className="bg-green-600 hover:bg-green-700 text-white">
-          <Plus className="h-4 w-4 mr-1.5" />
-          <span className="hidden sm:inline">Create Promotion</span>
-          <span className="sm:hidden">Create</span>
-        </Button>
-      </div>
+      {!isViewer && (
+        <div className="flex items-center justify-end gap-3 mb-5">
+          <Button size="sm" onClick={openCreate} className="bg-green-600 hover:bg-green-700 text-white">
+            <Plus className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Create Promotion</span>
+            <span className="sm:hidden">Create</span>
+          </Button>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-5">
         <div className="flex-1 flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
@@ -388,7 +394,7 @@ export default function Promotions() {
                 ? "Create your first promotion to attract more customers."
                 : `No ${filter} promotions at the moment.`}
             </p>
-            {filter === "all" && (
+            {filter === "all" && !isViewer && (
               <Button onClick={openCreate} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Promotion
@@ -419,46 +425,48 @@ export default function Promotions() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <h3 className="font-semibold text-gray-900 leading-tight">{promo.name}</h3>
-                        <div className="flex items-center gap-0.5 flex-shrink-0 -mt-1 -mr-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              toggleMutation.mutate({
-                                productId: promo.productId,
-                                promoId: promo.id,
-                                isActive: !promo.isActive,
-                              })
-                            }
-                            title={promo.isActive ? "Deactivate" : "Activate"}
-                          >
-                            {promo.isActive ? (
-                              <ToggleRight className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <ToggleLeft className="h-5 w-5 text-gray-400" />
-                            )}
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-36">
-                              <DropdownMenuItem onClick={() => openEdit(promo)}>
-                                <Pencil className="h-4 w-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
-                                disabled={deleteMutation.isPending}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        {!isViewer && (
+                          <div className="flex items-center gap-0.5 flex-shrink-0 -mt-1 -mr-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                toggleMutation.mutate({
+                                  productId: promo.productId,
+                                  promoId: promo.id,
+                                  isActive: !promo.isActive,
+                                })
+                              }
+                              title={promo.isActive ? "Deactivate" : "Activate"}
+                            >
+                              {promo.isActive ? (
+                                <ToggleRight className="h-5 w-5 text-green-600" />
+                              ) : (
+                                <ToggleLeft className="h-5 w-5 text-gray-400" />
+                              )}
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem onClick={() => openEdit(promo)}>
+                                  <Pencil className="h-4 w-4 mr-2" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => deleteMutation.mutate({ productId: promo.productId, promoId: promo.id })}
+                                  disabled={deleteMutation.isPending}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap mb-2">
                         {getTypeBadge(promo.type)}

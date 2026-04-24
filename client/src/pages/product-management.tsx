@@ -2903,6 +2903,7 @@ export default function ProductManagement() {
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
                     onManageStock={(p) => { setStockProduct(p); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(p.costPrice ? String(p.costPrice) : ""); }}
+                    isViewer={isViewer}
                   />
                 </div>
               ))}

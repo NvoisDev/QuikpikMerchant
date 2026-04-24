@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import type { PromotionalOffer } from "@shared/schema";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -126,6 +127,8 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
 
   const productId = parseInt(id || "0");
 
@@ -326,39 +329,41 @@ export default function ProductDetail() {
           <Button variant="ghost" size="sm" onClick={() => navigate("/products")} className="gap-1.5 -ml-1 text-gray-600">
             <ArrowLeft className="h-4 w-4" /> Products
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <MoreHorizontal className="h-4 w-4" /> Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={openEditModal} disabled={isLocked}>
-                <Edit className="h-4 w-4 mr-2" /> Edit product
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={openStockModal} disabled={isLocked}>
-                <PackagePlus className="h-4 w-4 mr-2" /> Manage stock
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}
-                disabled={isLocked}
-              >
-                {product.status === "active"
-                  ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set inactive</>
-                  : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set active</>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/promotions?productId=${productId}`)} disabled={isLocked}>
-                <Tag className="h-4 w-4 mr-2" /> Promotions
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => duplicateMutation.mutate()} disabled={isLocked || duplicateMutation.isPending}>
-                <Copy className="h-4 w-4 mr-2" /> Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteDialogOpen(true)}>
-                <Trash2 className="h-4 w-4 mr-2" /> Delete product
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isViewer && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <MoreHorizontal className="h-4 w-4" /> Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={openEditModal} disabled={isLocked}>
+                  <Edit className="h-4 w-4 mr-2" /> Edit product
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openStockModal} disabled={isLocked}>
+                  <PackagePlus className="h-4 w-4 mr-2" /> Manage stock
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => statusMutation.mutate(product.status === "active" ? "inactive" : "active")}
+                  disabled={isLocked}
+                >
+                  {product.status === "active"
+                    ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set inactive</>
+                    : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set active</>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/promotions?productId=${productId}`)} disabled={isLocked}>
+                  <Tag className="h-4 w-4 mr-2" /> Promotions
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => duplicateMutation.mutate()} disabled={isLocked || duplicateMutation.isPending}>
+                  <Copy className="h-4 w-4 mr-2" /> Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteDialogOpen(true)}>
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete product
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* ── Hero image ── */}
@@ -463,12 +468,14 @@ export default function ProductDetail() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Inventory</CardTitle>
-                <button
-                  onClick={openStockModal}
-                  className="text-xs text-green-700 hover:text-green-900 border border-green-200 hover:border-green-400 rounded px-2 py-1 flex items-center gap-1"
-                >
-                  <PackagePlus className="h-3 w-3" /> Manage Stock
-                </button>
+                {!isViewer && (
+                  <button
+                    onClick={openStockModal}
+                    className="text-xs text-green-700 hover:text-green-900 border border-green-200 hover:border-green-400 rounded px-2 py-1 flex items-center gap-1"
+                  >
+                    <PackagePlus className="h-3 w-3" /> Manage Stock
+                  </button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
