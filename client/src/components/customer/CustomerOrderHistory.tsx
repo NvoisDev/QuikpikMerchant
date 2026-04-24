@@ -1012,7 +1012,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
                   {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
-                    <div className="text-xs text-gray-400">{item.packQuantity} × {Math.round(parseFloat(item.unitSize))}{item.unitOfMeasure}</div>
+                    <div className="text-xs text-gray-400">{item.packQuantity} × {parseFloat(item.unitSize)}{item.unitOfMeasure}</div>
                   )}
                   {item.appliedOfferLabel && (() => {
                     const parts = item.appliedOfferLabel.split(' - ');
@@ -1531,7 +1531,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
                   {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
-                    <div className="text-xs text-gray-400">{item.packQuantity} × {Math.round(parseFloat(item.unitSize))}{item.unitOfMeasure}</div>
+                    <div className="text-xs text-gray-400">{item.packQuantity} × {parseFloat(item.unitSize)}{item.unitOfMeasure}</div>
                   )}
                   {item.appliedOfferLabel && (() => {
                     const parts = item.appliedOfferLabel.split(' - ');
