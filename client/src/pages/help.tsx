@@ -185,16 +185,36 @@ Click the status badge on any product card to quickly change status.
       {
         title: "Managing Inventory",
         content: `
-### Inventory Management Best Practices
+### Batch-Based Stock Management
 
-#### Stock Tracking
-- Update stock levels regularly after sales
-- Set realistic MOQ based on your packaging/shipping constraints
-- Use "Out of Stock" status when inventory is depleted
-- Click any product's stock count to open the stock update panel and view full movement history
+Quikpik tracks stock at the **batch level**. When you receive a new shipment, you add it as a separate batch rather than simply incrementing a single number. This gives you precise control over expiry dates, cost prices, and movement history.
+
+#### What Is a Batch?
+A batch represents a single delivery or production run of a product. Each batch can have its own:
+- **Quantity** — how many units arrived in this shipment
+- **Expiry date** — when this batch expires (optional but recommended for perishable goods)
+- **Batch reference** — your internal reference (e.g. purchase order number or supplier lot code)
+- **Cost price per unit** — what you paid per unit for this specific batch (see Cost Prices below)
+
+#### Adding a New Batch
+1. Go to **Product Management** and click on a product's stock count to open the stock panel
+2. Click **"Add Stock"** or **"New Batch"**
+3. Enter the quantity, expiry date, batch reference, and cost price per unit for this shipment
+4. Save — the new batch is added immediately and the total stock count updates automatically
+
+#### FEFO Picking Order
+When a customer places an order, Quikpik picks stock using **First Expired, First Out (FEFO)**. This means batches with the nearest expiry date are always sold first, reducing waste and ensuring customers receive the freshest possible stock. You do not need to manage the picking order manually — the system handles it automatically.
+
+#### The Two Cost Price Levels
+There are two places where a cost price can be set, and understanding both is important for accurate margin tracking:
+
+1. **Product-level cost price** — set on the product itself (in the Add/Edit Product form). This is the **default fallback** used for margin calculations when no batch-specific cost is available.
+2. **Batch-level cost price** — set when adding a new stock batch. This reflects the **actual cost for that specific shipment** and takes priority over the product-level default for any units sold from that batch.
+
+For the most accurate margin figures, set a cost price on each batch. If a batch has no cost price, the system falls back to the product-level default.
 
 #### Stock Movement History
-Every stock change is logged automatically with a before/after count and reason. Movement types include:
+Every stock change is logged automatically with a before/after count and reason. Click any product's stock count to view the full movement history. Movement types include:
 - **Order** — stock reduced when a customer places an order
 - **Customer Return** — stock restored when an order is cancelled or items are partially returned with "Restock inventory" ticked. Shows as a green "+X units · Return" entry linked to the order.
 - **Restocked / Manual Increase** — stock added manually (new shipment, correction)
@@ -207,7 +227,7 @@ Stock alerts help you stay on top of inventory without having to check manually:
 - **24-hour limit per product**: A product can only trigger one alert per 24 hours, so you won't receive repeated alerts for the same item
 - **Per-product thresholds**: Each product has its own threshold (default 50 units). You can adjust this from the Stock Alerts page using the settings icon on each alert
 - **Global default**: Set a default threshold in Stock Alerts → Settings to apply to all new products going forward
-- **Resolving alerts**: Once you've restocked, mark the alert as resolved so it clears from your list
+- **Auto-resolve on restock**: When you add stock that brings the product back above its threshold, the alert resolves automatically — no manual action needed
 - **Visual indicators**: Products that are low or out of stock also show a coloured badge on your Products page — amber for Low Stock, red for Out of Stock
 
 #### Notification Centre (Bell Icon)
@@ -217,21 +237,43 @@ The bell icon in the top-right of every page shows everything that needs your at
 - **Stock Alerts**: Products running low or out of stock — click to go to the full Stock Alerts page
 - Clicking any item in the notification panel takes you directly to the relevant page to take action
 
-#### Pricing Strategy
-- Research competitor pricing in your category
-- Consider your margins and the 4.6% platform fee on eligible online card payments
-- Use price visibility settings strategically
-
-#### Product Organization
+#### Product Organisation Tips
 - Use clear, searchable product names
 - Write detailed descriptions with key specifications
 - Choose accurate categories for better discoverability
 - Upload high-quality product images
-
-#### Bulk Operations
 - Use the "Duplicate" feature to quickly create similar products
-- Edit multiple products by status to manage seasonal inventory
-- Export product data for offline analysis (coming soon)
+        `
+      },
+      {
+        title: "Product Expiry Dates",
+        content: `
+### Managing Product Expiry Dates
+
+Expiry dates in Quikpik are set at the **batch level**, giving you fine-grained control over perishable or time-sensitive stock.
+
+#### Setting an Expiry Date
+When adding a new stock batch, you can enter an expiry date for that shipment. This date is optional but recommended for any product that has a shelf life — food, beverages, supplements, cosmetics, and so on.
+
+#### "Expiring Soon" Badge on Product Cards
+When any batch of a product is due to expire within **30 days**, the product card in your dashboard and product list shows an **"Expiring Soon"** badge. This is a visual prompt to act — prioritise selling that stock or remove it from sale if it has already expired.
+
+#### Expiring Soon Dashboard Panel
+Your main dashboard includes an **Expiring Soon** panel that lists all products with at least one batch expiring within 30 days. It shows:
+- The product name
+- The number of units in the affected batch(es)
+- The expiry date
+
+Use this panel as your daily check to stay ahead of upcoming expirations.
+
+#### FEFO — First Expired, First Out
+Quikpik automatically picks stock in **FEFO order**: when a customer orders a product with multiple batches, the system allocates units from the batch with the nearest expiry date first. This ensures older stock is always sold before newer stock, reducing waste without any manual effort from you.
+
+#### Tips for Accurate Expiry Tracking
+- Always enter an expiry date when adding a batch for perishable products
+- Use the batch reference field to cross-reference with your supplier's lot number
+- Check the Expiring Soon panel on your dashboard regularly
+- Mark affected products as Out of Stock if a batch has already expired and you want to prevent orders
         `
       }
     ]
@@ -276,6 +318,10 @@ Navigate to **Promotions** in the sidebar to manage all promotional pricing for 
 - **Toggle active/inactive**: Switch any promotion on or off instantly without deleting it
 - **Edit**: Update any promotion details or change assigned products
 - **Delete**: Remove a promotion permanently
+
+#### Automatic Promotion Notifications
+
+When a promotion has a start or end date, the system automatically sends **email and SMS notifications** to all relevant customers the moment it activates and again when it deactivates. You do not need to send any messages manually — as soon as the promotion's start date is reached, all assigned customers are notified; when the end date passes and the promotion deactivates, they are notified again. This keeps your customers informed about live deals and ensures they know when a promotion has ended.
 
 #### Customer Experience
 
@@ -1228,6 +1274,48 @@ Broadcast performance reporting will become available when broadcast campaigns l
         `
       },
       {
+        title: "Margin & Profitability Tracking",
+        content: `
+### Understanding Your Margins
+
+The **Margin Overview** panel in your Analytics dashboard shows a clear picture of how much of your revenue is actual profit — broken down by sale type so you can see exactly where your margins are strongest.
+
+#### What the Margin Overview Shows
+
+| Metric | What It Means |
+|--------|--------------|
+| **Revenue** | Total value of completed orders |
+| **Cost** | Total cost of goods sold (based on cost prices set on your products or batches) |
+| **Gross Margin %** | (Revenue − Cost) ÷ Revenue × 100 — the percentage of revenue that is gross profit |
+
+The panel breaks these figures down separately for **online orders** (customer portal card payments) and **quote/offline sales** (Quick Quote orders including Pay Later and cash orders), so you can compare the profitability of each channel.
+
+#### How Cost Is Calculated
+
+Quikpik uses a two-level cost price system for margin calculations:
+
+1. **Batch-level cost price (priority)** — when a stock batch has its own cost price set, the system uses that figure for any units sold from that batch. This reflects the actual cost of those specific goods.
+2. **Product-level cost price (fallback)** — if a batch has no cost price, the system falls back to the default cost price set on the product itself.
+
+This means you get accurate margins even when your per-unit cost changes across shipments — as long as you enter the cost price when adding each batch.
+
+#### What "Missing Cost" Means
+
+If a sold item has no cost price at either level (no batch cost and no product default), it is flagged as **missing cost**. Items with missing cost are excluded from the margin calculation rather than treated as zero-cost (which would make your margins appear artificially high).
+
+The Margin Overview panel shows how many line items have missing cost data, so you can identify which products need a cost price to be entered.
+
+#### Keeping Cost Prices Up to Date
+
+For accurate ongoing reporting:
+- Set a **product-level cost price** as your baseline when you first create a product
+- Update the **batch-level cost price** each time you add new stock, especially if your supplier price has changed
+- Review the missing cost count in the Margin Overview regularly and fill in any gaps
+
+Accurate cost prices make the Margin Overview a reliable tool for pricing decisions, supplier negotiations, and understanding your true profitability.
+        `
+      },
+      {
         title: "Using Data for Growth",
         content: `
 ### Making Data-Driven Decisions
@@ -1573,6 +1661,73 @@ The previous link may have expired before the next reminder ran. The **next sche
 #### Pay Later Orders
 
 No reminders are sent for Pay Later (0%) orders — there is no Stripe payment link to send. These are managed manually between you and the customer.
+        `
+      },
+      {
+        title: "Invoices — Download & Share",
+        content: `
+### Downloading and Sharing Invoices
+
+Every order in Quikpik has a professional PDF invoice you can download or share with your customer in seconds.
+
+#### Downloading an Invoice
+1. Open any order from the **Orders** page
+2. Click the **"Download Invoice"** button in the order detail panel
+3. A PDF invoice downloads immediately — it includes your business logo, all line items with quantities and unit prices, the order total, and your business details
+
+The invoice is ready to send by email, save for your records, or print.
+
+#### Sharing an Invoice
+The **Share Invoice** button sends a pre-formatted WhatsApp message to the customer containing:
+- A personalised greeting with the customer's name
+- The order number and a summary of the items ordered
+- The total order value and any outstanding balance
+- A **payment link** (where a Stripe payment link applies — for deposit and full-payment orders)
+
+On a mobile device, tapping Share Invoice opens the native share sheet, letting you choose WhatsApp, email, or any other app on your phone.
+
+#### When Is a Payment Link Included?
+- **Stripe orders (deposit or full payment)**: the share message includes the customer's payment link
+- **Pay Later / cash / bank transfer orders**: no payment link is included, but all order details and the outstanding balance are still shown so you can follow up manually
+
+#### Tips
+- Use Share Invoice straight after creating a Quick Quote to get the payment link to your customer immediately
+- For cash or bank transfer orders, the share message is a clear, professional way to confirm the order and tell the customer the amount they owe
+        `
+      },
+      {
+        title: "Cash & Bank Transfer Orders",
+        content: `
+### Creating Offline (Cash or Bank Transfer) Orders
+
+Not every sale goes through Stripe. For customers who pay by cash or bank transfer, Quikpik's Quick Quote flow lets you record and manage offline orders without generating any payment link.
+
+#### How to Create an Offline Order
+1. Go to **Orders** and click **"Quick Quote"**
+2. Select the customer and add the products with quantities and prices
+3. Under the payment method, choose **Pay Later (0%)** — this is the offline option
+4. Click **"Create Quote"**
+
+The order is created immediately. No Stripe payment link is generated. The customer receives an **SMS confirmation** that their order has been placed, including the order number and total amount.
+
+#### No Platform or Transaction Fees
+Offline orders are completely fee-free:
+- **No 4.6% platform fee** is charged on the order
+- **No 5.5% + £0.50 customer transaction fee** applies
+- Fees only apply if an online Stripe card payment is made later (for example, if the customer pays a deposit or balance through a link you send)
+
+#### Marking the Order as Paid
+When you receive payment from the customer (cash, bank transfer, or any offline method):
+1. Open the order from the **Orders** page
+2. Click **"Mark as Paid"**
+3. The order payment status updates to **Paid** and the order is marked as settled
+
+This keeps your order history accurate without requiring any Stripe transaction.
+
+#### Tips
+- Use Pay Later for all walk-in, phone, or bank-transfer sales
+- The Share Invoice feature lets you send the customer a WhatsApp message with the order summary and amount owed — useful for following up on bank transfer payments
+- You can still cancel, refund (recorded manually), and update the status of offline orders just like any other order
         `
       },
       {

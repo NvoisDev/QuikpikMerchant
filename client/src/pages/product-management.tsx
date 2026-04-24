@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -2078,6 +2078,9 @@ export default function ProductManagement() {
                               <FormControl>
                                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
                               </FormControl>
+                              <FormDescription className="text-xs text-muted-foreground">
+                                Used as the default for margin calculations. Each stock batch can set its own cost, which takes priority.
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
