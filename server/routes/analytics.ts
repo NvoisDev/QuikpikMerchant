@@ -377,44 +377,57 @@ export function registerAnalyticsRoutes(app: Express): void {
           quantity: orderItems.quantity,
           unitPrice: orderItems.unitPrice,
           batchId: orderItems.batchId,
-          costPrice: productBatches.costPrice,
+          batchCostPrice: productBatches.costPrice,
+          productCostPrice: products.costPrice,
         })
         .from(orderItems)
         .leftJoin(productBatches, eq(orderItems.batchId, productBatches.id))
+        .leftJoin(products, eq(orderItems.productId, products.id))
         .where(inArray(orderItems.orderId, orderIds));
 
       const orderQuoteMap = new Map(validOrders.map(o => [o.id, o.isQuote ?? false]));
 
-      let quotesRevenue = 0, quotesCost = 0, quotesMissingCost = false;
-      let onlineRevenue = 0, onlineCost = 0, onlineMissingCost = false;
+      let quotesCoveredRevenue = 0, quotesCost = 0, quotesUncoveredRevenue = 0, quotesMissingCost = false;
+      let onlineCoveredRevenue = 0, onlineCost = 0, onlineUncoveredRevenue = 0, onlineMissingCost = false;
 
       for (const item of items) {
         const isQuote = orderQuoteMap.get(item.orderId) ?? false;
-        const hasCost = item.batchId !== null && item.costPrice !== null && item.costPrice !== undefined;
+        const resolvedCostPrice = item.batchCostPrice ?? item.productCostPrice ?? null;
+        const hasCost = resolvedCostPrice !== null && resolvedCostPrice !== undefined;
+
+        const revenue = parseFloat(item.unitPrice) * item.quantity;
 
         if (!hasCost) {
-          // Mark missing cost but exclude this item entirely from margin arithmetic
-          if (isQuote) { quotesMissingCost = true; } else { onlineMissingCost = true; }
+          // Track uncovered revenue separately so it appears in totals but doesn't
+          // inflate margin percentages (which are only meaningful when cost is known)
+          if (isQuote) {
+            quotesUncoveredRevenue += revenue;
+            quotesMissingCost = true;
+          } else {
+            onlineUncoveredRevenue += revenue;
+            onlineMissingCost = true;
+          }
           continue;
         }
 
-        const revenue = parseFloat(item.unitPrice) * item.quantity;
-        const cost = parseFloat(item.costPrice!) * item.quantity;
+        const cost = parseFloat(resolvedCostPrice!) * item.quantity;
 
         if (isQuote) {
-          quotesRevenue += revenue;
+          quotesCoveredRevenue += revenue;
           quotesCost += cost;
         } else {
-          onlineRevenue += revenue;
+          onlineCoveredRevenue += revenue;
           onlineCost += cost;
         }
       }
 
-      const calcMetrics = (revenue: number, cost: number, hasMissingCost: boolean) => {
-        const margin = revenue - cost;
-        const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
+      // Revenue shown = covered + uncovered (real sales figure); margin is only on covered items
+      const calcMetrics = (coveredRevenue: number, cost: number, uncoveredRevenue: number, hasMissingCost: boolean) => {
+        const margin = coveredRevenue - cost;
+        const marginPercent = coveredRevenue > 0 ? (margin / coveredRevenue) * 100 : 0;
+        const totalRevenue = coveredRevenue + uncoveredRevenue;
         return {
-          revenue: Math.round(revenue * 100) / 100,
+          revenue: Math.round(totalRevenue * 100) / 100,
           cost: Math.round(cost * 100) / 100,
           margin: Math.round(margin * 100) / 100,
           marginPercent: Math.round(marginPercent * 10) / 10,
@@ -422,13 +435,15 @@ export function registerAnalyticsRoutes(app: Express): void {
         };
       };
 
-      const totalRevenue = quotesRevenue + onlineRevenue;
-      const totalCost = quotesCost + onlineCost;
-
       res.json({
-        quotes: calcMetrics(quotesRevenue, quotesCost, quotesMissingCost),
-        online: calcMetrics(onlineRevenue, onlineCost, onlineMissingCost),
-        total: calcMetrics(totalRevenue, totalCost, quotesMissingCost || onlineMissingCost),
+        quotes: calcMetrics(quotesCoveredRevenue, quotesCost, quotesUncoveredRevenue, quotesMissingCost),
+        online: calcMetrics(onlineCoveredRevenue, onlineCost, onlineUncoveredRevenue, onlineMissingCost),
+        total: calcMetrics(
+          quotesCoveredRevenue + onlineCoveredRevenue,
+          quotesCost + onlineCost,
+          quotesUncoveredRevenue + onlineUncoveredRevenue,
+          quotesMissingCost || onlineMissingCost,
+        ),
       });
     } catch (error) {
       console.error("Error fetching margin summary:", error);
