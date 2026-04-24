@@ -1015,7 +1015,7 @@ export default function OrdersFresh() {
       )}
 
       {/* Cancellation Requests Alert */}
-      {cancellationRequests.length > 0 && (
+      {cancellationRequests.length > 0 && !isViewer && (
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">

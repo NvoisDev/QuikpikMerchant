@@ -1504,10 +1504,12 @@ export default function Customers() {
                 <p className="text-sm sm:text-base text-gray-500 text-center mb-6 max-w-sm px-4">
                   Create your first customer group to organize your contacts and send targeted messages.
                 </p>
+                {!isViewer && (
                 <Button onClick={() => setIsCreateDialogOpen(true)} className="text-sm sm:text-base">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Your First Group
                 </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -1541,6 +1543,7 @@ export default function Customers() {
                   <CardContent className="pt-0 p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center">
+                        {!isViewer && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm">
@@ -1579,6 +1582,7 @@ export default function Customers() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2">
                         <Button 
@@ -1593,6 +1597,7 @@ export default function Customers() {
                         >
                           <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
+                        {!isViewer && (
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -1605,6 +1610,8 @@ export default function Customers() {
                         >
                           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
+                        )}
+                        {!isViewer && (
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -1618,6 +1625,7 @@ export default function Customers() {
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
