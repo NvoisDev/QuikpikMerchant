@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
+  Thermometer, Layers, Clock, ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,8 @@ interface ProductDetail {
   unitOfMeasure: string | null;
   sizePerUnit: string | null;
   temperatureRequirement: string | null;
+  contentCategory: string | null;
+  specialHandling: { fragile?: boolean; perishable?: boolean; hazardous?: boolean } | null;
   promotionalOffers: PromotionalOffer[];
   totalBatchStock: number | null;
   batchCount: number;
@@ -586,15 +589,89 @@ export default function ProductDetail() {
                     <span className="font-medium text-gray-800">{parseFloat(product.palletWeight).toFixed(2)} kg</span>
                   </div>
                 )}
-                {product.temperatureRequirement && product.temperatureRequirement !== "ambient" && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Temperature</span>
-                    <span className="font-medium text-gray-800 capitalize">{product.temperatureRequirement}</span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* ── Shipping Requirements ── */}
+          {(() => {
+            const temp = product.temperatureRequirement;
+            const cat = product.contentCategory;
+            const sh = product.specialHandling ?? {};
+            const hasTemp = !!temp && temp.toLowerCase() !== "ambient";
+            const hasCat = !!cat && cat.toLowerCase() !== "general";
+            const hasFlags = !!(sh.fragile || sh.perishable || sh.hazardous);
+            if (!hasTemp && !hasCat && !hasFlags) return null;
+
+            const tempLabels: Record<string, string> = {
+              frozen: "Frozen (−18 °C or below)",
+              chilled: "Chilled (0–8 °C)",
+              ambient: "Ambient",
+            };
+            const catLabels: Record<string, string> = {
+              food: "Food",
+              pharmaceuticals: "Pharmaceuticals",
+              electronics: "Electronics",
+              textiles: "Textiles",
+              general: "General",
+            };
+
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Shipping Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2.5 text-sm">
+                    {hasTemp && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-gray-500">
+                          <Thermometer className="h-3.5 w-3.5 shrink-0" /> Temperature
+                        </span>
+                        <span className="font-medium text-gray-800 capitalize">
+                          {tempLabels[temp!.toLowerCase()] ?? temp}
+                        </span>
+                      </div>
+                    )}
+                    {hasCat && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-gray-500">
+                          <Layers className="h-3.5 w-3.5 shrink-0" /> Content category
+                        </span>
+                        <span className="font-medium text-gray-800">
+                          {catLabels[cat!.toLowerCase()] ?? cat}
+                        </span>
+                      </div>
+                    )}
+                    {hasFlags && (
+                      <div className="flex items-start justify-between">
+                        <span className="flex items-center gap-1.5 text-gray-500 shrink-0">
+                          <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Special handling
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 justify-end">
+                          {sh.fragile && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5">
+                              <Package className="h-3 w-3" /> Fragile
+                            </span>
+                          )}
+                          {sh.perishable && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-2.5 py-0.5">
+                              <Clock className="h-3 w-3" /> Perishable
+                            </span>
+                          )}
+                          {sh.hazardous && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded-full px-2.5 py-0.5">
+                              <AlertTriangle className="h-3 w-3" /> Hazardous
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* ── Promotions ── */}
           {activePromos.length > 0 && (
