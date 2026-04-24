@@ -3,7 +3,7 @@ import {
   and, count, createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl,
   hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
-  requireAuth, requireNotViewer, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
+  requireAuth, requireNotViewer, requireOwner, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
   sgMail, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail
 } from "./shared";
@@ -671,7 +671,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/team-members
-  app.post('/api/team-members', requireAuth, async (req: any, res) => {
+  app.post('/api/team-members', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { email, firstName, lastName, phoneNumber, role, permissions } = req.body;
@@ -719,7 +719,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // PATCH /api/team-members/:id/role
-  app.patch('/api/team-members/:id/role', requireAuth, async (req: any, res) => {
+  app.patch('/api/team-members/:id/role', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -779,7 +779,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // DELETE /api/team-members/:id
-  app.delete('/api/team-members/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/team-members/:id', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
       const requestingUserId = req.user.role === 'team_member' && req.user.wholesalerId
@@ -801,7 +801,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // PATCH /api/team-members/:id/status
-  app.patch('/api/team-members/:id/status', requireAuth, async (req: any, res) => {
+  app.patch('/api/team-members/:id/status', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -827,7 +827,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/team-members/:id/resend-invite
-  app.post('/api/team-members/:id/resend-invite', requireAuth, async (req: any, res) => {
+  app.post('/api/team-members/:id/resend-invite', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;

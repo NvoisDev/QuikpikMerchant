@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import {
   and, asc, count, db, eq, generateProductImage, insertProductSchema, isNull, openai, or,
-  products, requireAuth, requireNotViewer, requireProductLimits, sql, storage, users, z
+  products, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
 import { productBatches } from "@shared/schema";
 
@@ -76,7 +76,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/products
-  app.post('/api/products', requireAuth, requireNotViewer, requireProductLimits(), async (req: any, res) => {
+  app.post('/api/products', requireAuth, requireNotViewer, requireMemberPermission('products'), requireProductLimits(), async (req: any, res) => {
     try {
       // Use parent company ID for team members to ensure data inheritance
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -120,7 +120,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // PATCH /api/products/:id
-  app.patch('/api/products/:id', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/products/:id', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
       ? req.user.wholesalerId 
       : req.user.id;
@@ -260,7 +260,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // DELETE /api/products/:id
-  app.delete('/api/products/:id', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.delete('/api/products/:id', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       // Use parent company ID for team members to inherit data access
@@ -340,7 +340,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/products/:id/promotions
-  app.post('/api/products/:id/promotions', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/products/:id/promotions', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -395,7 +395,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // PATCH /api/products/:id/promotions/:promoId
-  app.patch('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -451,7 +451,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // DELETE /api/products/:id/promotions/:promoId
-  app.delete('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.delete('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -501,7 +501,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/products/reset-promotions
-  app.post('/api/products/reset-promotions', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/products/reset-promotions', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       
@@ -579,7 +579,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/inventory/alerts/:id/mark-read
-  app.post('/api/inventory/alerts/:id/mark-read', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/inventory/alerts/:id/mark-read', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alertId = parseInt(req.params.id);
@@ -593,7 +593,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/inventory/alerts/:id/resolve
-  app.post('/api/inventory/alerts/:id/resolve', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/inventory/alerts/:id/resolve', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alertId = parseInt(req.params.id);
@@ -665,7 +665,7 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // POST /api/products/:id/stock-adjustment
-  app.post('/api/products/:id/stock-adjustment', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/products/:id/stock-adjustment', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const productId = parseInt(req.params.id);
@@ -988,7 +988,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
   });
 
   // PATCH /api/products/:productId/low-stock-threshold
-  app.patch('/api/products/:productId/low-stock-threshold', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/products/:productId/low-stock-threshold', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { productId } = req.params;

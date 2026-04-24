@@ -6,7 +6,7 @@ import {
   generateOrderNumber, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
   orderNotificationService, orderPhotoUpload, orders, products,
-  refundAcrossPaymentIntents, requireAuth, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
+  refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus
 } from "./shared";
@@ -168,7 +168,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // PUT /api/orders/:id/ready-for-collection
-  app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       console.log(`📦 Ready for collection request for order ID: ${orderId}`);
@@ -335,7 +335,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/resend-ready-notification
-  app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireNotViewer, async (req, res) => {
+  app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -403,7 +403,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/mark-as-paid
-  app.post('/api/orders/:id/mark-as-paid', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/mark-as-paid', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -579,7 +579,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // PUT /api/orders/:id/items-prepared
-  app.put("/api/orders/:id/items-prepared", requireAuth, requireNotViewer, async (req, res) => {
+  app.put("/api/orders/:id/items-prepared", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -1019,7 +1019,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders
-  app.post('/api/orders', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { items, deliveryAddress, notes } = req.body;
@@ -1115,7 +1115,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // PATCH /api/orders/:id/status
-  app.patch('/api/orders/:id/status', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/orders/:id/status', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
@@ -1179,7 +1179,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/cancel
-  app.post('/api/orders/:id/cancel', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/cancel', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -1555,7 +1555,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/retry-refund
-  app.post('/api/orders/:id/retry-refund', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/retry-refund', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
@@ -1617,7 +1617,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/mark-refunded
-  app.post('/api/orders/:id/mark-refunded', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/mark-refunded', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
@@ -1729,7 +1729,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/cancellation-requests/:id/respond
-  app.post('/api/cancellation-requests/:id/respond', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/cancellation-requests/:id/respond', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const requestId = parseInt(req.params.id);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -1963,7 +1963,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/refund
-  app.post('/api/orders/:id/refund', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/refund', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -2074,7 +2074,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/upload-image
-  app.post('/api/orders/:orderId/upload-image', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:orderId/upload-image', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId } = req.params;
       
@@ -2102,7 +2102,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/save-image
-  app.post('/api/orders/:orderId/save-image', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:orderId/save-image', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId } = req.params;
       const { imageUrl, filename, description } = req.body;
@@ -2266,7 +2266,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // DELETE /api/orders/:orderId/delete-image/:imageId
-  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId, imageId } = req.params;
       
@@ -2297,7 +2297,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/resend-confirmation
-  app.post('/api/orders/:id/resend-confirmation', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/resend-confirmation', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -2342,7 +2342,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // DELETE /api/orders/bulk-delete
-  app.delete("/api/orders/bulk-delete", requireAuth, requireNotViewer, async (req: any, res) => {
+  app.delete("/api/orders/bulk-delete", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { 
@@ -2521,7 +2521,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // GET /api/orders/:id/invoice/customer
-  app.get('/api/orders/:id/invoice/customer', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.get('/api/orders/:id/invoice/customer', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const user = req.user;
@@ -2546,7 +2546,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/share-invoice
-  app.post('/api/orders/:id/share-invoice', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/share-invoice', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const user = req.user;
@@ -2607,7 +2607,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/send-receipt
-  app.post('/api/orders/:id/send-receipt', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:id/send-receipt', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -2745,7 +2745,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/shipping
-  app.post('/api/orders/:orderId/shipping', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:orderId/shipping', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { orderId } = req.params;
@@ -2896,7 +2896,7 @@ export function registerOrderRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/generate-balance-link
-  app.post('/api/orders/:orderId/generate-balance-link', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/orders/:orderId/generate-balance-link', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 

@@ -5,7 +5,7 @@ import {
   formatPackDescriptor,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
-  or, orderItems, orders, products, requireAuth, requireNotViewer, sendEmail, sendSMS, sgMail,
+  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
   sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z
 } from "./shared";
@@ -1160,7 +1160,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // POST /api/subscriptions/create-checkout-session
-  app.post('/api/subscriptions/create-checkout-session', requireAuth, async (req: any, res) => {
+  app.post('/api/subscriptions/create-checkout-session', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { priceId, idempotencyKey } = req.body;
@@ -1311,7 +1311,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // POST /api/subscriptions/downgrade
-  app.post('/api/subscriptions/downgrade', requireAuth, async (req: any, res) => {
+  app.post('/api/subscriptions/downgrade', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { targetPlan } = req.body;
@@ -1425,7 +1425,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // POST /api/subscriptions/cancel
-  app.post('/api/subscriptions/cancel', requireAuth, async (req: any, res) => {
+  app.post('/api/subscriptions/cancel', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { user } = await SubscriptionService.getUserSubscription(userId);

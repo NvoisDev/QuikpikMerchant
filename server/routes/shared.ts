@@ -410,6 +410,33 @@ export const requireNotViewer = async (req: any, res: any, next: any) => {
   next();
 };
 
+export const requireOwner = (req: any, res: any, next: any) => {
+  if (req.user?.role === 'team_member') {
+    return res.status(403).json({ message: 'This action is restricted to the account owner.' });
+  }
+  next();
+};
+
+export const requireMemberPermission = (area: string) => async (req: any, res: any, next: any) => {
+  if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
+    try {
+      const members = await storage.getTeamMembers(req.user.wholesalerId);
+      const member = members.find((m: any) => m.email === req.user.email);
+      if (!member) return res.status(403).json({ message: 'Team member record not found. Access denied.' });
+      if (member.role === 'admin') return next();
+      if (member.role === 'viewer') return res.status(403).json({ message: 'Viewers can only view data.' });
+      const permissions: string[] = Array.isArray(member.permissions) ? member.permissions : [];
+      if (!permissions.includes(area)) {
+        return res.status(403).json({ message: `You do not have permission to manage ${area}.` });
+      }
+    } catch (err) {
+      console.error('requireMemberPermission: failed to resolve permissions', err);
+      return res.status(403).json({ message: 'Unable to verify permissions. Access denied.' });
+    }
+  }
+  next();
+};
+
 // ─── Plan enforcement ─────────────────────────────────────────────────────────
 // PLAN_ENFORCEMENT_LIMITS is an alias for PLAN_LIMITS (single source of truth in server/config/plan-limits.ts).
 // `teamMembers` replaces the old `invitedMembersAllowed` field name.

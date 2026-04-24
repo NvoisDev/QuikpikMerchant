@@ -587,6 +587,16 @@ export default function TeamManagement() {
       </PageHeader>
       <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
+      {/* Read-only banner for team members */}
+      {user?.role === 'team_member' && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <Lock className="h-4 w-4 shrink-0 text-blue-500" />
+          <p className="text-sm text-blue-800">
+            You are viewing team management in read-only mode. Only the account owner can invite, edit, or remove team members.
+          </p>
+        </div>
+      )}
+
       {/* Downgrade warning banner */}
       {planLimits?.cancelAtPeriodEnd && (planLimits.usage.teamMembers > 0) && (
         <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -678,6 +688,30 @@ export default function TeamManagement() {
             </div>
           ) : (
             <div className="space-y-2">
+              {/* Owner row — always at top, no action buttons */}
+              {user && user.role !== 'team_member' && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-2 bg-amber-50 border-amber-200">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Crown className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.businessName || user.email}
+                      </h3>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <Badge className="text-xs bg-amber-500 text-white">Owner</Badge>
+                    <span className="text-xs text-gray-500 hidden sm:inline">Account holder</span>
+                  </div>
+                </div>
+              )}
               {Array.isArray(teamMembers) && teamMembers.map((member: TeamMember) => (
                 <div
                   key={member.id}
