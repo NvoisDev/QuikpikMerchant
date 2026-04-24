@@ -707,6 +707,10 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4).strokeColor(GREEN).lineWidth(1.5).stroke();
     tY += 4;
     drawTotRow('Total', fmt(grandTotal), true);
+    if (order.totalWeight && parseFloat(order.totalWeight) > 0) {
+      tY += 4;
+      drawTotRow('Total Weight', `${parseFloat(order.totalWeight).toFixed(2)} kg`);
+    }
     const FOOTER_HEIGHT = 60, PAGE_H = 841.89;
     if (tY + 36 + FOOTER_HEIGHT > PAGE_H) { doc.addPage({ size: 'A4', margin: 0 }); tY = MARGIN; }
     const footerY = Math.max(tY + 36, PAGE_H - FOOTER_HEIGHT - 10);
