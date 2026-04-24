@@ -69,6 +69,20 @@ import {
 import { getEmailDeliveryAddress } from "../utils/address-helper";
 import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
 
+// ─── Pack Format Helper ────────────────────────────────────────────────────────
+/** Returns a pack descriptor string such as "24 × 330ml" when all three fields
+ *  are present and packQuantity > 1, otherwise returns an empty string. */
+export function formatPackDescriptor(
+  packQuantity: number | null | undefined,
+  unitSize: number | string | null | undefined,
+  unitOfMeasure: string | null | undefined
+): string {
+  if (packQuantity && packQuantity > 1 && unitSize && unitOfMeasure) {
+    return `${packQuantity} × ${parseFloat(String(unitSize))}${unitOfMeasure}`;
+  }
+  return '';
+}
+
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export {
   storage, db, performanceMiddleware, queryOptimizer, queryCache,
@@ -569,8 +583,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (promoLabel && freeCount > 0) promoLine = `${promoLabel} · +${freeCount} free included`;
     else if (promoLabel) promoLine = promoLabel;
     else if (freeCount > 0) promoLine = `+${freeCount} free included`;
-    const pq = item.product?.quantityInPack; const pu = item.product?.unitSize; const pm = item.product?.unitOfMeasure;
-    const packInfo = (pq && pq > 1 && pu && pm) ? `${pq} × ${parseFloat(String(pu))}${pm}` : '';
+    const packInfo = formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
     return {
       name: item.product?.name || item.productName || 'Product',
       qty: Number(item.quantity) || 0,

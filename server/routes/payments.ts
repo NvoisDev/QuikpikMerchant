@@ -2,6 +2,7 @@ import type { Express } from "express";
 import {
   InventoryCalculator, SendGridAttachment, SubscriptionService, and, buildInvoicePdf, db,
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
+  formatPackDescriptor,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, sendEmail, sendSMS, sgMail,
@@ -1723,6 +1724,9 @@ export function registerPaymentRoutes(app: Express): void {
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
       }).returning();
 
+      // Collect pack descriptors for Stripe line item descriptions
+      const packDescLines: string[] = [];
+
       // Create order items with custom prices (supporting both units and pallets)
       // AND decrement stock immediately (field sales - products given in person)
       for (const item of items) {
@@ -1739,6 +1743,9 @@ export function registerPaymentRoutes(app: Express): void {
         // CRITICAL: Decrement stock at quote creation (products handed over in person)
         const [product] = await db.select().from(products).where(eq(products.id, item.productId));
         if (product) {
+          const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
+          packDescLines.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
+
           const quantity = item.quantity;
           console.log(`📦 QUOTE STOCK: Decrementing ${quantity} ${sellingType} of ${product.name} at quote creation`);
           
@@ -1789,13 +1796,14 @@ export function registerPaymentRoutes(app: Express): void {
           // Full payment: single line item for the full total (subtotal + transaction fee)
           // Never map raw item prices — they exclude the customer transaction fee
           const isDeposit = validDepositPercentage < 100;
+          const packSummary = packDescLines.length > 0 ? packDescLines.join(', ') : '';
           const lineItems = isDeposit
             ? [{
                 price_data: {
                   currency: 'gbp',
                   product_data: {
                     name: `Deposit (${validDepositPercentage}%) - Order ${orderNumber}`,
-                    description: `Deposit payment for quote. Full order: £${total.toFixed(2)}. Remaining: £${outstandingAmount.toFixed(2)}`,
+                    description: `Deposit payment for quote. Full order: £${total.toFixed(2)}. Remaining: £${outstandingAmount.toFixed(2)}${packSummary ? ` | ${packSummary}` : ''}`,
                   },
                   unit_amount: Math.round(depositAmount * 100),
                 },
@@ -1806,7 +1814,7 @@ export function registerPaymentRoutes(app: Express): void {
                   currency: 'gbp',
                   product_data: {
                     name: `Order ${orderNumber}`,
-                    description: `Full payment including transaction fee`,
+                    description: `Full payment including transaction fee${packSummary ? ` | ${packSummary}` : ''}`,
                   },
                   unit_amount: Math.round(total * 100), // total = subtotal + customer transaction fee
                 },
