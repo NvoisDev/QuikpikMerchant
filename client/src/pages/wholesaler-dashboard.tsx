@@ -62,11 +62,16 @@ interface MarginSummary {
   total: MarginSegment;
 }
 
-function MarginOverview({ dateRange }: { dateRange: DateRange }) {
+function MarginOverview() {
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(startOfToday(), 29),
+    to: startOfToday(),
+    label: "Last 30 days",
+  });
+
   const { data: marginData, isLoading } = useQuery<MarginSummary>({
-    queryKey: ["/api/analytics/margin-summary", dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryKey: ["/api/analytics/margin-summary", dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
-      if (!dateRange.from || !dateRange.to) throw new Error("Date range required");
       const params = new URLSearchParams({
         fromDate: dateRange.from.toISOString(),
         toDate: dateRange.to.toISOString(),
@@ -75,7 +80,6 @@ function MarginOverview({ dateRange }: { dateRange: DateRange }) {
       if (!res.ok) throw new Error("Failed to fetch margin summary");
       return res.json();
     },
-    enabled: !!dateRange?.from && !!dateRange?.to,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: false,
@@ -85,32 +89,45 @@ function MarginOverview({ dateRange }: { dateRange: DateRange }) {
   const pct = (v: number) => `${v >= 0 ? "" : "-"}${Math.abs(v).toFixed(1)}%`;
   const hasMissingCost = marginData?.total?.hasMissingCost || marginData?.quotes?.hasMissingCost || marginData?.online?.hasMissingCost;
 
-  const StatTile = ({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) => (
-    <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-1">
+  const StatTile = ({ label, value, positive }: { label: string; value: string; positive?: boolean }) => (
+    <div className="bg-slate-50 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-      <p className={`text-2xl font-bold ${positive === undefined ? "text-slate-900" : positive ? "text-emerald-600" : "text-red-500"}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-400">{sub}</p>}
+      <p className={`text-xl sm:text-2xl font-bold ${positive === undefined ? "text-slate-900" : positive ? "text-emerald-600" : "text-red-500"}`}>{value}</p>
     </div>
   );
 
-  const BreakdownRow = ({ label, seg, icon }: { label: string; seg: MarginSegment; icon: JSX.Element }) => (
-    <div className="grid grid-cols-5 gap-2 items-center py-3 border-t border-slate-100 first:border-0">
-      <div className="flex items-center gap-2 col-span-1">
+  const SegmentCard = ({ label, seg, icon }: { label: string; seg: MarginSegment; icon: JSX.Element }) => (
+    <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
         {icon}
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-semibold text-slate-800">{label}</span>
       </div>
-      <div className="text-sm text-right text-slate-700">{fmt(seg.revenue)}</div>
-      <div className="text-sm text-right text-slate-700">{fmt(seg.cost)}</div>
-      <div className={`text-sm text-right font-medium ${seg.margin >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmt(seg.margin)}</div>
-      <div className={`text-sm text-right font-semibold ${seg.marginPercent >= 0 ? "text-emerald-600" : "text-red-500"}`}>{pct(seg.marginPercent)}</div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Revenue</p>
+          <p className="text-sm font-medium text-slate-700">{fmt(seg.revenue)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Est. Cost</p>
+          <p className="text-sm font-medium text-slate-700">{fmt(seg.cost)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Margin £</p>
+          <p className={`text-sm font-semibold ${seg.margin >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmt(seg.margin)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Margin %</p>
+          <p className={`text-sm font-semibold ${seg.marginPercent >= 0 ? "text-emerald-600" : "text-red-500"}`}>{pct(seg.marginPercent)}</p>
+        </div>
+      </div>
     </div>
   );
 
   return (
     <div className="mb-8">
       <Card className="bg-white border-slate-200 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Percent className="w-5 h-5 text-emerald-500" />
@@ -118,12 +135,15 @@ function MarginOverview({ dateRange }: { dateRange: DateRange }) {
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">Estimated gross margin based on batch cost prices</p>
             </div>
+            <div className="flex-shrink-0">
+              <DateRangePicker value={dateRange} onChange={setDateRange} className="w-full sm:w-auto text-sm" />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="bg-slate-50 rounded-xl p-4 animate-pulse">
                     <div className="h-3 bg-slate-200 rounded w-2/3 mb-3" />
@@ -131,35 +151,32 @@ function MarginOverview({ dateRange }: { dateRange: DateRange }) {
                   </div>
                 ))}
               </div>
-              <div className="h-24 bg-slate-50 rounded-xl animate-pulse" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="h-28 bg-slate-50 rounded-xl animate-pulse" />
+                <div className="h-28 bg-slate-50 rounded-xl animate-pulse" />
+              </div>
             </div>
           ) : marginData ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {hasMissingCost && (
-                <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  <Info className="w-4 h-4 flex-shrink-0" />
+                <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <span>Some products have no cost data — those items are excluded from margin totals.</span>
                 </div>
               )}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatTile label="Total Revenue" value={fmt(marginData.total.revenue)} />
                 <StatTile label="Est. Cost" value={fmt(marginData.total.cost)} />
                 <StatTile label="Margin (£)" value={fmt(marginData.total.margin)} positive={marginData.total.margin >= 0} />
                 <StatTile label="Margin %" value={pct(marginData.total.marginPercent)} positive={marginData.total.marginPercent >= 0} />
               </div>
-              <div>
-                <div className="grid grid-cols-5 gap-2 pb-2">
-                  <div className="col-span-1" />
-                  {["Revenue", "Est. Cost", "Margin (£)", "Margin %"].map(h => (
-                    <p key={h} className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-right">{h}</p>
-                  ))}
-                </div>
-                <BreakdownRow
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <SegmentCard
                   label="Quotes"
                   seg={marginData.quotes}
                   icon={<TrendingUp className="w-4 h-4 text-purple-500 flex-shrink-0" />}
                 />
-                <BreakdownRow
+                <SegmentCard
                   label="Online Orders"
                   seg={marginData.online}
                   icon={<ShoppingCart className="w-4 h-4 text-blue-500 flex-shrink-0" />}
@@ -669,7 +686,7 @@ export default function WholesalerDashboard() {
           </div>
 
           {/* Margin Overview */}
-          <MarginOverview dateRange={dateRange} />
+          <MarginOverview />
           
           {/* Interactive Quick Actions Grid */}
           <TooltipProvider>
