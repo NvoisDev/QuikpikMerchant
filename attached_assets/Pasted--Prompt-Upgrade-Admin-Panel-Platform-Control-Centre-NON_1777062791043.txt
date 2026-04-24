@@ -1,0 +1,183 @@
+🧾 Prompt: Upgrade Admin Panel → Platform Control Centre (NON-BREAKING)
+🎯 Objective
+
+Redesign the existing admin page into a modern, structured control centre that allows the platform owner to:
+
+Monitor platform health
+Support wholesalers quickly
+Take action (fix issues, override, assist users)
+Navigate easily without clutter
+
+All changes must be non-breaking and additive.
+
+🧠 Core Principle
+
+Admin ≠ Settings page
+Admin = Operations + Support + Control
+
+🧱 New Admin Structure (Clean Navigation)
+Sidebar Navigation (Left)
+Overview
+Wholesalers
+Customers
+Orders
+Products
+Financials
+Support & Logs
+System Settings
+
+👉 Keep it simple, no more than 7–8 sections
+
+🖥️ 1. Overview Dashboard (Your Command Centre)
+
+Show:
+
+Total Orders (Today / 7 days)
+Revenue
+Margin (from your new feature 👀)
+Active wholesalers
+Failed payments
+Low stock alerts
+Add quick alerts:
+⚠️ Failed payments  
+⚠️ Orders stuck in processing  
+⚠️ Expiring stock (batch-related)
+
+👉 This is your “what needs attention right now” view
+
+🏪 2. Wholesaler Management
+
+List all wholesalers with:
+
+Name
+Status (Active / Inactive)
+Revenue
+Last activity
+Actions:
+View account
+Impersonate (login as wholesaler) ⚠️ (secure)
+Adjust settings
+Disable account
+
+👉 This is your support tool
+
+👥 3. Customer Management
+Search by phone (important for OTP system)
+View order history
+Flag suspicious activity
+📦 4. Orders (Global View)
+All orders across platform
+Filters:
+Status
+Wholesaler
+Date
+Actions:
+View details
+Trigger refund
+Resend invoice
+Investigate issues
+📦 5. Product Oversight
+View products across wholesalers
+Spot:
+Missing cost prices
+Low margin items
+Out-of-stock products
+
+👉 Helps you maintain platform quality
+
+💰 6. Financials (IMPORTANT)
+
+Show:
+
+Total platform revenue (fees)
+Commission earned
+Refunds
+Stripe payout status
+
+Using Stripe data where relevant
+
+🛠️ 7. Support & Logs (VERY IMPORTANT)
+Activity Logs:
+User actions:
+- Created order
+- Edited product
+- Issued refund
+Error Logs:
+Payment failures
+Webhook failures
+System errors
+
+👉 This is how you debug fast
+
+⚙️ 8. System Settings (LIMITED)
+
+Only include:
+
+Fee configuration (view-only or controlled)
+Feature flags (optional)
+Environment info (test/live)
+
+🚫 Do NOT overload this section
+
+⚡ Power Features (HIGH VALUE)
+1. Impersonation Mode
+"Login as wholesaler"
+Must be logged/audited
+Easy exit back to admin
+
+👉 Huge for support
+
+2. Global Search (Top Bar)
+
+Search:
+
+Orders
+Customers
+Products
+
+👉 Saves time
+
+3. Quick Actions Panel
+
+Buttons:
+
+Create order (on behalf)
+Issue refund
+Add product
+Contact wholesaler
+🎨 UX Guidelines
+Clean, modern (Stripe / Shopify style)
+Card-based layout
+Clear spacing
+No clutter
+🚨 NON-NEGOTIABLE RULES
+Do NOT break:
+Existing workflows
+Data structures
+Permissions
+Admin actions must:
+Be logged
+Be reversible where possible
+🔐 Security Rules
+Only Owner role can access admin panel
+Sensitive actions require:
+Confirmation step
+🧪 Acceptance Criteria
+Admin can find anything within 2–3 clicks
+Can support a wholesaler without leaving panel
+Can detect issues quickly
+No performance lag
+No existing features broken
+🧠 Sanity Check
+
+If admin panel:
+
+“Looks like a settings page with lots of toggles”
+
+🚫 WRONG
+
+If admin panel:
+
+“Helps you monitor, act, and fix things quickly”
+
+✅ Correct
