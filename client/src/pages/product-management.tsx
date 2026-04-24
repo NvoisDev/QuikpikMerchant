@@ -484,7 +484,7 @@ export default function ProductManagement() {
       form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
       lastAutoFilledUnitWeight.current = newUnitWeight;
       toast({
-        title: "Unit Weight Auto-Filled",
+        title: "Unit Weight Auto-Calculated",
         description: `${calculatedKg}kg per unit (${size}${unitOfMeasure})`,
         duration: 2000,
       });
