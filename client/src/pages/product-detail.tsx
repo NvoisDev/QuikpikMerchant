@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
-  Thermometer, Layers, Clock, ShieldAlert,
+  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,6 +132,9 @@ export default function ProductDetail() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showAllBatches, setShowAllBatches] = useState(false);
+  const [expiryPopoverBatchId, setExpiryPopoverBatchId] = useState<number | null>(null);
+  const [expiryInputValue, setExpiryInputValue] = useState<string>("");
+  const expiryPopoverRef = useRef<HTMLDivElement>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -220,6 +223,35 @@ export default function ProductDetail() {
     },
     onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
   });
+
+  const updateExpiryMutation = useMutation({
+    mutationFn: ({ batchId, expiryDate }: { batchId: number; expiryDate: string | null }) =>
+      apiRequest("PATCH", `/api/products/${productId}/batches/${batchId}`, { expiryDate }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "batches"] });
+      setExpiryPopoverBatchId((current) => (current === variables.batchId ? null : current));
+      toast({ title: "Expiry date updated" });
+    },
+    onError: () => toast({ title: "Failed to update expiry date", variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (expiryPopoverBatchId === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (expiryPopoverRef.current && !expiryPopoverRef.current.contains(e.target as Node)) {
+        setExpiryPopoverBatchId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expiryPopoverBatchId]);
+
+  const openExpiryPopover = (batch: Batch) => {
+    const val = batch.expiryDate ? batch.expiryDate.substring(0, 10) : "";
+    setExpiryInputValue(val);
+    setExpiryPopoverBatchId(batch.id);
+  };
 
   // Navigate to product-management opening the exact existing modal, then return here
   const openEditModal = () => navigate(`/products?edit=${productId}&from=${encodeURIComponent(`/products/${productId}`)}`);
@@ -501,6 +533,10 @@ export default function ProductDetail() {
                           const isExpiredBatch =
                             batch.status === "expired" ||
                             (batch.expiryDate != null && new Date(batch.expiryDate) < today);
+                          const isThisPopoverOpen = expiryPopoverBatchId === batch.id;
+                          const isSavingThisBatch =
+                            updateExpiryMutation.isPending &&
+                            updateExpiryMutation.variables?.batchId === batch.id;
                           return (
                             <tr key={batch.id} className={isExpiredBatch ? "opacity-50" : ""}>
                               <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[90px]">
@@ -508,15 +544,74 @@ export default function ProductDetail() {
                               </td>
                               <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
                               <td className="px-3 py-2 text-right">
-                                {expiryInfo ? (
-                                  <span className={`inline-block px-1.5 py-0.5 rounded text-xs border ${expiryInfo.className}`}>
-                                    {batch.expiryDate
-                                      ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
-                                      : "—"}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">No expiry</span>
-                                )}
+                                <div className="relative inline-block">
+                                  <button
+                                    onClick={() => openExpiryPopover(batch)}
+                                    disabled={isSavingThisBatch}
+                                    className="focus:outline-none"
+                                    title="Click to edit expiry date"
+                                  >
+                                    {isSavingThisBatch ? (
+                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${expiryInfo?.className ?? "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      </span>
+                                    ) : expiryInfo ? (
+                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border cursor-pointer hover:opacity-80 transition-opacity ${expiryInfo.className}`}>
+                                        {batch.expiryDate
+                                          ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+                                          : "—"}
+                                        <CalendarDays className="h-2.5 w-2.5 opacity-60" />
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
+                                        No expiry <CalendarDays className="h-2.5 w-2.5" />
+                                      </span>
+                                    )}
+                                  </button>
+
+                                  {isThisPopoverOpen && (
+                                    <div
+                                      ref={expiryPopoverRef}
+                                      className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px]"
+                                    >
+                                      <p className="text-xs font-medium text-gray-600 mb-2">Set expiry date</p>
+                                      <input
+                                        type="date"
+                                        autoFocus
+                                        value={expiryInputValue}
+                                        disabled={updateExpiryMutation.isPending}
+                                        onChange={(e) => {
+                                          const newVal = e.target.value;
+                                          setExpiryInputValue(newVal);
+                                          if (newVal) {
+                                            updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: newVal });
+                                          }
+                                        }}
+                                        className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2 disabled:opacity-50"
+                                      />
+                                      <div className="flex gap-1.5 justify-end">
+                                        {batch.expiryDate && (
+                                          <button
+                                            onClick={() =>
+                                              updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: null })
+                                            }
+                                            disabled={updateExpiryMutation.isPending}
+                                            className="text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded px-2 py-1.5 disabled:opacity-50"
+                                            title="Remove expiry date"
+                                          >
+                                            Clear
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => setExpiryPopoverBatchId(null)}
+                                          className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1.5"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <span className={`inline-block px-1.5 py-0.5 rounded-full text-xs capitalize ${
