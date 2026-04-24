@@ -116,6 +116,19 @@ export function registerBatchRoutes(app: Express): void {
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
       }
+
+      if ('costPrice' in updates) {
+        if (updates.costPrice === null || updates.costPrice === '') {
+          updates.costPrice = null;
+        } else {
+          const costNum = Number(updates.costPrice);
+          if (!isFinite(costNum) || costNum < 0) {
+            return res.status(400).json({ error: 'costPrice must be a non-negative number or null' });
+          }
+          updates.costPrice = String(costNum);
+        }
+      }
+
       const updated = await storage.updateProductBatch(batchId, updates, wholesalerId);
       res.json(updated);
     } catch (error) {

@@ -180,6 +180,8 @@ export default function ProductManagement() {
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
   const [topUpQuantity, setTopUpQuantity] = useState("");
+  const [editCostPriceBatchId, setEditCostPriceBatchId] = useState<number | null>(null);
+  const [editCostPriceValue, setEditCostPriceValue] = useState("");
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -1289,6 +1291,22 @@ export default function ProductManagement() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update expiry date", variant: "destructive" });
+    },
+  });
+
+  const updateBatchCostPriceMutation = useMutation({
+    mutationFn: async ({ productId, batchId, costPrice }: { productId: number; batchId: number; costPrice: string | null }) => {
+      return apiRequest('PATCH', `/api/products/${productId}/batches/${batchId}`, { costPrice });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/batches`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${expandedBatchProductId}/batches`] });
+      setEditCostPriceBatchId(null);
+      toast({ title: "Cost price updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update cost price", variant: "destructive" });
     },
   });
 
@@ -3341,7 +3359,7 @@ export default function ProductManagement() {
           )}
       </div>
 
-      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setStockQuantity(""); setStockReason(""); if (navigateBackTo) { const dest = navigateBackTo; setNavigateBackTo(null); navigate(dest); } } }}>
+      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); setStockQuantity(""); setStockReason(""); if (navigateBackTo) { const dest = navigateBackTo; setNavigateBackTo(null); navigate(dest); } } }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -3365,7 +3383,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "increase" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); }}
+                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); }}
                 >
                   <ArrowUpCircle className="h-4 w-4 mr-1" />
                   Add New Batch
@@ -3374,7 +3392,7 @@ export default function ProductManagement() {
                   variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
                   size="sm"
                   className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); }}
+                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); }}
                 >
                   <ArrowDownCircle className="h-4 w-4 mr-1" />
                   Remove Stock
@@ -3442,6 +3460,7 @@ export default function ProductManagement() {
                           } else {
                             const isExpired = batch.status !== 'active' || (batch.expiryDate && new Date(batch.expiryDate) < todayDate);
                             const isTopUp = topUpBatchId === batch.id;
+                            const isEditingCost = editCostPriceBatchId === batch.id;
                             return (
                               <div key={batch.id} className="rounded-lg border border-gray-200 overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-2 bg-gray-50 text-sm">
@@ -3452,16 +3471,32 @@ export default function ProductManagement() {
                                     <span className={`text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}`}>Exp: {expiry}</span>
                                     {isExpired && <span className="text-xs text-red-500 font-medium">(expired)</span>}
                                     <span className="text-gray-300">·</span>
-                                    <span className="text-xs text-gray-400">
-                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
-                                    </span>
+                                    {isViewer ? (
+                                      <span className="text-xs text-gray-400">
+                                        Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const current = batch.costPrice != null && batch.costPrice !== "" ? String(batch.costPrice) : "";
+                                          setEditCostPriceValue(current);
+                                          setEditCostPriceBatchId(isEditingCost ? null : batch.id);
+                                          if (isTopUp) { setTopUpBatchId(null); setTopUpQuantity(""); }
+                                        }}
+                                        className="text-xs text-gray-400 hover:text-green-600 transition-colors"
+                                        title="Edit cost price"
+                                      >
+                                        Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"} ✎
+                                      </button>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     <span className={`font-semibold ${isExpired ? 'text-gray-400' : 'text-gray-500'}`}>{formatNumber(batch.quantity)} units</span>
                                     {!isExpired && (
                                       <button
                                         type="button"
-                                        onClick={() => { setTopUpBatchId(isTopUp ? null : batch.id); setTopUpQuantity(""); }}
+                                        onClick={() => { setTopUpBatchId(isTopUp ? null : batch.id); setTopUpQuantity(""); setEditCostPriceBatchId(null); }}
                                         className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
                                           isTopUp
                                             ? 'bg-green-600 text-white border-green-600'
@@ -3473,6 +3508,51 @@ export default function ProductManagement() {
                                     )}
                                   </div>
                                 </div>
+                                {isEditingCost && (
+                                  <div className="px-3 py-2.5 bg-blue-50 border-t border-blue-100 flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="Cost price"
+                                      value={editCostPriceValue}
+                                      onChange={(e) => setEditCostPriceValue(e.target.value)}
+                                      className="h-8 text-sm flex-1"
+                                      autoFocus
+                                    />
+                                    {batch.costPrice != null && batch.costPrice !== "" && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateBatchCostPriceMutation.mutate({ productId: stockProduct!.id, batchId: batch.id, costPrice: null })}
+                                        disabled={updateBatchCostPriceMutation.isPending}
+                                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 flex-shrink-0"
+                                      >
+                                        Clear
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditCostPriceBatchId(null)}
+                                      className="h-8 text-xs flex-shrink-0"
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        const val = editCostPriceValue.trim();
+                                        if (!val) return;
+                                        updateBatchCostPriceMutation.mutate({ productId: stockProduct!.id, batchId: batch.id, costPrice: val });
+                                      }}
+                                      disabled={!editCostPriceValue.trim() || updateBatchCostPriceMutation.isPending}
+                                      className="h-8 bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+                                    >
+                                      {updateBatchCostPriceMutation.isPending ? "Saving…" : "Save"}
+                                    </Button>
+                                  </div>
+                                )}
                                 {isTopUp && (
                                   <div className="px-3 py-2.5 bg-green-50 border-t border-green-100 flex items-center gap-2">
                                     <Input

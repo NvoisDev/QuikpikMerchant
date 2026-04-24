@@ -138,6 +138,9 @@ export default function ProductDetail() {
   const [expiryPopoverBatchId, setExpiryPopoverBatchId] = useState<number | null>(null);
   const [expiryInputValue, setExpiryInputValue] = useState<string>("");
   const expiryPopoverRef = useRef<HTMLDivElement>(null);
+  const [costPriceEditBatchId, setCostPriceEditBatchId] = useState<number | null>(null);
+  const [costPriceInputValue, setCostPriceInputValue] = useState<string>("");
+  const costPricePopoverRef = useRef<HTMLDivElement>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -238,6 +241,18 @@ export default function ProductDetail() {
     onError: () => toast({ title: "Failed to update expiry date", variant: "destructive" }),
   });
 
+  const updateCostPriceMutation = useMutation({
+    mutationFn: ({ batchId, costPrice }: { batchId: number; costPrice: string | null }) =>
+      apiRequest("PATCH", `/api/products/${productId}/batches/${batchId}`, { costPrice }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "batches"] });
+      setCostPriceEditBatchId((current) => (current === variables.batchId ? null : current));
+      toast({ title: "Cost price updated" });
+    },
+    onError: () => toast({ title: "Failed to update cost price", variant: "destructive" }),
+  });
+
   useEffect(() => {
     if (expiryPopoverBatchId === null) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -249,10 +264,27 @@ export default function ProductDetail() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expiryPopoverBatchId]);
 
+  useEffect(() => {
+    if (costPriceEditBatchId === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (costPricePopoverRef.current && !costPricePopoverRef.current.contains(e.target as Node)) {
+        setCostPriceEditBatchId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [costPriceEditBatchId]);
+
   const openExpiryPopover = (batch: Batch) => {
     const val = batch.expiryDate ? batch.expiryDate.substring(0, 10) : "";
     setExpiryInputValue(val);
     setExpiryPopoverBatchId(batch.id);
+  };
+
+  const openCostPricePopover = (batch: Batch) => {
+    const val = batch.costPrice != null && batch.costPrice !== "" ? String(batch.costPrice) : "";
+    setCostPriceInputValue(val);
+    setCostPriceEditBatchId(batch.id);
   };
 
   // Navigate to product-management opening the exact existing modal, then return here
@@ -551,9 +583,75 @@ export default function ProductDetail() {
                               </td>
                               <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
                               <td className="px-3 py-2 text-right text-gray-700">
-                                {batch.costPrice != null && batch.costPrice !== ""
-                                  ? fmt(batch.costPrice, currency)
-                                  : <span className="text-gray-400">—</span>}
+                                {isViewer ? (
+                                  batch.costPrice != null && batch.costPrice !== ""
+                                    ? fmt(batch.costPrice, currency)
+                                    : <span className="text-gray-400">—</span>
+                                ) : (
+                                  <div className="relative inline-block">
+                                    <button
+                                      onClick={() => openCostPricePopover(batch)}
+                                      disabled={updateCostPriceMutation.isPending && updateCostPriceMutation.variables?.batchId === batch.id}
+                                      className="focus:outline-none"
+                                      title="Click to edit cost price"
+                                    >
+                                      {updateCostPriceMutation.isPending && updateCostPriceMutation.variables?.batchId === batch.id ? (
+                                        <span className="inline-flex items-center gap-1 text-gray-400"><Loader2 className="h-3 w-3 animate-spin" /></span>
+                                      ) : batch.costPrice != null && batch.costPrice !== "" ? (
+                                        <span className="cursor-pointer hover:text-green-700 hover:underline transition-colors">{fmt(batch.costPrice, currency)}</span>
+                                      ) : (
+                                        <span className="text-gray-400 cursor-pointer hover:text-green-600 transition-colors">— <span className="text-xs">(add)</span></span>
+                                      )}
+                                    </button>
+                                    {costPriceEditBatchId === batch.id && (
+                                      <div
+                                        ref={costPricePopoverRef}
+                                        className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[180px]"
+                                      >
+                                        <p className="text-xs font-medium text-gray-600 mb-2">Set cost price</p>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          autoFocus
+                                          value={costPriceInputValue}
+                                          disabled={updateCostPriceMutation.isPending}
+                                          onChange={(e) => setCostPriceInputValue(e.target.value)}
+                                          placeholder="0.00"
+                                          className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2 disabled:opacity-50"
+                                        />
+                                        <div className="flex gap-1.5 justify-end">
+                                          {(batch.costPrice != null && batch.costPrice !== "") && (
+                                            <button
+                                              onClick={() => updateCostPriceMutation.mutate({ batchId: batch.id, costPrice: null })}
+                                              disabled={updateCostPriceMutation.isPending}
+                                              className="text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded px-2 py-1.5 disabled:opacity-50"
+                                            >
+                                              Clear
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={() => setCostPriceEditBatchId(null)}
+                                            className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1.5"
+                                          >
+                                            ✕
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              const val = costPriceInputValue.trim();
+                                              if (val === "") return;
+                                              updateCostPriceMutation.mutate({ batchId: batch.id, costPrice: val });
+                                            }}
+                                            disabled={updateCostPriceMutation.isPending || costPriceInputValue.trim() === ""}
+                                            className="text-xs text-white bg-green-600 hover:bg-green-700 rounded px-2 py-1.5 disabled:opacity-50"
+                                          >
+                                            Save
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 {isViewer ? (
