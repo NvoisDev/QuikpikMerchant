@@ -351,18 +351,33 @@ export default function ProductManagement() {
           form.reset(safeData);
           console.log('✅ Form safely populated with complete data');
 
-          // Auto-fill unit weight on load if it's blank but unit of measure is kg/g/lb/oz
-          const WEIGHT_TO_KG: Record<string, number> = { kg: 1, g: 0.001, lb: 0.453592, oz: 0.0283495 };
-          const loadConversionFactor = safeData.unitOfMeasure ? WEIGHT_TO_KG[safeData.unitOfMeasure as string] : undefined;
-          if (!safeData.unitWeight && safeData.unitSize && loadConversionFactor) {
-            const size = parseFloat(safeData.unitSize as string);
-            if (size > 0) {
-              const autoKg = Math.round(size * loadConversionFactor * 1000) / 1000;
-              if (autoKg > 0) {
-                const autoStr = autoKg.toString();
-                form.setValue('unitWeight', autoStr, { shouldValidate: false });
-                lastAutoFilledUnitWeight.current = autoStr;
+          // Auto-fill unit weight on load if it's blank
+          // Priority 1: derive from totalPackageWeight ÷ packQuantity (works for any unit)
+          // Priority 2: derive from unitSize × unit-of-measure conversion (weight units only)
+          if (!safeData.unitWeight) {
+            let autoStr = '';
+            if (safeData.totalPackageWeight) {
+              const pkgWeight = parseFloat(safeData.totalPackageWeight as string);
+              const qty = parseFloat(safeData.packQuantity as string) || 1;
+              if (pkgWeight > 0 && qty > 0) {
+                const autoKg = Math.round((pkgWeight / qty) * 1000) / 1000;
+                if (autoKg > 0) autoStr = autoKg.toString();
               }
+            }
+            if (!autoStr) {
+              const WEIGHT_TO_KG: Record<string, number> = { kg: 1, g: 0.001, lb: 0.453592, oz: 0.0283495 };
+              const loadConversionFactor = safeData.unitOfMeasure ? WEIGHT_TO_KG[safeData.unitOfMeasure as string] : undefined;
+              if (safeData.unitSize && loadConversionFactor) {
+                const size = parseFloat(safeData.unitSize as string);
+                if (size > 0) {
+                  const autoKg = Math.round(size * loadConversionFactor * 1000) / 1000;
+                  if (autoKg > 0) autoStr = autoKg.toString();
+                }
+              }
+            }
+            if (autoStr) {
+              form.setValue('unitWeight', autoStr, { shouldValidate: false });
+              lastAutoFilledUnitWeight.current = autoStr;
             }
           } else {
             // DB has a value the user set manually — don't track it as auto-filled
@@ -447,6 +462,36 @@ export default function ProductManagement() {
 
     return () => subscription.unsubscribe();
   }, [form, toast]);
+
+  // Auto-calculate Unit Weight from Total Package Weight ÷ Pack Quantity
+  // Works for ALL unit types (mL, pieces, kg, g, etc.)
+  // Only overwrites unitWeight when it is blank OR still holds our last auto-filled value
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name !== 'totalPackageWeight' && name !== 'packQuantity') return;
+
+      const { totalPackageWeight = '', packQuantity = '' } = values;
+      if (!totalPackageWeight) return;
+
+      const pkgWeight = parseFloat(totalPackageWeight as string);
+      const qty = parseFloat(packQuantity as string) || 1;
+      if (pkgWeight <= 0 || qty <= 0) return;
+
+      const calculatedUnitWeight = Math.round((pkgWeight / qty) * 1000) / 1000;
+      if (calculatedUnitWeight <= 0) return;
+
+      const currentUnitWeight = form.getValues('unitWeight');
+      const newUnitWeight = calculatedUnitWeight.toString();
+
+      const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+      if (!canOverwrite || currentUnitWeight === newUnitWeight) return;
+
+      form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
+      lastAutoFilledUnitWeight.current = newUnitWeight;
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, lastAutoFilledUnitWeight]);
 
   // Auto-fill Unit Weight from Size per Unit when unit of measure is kg / g / lb / oz
   // Only overwrites unitWeight when it is blank OR when it still holds the last value we
@@ -2408,7 +2453,7 @@ export default function ProductManagement() {
                                   </FormControl>
                                   <FormMessage />
                                   <div className="text-xs text-muted-foreground">
-                                    Weight of one selling unit — used in quote weight totals
+                                    Auto-calculated from Total Package Weight ÷ Quantity in Pack
                                   </div>
                                 </FormItem>
                               )}
