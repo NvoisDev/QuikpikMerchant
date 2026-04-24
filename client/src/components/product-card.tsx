@@ -251,7 +251,7 @@ export default function ProductCard({
                   <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem
                   onClick={() => !isLocked && onEdit(product)}
                   disabled={isLocked}
@@ -314,7 +314,7 @@ export default function ProductCard({
                   {currentStatusConfig.label}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={() => handleStatusChange("active")} className="cursor-pointer">
                   <div className="w-2 h-2 rounded-full bg-green-500 mr-2" /> Active
                 </DropdownMenuItem>
