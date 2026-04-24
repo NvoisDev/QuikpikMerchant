@@ -65,7 +65,6 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - **WhatsApp Messaging**: Send supported customer notifications now and prepare groups for future broadcast campaigns
 - **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports
 - **Order Management**: Complete order lifecycle with status tracking and refund processing
-- **Product Negotiation**: Enable custom pricing requests with minimum bid price controls
 - **Real-time Analytics**: Track sales, revenue, and business performance
 - **Mobile Responsive**: Works perfectly on all devices for you and your customers
 
@@ -168,7 +167,6 @@ The **Team Management** page (accessible from the sidebar) lets you invite colle
 
 5. **Set Visibility Options**:
    - **Price Visible**: Show/hide price to customers
-   - **Negotiation Enabled**: Allow customers to request price negotiations
 
 6. **Click "Create Product"** to save
 
@@ -1458,7 +1456,6 @@ The Customer Portal is a dedicated shopping interface where approved customers c
 - **Secure Payments**: Stripe-powered checkout with card processing
 - **Automatic Invoicing**: Professional invoices emailed after purchase
 - **Real-time Stock**: Live inventory updates prevent overselling
-- **Negotiation System**: Customers can request custom pricing on eligible products
 
 #### How Customers Access Your Portal
 1. **Direct Links**: Share your customer portal URL (found in "Preview Store")

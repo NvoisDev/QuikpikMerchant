@@ -2,7 +2,6 @@ export type GuestPricedProduct = Record<string, unknown> & {
   price?: unknown;
   promoPrice?: unknown;
   palletPrice?: unknown;
-  minimumBidPrice?: unknown;
   customPrice?: unknown;
   standardPrice?: unknown;
   hasPriceList?: unknown;
@@ -14,7 +13,6 @@ export const stripGuestPricingData = <T extends GuestPricedProduct>(product: T):
   product.price = null;
   product.promoPrice = null;
   product.palletPrice = null;
-  product.minimumBidPrice = null;
   product.customPrice = undefined;
   product.standardPrice = undefined;
   product.hasPriceList = undefined;

@@ -431,13 +431,6 @@ export default function CustomerPortal() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editQuantity, setEditQuantity] = useState(1);
   const [selectedSellingType, setSelectedSellingType] = useState<"units" | "pallets">("units");
-  const [showNegotiation, setShowNegotiation] = useState(false);
-  const [negotiationProduct, setNegotiationProduct] = useState<Product | null>(null);
-  const [negotiationData, setNegotiationData] = useState({
-    quantity: 1,
-    offeredPrice: '',
-    message: ''
-  });
   const [showCheckout, setShowCheckout] = useState(false);
   const [payLaterMode, setPayLaterMode] = useState(false);
   const [isPlacingPayLaterOrder, setIsPlacingPayLaterOrder] = useState(false);
@@ -897,24 +890,6 @@ export default function CustomerPortal() {
     setShowQuantityEditor(true);
   }, [isEnhancedPreviewMode, toast]);
 
-  const openNegotiation = useCallback((product: Product) => {
-    if (isEnhancedPreviewMode) {
-      toast({
-        title: "Preview Mode",
-        description: "Negotiation functionality is disabled in preview mode.",
-        variant: "default"
-      });
-      return;
-    }
-    setNegotiationProduct(product);
-    setNegotiationData({
-      quantity: product.moq,
-      offeredPrice: '',
-      message: ''
-    });
-    setShowNegotiation(true);
-  }, [isEnhancedPreviewMode, toast]);
-
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
     if (isEnhancedPreviewMode) {
       toast({
@@ -1362,28 +1337,6 @@ export default function CustomerPortal() {
     }
   };
 
-  // Handle negotiation submission
-  const submitNegotiation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/marketplace/negotiations", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Quote Request Sent",
-        description: "Your custom quote request has been sent to the supplier. You'll receive an email response within 24 hours.",
-      });
-      setShowNegotiation(false);
-      setNegotiationProduct(null);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send quote request. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
-
   // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: typeof editedProfile) => {
@@ -1428,21 +1381,6 @@ export default function CustomerPortal() {
   // Handle profile save
   const handleSaveProfile = () => {
     updateProfileMutation.mutate(editedProfile);
-  };
-
-  const handleNegotiationSubmit = () => {
-    if (!negotiationProduct) return;
-    
-    submitNegotiation.mutate({
-      productId: negotiationProduct.id,
-      wholesalerId: wholesalerId,
-      quantity: negotiationData.quantity,
-      offeredPrice: negotiationData.offeredPrice,
-      message: negotiationData.message,
-      customerName: customerData.name,
-      customerEmail: customerData.email,
-      customerPhone: customerData.phone
-    });
   };
 
   // Authentication handlers

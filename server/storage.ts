@@ -5,7 +5,6 @@ import {
   orderItems,
   customerGroups,
   customerGroupMembers,
-  negotiations,
   broadcasts,
   messageTemplates,
   templateProducts,
@@ -37,8 +36,6 @@ import {
   type InsertOrderItem,
   type CustomerGroup,
   type InsertCustomerGroup,
-  type Negotiation,
-  type InsertNegotiation,
   type Broadcast,
   type InsertBroadcast,
   type MessageTemplate,
@@ -252,11 +249,6 @@ export interface IStorage {
   
   getTopProducts(wholesalerId: string, limit?: number): Promise<(Product & { orderCount: number; revenue: number })[]>;
   getRecentOrders(wholesalerId: string, limit?: number): Promise<(Order & { retailer: User })[]>;
-  
-  // Negotiation operations
-  getNegotiations(productId?: number, retailerId?: string): Promise<(Negotiation & { product: Product; retailer: User })[]>;
-  createNegotiation(negotiation: InsertNegotiation): Promise<Negotiation>;
-  updateNegotiation(id: number, updates: Partial<InsertNegotiation>): Promise<Negotiation>;
   
   // Subscription operations
   updateUserSubscription(userId: string, subscription: {

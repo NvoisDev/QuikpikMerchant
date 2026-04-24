@@ -434,8 +434,6 @@ export const products = pgTable("products", {
   category: varchar("category"),
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock' | 'locked'
   priceVisible: boolean("price_visible").notNull().default(true),
-  negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
-  minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   
   // Core Inventory Configuration - Following Base Unit Logic
@@ -654,20 +652,6 @@ export const orderItems = pgTable("order_items", {
   orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
   productIdIdx: index("order_items_product_id_idx").on(table.productId),
 }));
-
-export const negotiations = pgTable("negotiations", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => products.id),
-  retailerId: varchar("retailer_id").notNull().references(() => users.id),
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
-  offeredPrice: decimal("offered_price", { precision: 10, scale: 2 }).notNull(),
-  counterPrice: decimal("counter_price", { precision: 10, scale: 2 }),
-  status: varchar("status").notNull().default("pending"), // 'pending' | 'accepted' | 'declined' | 'countered'
-  quantity: integer("quantity").notNull(),
-  message: text("message"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
@@ -962,7 +946,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   customerGroups: many(customerGroups),
   ordersAsWholesaler: many(orders, { relationName: "wholesaler" }),
   ordersAsRetailer: many(orders, { relationName: "retailer" }),
-  negotiations: many(negotiations),
   groupMemberships: many(customerGroupMembers),
   teamMembers: many(teamMembers),
 }));
@@ -980,7 +963,6 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     references: [users.id],
   }),
   orderItems: many(orderItems),
-  negotiations: many(negotiations),
   stockMovements: many(stockMovements),
 }));
 
@@ -1040,17 +1022,6 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
   order: one(orders, {
     fields: [stockMovements.orderId],
     references: [orders.id],
-  }),
-}));
-
-export const negotiationsRelations = relations(negotiations, ({ one }) => ({
-  product: one(products, {
-    fields: [negotiations.productId],
-    references: [products.id],
-  }),
-  retailer: one(users, {
-    fields: [negotiations.retailerId],
-    references: [users.id],
   }),
 }));
 
@@ -1159,7 +1130,6 @@ export const insertProductSchema = createInsertSchema(products).omit({
   price: z.union([z.string(), z.number()]).transform((val) => val.toString()),
   promoPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
 
-  minimumBidPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   totalPackageWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   
@@ -1204,14 +1174,6 @@ export const insertCustomerGroupSchema = createInsertSchema(customerGroups).omit
 });
 export type InsertCustomerGroup = z.infer<typeof insertCustomerGroupSchema>;
 export type CustomerGroup = typeof customerGroups.$inferSelect;
-
-export const insertNegotiationSchema = createInsertSchema(negotiations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertNegotiation = z.infer<typeof insertNegotiationSchema>;
-export type Negotiation = typeof negotiations.$inferSelect;
 
 export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({
   id: true,

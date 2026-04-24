@@ -5,7 +5,6 @@ import {
   orderItems,
   customerGroups,
   customerGroupMembers,
-  negotiations,
   broadcasts,
   messageTemplates,
   templateProducts,
@@ -34,8 +33,6 @@ import {
   type InsertOrderItem,
   type CustomerGroup,
   type InsertCustomerGroup,
-  type Negotiation,
-  type InsertNegotiation,
   type Broadcast,
   type InsertBroadcast,
   type MessageTemplate,
@@ -1031,43 +1028,6 @@ export class CustomerStorage extends OrderStorage {
     }));
   }
 
-  // Negotiation operations
-  async getNegotiations(productId?: number, retailerId?: string): Promise<(Negotiation & { product: Product; retailer: User })[]> {
-    let query = db
-      .select()
-      .from(negotiations)
-      .leftJoin(products, eq(negotiations.productId, products.id))
-      .leftJoin(users, eq(negotiations.retailerId, users.id));
-
-    if (productId) {
-      query = query.where(eq(negotiations.productId, productId));
-    } else if (retailerId) {
-      query = query.where(eq(negotiations.retailerId, retailerId));
-    }
-
-    const result = await query.orderBy(desc(negotiations.createdAt));
-
-    return result.map(row => ({
-      ...row.negotiations,
-      product: row.products!,
-      retailer: row.users!
-    }));
-  }
-
-  async createNegotiation(negotiation: InsertNegotiation): Promise<Negotiation> {
-    const [newNegotiation] = await db.insert(negotiations).values(negotiation).returning();
-    return newNegotiation;
-  }
-
-  async updateNegotiation(id: number, updates: Partial<InsertNegotiation>): Promise<Negotiation> {
-    const [updatedNegotiation] = await db
-      .update(negotiations)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(negotiations.id, id))
-      .returning();
-    return updatedNegotiation;
-  }
-
   async updateUserSubscription(userId: string, subscription: {
     tier: string;
     status: string;
@@ -1196,8 +1156,6 @@ export class CustomerStorage extends OrderStorage {
           category: product.category,
           status: product.status,
           priceVisible: product.price_visible,
-          negotiationEnabled: product.negotiation_enabled,
-          minimumBidPrice: product.minimum_bid_price,
           // Product size fields conversion
           packQuantity: product.pack_quantity,
           unitOfMeasure: product.unit_of_measure,
@@ -1385,8 +1343,6 @@ export class CustomerStorage extends OrderStorage {
           category: product.category,
           status: product.status,
           priceVisible: product.price_visible,
-          negotiationEnabled: product.negotiation_enabled,
-          minimumBidPrice: product.minimum_bid_price,
           sellingFormat: product.selling_format,
           unitsPerPallet: product.units_per_pallet,
           palletPrice: product.pallet_price,

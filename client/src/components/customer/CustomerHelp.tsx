@@ -125,10 +125,6 @@ const helpSections: HelpSection[] = [
         question: "How does a Buy X Get Y Free promotion work?",
         answer: "When you add the qualifying quantity of a product, any free units are automatically included in your cart and shown clearly at checkout. You won't be charged for the free items."
       },
-      {
-        question: "Can I use a promo and still negotiate a price?",
-        answer: "If a product allows price negotiation (you'll see a 'Make an Offer' option), you can still request a custom price. The seller will review your offer and respond."
-      }
     ]
   },
   {

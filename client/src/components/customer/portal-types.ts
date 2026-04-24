@@ -30,8 +30,6 @@ export interface Product {
   imageUrl?: string;
   status: string;
   priceVisible: boolean;
-  negotiationEnabled: boolean;
-  minimumBidPrice?: string;
   promoPrice?: string;
   promoActive?: boolean;
   deliveryExcluded?: boolean;

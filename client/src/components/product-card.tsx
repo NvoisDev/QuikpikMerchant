@@ -47,7 +47,6 @@ interface Product {
   category?: string;
   status: "active" | "inactive" | "out_of_stock" | "locked";
   priceVisible: boolean;
-  negotiationEnabled: boolean;
   editCount?: number;
   createdAt?: string;
   lowStockThreshold?: number;
@@ -446,11 +445,6 @@ export default function ProductCard({
                 {product.sellingFormat === 'pallets' ? 'Pallets Only' :
                  product.sellingFormat === 'both' ? 'Units & Pallets' : 'Units Only'}
               </Badge>
-              {product.negotiationEnabled && (
-                <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                  Negotiable
-                </Badge>
-              )}
               {!product.priceVisible && (
                 <Badge variant="outline" className="text-xs">Price Hidden</Badge>
               )}

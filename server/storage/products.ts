@@ -5,7 +5,6 @@ import {
   orderItems,
   customerGroups,
   customerGroupMembers,
-  negotiations,
   broadcasts,
   messageTemplates,
   templateProducts,
@@ -38,8 +37,6 @@ import {
   type InsertOrderItem,
   type CustomerGroup,
   type InsertCustomerGroup,
-  type Negotiation,
-  type InsertNegotiation,
   type Broadcast,
   type InsertBroadcast,
   type MessageTemplate,
@@ -114,7 +111,7 @@ export class ProductStorage extends UserStorageBase {
           id, name, description, price, stock, moq, 
           wholesaler_id, image_url, images, status, category,
           promo_active, promo_price, low_stock_threshold,
-          price_visible, negotiation_enabled, minimum_bid_price,
+          price_visible,
           pack_quantity, unit_of_measure, size_per_unit, currency,
           selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
           base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
@@ -163,8 +160,6 @@ export class ProductStorage extends UserStorageBase {
         category: row.category ? String(row.category) : null,
         status: String(row.status),
         priceVisible: Boolean(row.price_visible !== false),
-        negotiationEnabled: Boolean(row.negotiation_enabled),
-        minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
         editCount: Number(row.edit_count || 0),
         sellingFormat: String(row.selling_format || 'units'),
         palletPrice: row.pallet_price ? String(row.pallet_price) : null,
@@ -220,7 +215,7 @@ export class ProductStorage extends UserStorageBase {
         id, name, description, price, stock, moq, 
         wholesaler_id, image_url, images, status, category,
         promo_active, promo_price, low_stock_threshold,
-        price_visible, negotiation_enabled, minimum_bid_price,
+        price_visible,
         pack_quantity, unit_of_measure, size_per_unit, currency,
         selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
         promotional_offers,
@@ -265,8 +260,6 @@ export class ProductStorage extends UserStorageBase {
       category: row.category ? String(row.category) : null,
       status: String(row.status),
       priceVisible: Boolean(row.price_visible !== false),
-      negotiationEnabled: Boolean(row.negotiation_enabled),
-      minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
       editCount: 0,
       sellingFormat: String(row.selling_format || 'units'),
       palletPrice: row.pallet_price ? String(row.pallet_price) : null,
@@ -318,7 +311,7 @@ export class ProductStorage extends UserStorageBase {
         id, name, description, price, stock, moq,
         wholesaler_id, image_url, images, status, category,
         promo_active, promo_price, low_stock_threshold,
-        price_visible, negotiation_enabled, minimum_bid_price,
+        price_visible,
         pack_quantity, unit_of_measure, size_per_unit, currency,
         selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
         base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
@@ -359,8 +352,6 @@ export class ProductStorage extends UserStorageBase {
         category: row.category ? String(row.category) : null,
         status: String(row.status),
         priceVisible: Boolean(row.price_visible !== false),
-        negotiationEnabled: Boolean(row.negotiation_enabled),
-        minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
         editCount: Number(row.edit_count || 0),
         sellingFormat: String(row.selling_format || 'units'),
         palletPrice: row.pallet_price ? String(row.pallet_price) : null,
@@ -432,7 +423,6 @@ export class ProductStorage extends UserStorageBase {
     await db.update(orderItems).set({ productId: null }).where(eq(orderItems.productId, id));
     // Delete rows that exist purely for this product
     await db.delete(stockMovements).where(eq(stockMovements.productId, id));
-    await db.delete(negotiations).where(eq(negotiations.productId, id));
     await db.delete(templateProducts).where(eq(templateProducts.productId, id));
     await db.delete(productPerformanceSummary).where(eq(productPerformanceSummary.productId, id));
     await db.delete(stockUpdateNotifications).where(eq(stockUpdateNotifications.productId, id));

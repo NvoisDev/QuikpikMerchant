@@ -84,8 +84,6 @@ const productFormSchema = z.object({
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   images: z.array(z.string()).optional(),
   priceVisible: z.boolean(),
-  negotiationEnabled: z.boolean(),
-  minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
   
   // Flexible unit system
@@ -264,8 +262,6 @@ export default function ProductManagement() {
       imageUrl: "",
       images: [],
       priceVisible: true,
-      negotiationEnabled: false,
-      minimumBidPrice: "",
       status: "active",
       // Flexible unit system defaults
       packQuantity: "",
@@ -316,8 +312,6 @@ export default function ProductManagement() {
             imageUrl: editingProduct.imageUrl || "",
             images: Array.isArray(editingProduct.images) ? editingProduct.images : [],
             priceVisible: editingProduct.priceVisible !== false,
-            negotiationEnabled: editingProduct.negotiationEnabled === true,
-            minimumBidPrice: String(editingProduct.minimumBidPrice || ""),
             status: editingProduct.status || "active",
             // Extended fields to match schema
             packQuantity: String(editingProduct.packQuantity || ""),
@@ -878,8 +872,6 @@ export default function ProductManagement() {
       category: "",
       imageUrl: "",
       priceVisible: true,
-      negotiationEnabled: false,
-      minimumBidPrice: "",
       status: "active",
       unit: "units",
       unitsPerPallet: "",
@@ -1122,8 +1114,6 @@ export default function ProductManagement() {
         imageUrl: "", // Clear image URL when duplicating
         images: [], // Clear images array when duplicating
         priceVisible: Boolean(product.priceVisible),
-        negotiationEnabled: Boolean(product.negotiationEnabled),
-        minimumBidPrice: String(product.minimumBidPrice || ""),
         status: product.status || "active",
         // Flexible unit system
         packQuantity: String(product.packQuantity || ""),
@@ -1490,8 +1480,6 @@ export default function ProductManagement() {
         category: row.category || "",
         imageUrl: row.imageUrl || "",
         priceVisible: row.priceVisible !== 'false',
-        negotiationEnabled: row.negotiationEnabled === 'true',
-        minimumBidPrice: row.minimumBidPrice || "",
         status: row.status || "active",
         unit: row.unit || "units",
         unitFormat: row.unitFormat || "none",
@@ -1534,7 +1522,6 @@ export default function ProductManagement() {
             promoPrice: product.promoPrice ? parseFloat(product.promoPrice) : null,
             moq: parseInt(product.moq),
             stock: parseInt(product.stock),
-            minimumBidPrice: product.minimumBidPrice ? parseFloat(product.minimumBidPrice) : null,
             unitsPerPallet: product.unitsPerPallet ? parseInt(product.unitsPerPallet) : null,
             palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : null,
             palletMoq: product.palletMoq ? parseInt(product.palletMoq) : null,
@@ -1590,8 +1577,6 @@ export default function ProductManagement() {
         category: "Groceries & Food",
         imageUrl: "",
         priceVisible: "true",
-        negotiationEnabled: "false",
-        minimumBidPrice: "",
         status: "active",
         unit: "kg",
         unitFormat: "25kg bags",
@@ -1622,8 +1607,6 @@ export default function ProductManagement() {
         category: "Groceries & Food",
         imageUrl: "",
         priceVisible: "true",
-        negotiationEnabled: "true",
-        minimumBidPrice: "7.00",
         status: "active",
         unit: "ml",
         unitFormat: "12 x 500ml",
@@ -1654,8 +1637,6 @@ export default function ProductManagement() {
         category: "Beverages & Drinks",
         imageUrl: "",
         priceVisible: "true",
-        negotiationEnabled: "false",
-        minimumBidPrice: "",
         status: "active",
         unit: "cl",
         unitFormat: "24 x 33cl",
@@ -1864,7 +1845,7 @@ export default function ProductManagement() {
                         <h4 className="font-semibold">File Format Requirements:</h4>
                         <div className="text-sm text-gray-600 space-y-2">
                           <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
+                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
                           <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
                         </div>
                         <Button variant="link" onClick={downloadTemplate} className="p-0">
@@ -2827,59 +2808,6 @@ export default function ProductManagement() {
 
 
 
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-4">
-                          {/* Price visibility toggle removed - marketplace-specific pricing controls are in subscription settings for Premium users */}
-                          
-                          <FormField
-                            control={form.control}
-                            name="negotiationEnabled"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Enable Negotiation</FormLabel>
-                                  <div className="text-sm text-muted-foreground">
-                                    Allow customers to negotiate price
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {form.watch("negotiationEnabled") && (
-                            <FormField
-                              control={form.control}
-                              name="minimumBidPrice"
-                              render={({ field }) => (
-                                <FormItem className="rounded-lg border p-4">
-                                  <div className="space-y-2">
-                                    <FormLabel className="text-base">Minimum Bid Price</FormLabel>
-                                    <div className="text-sm text-muted-foreground">
-                                      Set the lowest price you'll accept for negotiations. Bids below this amount will be automatically declined.
-                                    </div>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="e.g., 15.00"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                        </div>
-                      </div>
-
                       {/* Promotional Offers Section - temporarily hidden until fully working */}
 
                       <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
@@ -3394,8 +3322,6 @@ export default function ProductManagement() {
                       category: "",
                       imageUrl: "",
                       priceVisible: true,
-                      negotiationEnabled: false,
-                      minimumBidPrice: "",
                       status: "active",
                       unit: "units",
                       unitsPerPallet: "",

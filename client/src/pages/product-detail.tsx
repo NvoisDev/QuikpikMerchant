@@ -37,7 +37,6 @@ interface ProductDetail {
   category: string | null;
   status: "active" | "inactive" | "out_of_stock" | "locked";
   priceVisible: boolean;
-  negotiationEnabled: boolean;
   sellingFormat: "units" | "pallets" | "both";
   palletPrice: string | null;
   palletMoq: number | null;
@@ -195,7 +194,6 @@ export default function ProductDetail() {
         imageUrl: product.imageUrl,
         images: product.images,
         priceVisible: product.priceVisible,
-        negotiationEnabled: product.negotiationEnabled,
         sellingFormat: product.sellingFormat,
         palletPrice: product.palletPrice,
         palletMoq: product.palletMoq,
