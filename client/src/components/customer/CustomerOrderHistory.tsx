@@ -31,6 +31,9 @@ export interface OrderItem {
   sellingType?: 'units' | 'pallets';
   appliedOfferLabel?: string | null;
   freeItems?: number;
+  packQuantity?: number;
+  unitSize?: string;
+  unitOfMeasure?: string;
 }
 
 export interface Order {
@@ -1008,6 +1011,9 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
+                  {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
+                    <div className="text-xs text-gray-400">{item.packQuantity} × {Math.round(parseFloat(item.unitSize))}{item.unitOfMeasure}</div>
+                  )}
                   {item.appliedOfferLabel && (() => {
                     const parts = item.appliedOfferLabel.split(' - ');
                     const promoName = parts[0];
@@ -1524,6 +1530,9 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
+                  {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
+                    <div className="text-xs text-gray-400">{item.packQuantity} × {Math.round(parseFloat(item.unitSize))}{item.unitOfMeasure}</div>
+                  )}
                   {item.appliedOfferLabel && (() => {
                     const parts = item.appliedOfferLabel.split(' - ');
                     const promoName = parts[0];

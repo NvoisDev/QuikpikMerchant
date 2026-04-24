@@ -198,6 +198,9 @@ export function registerMarketplaceRoutes(app: Express): void {
             sellingType: orderItems.sellingType, // CRITICAL FIX: Include selling type in query
             appliedOfferLabel: orderItems.appliedOfferLabel,
             freeItems: orderItems.freeItems,
+            packQuantity: products.quantityInPack,
+            unitSize: products.unitSize,
+            unitOfMeasure: products.unitOfMeasure,
           })
           .from(orderItems)
           .leftJoin(products, eq(orderItems.productId, products.id))
@@ -223,6 +226,9 @@ export function registerMarketplaceRoutes(app: Express): void {
             sellingType: item.sellingType || "units", // CRITICAL FIX: Include selling type in response
             appliedOfferLabel: item.appliedOfferLabel || null,
             freeItems: item.freeItems || 0,
+            packQuantity: item.packQuantity ?? undefined,
+            unitSize: item.unitSize ?? undefined,
+            unitOfMeasure: item.unitOfMeasure ?? undefined,
           })),
           wholesaler: wholesalerDetails ? {
             id: order.wholesalerId,
