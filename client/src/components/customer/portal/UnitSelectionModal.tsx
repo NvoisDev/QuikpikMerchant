@@ -103,6 +103,13 @@ export function UnitSelectionModal({
                           Minimum: {moq} units
                         </p>
                         {(() => {
+                          const pq = (selectedProductForModal as any).packQuantity || selectedProductForModal.quantityInPack;
+                          const us = selectedProductForModal.unitSize;
+                          const um = selectedProductForModal.unitOfMeasure;
+                          if (pq && pq > 1 && us && um) return <p className="text-xs text-gray-400">{pq} × {parseFloat(String(us))}{um}</p>;
+                          return null;
+                        })()}
+                        {(() => {
                           const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
                           if (pw > 0) return <p className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</p>;
                           return null;

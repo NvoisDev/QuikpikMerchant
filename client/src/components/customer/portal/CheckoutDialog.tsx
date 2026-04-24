@@ -151,7 +151,16 @@ export function CheckoutDialog({
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold text-sm leading-snug">{item.product.name}</p>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm leading-snug">{item.product.name}</p>
+                              {(() => {
+                                const pq = (item.product as any).packQuantity || (item.product as any).quantityInPack;
+                                const us = (item.product as any).unitSize;
+                                const um = (item.product as any).unitOfMeasure;
+                                if (pq && pq > 1 && us && um) return <p className="text-xs text-gray-400 leading-tight">{pq} × {parseFloat(String(us))}{um}</p>;
+                                return null;
+                              })()}
+                            </div>
                             <div className="text-right flex-shrink-0">
                               {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
                                 <div className="text-xs text-gray-400 line-through">

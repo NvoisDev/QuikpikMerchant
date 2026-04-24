@@ -295,7 +295,9 @@ export function registerOrderRoutes(app: Express): void {
               const sellingType = item.sellingType || 'units';
               const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
               const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
-              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
+              const pq = item.product?.quantityInPack; const pu = item.product?.unitSize; const pm = item.product?.unitOfMeasure;
+              const packNote = (pq && pq > 1 && pu && pm) ? ` [${pq}×${parseFloat(String(pu))}${pm}]` : '';
+              itemsListParts.push(`• ${productName}${packNote} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {

@@ -18,6 +18,9 @@ interface CartItem {
     promoActive?: boolean;
     promotionalOffers?: any[];
     palletPrice?: string;
+    packQuantity?: number;
+    unitSize?: string | null;
+    unitOfMeasure?: string | null;
   };
   quantity: number;
   sellingType: "units" | "pallets";
@@ -272,6 +275,9 @@ export const ThankYouPage = ({
                         </div>
                         <div>
                           <h4 className="font-medium text-gray-900">{item.product.name}</h4>
+                          {item.product.packQuantity && item.product.packQuantity > 1 && item.product.unitSize && item.product.unitOfMeasure && (
+                            <p className="text-xs text-gray-400">{item.product.packQuantity} × {parseFloat(item.product.unitSize)}{item.product.unitOfMeasure}</p>
+                          )}
                           <p className="text-sm text-gray-500">
                             QTY: {item.quantity} {item.sellingType === "pallets" ? "pallets" : "units"}
                           </p>

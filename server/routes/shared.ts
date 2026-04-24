@@ -569,12 +569,15 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (promoLabel && freeCount > 0) promoLine = `${promoLabel} · +${freeCount} free included`;
     else if (promoLabel) promoLine = promoLabel;
     else if (freeCount > 0) promoLine = `+${freeCount} free included`;
+    const pq = item.product?.quantityInPack; const pu = item.product?.unitSize; const pm = item.product?.unitOfMeasure;
+    const packInfo = (pq && pq > 1 && pu && pm) ? `${pq} × ${parseFloat(String(pu))}${pm}` : '';
     return {
       name: item.product?.name || item.productName || 'Product',
       qty: Number(item.quantity) || 0,
       unitPrice: parseFloat(item.unitPrice || '0'),
       lineTotal: parseFloat(item.unitPrice || '0') * (Number(item.quantity) || 0),
       promo: promoLine,
+      packInfo,
     };
   });
   const subtotal = parseFloat(order.subtotal || '0');
@@ -679,13 +682,19 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     };
     let rowY = drawTableHeader(tableY);
     for (const item of orderItemsList) {
-      const rowH = item.promo ? 38 : 26;
+      const hasExtra = !!(item.packInfo || item.promo);
+      const hasBoth = !!(item.packInfo && item.promo);
+      const rowH = hasBoth ? 50 : hasExtra ? 38 : 26;
       if (rowY + rowH > 810) { doc.addPage({ size: 'A4', margin: 0 }); rowY = drawTableHeader(MARGIN); }
       doc.font('Helvetica').fontSize(10).fillColor(DARK).text(item.name, xProduct + 6, rowY + 7, { width: CW_PRODUCT - 12, ellipsis: true, lineBreak: false });
+      if (item.packInfo) {
+        doc.font('Helvetica').fontSize(8).fillColor('#6b7280').text(item.packInfo, xProduct + 6, rowY + 20, { width: CW_PRODUCT - 12, lineBreak: false });
+      }
       if (item.promo) {
+        const promoY = item.packInfo ? rowY + 34 : rowY + 22;
         const promoTextWidth = Math.min(item.promo.length * 5.2 + 12, CW_PRODUCT - 14);
-        doc.roundedRect(xProduct + 4, rowY + 22, promoTextWidth, 13, 3).fill('#dcfce7');
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#16a34a').text(item.promo, xProduct + 8, rowY + 24, { width: promoTextWidth - 6, lineBreak: false });
+        doc.roundedRect(xProduct + 4, promoY, promoTextWidth, 13, 3).fill('#dcfce7');
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#16a34a').text(item.promo, xProduct + 8, promoY + 2, { width: promoTextWidth - 6, lineBreak: false });
       }
       doc.font('Helvetica').fontSize(10).fillColor(DARK).text(String(item.qty), xQty, rowY + 7, { width: CW_QTY, align: 'center' });
       doc.font('Helvetica').fontSize(10).fillColor(DARK).text(fmt(item.unitPrice), xPrice, rowY + 7, { width: CW_PRICE, align: 'right' });
@@ -756,9 +765,14 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       else if (item.unitPrice && item.quantity) total = (parseFloat(item.unitPrice) * parseInt(item.quantity)).toFixed(2);
       const promoLabel = item.appliedOfferLabel || '';
       const freeItemsCount = item.freeItems || 0;
+      const packQty = item.product?.quantityInPack;
+      const packSize = item.product?.unitSize;
+      const packMeasure = item.product?.unitOfMeasure;
+      const packBadge = (packQty && packQty > 1 && packSize && packMeasure)
+        ? `<br><span style="color:#6b7280;font-size:11px;">${packQty} × ${parseFloat(String(packSize))}${packMeasure}</span>` : '';
       const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';
       const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE ITEMS</span>` : '';
-      return `<tr><td style="padding:8px;border-bottom:1px solid #ddd;">${productName}${promoBadge}${freeBadge}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${unitPrice}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${total}</td></tr>`;
+      return `<tr><td style="padding:8px;border-bottom:1px solid #ddd;">${productName}${packBadge}${promoBadge}${freeBadge}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${unitPrice}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${total}</td></tr>`;
     }).join('');
     const addrParts = [addressComponents.line1, addressComponents.line2, addressComponents.city, addressComponents.state, addressComponents.postalCode, addressComponents.country].filter(Boolean);
     const deliverySection = addrParts.length > 0 ? `<div style="margin:16px 0"><strong>Delivery Address:</strong><br>${addrParts.join(', ')}</div>` : '';
