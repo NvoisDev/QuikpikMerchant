@@ -50,7 +50,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 
 interface Customer {
   id: string;
@@ -110,6 +110,7 @@ export default function CustomerDetail() {
   const customerId = params?.customerId || "";
   const { toast } = useToast();
   const { user } = useAuth();
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { formatMoney } = useCurrency();
   const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
 
@@ -538,23 +539,31 @@ export default function CustomerDetail() {
               <ShoppingBag className="h-4 w-4 mr-2" />
               View orders
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsAddToGroupOpen(true)}>
-              <Users className="h-4 w-4 mr-2" />
-              Add to Group
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsAddToPriceListOpen(true)}>
-              <Tag className="h-4 w-4 mr-2" />
-              Add to Price List
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={openEditContact}>
-              <Edit3 className="h-4 w-4 mr-2" />
-              Edit contact info
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsEditAddressesOpen(true)}>
-              <MapPin className="h-4 w-4 mr-2" />
-              Edit addresses
-            </DropdownMenuItem>
+            {!isViewer && (
+              <DropdownMenuItem onClick={() => setIsAddToGroupOpen(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                Add to Group
+              </DropdownMenuItem>
+            )}
+            {!isViewer && (
+              <DropdownMenuItem onClick={() => setIsAddToPriceListOpen(true)}>
+                <Tag className="h-4 w-4 mr-2" />
+                Add to Price List
+              </DropdownMenuItem>
+            )}
+            {!isViewer && <DropdownMenuSeparator />}
+            {!isViewer && (
+              <DropdownMenuItem onClick={openEditContact}>
+                <Edit3 className="h-4 w-4 mr-2" />
+                Edit contact info
+              </DropdownMenuItem>
+            )}
+            {!isViewer && (
+              <DropdownMenuItem onClick={() => setIsEditAddressesOpen(true)}>
+                <MapPin className="h-4 w-4 mr-2" />
+                Edit addresses
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 const phone = customer?.phoneNumber?.replace(/[^0-9]/g, '');
@@ -583,8 +592,8 @@ export default function CustomerDetail() {
                 Email
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            {hasPortalAccess ? (
+            {!isViewer && <DropdownMenuSeparator />}
+            {!isViewer && (hasPortalAccess ? (
               <DropdownMenuItem
                 className="text-orange-600"
                 onClick={() => {
@@ -617,18 +626,20 @@ export default function CustomerDetail() {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Allow Access
               </DropdownMenuItem>
+            ))}
+            {!isViewer && (
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${fullName}? This action cannot be undone.`)) {
+                    deleteCustomerMutation.mutate(customerId);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete ${fullName}? This action cannot be undone.`)) {
-                  deleteCustomerMutation.mutate(customerId);
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         </div>
@@ -778,15 +789,17 @@ export default function CustomerDetail() {
                 View all
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-green-600 h-auto p-0"
-              onClick={() => setIsAddToPriceListOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
+            {!isViewer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-green-600 h-auto p-0"
+                onClick={() => setIsAddToPriceListOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            )}
           </div>
         </div>
         {customerPriceLists && customerPriceLists.count > 0 ? (
@@ -801,14 +814,16 @@ export default function CustomerDetail() {
                 >
                   <Tag className="h-3 w-3" />
                   {name}
-                  <button
-                    className="ml-1 hover:text-red-500 transition-colors"
-                    disabled={removeFromPriceListMutation.isPending}
-                    onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
-                    aria-label={`Remove from ${name}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                  {!isViewer && (
+                    <button
+                      className="ml-1 hover:text-red-500 transition-colors"
+                      disabled={removeFromPriceListMutation.isPending}
+                      onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
+                      aria-label={`Remove from ${name}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </Badge>
               ))}
             </div>
@@ -871,9 +886,11 @@ export default function CustomerDetail() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-muted-foreground">Default address</h2>
-          <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={() => setIsEditAddressesOpen(true)}>
-            Edit addresses
-          </Button>
+          {!isViewer && (
+            <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={() => setIsEditAddressesOpen(true)}>
+              Edit addresses
+            </Button>
+          )}
         </div>
         {defaultAddress ? (
           <div className="bg-white rounded-lg p-3 border text-sm space-y-0.5">
@@ -889,17 +906,19 @@ export default function CustomerDetail() {
           <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
             <MapPin className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No addresses saved</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 text-xs text-green-600"
-              onClick={() => {
-                setIsEditAddressesOpen(true);
-                setShowAddForm(true);
-              }}
-            >
-              Add first address
-            </Button>
+            {!isViewer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 text-xs text-green-600"
+                onClick={() => {
+                  setIsEditAddressesOpen(true);
+                  setShowAddForm(true);
+                }}
+              >
+                Add first address
+              </Button>
+            )}
           </div>
         )}
       </div>
