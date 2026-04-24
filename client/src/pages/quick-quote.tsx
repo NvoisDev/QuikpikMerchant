@@ -59,6 +59,9 @@ interface QuoteItem {
   promotionalOffers?: any[];
   costPrice: number;
   weightKg: number;
+  packQuantity?: number;
+  unitSize?: string;
+  unitOfMeasure?: string;
 }
 
 interface Customer {
@@ -93,6 +96,8 @@ interface Product {
   unitWeight?: string | null;
   palletWeight?: string | null;
   quantityInPack?: number;
+  unitSize?: string | null;
+  unitOfMeasure?: string | null;
   promotionalOffers?: any[];
   totalBatchStock?: number | null;
   nearestExpiry?: string | null;
@@ -284,6 +289,9 @@ export default function QuickQuote() {
         promotionalOffers: product.promotionalOffers || [],
         costPrice: baseCost,
         weightKg,
+        packQuantity: product.quantityInPack && product.quantityInPack > 1 ? product.quantityInPack : undefined,
+        unitSize: product.unitSize ?? undefined,
+        unitOfMeasure: product.unitOfMeasure ?? undefined,
       }]);
       setInputValues(prev => ({
         ...prev,
@@ -967,9 +975,14 @@ export default function QuickQuote() {
                               </Badge>
                             )}
                           </div>
+                          {item.packQuantity && item.unitSize && item.unitOfMeasure && (
+                            <span className="text-xs text-gray-400">
+                              {item.packQuantity} × {item.unitSize}{item.unitOfMeasure}
+                            </span>
+                          )}
                           {item.weightKg > 0 && (
                             <span className="text-xs text-gray-400">
-                              {item.weightKg.toFixed(2)} kg/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}
+                              {item.weightKg.toFixed(2)} kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
                             </span>
                           )}
                           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
