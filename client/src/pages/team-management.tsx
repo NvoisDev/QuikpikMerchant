@@ -126,6 +126,16 @@ export default function TeamManagement() {
     gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const { data: ownerProfile } = useQuery<{
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    businessName: string | null;
+  }>({
+    queryKey: ["/api/owner-profile"],
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Fetch plan limits for downgrade warning banner
   const { data: planLimits } = useQuery<{
     plan: string;
@@ -553,9 +563,14 @@ export default function TeamManagement() {
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <div className="bg-blue-50 p-3 rounded-lg mt-2">
+                      <div className="bg-blue-50 p-3 rounded-lg mt-2 space-y-1">
                         <p className="text-xs text-blue-800">
-                          <strong>Tip:</strong> Use the Tab Permissions section below to control which business areas team members can access.
+                          <strong>Note:</strong> The Owner role cannot be assigned via invite — it belongs to the account holder only.
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          <strong>Admin</strong> — full operational access to all business areas.{' '}
+                          <strong>Member</strong> — access limited to areas you configure in Tab Permissions.{' '}
+                          <strong>Viewer</strong> — read-only, cannot make any changes.
                         </p>
                       </div>
                       <FormMessage />
@@ -666,52 +681,55 @@ export default function TeamManagement() {
               <CardTitle className="text-base">Team Members</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-          {!Array.isArray(teamMembers) || teamMembers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
-              <p className="text-gray-600 mb-4">
-                {simpleTier === 'free' 
-                  ? "Upgrade your plan to invite team members and collaborate on your wholesale platform."
-                  : "Invite team members to help manage your wholesale platform."
-                }
-              </p>
-              {simpleTier !== 'free' && (
-                <Button 
-                  onClick={() => setIsInviteDialogOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite Your First Team Member
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {/* Owner row — always at top, no action buttons */}
-              {user && user.role !== 'team_member' && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-2 bg-amber-50 border-amber-200">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                      <Crown className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
-                        {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.businessName || user.email}
-                      </h3>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
-                        <Mail className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{user.email}</span>
-                      </p>
-                    </div>
+          <div className="space-y-2">
+            {/* Owner row — always at top, no action buttons, visible to all roles */}
+            {ownerProfile && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 sm:gap-2 bg-amber-50 border-amber-200">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Crown className="h-4 w-4 text-amber-600" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-amber-500" />
-                    <Badge className="text-xs bg-amber-500 text-white">Owner</Badge>
-                    <span className="text-xs text-gray-500 hidden sm:inline">Account holder</span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      {[ownerProfile.firstName, ownerProfile.lastName].filter(Boolean).join(' ') || ownerProfile.businessName || ownerProfile.email}
+                    </h3>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{ownerProfile.email}</span>
+                    </p>
                   </div>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-amber-500" />
+                  <Badge className="text-xs bg-amber-500 text-white">Owner</Badge>
+                  <span className="text-xs text-gray-500 hidden sm:inline">Account holder</span>
+                </div>
+              </div>
+            )}
+
+            {/* Team member list or empty state */}
+            {!Array.isArray(teamMembers) || teamMembers.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-gray-900 mb-1">No team members yet</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {simpleTier === 'free'
+                    ? "Upgrade your plan to invite team members and collaborate on your wholesale platform."
+                    : "Invite team members to help manage your wholesale platform."
+                  }
+                </p>
+                {simpleTier !== 'free' && user?.role !== 'team_member' && (
+                  <Button
+                    onClick={() => setIsInviteDialogOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Your First Team Member
+                  </Button>
+                )}
+              </div>
+            ) : (
+            <div className="space-y-2">
               {Array.isArray(teamMembers) && teamMembers.map((member: TeamMember) => (
                 <div
                   key={member.id}

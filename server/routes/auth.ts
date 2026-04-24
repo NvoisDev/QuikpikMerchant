@@ -658,6 +658,27 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
+  // GET /api/owner-profile — returns basic info about the account owner
+  // Works for both the owner themselves and team members (uses wholesalerId)
+  app.get('/api/owner-profile', requireAuth, async (req: any, res) => {
+    try {
+      const ownerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+      const owner = await storage.getUser(ownerId);
+      if (!owner) return res.status(404).json({ message: 'Owner not found' });
+      res.json({
+        firstName: owner.firstName,
+        lastName: owner.lastName,
+        email: owner.email,
+        businessName: owner.businessName,
+      });
+    } catch (error) {
+      console.error('Error fetching owner profile:', error);
+      res.status(500).json({ message: 'Failed to fetch owner profile' });
+    }
+  });
+
   // GET /api/team-members
   app.get('/api/team-members', requireAuth, async (req: any, res) => {
     try {
