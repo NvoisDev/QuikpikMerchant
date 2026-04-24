@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import "@/lib/impersonation";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
+import { ImpersonationProvider } from "@/contexts/impersonation-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ElephantLoader from "@/components/ui/elephant-loader";
 
@@ -205,12 +207,14 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <OnboardingProvider>
-            <Router />
-            <Toaster />
-          </OnboardingProvider>
-        </TooltipProvider>
+        <ImpersonationProvider>
+          <TooltipProvider>
+            <OnboardingProvider>
+              <Router />
+              <Toaster />
+            </OnboardingProvider>
+          </TooltipProvider>
+        </ImpersonationProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -25,6 +25,8 @@ import {
   cancellationRefundTypeToEmailStatus,
   customerPhoneVerifications,
   productBatches, subscriptionAuditLogs,
+  adminAuditLogs, systemErrorLogs,
+  customerProfileUpdateNotifications,
 } from "@shared/schema";
 import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
@@ -101,6 +103,8 @@ export {
   cancellationRefundTypeToEmailStatus,
   customerPhoneVerifications,
   productBatches, subscriptionAuditLogs,
+  adminAuditLogs, systemErrorLogs,
+  customerProfileUpdateNotifications,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,
@@ -916,7 +920,7 @@ export async function sendWelcomeEmail(user: any): Promise<void> {
 
 export const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number }>();
 
-export const ADMIN_EMAILS = ['hello@quikpik.co', 'mogunjemilua@gmail.com'];
+export { ADMIN_EMAILS } from '../config';
 
 export async function geocodePostcode(postcode: string): Promise<{ lat: number; lng: number } | null> {
   try {

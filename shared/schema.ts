@@ -915,6 +915,42 @@ export const stockAlerts = pgTable("stock_alerts", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+// Admin audit logs for tracking impersonation and admin actions
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: serial("id").primaryKey(),
+  adminEmail: varchar("admin_email").notNull(),
+  action: varchar("action").notNull(), // 'impersonate_start', 'impersonate_exit'
+  targetWholesalerId: varchar("target_wholesaler_id").references(() => users.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  adminEmailIdx: index("admin_audit_admin_email_idx").on(table.adminEmail),
+  createdAtIdx: index("admin_audit_created_at_idx").on(table.createdAt),
+}));
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({ id: true, createdAt: true });
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+
+// System error logs for tracking platform errors
+export const systemErrorLogs = pgTable("system_error_logs", {
+  id: serial("id").primaryKey(),
+  errorType: varchar("error_type").notNull(), // 'payment_failure', 'webhook_error', 'server_error', etc.
+  message: text("message").notNull(),
+  context: jsonb("context").$type<Record<string, unknown>>().default({}),
+  wholesalerId: varchar("wholesaler_id").references(() => users.id, { onDelete: "set null" }),
+  severity: varchar("severity").notNull().default("error"), // 'error', 'warning', 'critical'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  errorTypeIdx: index("system_errors_type_idx").on(table.errorType),
+  createdAtIdx: index("system_errors_created_at_idx").on(table.createdAt),
+  wholesalerIdIdx: index("system_errors_wholesaler_id_idx").on(table.wholesalerId),
+}));
+
+export const insertSystemErrorLogSchema = createInsertSchema(systemErrorLogs).omit({ id: true, createdAt: true });
+export type InsertSystemErrorLog = z.infer<typeof insertSystemErrorLogSchema>;
+export type SystemErrorLog = typeof systemErrorLogs.$inferSelect;
+
 // Subscription audit logs for tracking all subscription events
 export const subscriptionAuditLogs = pgTable("subscription_audit_logs", {
   id: serial("id").primaryKey(),

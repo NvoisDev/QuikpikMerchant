@@ -321,7 +321,7 @@ export function registerAuthRoutes(app: Express): void {
         id: responseUser.id,
         email: responseUser.email,
       });
-      
+
       res.json(responseUser);
     } catch (error) {
       console.error("Error fetching user:", error);

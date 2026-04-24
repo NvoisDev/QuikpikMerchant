@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import { ADMIN_EMAILS } from './config';
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
@@ -290,6 +291,27 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           });
         }
         
+        // Handle admin impersonation via server-issued token (proves audited start)
+        const impersonateHeader = req.headers['x-admin-impersonate'] as string | undefined;
+        const impersonateToken = req.headers['x-impersonate-token'] as string | undefined;
+        const sessionToken = (req.session as any).impersonationToken as { token: string; wholesalerId: string; adminEmail: string; expiresAt?: number } | undefined;
+        if (
+          impersonateHeader && impersonateToken && ADMIN_EMAILS.includes(user.email || '') &&
+          sessionToken &&
+          sessionToken.token === impersonateToken &&
+          sessionToken.wholesalerId === impersonateHeader &&
+          (!sessionToken.expiresAt || Date.now() < sessionToken.expiresAt)
+        ) {
+          const wholesalerUser = await storage.getUser(impersonateHeader);
+          if (wholesalerUser && wholesalerUser.role === 'wholesaler') {
+            (req as any)._adminEmail = user.email;
+            (req as any)._impersonatingBusinessName = wholesalerUser.businessName;
+            req.user = wholesalerUser;
+            console.log(`🎭 Admin ${user.email} impersonating wholesaler ${wholesalerUser.email} (${req.method} ${req.url})`);
+            return next();
+          }
+        }
+        
         console.log(`✅ Auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
         return next();
@@ -308,6 +330,26 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
             userType: user.role,
             redirectUrl: '/customer-login'
           });
+        }
+        
+        // Handle admin impersonation via server-issued token (proves audited start)
+        const impersonateHeaderLegacy = req.headers['x-admin-impersonate'] as string | undefined;
+        const impersonateTokenLegacy = req.headers['x-impersonate-token'] as string | undefined;
+        const sessionTokenLegacy = (req.session as any).impersonationToken as { token: string; wholesalerId: string; expiresAt?: number } | undefined;
+        if (
+          impersonateHeaderLegacy && impersonateTokenLegacy && ADMIN_EMAILS.includes(user.email || '') &&
+          sessionTokenLegacy &&
+          sessionTokenLegacy.token === impersonateTokenLegacy &&
+          sessionTokenLegacy.wholesalerId === impersonateHeaderLegacy &&
+          (!sessionTokenLegacy.expiresAt || Date.now() < sessionTokenLegacy.expiresAt)
+        ) {
+          const wholesalerUser = await storage.getUser(impersonateHeaderLegacy);
+          if (wholesalerUser && wholesalerUser.role === 'wholesaler') {
+            (req as any)._adminEmail = user.email;
+            (req as any)._impersonatingBusinessName = wholesalerUser.businessName;
+            req.user = wholesalerUser;
+            return next();
+          }
         }
         
         console.log(`✅ Legacy auth successful for ${user.email} (${req.method} ${req.url})`);

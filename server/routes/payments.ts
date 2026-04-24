@@ -7,7 +7,7 @@ import {
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
   sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
-  users, wrapCustomerEmail, z
+  users, wrapCustomerEmail, z, systemErrorLogs,
 } from "./shared";
 
 export function registerPaymentRoutes(app: Express): void {
@@ -739,6 +739,39 @@ export function registerPaymentRoutes(app: Express): void {
 
         console.log(`✅ invoice.payment_succeeded: Activated ${invPlan.planId} for user ${invUser.id} (${invUser.email})`);
         return res.json({ received: true, type: event.type, userId: invUser.id, planId: invPlan.planId });
+      }
+
+      // ── Payment failure — write to system_error_logs ──────────────────────────
+      if (event.type === 'invoice.payment_failed') {
+        try {
+          const failedInvoice = event.data.object as Stripe.Invoice;
+          const failCustId = typeof failedInvoice.customer === 'string' ? failedInvoice.customer
+            : typeof failedInvoice.customer === 'object' && failedInvoice.customer !== null ? failedInvoice.customer.id : null;
+
+          let failUserId: string | null = null;
+          if (failCustId) {
+            const [failUser] = await db.select({ id: users.id }).from(users).where(eq(users.stripeCustomerId, failCustId));
+            failUserId = failUser?.id || null;
+          }
+
+          await db.insert(systemErrorLogs).values({
+            errorType: 'payment_failed',
+            message: `Stripe payment failed for invoice ${failedInvoice.id || 'unknown'}${failedInvoice.amount_due ? ` — £${(failedInvoice.amount_due / 100).toFixed(2)}` : ''}`,
+            context: {
+              invoiceId: failedInvoice.id,
+              customerId: failCustId,
+              amountDue: failedInvoice.amount_due,
+              attemptCount: failedInvoice.attempt_count,
+            },
+            wholesalerId: failUserId,
+            severity: 'error',
+          });
+
+          console.log(`💳 invoice.payment_failed logged to system_error_logs for customer ${failCustId}`);
+        } catch (logErr) {
+          console.error('Failed to log payment failure to system_error_logs:', logErr);
+        }
+        return res.json({ received: true, type: event.type });
       }
 
       // Acknowledge all other events

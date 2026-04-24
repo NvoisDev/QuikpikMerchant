@@ -4,13 +4,19 @@ import {
   ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
+  adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications,
 } from "./shared";
+
+// Helper: get the effective admin email (handles impersonation mode)
+function getAdminEmail(req: any): string | undefined {
+  return req._adminEmail || req.user?.email;
+}
 
 export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/platform-stats
   app.get('/api/admin/platform-stats', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -88,7 +94,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/wholesalers
   app.get('/api/admin/wholesalers', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
 
@@ -149,7 +155,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/revenue
   app.get('/api/admin/revenue', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const { from, to, wholesalerId: filterWholesalerId } = req.query as Record<string, string>;
 
@@ -216,7 +222,7 @@ export function registerAdminRoutes(app: Express): void {
   // PATCH /api/admin/wholesalers/:id/toggle-status
   app.patch('/api/admin/wholesalers/:id/toggle-status', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
       if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
@@ -236,7 +242,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/customers/map
   app.get('/api/admin/customers/map', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const customers = await db
         .select({
@@ -306,7 +312,7 @@ export function registerAdminRoutes(app: Express): void {
   // PATCH /api/admin/customers/:id/type
   app.patch('/api/admin/customers/:id/type', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const { customerType, postalCode } = req.body;
       const validTypes = ['retail', 'wholesale', 'individual', null, ''];
@@ -390,7 +396,7 @@ export function registerAdminRoutes(app: Express): void {
   // POST /api/admin/customers/geocode-all
   app.post('/api/admin/customers/geocode-all', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const pending = await db
         .select({ id: users.id, postalCode: users.postalCode })
@@ -429,7 +435,7 @@ export function registerAdminRoutes(app: Express): void {
   // POST /api/admin/subscriptions/activate
   app.post('/api/admin/subscriptions/activate', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const { stripeSubscriptionId, planId: overridePlanId } = req.body;
       if (!stripeSubscriptionId) {
@@ -533,7 +539,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/customers — search across all customers/retailers
   app.get('/api/admin/customers', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const { q = '' } = req.query as Record<string, string>;
 
       const searchTerm = q.trim() ? `%${q.trim()}%` : null;
@@ -603,7 +609,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/customers/:id/orders — order history for a specific customer
   app.get('/api/admin/customers/:id/orders', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const customerOrders = await db.select({
         id: orders.id,
         orderNumber: orders.orderNumber,
@@ -625,7 +631,7 @@ export function registerAdminRoutes(app: Express): void {
   // PATCH /api/admin/customers/:id/flag — toggle suspicious flag
   app.patch('/api/admin/customers/:id/flag', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const [targetUser] = await db.select({ id: users.id, role: users.role })
         .from(users).where(eq(users.id, req.params.id)).limit(1);
       if (!targetUser) return res.status(404).json({ error: 'User not found' });
@@ -641,7 +647,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/products — all products across all wholesalers with cost/margin/stock
   app.get('/api/admin/products', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const { sort = 'margin_asc' } = req.query as Record<string, string>;
 
       const productList = await db.select({
@@ -692,7 +698,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/alerts — platform alert items
   app.get('/api/admin/alerts', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -734,7 +740,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/wholesalers/:id/orders — recent orders for a wholesaler
   app.get('/api/admin/wholesalers/:id/orders', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const recentOrders = await db.select({
         id: orders.id,
         orderNumber: orders.orderNumber,
@@ -754,7 +760,7 @@ export function registerAdminRoutes(app: Express): void {
   // POST /api/admin/orders/:id/resend-invoice — resend invoice email
   app.post('/api/admin/orders/:id/resend-invoice', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
       const orderId = parseInt(req.params.id, 10);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -797,7 +803,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/stripe-mode — returns whether Stripe is in test or live mode
   app.get('/api/admin/stripe-mode', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const key = process.env.STRIPE_SECRET_KEY || '';
       const mode = key.startsWith('sk_live_') ? 'live' : 'test';
       res.json({ mode, keyPrefix: key.slice(0, 8) + '...' });
@@ -809,7 +815,7 @@ export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/payout-status — Stripe platform balance and last payout
   app.get('/api/admin/payout-status', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       if (!stripe) return res.json({ available: 0, pending: 0, lastPayout: null, currency: 'gbp' });
 
       const [balance, payouts] = await Promise.all([
@@ -837,7 +843,7 @@ export function registerAdminRoutes(app: Express): void {
   // POST /api/admin/orders/:id/issue-refund — admin-initiated full or partial refund
   app.post('/api/admin/orders/:id/issue-refund', requireAuth, async (req: any, res) => {
     try {
-      if (!ADMIN_EMAILS.includes(req.user.email)) return res.status(403).json({ error: 'Forbidden' });
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
       const refundOrderId = parseInt(req.params.id, 10);
@@ -860,6 +866,419 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin issue-refund error:', error);
       res.status(500).json({ error: 'Failed to process refund' });
+    }
+  });
+
+  // ── Impersonation ────────────────────────────────────────────────────────────
+
+  // POST /api/admin/impersonate/exit — clear session token + log audit (must be before :wholesalerId route)
+  app.post('/api/admin/impersonate/exit', requireAuth, async (req: any, res) => {
+    try {
+      const adminEmail = getAdminEmail(req) || req.user.email;
+      if (!ADMIN_EMAILS.includes(adminEmail)) return res.status(403).json({ error: 'Forbidden' });
+
+      const { wholesalerId: bodyWholesalerId } = req.body as { wholesalerId?: string };
+      const session = req.session as any;
+
+      // Always prefer the server-authoritative session token for the audit write;
+      // reject client-supplied wholesalerId if it doesn't match the session (tamper-resistance)
+      const sessionWholesalerId = session.impersonationToken?.wholesalerId;
+      if (bodyWholesalerId && sessionWholesalerId && bodyWholesalerId !== sessionWholesalerId) {
+        delete session.impersonationToken;
+        return res.status(400).json({ error: 'Wholesaler ID mismatch' });
+      }
+      const resolvedWholesalerId = sessionWholesalerId || bodyWholesalerId;
+
+      // Clear the session token so the impersonation proof is invalidated
+      delete session.impersonationToken;
+
+      if (resolvedWholesalerId) {
+        await db.insert(adminAuditLogs).values({
+          adminEmail,
+          action: 'impersonate_exit',
+          targetWholesalerId: resolvedWholesalerId,
+          metadata: {},
+        });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Admin impersonate exit error:', error);
+      res.status(500).json({ error: 'Failed to log impersonation exit' });
+    }
+  });
+
+  // POST /api/admin/impersonate/:wholesalerId — issue session token + log audit start
+  app.post('/api/admin/impersonate/:wholesalerId', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const [target] = await db.select().from(users).where(eq(users.id, req.params.wholesalerId)).limit(1);
+      if (!target || target.role !== 'wholesaler') {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+
+      const effectiveAdminEmail = getAdminEmail(req) || '';
+      const businessName = target.businessName || `${target.firstName || ''} ${target.lastName || ''}`.trim() || target.email || '';
+
+      // Issue a server-side token that proves this impersonation was audited
+      // Token expires after 30 minutes for defence-in-depth
+      const token = crypto.randomUUID();
+      const expiresAt = Date.now() + 30 * 60 * 1000;
+      (req.session as any).impersonationToken = { token, wholesalerId: target.id, adminEmail: effectiveAdminEmail, expiresAt };
+
+      await db.insert(adminAuditLogs).values({
+        adminEmail: effectiveAdminEmail,
+        action: 'impersonate_start',
+        targetWholesalerId: target.id,
+        metadata: { businessName: target.businessName, targetEmail: target.email },
+      });
+
+      res.json({ success: true, wholesalerId: target.id, businessName, token });
+    } catch (error) {
+      console.error('Admin impersonate error:', error);
+      res.status(500).json({ error: 'Failed to start impersonation' });
+    }
+  });
+
+  // GET /api/admin/impersonate/status — check header-based impersonation state
+  app.get('/api/admin/impersonate/status', requireAuth, async (req: any, res) => {
+    try {
+      const adminEmail = getAdminEmail(req) || req.user.email;
+      if (!ADMIN_EMAILS.includes(adminEmail)) return res.status(403).json({ error: 'Forbidden' });
+
+      const impersonateHeader = req.headers['x-admin-impersonate'] as string | undefined;
+      res.json({
+        impersonating: !!impersonateHeader,
+        wholesalerId: impersonateHeader || null,
+        businessName: (req as any)._impersonatingBusinessName || null,
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get impersonation status' });
+    }
+  });
+
+  // ── Activity Feed ────────────────────────────────────────────────────────────
+
+  // GET /api/admin/activity — merged activity feed from multiple tables
+  app.get('/api/admin/activity', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { offset = '0', limit = '50', wholesalerId: wFilter } = req.query as Record<string, string>;
+      const offsetNum = Math.max(0, parseInt(offset, 10) || 0);
+      const limitNum = Math.min(100, parseInt(limit, 10) || 50);
+
+      // Build wholesaler lookup
+      const allWholesalers = await db.select({ id: users.id, businessName: users.businessName, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.role, 'wholesaler'));
+      const wMap: Record<string, string> = {};
+      for (const w of allWholesalers) wMap[w.id] = w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim() || 'Unknown';
+
+      // Fetch from all sources in parallel
+      const [movements, subLogs, profileUpdates, recentOrders] = await Promise.all([
+        db.select({
+          id: stockMovements.id,
+          productId: stockMovements.productId,
+          wholesalerId: stockMovements.wholesalerId,
+          movementType: stockMovements.movementType,
+          quantity: stockMovements.quantity,
+          reason: stockMovements.reason,
+          customerName: stockMovements.customerName,
+          createdAt: stockMovements.createdAt,
+        }).from(stockMovements)
+          .where(wFilter ? eq(stockMovements.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(stockMovements.createdAt))
+          .limit(200),
+
+        db.select({
+          id: subscriptionAuditLogs.id,
+          userId: subscriptionAuditLogs.userId,
+          eventType: subscriptionAuditLogs.eventType,
+          fromTier: subscriptionAuditLogs.fromTier,
+          toTier: subscriptionAuditLogs.toTier,
+          amount: subscriptionAuditLogs.amount,
+          reason: subscriptionAuditLogs.reason,
+          timestamp: subscriptionAuditLogs.timestamp,
+        }).from(subscriptionAuditLogs)
+          .where(wFilter ? eq(subscriptionAuditLogs.userId, wFilter) : undefined)
+          .orderBy(desc(subscriptionAuditLogs.timestamp))
+          .limit(200),
+
+        db.select({
+          id: customerProfileUpdateNotifications.id,
+          customerId: customerProfileUpdateNotifications.customerId,
+          wholesalerId: customerProfileUpdateNotifications.wholesalerId,
+          updateType: customerProfileUpdateNotifications.updateType,
+          newValue: customerProfileUpdateNotifications.newValue,
+          createdAt: customerProfileUpdateNotifications.createdAt,
+        }).from(customerProfileUpdateNotifications)
+          .where(wFilter ? eq(customerProfileUpdateNotifications.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(customerProfileUpdateNotifications.createdAt))
+          .limit(200),
+
+        db.select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          wholesalerId: orders.wholesalerId,
+          customerName: orders.customerName,
+          status: orders.status,
+          subtotal: orders.subtotal,
+          createdAt: orders.createdAt,
+        }).from(orders)
+          .where(wFilter ? eq(orders.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(orders.createdAt))
+          .limit(200),
+      ]);
+
+      // User lookup for subscription events
+      const subUserIds = [...new Set(subLogs.map(l => l.userId))];
+      const subUsers: Record<string, string> = {};
+      if (subUserIds.length > 0) {
+        const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, subUserIds));
+        for (const u of fetched) subUsers[u.id] = u.businessName || u.email || u.id;
+      }
+
+      // Normalise all events
+      type ActivityEntry = { timestamp: Date; type: string; description: string; wholesalerName: string; actorName: string };
+      const events: ActivityEntry[] = [];
+
+      for (const m of movements) {
+        events.push({
+          timestamp: m.createdAt || new Date(),
+          type: 'stock_movement',
+          description: `Stock ${m.movementType?.replace(/_/g, ' ')} of ${Math.abs(m.quantity)} units${m.reason ? ` — ${m.reason}` : ''}`,
+          wholesalerName: wMap[m.wholesalerId] || 'Unknown',
+          actorName: m.customerName || 'System',
+        });
+      }
+
+      for (const s of subLogs) {
+        const isFailure = s.eventType?.includes('fail') || s.eventType?.includes('error');
+        events.push({
+          timestamp: s.timestamp || new Date(),
+          type: isFailure ? 'payment_failure' : 'subscription_event',
+          description: `Subscription ${s.eventType?.replace(/_/g, ' ')}${s.fromTier && s.toTier ? ` (${s.fromTier} → ${s.toTier})` : ''}${s.amount ? ` £${parseFloat(String(s.amount)).toFixed(2)}` : ''}`,
+          wholesalerName: subUsers[s.userId] || 'Unknown',
+          actorName: subUsers[s.userId] || 'System',
+        });
+      }
+
+      for (const p of profileUpdates) {
+        events.push({
+          timestamp: p.createdAt || new Date(),
+          type: 'profile_update',
+          description: `Customer updated ${p.updateType?.replace(/_/g, ' ')}`,
+          wholesalerName: wMap[p.wholesalerId] || 'Unknown',
+          actorName: 'Customer',
+        });
+      }
+
+      for (const o of recentOrders) {
+        events.push({
+          timestamp: o.createdAt || new Date(),
+          type: 'order',
+          description: `Order ${o.orderNumber} placed — £${parseFloat(o.subtotal || '0').toFixed(2)} (${o.status})`,
+          wholesalerName: wMap[o.wholesalerId] || 'Unknown',
+          actorName: o.customerName || 'Customer',
+        });
+      }
+
+      // Sort descending by timestamp
+      events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+      const total = events.length;
+      const page = events.slice(offsetNum, offsetNum + limitNum).map(e => ({ ...e, timestamp: e.timestamp.toISOString() }));
+
+      res.json({ events: page, total, offset: offsetNum, limit: limitNum });
+    } catch (error) {
+      console.error('Admin activity error:', error);
+      res.status(500).json({ error: 'Failed to fetch activity feed' });
+    }
+  });
+
+  // ── Error Log ────────────────────────────────────────────────────────────────
+
+  // GET /api/admin/errors — recent system error logs
+  app.get('/api/admin/errors', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { limit = '50' } = req.query as Record<string, string>;
+      const limitNum = Math.min(200, parseInt(limit, 10) || 50);
+      // Fetch more than limitNum per source so the global merge+sort+slice is accurate
+      const fetchCap = Math.min(400, limitNum * 4);
+
+      // Fetch payment failures from subscription_audit_logs as errors
+      const [dbErrors, paymentFailures] = await Promise.all([
+        db.select().from(systemErrorLogs).orderBy(desc(systemErrorLogs.createdAt)).limit(fetchCap),
+        db.select({
+          id: subscriptionAuditLogs.id,
+          userId: subscriptionAuditLogs.userId,
+          eventType: subscriptionAuditLogs.eventType,
+          reason: subscriptionAuditLogs.reason,
+          amount: subscriptionAuditLogs.amount,
+          timestamp: subscriptionAuditLogs.timestamp,
+        }).from(subscriptionAuditLogs)
+          .where(inArray(subscriptionAuditLogs.eventType, [
+            'payment_failed',
+            'payment_failure',
+            'payment_action_required',
+            'subscription_error',
+            'subscription_cancelled',
+            'subscription_expired',
+            'invoice_failed',
+          ]))
+          .orderBy(desc(subscriptionAuditLogs.timestamp))
+          .limit(fetchCap),
+      ]);
+
+      // Enrich payment failures with user info
+      const failureUserIds = [...new Set(paymentFailures.map(f => f.userId))];
+      const failureUsers: Record<string, string> = {};
+      if (failureUserIds.length > 0) {
+        const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, failureUserIds));
+        for (const u of fetched) failureUsers[u.id] = u.businessName || u.email || u.id;
+      }
+
+      // Enrich system errors with wholesaler names
+      const errorWholesalerIds = dbErrors.map(e => e.wholesalerId).filter(Boolean) as string[];
+      const errorWholesalers: Record<string, string> = {};
+      if (errorWholesalerIds.length > 0) {
+        const fetched = await db.select({ id: users.id, businessName: users.businessName }).from(users).where(inArray(users.id, errorWholesalerIds));
+        for (const u of fetched) errorWholesalers[u.id] = u.businessName || u.id;
+      }
+
+      const allErrors = [
+        ...dbErrors.map(e => ({
+          id: `sys-${e.id}`,
+          errorType: e.errorType,
+          message: e.message,
+          severity: e.severity,
+          wholesalerName: e.wholesalerId ? (errorWholesalers[e.wholesalerId] || 'Unknown') : null,
+          context: e.context,
+          timestamp: e.createdAt?.toISOString() || new Date().toISOString(),
+          source: 'system',
+        })),
+        ...paymentFailures.map(f => ({
+          id: `pay-${f.id}`,
+          errorType: 'payment_failed',
+          message: f.reason || 'Payment failed',
+          severity: 'error',
+          wholesalerName: failureUsers[f.userId] || 'Unknown',
+          context: { amount: f.amount, eventType: f.eventType },
+          timestamp: f.timestamp?.toISOString() || new Date().toISOString(),
+          source: 'stripe',
+        })),
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      // Apply limit globally after merge+sort so `limit` is a true contract
+      const errors = allErrors.slice(0, limitNum);
+      res.json({ errors, total: allErrors.length });
+    } catch (error) {
+      console.error('Admin errors error:', error);
+      res.status(500).json({ error: 'Failed to fetch error log' });
+    }
+  });
+
+  // ── Global Search ────────────────────────────────────────────────────────────
+
+  // GET /api/admin/search?q= — search orders, customers, products
+  app.get('/api/admin/search', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { q = '' } = req.query as Record<string, string>;
+      const term = q.trim();
+      if (!term || term.length < 2) return res.json({ orders: [], customers: [], products: [] });
+
+      const searchPat = `%${term}%`;
+
+      const [matchedOrders, matchedCustomers, matchedProducts] = await Promise.all([
+        db.select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerName: orders.customerName,
+          wholesalerName: users.businessName,
+          status: orders.status,
+          createdAt: orders.createdAt,
+        }).from(orders)
+          .leftJoin(users, eq(orders.wholesalerId, users.id))
+          .where(or(
+            ilike(orders.orderNumber, searchPat),
+            ilike(orders.customerName, searchPat),
+          ))
+          .orderBy(desc(orders.createdAt))
+          .limit(5),
+
+        db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          businessName: users.businessName,
+          phoneNumber: users.phoneNumber,
+          email: users.email,
+          wholesalerId: users.wholesalerId,
+        }).from(users)
+          .where(and(
+            eq(users.role, 'retailer'),
+            or(
+              ilike(users.firstName, searchPat),
+              ilike(users.lastName, searchPat),
+              ilike(users.businessName, searchPat),
+              ilike(users.phoneNumber, searchPat),
+              ilike(users.email, searchPat),
+            ),
+          ))
+          .limit(5),
+
+        db.select({
+          id: products.id,
+          name: products.name,
+          category: products.category,
+          wholesalerName: users.businessName,
+          status: products.status,
+          price: products.price,
+        }).from(products)
+          .leftJoin(users, eq(products.wholesalerId, users.id))
+          .where(ilike(products.name, searchPat))
+          .limit(5),
+      ]);
+
+      // Resolve wholesaler names for customers
+      const custWholesalerIds = [...new Set(matchedCustomers.map(c => c.wholesalerId).filter(Boolean))] as string[];
+      const custWholesalers: Record<string, string> = {};
+      if (custWholesalerIds.length > 0) {
+        const ws = await db.select({ id: users.id, businessName: users.businessName }).from(users).where(inArray(users.id, custWholesalerIds));
+        for (const w of ws) custWholesalers[w.id] = w.businessName || 'Unknown';
+      }
+
+      res.json({
+        orders: matchedOrders.map(o => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          customerName: o.customerName,
+          wholesalerName: o.wholesalerName,
+          status: o.status,
+          createdAt: o.createdAt,
+        })),
+        customers: matchedCustomers.map(c => ({
+          id: c.id,
+          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
+          phoneNumber: c.phoneNumber,
+          email: c.email,
+          wholesalerName: c.wholesalerId ? (custWholesalers[c.wholesalerId] || 'Unknown') : 'No wholesaler',
+        })),
+        products: matchedProducts.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          wholesalerName: p.wholesalerName,
+          status: p.status,
+          price: parseFloat(p.price || '0'),
+        })),
+      });
+    } catch (error) {
+      console.error('Admin search error:', error);
+      res.status(500).json({ error: 'Failed to search' });
     }
   });
 

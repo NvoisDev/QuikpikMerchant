@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./replitAuth";
 import compression from "compression";
@@ -18,6 +18,7 @@ import { registerPaymentRoutes } from "./routes/payments";
 import { registerAdminRoutes } from "./routes/admin";
 import { registerPriceListRoutes } from "./routes/price-lists";
 import { registerBatchRoutes } from "./routes/batches";
+import { logServerError } from "./lib/errorLogger";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
@@ -44,6 +45,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminRoutes(app);
   registerPriceListRoutes(app);
   registerBatchRoutes(app);
+
+  // Global error middleware — captures unhandled route errors and persists them to system_error_logs
+  app.use(async (err: Error, req: Request, res: Response, _next: NextFunction) => {
+    console.error(`[server] Unhandled route error ${req.method} ${req.url}:`, err);
+    const user = (req as any).user as { id?: string } | undefined;
+    await logServerError("server_error", err.message || "Unknown error", {
+      context: { method: req.method, url: req.url, stack: err.stack?.slice(0, 500) },
+      wholesalerId: user?.id,
+      severity: "error",
+    });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

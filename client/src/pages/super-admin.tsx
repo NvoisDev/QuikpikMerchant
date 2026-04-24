@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useImpersonation } from "@/contexts/impersonation-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,7 +22,9 @@ import {
   Calendar, MapPin, AlertTriangle, RefreshCw, Package, DollarSign, Settings,
   ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
+  Activity, LogIn, Terminal, Clock, UserCheck, Zap,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
@@ -53,7 +56,7 @@ const planBadge = (tier: string | null) => {
   return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Free</span>;
 };
 
-type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "map";
+type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "map" | "logs";
 
 // ── Shared data interfaces ────────────────────────────────────────────────────
 interface PlatformStats {
@@ -126,6 +129,7 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType<{ clas
   { id: "financials",  label: "Financials",        icon: TrendingUp },
   { id: "settings",    label: "System Settings",   icon: Settings },
   { id: "map",         label: "Customer Map",      icon: MapPin },
+  { id: "logs",        label: "Support & Logs",    icon: Activity },
 ];
 
 type Preset = "this_month" | "last_month" | "last_3_months" | "all_time";
@@ -400,9 +404,26 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const { startImpersonation } = useImpersonation();
   const [planFilter, setPlanFilter] = useState("");
   const [selectedWholesaler, setSelectedWholesaler] = useState<WholesalerRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [impersonateTarget, setImpersonateTarget] = useState<WholesalerRow | null>(null);
+
+  const impersonateMutation = useMutation({
+    mutationFn: async (id: string): Promise<{ success: boolean; wholesalerId: string; businessName: string; token: string }> => {
+      const res = await apiRequest("POST", `/api/admin/impersonate/${id}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setImpersonateTarget(null);
+      startImpersonation(data.wholesalerId, data.businessName, data.token);
+      toast({ title: "Impersonation active", description: `Now viewing as ${data.businessName || "wholesaler"}` });
+      setLocation("/dashboard");
+    },
+    onError: () => toast({ title: "Failed to start impersonation", variant: "destructive" }),
+  });
 
   const toggleStatus = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-status`),
@@ -482,12 +503,15 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                         }
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(w.id)}>
                             {w.archived ? "Activate" : "Suspend"}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => openDrawer(w)}>
                             <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" title="Login as this wholesaler" onClick={() => setImpersonateTarget(w)}>
+                            <LogIn className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -584,12 +608,40 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Impersonation confirmation dialog */}
+      <Dialog open={!!impersonateTarget} onOpenChange={open => { if (!open) setImpersonateTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-indigo-600" />
+              Login as Wholesaler
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2">
+            <p className="text-sm text-gray-700">
+              You are about to view the dashboard as:
+            </p>
+            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+              <p className="text-sm font-semibold text-indigo-800">{impersonateTarget?.businessName || `${impersonateTarget?.firstName} ${impersonateTarget?.lastName}`}</p>
+              <p className="text-xs text-indigo-600 mt-0.5">{impersonateTarget?.email}</p>
+            </div>
+            <p className="text-xs text-gray-500">This action is fully audited. You will see the wholesaler dashboard exactly as they do. Click "Exit Impersonation" in the banner to return.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
+            <Button size="sm" className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={impersonateMutation.isPending} onClick={() => impersonateTarget && impersonateMutation.mutate(impersonateTarget.id)}>
+              {impersonateMutation.isPending ? "Loading..." : "Confirm & View Dashboard"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // ── Customers Section ─────────────────────────────────────────────────────────
-function CustomersSection({ isAdmin }: { isAdmin: boolean }) {
+function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highlightedId?: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -620,6 +672,20 @@ function CustomersSection({ isAdmin }: { isAdmin: boolean }) {
     },
     enabled: !!selectedCustomer && drawerOpen,
   });
+
+  // Open customer detail when navigated from global search
+  useEffect(() => {
+    if (!highlightedId || !data?.customers?.length) return;
+    const match = data.customers.find(c => c.id === highlightedId);
+    if (match) {
+      setSelectedCustomer(match);
+      setDrawerOpen(true);
+      setTimeout(() => {
+        const el = document.getElementById(`record-customer-${highlightedId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [highlightedId, data?.customers]);
 
   const flagMutation = useMutation({
     mutationFn: ({ id, isSuspicious }: { id: string; isSuspicious: boolean }) =>
@@ -676,7 +742,7 @@ function CustomersSection({ isAdmin }: { isAdmin: boolean }) {
                 </TableHeader>
                 <TableBody>
                   {customers.map(c => (
-                    <TableRow key={c.id} className={`hover:bg-indigo-50/20 cursor-pointer ${c.isSuspicious ? "bg-red-50/30" : ""}`} onClick={() => { setSelectedCustomer(c); setDrawerOpen(true); }}>
+                    <TableRow id={`record-customer-${c.id}`} key={c.id} className={`hover:bg-indigo-50/20 cursor-pointer ${c.isSuspicious ? "bg-red-50/30" : ""} ${highlightedId === c.id ? "ring-2 ring-inset ring-indigo-400 bg-indigo-50/40" : ""}`} onClick={() => { setSelectedCustomer(c); setDrawerOpen(true); }}>
                       <TableCell>
                         <p className="text-xs font-medium text-gray-800">{c.name}</p>
                         <p className="text-xs text-gray-400">{c.email || "—"}</p>
@@ -785,9 +851,9 @@ function CustomersSection({ isAdmin }: { isAdmin: boolean }) {
 }
 
 // ── Orders Section ────────────────────────────────────────────────────────────
-function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin }: {
+function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin, highlightedId }: {
   revenueData: RevenueData | undefined; revenueLoading: boolean;
-  wholesalers: WholesalerRow[]; isAdmin: boolean;
+  wholesalers: WholesalerRow[]; isAdmin: boolean; highlightedId?: number;
 }) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -829,6 +895,23 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin }: {
   });
 
   const allOrders: RevenueOrder[] = orderData?.orders ?? [];
+
+  // Scroll to and highlight order when navigated from global search
+  useEffect(() => {
+    if (!highlightedId || !allOrders.length) return;
+    const idx = allOrders.findIndex(o => o.id === highlightedId);
+    if (idx !== -1) {
+      setSearch("");
+      setStatusFilter("");
+      // Navigate to the exact page that contains this record (after filters cleared)
+      const targetPage = Math.ceil((idx + 1) / PAGE_SIZE);
+      setPage(targetPage);
+      setTimeout(() => {
+        const el = document.getElementById(`record-order-${highlightedId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [highlightedId, allOrders.length]);
 
   const filtered = useMemo(() => {
     let list = allOrders;
@@ -913,7 +996,7 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin }: {
                   </TableHeader>
                   <TableBody>
                     {paged.map(o => (
-                      <TableRow key={o.id} className="hover:bg-amber-50/30">
+                      <TableRow id={`record-order-${o.id}`} key={o.id} className={`hover:bg-amber-50/30 ${highlightedId === o.id ? "ring-2 ring-inset ring-amber-400 bg-amber-50/40" : ""}`}>
                         <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
                         <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
                         <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
@@ -958,7 +1041,7 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin }: {
 }
 
 // ── Products Oversight Section ─────────────────────────────────────────────────
-function ProductsSection({ isAdmin }: { isAdmin: boolean }) {
+function ProductsSection({ isAdmin, highlightedId }: { isAdmin: boolean; highlightedId?: number }) {
   const [sort, setSort] = useState("margin_asc");
   const [wholesalerFilter, setWholesalerFilter] = useState("");
   const [flagFilter, setFlagFilter] = useState("");
@@ -975,6 +1058,23 @@ function ProductsSection({ isAdmin }: { isAdmin: boolean }) {
   });
 
   const products: ProductRow[] = data?.products ?? [];
+
+  // Scroll to and highlight product when navigated from global search
+  useEffect(() => {
+    if (!highlightedId || !products.length) return;
+    const idx = products.findIndex(p => p.id === highlightedId);
+    if (idx !== -1) {
+      setWholesalerFilter("");
+      setFlagFilter("");
+      // Navigate to the exact page that contains this record (after filters cleared)
+      const targetPage = Math.ceil((idx + 1) / PAGE_SIZE);
+      setPage(targetPage);
+      setTimeout(() => {
+        const el = document.getElementById(`record-product-${highlightedId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [highlightedId, products.length]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -1055,7 +1155,7 @@ function ProductsSection({ isAdmin }: { isAdmin: boolean }) {
                 </TableHeader>
                 <TableBody>
                   {paged.map(p => (
-                    <TableRow key={p.id} className={`${p.hasMissingCost || p.hasLowMargin ? "bg-red-50/20" : ""} hover:bg-slate-50/50`}>
+                    <TableRow id={`record-product-${p.id}`} key={p.id} className={`${p.hasMissingCost || p.hasLowMargin ? "bg-red-50/20" : ""} hover:bg-slate-50/50 ${highlightedId === p.id ? "ring-2 ring-inset ring-purple-400 bg-purple-50/30" : ""}`}>
                       <TableCell>
                         <p className="text-xs font-medium text-gray-800 max-w-[180px] truncate">{p.name}</p>
                         {p.category && <p className="text-xs text-gray-400">{p.category}</p>}
@@ -1782,12 +1882,391 @@ function QuickActionsModal({ open, onOpenChange, wholesalers }: {
   );
 }
 
+// ── Support & Logs Section ────────────────────────────────────────────────────
+interface ActivityEvent {
+  timestamp: string; type: string; description: string; wholesalerName: string; actorName: string;
+}
+interface ErrorEntry {
+  id: string; errorType: string; message: string; severity: string;
+  wholesalerName: string | null; timestamp: string; source: string;
+}
+
+const PAGE_SIZE = 25;
+
+function SupportLogsSection({ isAdmin, wholesalers }: { isAdmin: boolean; wholesalers: WholesalerRow[] }) {
+  const [tab, setTab] = useState<"activity" | "errors">("activity");
+  const [wholesalerFilter, setWholesalerFilter] = useState<string>("");
+  const [activityLimit, setActivityLimit] = useState(PAGE_SIZE);
+  const [errorsLimit, setErrorsLimit] = useState(PAGE_SIZE);
+
+  const activityUrl = `/api/admin/activity?limit=${activityLimit}${wholesalerFilter ? `&wholesalerId=${wholesalerFilter}` : ""}`;
+  const errorsUrl = `/api/admin/errors?limit=${errorsLimit}`;
+
+  const { data: activityData, isLoading: activityLoading, refetch: refetchActivity } = useQuery<{ events: ActivityEvent[]; total: number }>({
+    queryKey: ["/api/admin/activity", activityLimit, wholesalerFilter],
+    queryFn: async () => {
+      const r = await fetch(activityUrl, { credentials: "include" });
+      return r.json();
+    },
+    enabled: isAdmin,
+    refetchInterval: 30000,
+  });
+
+  const { data: errorsData, isLoading: errorsLoading, refetch: refetchErrors } = useQuery<{ errors: ErrorEntry[]; total: number }>({
+    queryKey: ["/api/admin/errors", errorsLimit],
+    queryFn: async () => {
+      const r = await fetch(errorsUrl, { credentials: "include" });
+      return r.json();
+    },
+    enabled: isAdmin,
+    refetchInterval: 30000,
+  });
+
+  const severityBadge = (s: string) => {
+    if (s === "critical") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">Critical</span>;
+    if (s === "error") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Error</span>;
+    if (s === "warning") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Warning</span>;
+    return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">Info</span>;
+  };
+
+  const typeIcon = (type: string) => {
+    if (type === "payment_failure") return <AlertCircle className="h-3.5 w-3.5 text-red-400" />;
+    if (type === "subscription_event") return <CreditCard className="h-3.5 w-3.5 text-blue-400" />;
+    if (type === "order") return <ShoppingCart className="h-3.5 w-3.5 text-amber-400" />;
+    if (type === "stock_movement") return <Package className="h-3.5 w-3.5 text-green-500" />;
+    return <Zap className="h-3.5 w-3.5 text-indigo-500" />;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Support & Logs</h2>
+          <p className="text-xs text-gray-400">Platform activity feed and error log</p>
+        </div>
+        <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200 gap-1.5" onClick={() => tab === "activity" ? refetchActivity() : refetchErrors()}>
+          <RefreshCw className="h-3.5 w-3.5" />Refresh
+        </Button>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        <button onClick={() => setTab("activity")} className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${tab === "activity" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />Activity Feed</span>
+        </button>
+        <button onClick={() => setTab("errors")} className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${tab === "errors" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <span className="flex items-center gap-1.5"><Terminal className="h-3.5 w-3.5" />Error Log</span>
+        </button>
+      </div>
+
+      {tab === "activity" && (
+        <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
+          <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-sm font-semibold text-gray-700">
+                Platform Activity
+                <span className="ml-2 text-xs font-normal text-gray-400">{activityData?.total ?? 0} total</span>
+              </CardTitle>
+              <select
+                value={wholesalerFilter}
+                onChange={e => { setWholesalerFilter(e.target.value); setActivityLimit(PAGE_SIZE); }}
+                className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300"
+              >
+                <option value="">All wholesalers</option>
+                {wholesalers.map(w => (
+                  <option key={w.id} value={w.id}>{w.businessName || `${w.firstName || ""} ${w.lastName || ""}`.trim() || w.email}</option>
+                ))}
+              </select>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {activityLoading ? (
+              <div className="p-8 text-center text-sm text-gray-400">Loading activity...</div>
+            ) : !activityData?.events?.length ? (
+              <div className="p-8 text-center">
+                <Activity className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No activity recorded yet</p>
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-gray-50">
+                  {activityData.events.map((item, i) => (
+                    <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/50">
+                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {typeIcon(item.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800">{item.description}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{item.wholesalerName} · {item.actorName}</p>
+                      </div>
+                      <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
+                        {format(new Date(item.timestamp), "dd MMM, HH:mm")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {activityData.events.length < activityData.total && (
+                  <div className="px-4 py-3 border-t border-gray-50 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-gray-500 h-7"
+                      onClick={() => setActivityLimit(prev => prev + PAGE_SIZE)}
+                    >
+                      Load more ({activityData.total - activityData.events.length} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "errors" && (
+        <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
+          <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-gray-700">
+              Error Log
+              <span className="ml-2 text-xs font-normal text-gray-400">{errorsData?.total ?? 0} total</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {errorsLoading ? (
+              <div className="p-8 text-center text-sm text-gray-400">Loading errors...</div>
+            ) : !errorsData?.errors?.length ? (
+              <div className="p-8 text-center">
+                <CheckCircle className="h-8 w-8 text-green-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No errors recorded — all clear</p>
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-gray-50">
+                  {errorsData.errors.map(item => (
+                    <div key={item.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/50">
+                      <div className="w-7 h-7 bg-red-50 border border-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-xs font-medium text-gray-800 truncate">{item.errorType.replace(/_/g, " ")}</p>
+                          {severityBadge(item.severity)}
+                          <span className="text-xs text-gray-300">{item.source}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{item.message}</p>
+                        {item.wholesalerName && <p className="text-xs text-gray-400 mt-0.5">{item.wholesalerName}</p>}
+                      </div>
+                      <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
+                        {format(new Date(item.timestamp), "dd MMM, HH:mm")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {errorsData.errors.length < errorsData.total && (
+                  <div className="px-4 py-3 border-t border-gray-50 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-gray-500 h-7"
+                      onClick={() => setErrorsLimit(prev => prev + PAGE_SIZE)}
+                    >
+                      Load more ({errorsData.total - errorsData.errors.length} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Global Search Bar ─────────────────────────────────────────────────────────
+interface SearchResult {
+  type: "wholesaler" | "customer" | "order" | "product";
+  id: string | number; label: string; sub: string; section: SectionId;
+}
+
+interface RawSearchResponse {
+  orders: Array<{ id: number; orderNumber: string | null; customerName: string | null; wholesalerName: string | null; status: string | null }>;
+  customers: Array<{ id: string; name: string; phoneNumber: string | null; email: string | null; wholesalerName: string }>;
+  products: Array<{ id: number; name: string | null; category: string | null; wholesalerName: string | null; status: string | null; price: number }>;
+}
+
+interface SearchGroup {
+  label: string;
+  section: SectionId;
+  icon: JSX.Element;
+  items: SearchResult[];
+}
+
+function buildSearchGroups(raw: RawSearchResponse): SearchGroup[] {
+  const groups: SearchGroup[] = [];
+  if (raw.orders?.length) {
+    groups.push({
+      label: "Orders",
+      section: "orders",
+      icon: <ShoppingCart className="h-3.5 w-3.5 text-amber-500" />,
+      items: raw.orders.map(o => ({
+        type: "order" as const,
+        id: o.id,
+        label: o.orderNumber || `Order #${o.id}`,
+        sub: `${o.customerName || "Unknown"} · ${o.wholesalerName || ""}`,
+        section: "orders" as SectionId,
+      })),
+    });
+  }
+  if (raw.customers?.length) {
+    groups.push({
+      label: "Customers",
+      section: "customers",
+      icon: <Users className="h-3.5 w-3.5 text-green-500" />,
+      items: raw.customers.map(c => ({
+        type: "customer" as const,
+        id: c.id,
+        label: c.name,
+        sub: `${c.phoneNumber || c.email || ""} · ${c.wholesalerName}`,
+        section: "customers" as SectionId,
+      })),
+    });
+  }
+  if (raw.products?.length) {
+    groups.push({
+      label: "Products",
+      section: "products",
+      icon: <Package className="h-3.5 w-3.5 text-purple-500" />,
+      items: raw.products.map(p => ({
+        type: "product" as const,
+        id: p.id,
+        label: p.name || "Product",
+        sub: `${p.category || ""} · ${p.wholesalerName || ""}`,
+        section: "products" as SectionId,
+      })),
+    });
+  }
+  return groups;
+}
+
+function GlobalSearchBar({ onNavigate }: { onNavigate: (section: SectionId, id?: string | number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const openSearch = () => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50); };
+  const closeSearch = () => { setOpen(false); setQuery(""); };
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isEditable = ["INPUT", "TEXTAREA"].includes(tag) || (e.target as HTMLElement)?.isContentEditable;
+      if ((e.key === "/" && !isEditable) || ((e.metaKey || e.ctrlKey) && e.key === "k")) {
+        e.preventDefault();
+        openSearch();
+      }
+      if (e.key === "Escape") closeSearch();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const { data: rawResults, isLoading } = useQuery<RawSearchResponse>({
+    queryKey: ["/api/admin/search", debouncedQ],
+    queryFn: async () => {
+      if (!debouncedQ.trim()) return { orders: [], customers: [], products: [] };
+      const r = await fetch(`/api/admin/search?q=${encodeURIComponent(debouncedQ)}`, { credentials: "include" });
+      return r.json();
+    },
+    enabled: open && !!debouncedQ.trim(),
+  });
+
+  const groups = rawResults ? buildSearchGroups(rawResults) : [];
+  const totalResults = groups.reduce((n, g) => n + g.items.length, 0);
+
+  if (!open) {
+    return (
+      <button onClick={openSearch}
+        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-400 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors min-w-[140px] max-w-[200px]">
+        <Search className="h-3.5 w-3.5 flex-shrink-0" />
+        <span className="truncate">Search</span>
+        <span className="ml-auto text-gray-300 font-mono text-xs leading-none px-1 py-0.5 bg-white border border-gray-200 rounded">/</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center border border-gray-300 rounded-lg bg-white shadow-sm overflow-hidden px-2.5">
+        <Search className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onBlur={() => { if (!query) setOpen(false); }}
+          placeholder="Search orders, customers, products…"
+          className="flex-1 px-2 py-2 text-xs bg-transparent outline-none text-gray-900 placeholder:text-gray-400 min-w-0"
+          autoFocus
+        />
+        <button onClick={closeSearch} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="h-3.5 w-3.5" /></button>
+      </div>
+      {open && (query || isLoading) && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden max-h-80 overflow-y-auto">
+          {isLoading ? (
+            <div className="px-4 py-3 text-xs text-gray-400">Searching…</div>
+          ) : totalResults === 0 ? (
+            <div className="px-4 py-3 text-xs text-gray-400">No results for "{query}"</div>
+          ) : (
+            <div>
+              {groups.map(group => (
+                <div key={group.section}>
+                  <div className="flex items-center gap-1.5 px-4 py-2 bg-gray-50 border-b border-gray-100 sticky top-0">
+                    {group.icon}
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.label}</span>
+                    <span className="ml-auto text-xs text-gray-400">{group.items.length}</span>
+                  </div>
+                  {group.items.map((r, i) => (
+                    <button
+                      key={i}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                      onClick={() => { onNavigate(r.section, r.id); closeSearch(); }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">{r.label}</p>
+                        <p className="text-xs text-gray-400 truncate">{r.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function SuperAdmin() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [activeSection, setActiveSection] = useState<SectionId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [highlightedRecord, setHighlightedRecord] = useState<{ section: SectionId; id: string | number } | null>(null);
+
+  const handleNavigate = useCallback((section: SectionId, id?: string | number) => {
+    setActiveSection(section);
+    setHighlightedRecord(id !== undefined ? { section, id } : null);
+  }, []);
 
   const isAdmin = !!user && ADMIN_EMAILS.includes(user.email || "");
 
@@ -1884,11 +2363,12 @@ export default function SuperAdmin() {
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 hidden sm:block">
             <h1 className="text-sm font-semibold text-gray-900 truncate">
               {SECTIONS.find(s => s.id === activeSection)?.label}
             </h1>
           </div>
+          <GlobalSearchBar onNavigate={handleNavigate} />
           <Button size="sm" variant="outline" className="text-xs h-7 border-gray-200 gap-1.5 hidden sm:flex" onClick={() => setQuickActionsOpen(true)}>
             <Star className="h-3.5 w-3.5" />Quick Actions
           </Button>
@@ -1906,19 +2386,34 @@ export default function SuperAdmin() {
             <WholesalersSection wholesalers={wholesalers} wholesalersLoading={wholesalersLoading} isAdmin={isAdmin} />
           )}
           {activeSection === "customers" && (
-            <CustomersSection isAdmin={isAdmin} />
+            <CustomersSection
+              isAdmin={isAdmin}
+              highlightedId={highlightedRecord?.section === "customers" ? String(highlightedRecord.id) : undefined}
+            />
           )}
           {activeSection === "orders" && (
-            <OrdersSection revenueData={revenueData} revenueLoading={revenueLoading} wholesalers={wholesalers} isAdmin={isAdmin} />
+            <OrdersSection
+              revenueData={revenueData}
+              revenueLoading={revenueLoading}
+              wholesalers={wholesalers}
+              isAdmin={isAdmin}
+              highlightedId={highlightedRecord?.section === "orders" ? Number(highlightedRecord.id) : undefined}
+            />
           )}
           {activeSection === "products" && (
-            <ProductsSection isAdmin={isAdmin} />
+            <ProductsSection
+              isAdmin={isAdmin}
+              highlightedId={highlightedRecord?.section === "products" ? Number(highlightedRecord.id) : undefined}
+            />
           )}
           {activeSection === "financials" && (
             <FinancialsSection wholesalers={wholesalers} isAdmin={isAdmin} />
           )}
           {activeSection === "settings" && (
             <SystemSettingsSection isAdmin={isAdmin} />
+          )}
+          {activeSection === "logs" && (
+            <SupportLogsSection isAdmin={isAdmin} wholesalers={wholesalers} />
           )}
           {activeSection === "map" && (
             <CustomerMapSection isAdmin={isAdmin} />
