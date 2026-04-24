@@ -1,0 +1,159 @@
+🧾 Prompt: Implement Structured Team Management with Role-Based Access (NON-BREAKING)
+🎯 Objective
+
+Implement a clear and scalable role-based access control (RBAC) system for team management with the following hierarchy:
+
+Owner → Full platform access
+Admin → Access to all operational areas (except restricted owner-only actions)
+Member → Access only to explicitly allowed areas
+Viewer → Read-only access (no actions)
+
+This must be implemented without breaking existing functionality, permissions, or user access.
+
+🧠 Core Principle
+
+Access = Role + Permissions
+NOT hardcoded per page or user
+
+🧱 Role Definitions (STRICT)
+1. Owner
+Full access to everything
+Can:
+Manage team (add/remove users)
+Change billing / subscription
+Delete account
+Access all data
+
+👉 Only 1 Owner per company (or controlled multiple)
+
+2. Admin
+Full operational access
+Can:
+Manage products
+Manage orders
+Manage customers
+View reports
+
+🚫 Cannot:
+
+Change billing
+Delete company
+Transfer ownership
+3. Member
+Limited access based on permissions
+
+Can be configured to:
+
+View products
+Create/edit orders
+Manage stock
+
+🚫 Cannot:
+
+Access sensitive settings
+Manage team
+4. Viewer
+Read-only access
+
+Can:
+
+View products
+View orders
+View dashboard
+
+🚫 Cannot:
+
+Create / edit / delete anything
+🧱 Data Model (SAFE ADDITIVE)
+Add / ensure table:
+team_members
+- id
+- user_id
+- company_id
+- role (owner | admin | member | viewer)
+- permissions (JSON, optional for member)
+- status (active / invited / removed)
+🔐 Permission Logic (CRITICAL)
+NEVER rely on frontend only
+
+All checks must happen:
+
+Backend (API level) ✅
+Frontend (UI visibility) ✅
+Example:
+IF role = viewer
+→ block POST, PUT, DELETE
+
+IF role = member
+→ check permissions array
+
+IF role = admin
+→ allow all except restricted actions
+
+IF role = owner
+→ allow all
+⚙️ Areas to Protect
+
+Apply role checks to:
+
+Products (create/edit/delete)
+Orders & quotes
+Customers
+Pricing & margins
+Dashboard analytics
+Team management
+Billing & subscription
+🚨 NON-NEGOTIABLE RULES
+1. DO NOT BREAK EXISTING USERS
+Existing users should default to:
+role = owner OR admin (based on current behaviour)
+2. DO NOT LOCK USERS OUT
+Ensure at least one Owner always exists
+3. DO NOT HARD DELETE ACCESS
+
+Use:
+
+status = removed
+🧪 Team Management Features
+Add:
+Invite team member (email / phone)
+Assign role on invite
+Edit role
+Remove user
+UI Requirements
+Clear role labels:
+Owner (badge)
+Admin
+Member
+Viewer
+Show:
+Name | Role | Status | Actions
+⚠️ Edge Cases
+Owner tries to remove themselves → ❌ block
+Last owner → cannot be removed
+Role downgrade (Admin → Viewer) → immediately restrict access
+Pending invites → limited access
+🔁 Backward Compatibility
+Existing flows must continue working
+Permissions layer should wrap around current logic
+No breaking API changes
+🧪 Acceptance Criteria
+Roles behave exactly as defined
+Viewer cannot perform any actions
+Member only accesses allowed areas
+Admin has full operational control
+Owner has full system control
+No existing user loses access unexpectedly
+🧠 Sanity Check
+
+If implementation:
+
+“Checks permissions only in UI”
+
+🚫 WRONG (security risk)
+
+If implementation:
+
+“Enforces permissions at API level + UI”
+
+✅ Correct
