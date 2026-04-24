@@ -236,7 +236,7 @@ const PaymentFormContent = ({
             <span className="font-semibold">Secure Payment Processing</span>
             <HelpCircle className="w-3 h-3 text-blue-600 cursor-help" />
           </div>
-          <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
+          <p>Your payment is processed securely through Stripe. Service fee (5.5% + £0.50) is included in the total.</p>
         </div>
 
         <Button

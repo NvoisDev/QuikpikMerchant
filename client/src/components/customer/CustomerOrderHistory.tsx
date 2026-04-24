@@ -456,7 +456,7 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                 <span>{fmt(preview.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Transaction Fee</span>
+                <span className="text-gray-600">Service Fee</span>
                 <span>{fmt(preview.transactionFee)}</span>
               </div>
               {parseFloat(preview.deliveryCost) > 0 && (
@@ -1062,7 +1062,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
             </div>
             {transactionFee > 0 && (
               <div className="flex justify-between text-xs">
-                <span className="break-words">Transaction Fee (5.5% + £0.50):</span>
+                <span className="break-words">Service Fee (5.5% + £0.50):</span>
                 <span className="font-medium">{fmt(transactionFee)}</span>
               </div>
             )}
@@ -1581,7 +1581,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             </div>
             {transactionFee > 0 && (
               <div className="flex justify-between text-xs">
-                <span>Transaction Fee (5.5% + £0.50):</span>
+                <span>Service Fee (5.5% + £0.50):</span>
                 <span className="font-medium">{fmt(transactionFee)}</span>
               </div>
             )}

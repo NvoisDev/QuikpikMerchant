@@ -725,7 +725,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     };
     drawTotRow('Subtotal', fmt(subtotal));
     if (deliveryCost > 0) drawTotRow('Delivery', fmt(deliveryCost));
-    if (showTransactionFee && txFee > 0) drawTotRow('Transaction Fee', fmt(txFee));
+    if (showTransactionFee && txFee > 0) drawTotRow('Service Fee', fmt(txFee));
     doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4).strokeColor(GREEN).lineWidth(1.5).stroke();
     tY += 4;
     drawTotRow('Total', fmt(grandTotal), true);

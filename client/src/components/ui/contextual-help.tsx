@@ -151,10 +151,10 @@ const helpContexts = {
             <div class="bg-purple-50 p-3 rounded-lg">
               <h4 class="font-semibold text-purple-900 mb-2">Payment Structure</h4>
               <div class="text-sm text-purple-800">
-                <p class="mb-2">Transaction fees are clearly displayed:</p>
+                <p class="mb-2">Service fees are clearly displayed:</p>
                 <ul class="list-disc list-inside space-y-1">
                   <li>Product subtotal</li>
-                  <li>Transaction fee (5.5% + £0.50)</li>
+                  <li>Service fee (5.5% + £0.50)</li>
                   <li>Shipping cost (if applicable)</li>
                   <li><strong>Total amount charged</strong></li>
                 </ul>

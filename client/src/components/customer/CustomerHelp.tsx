@@ -72,12 +72,12 @@ const helpSections: HelpSection[] = [
         answer: "Yes. All payments are processed by Stripe, a globally trusted payment provider. Your card details are never stored or seen by the seller. All transactions are encrypted."
       },
       {
-        question: "Why is there a transaction fee on my order?",
-        answer: "A transaction fee of 5.5% + £0.50 is added to every card payment to cover the cost of secure payment processing and platform services. This is calculated on your order subtotal (including any delivery charge) and is shown clearly before you complete checkout."
+        question: "Why is there a service fee on my order?",
+        answer: "A service fee of 5.5% + £0.50 is added to every card payment to cover the cost of secure payment processing and platform services. This is calculated on your order subtotal (including any delivery charge) and is shown clearly before you complete checkout."
       },
       {
-        question: "Where can I see the transaction fee before I pay?",
-        answer: "The fee is shown as a separate line item in your cart summary, labelled 'Transaction Fee (5.5% + £0.50)', before you proceed to payment. The final total you see already includes this charge — there are no hidden costs added afterwards."
+        question: "Where can I see the service fee before I pay?",
+        answer: "The fee is shown as a separate line item in your cart summary, labelled 'Service Fee (5.5% + £0.50)', before you proceed to payment. The final total you see already includes this charge — there are no hidden costs added afterwards."
       }
     ]
   },

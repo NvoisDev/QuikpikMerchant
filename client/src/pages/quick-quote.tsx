@@ -1419,7 +1419,7 @@ export default function QuickQuote() {
                   </div>
                   {quotePaymentMethod !== 'payment_link' && (
                     <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
-                      No payment link will be generated. The customer will pay by {quotePaymentMethod === 'bank_transfer' ? 'bank transfer' : quotePaymentMethod}. No transaction fees apply.
+                      No payment link will be generated. The customer will pay by {quotePaymentMethod === 'bank_transfer' ? 'bank transfer' : quotePaymentMethod}. No service fees apply.
                     </p>
                   )}
                 </div>
