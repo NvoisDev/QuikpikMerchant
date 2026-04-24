@@ -1,0 +1,155 @@
+🧾 Prompt: Full Refund Logic + Stock Restock (STRICTLY NON-BREAKING)
+🎯 Objective
+
+Implement a full refund flow where:
+
+Customer receives 100% refund
+Platform absorbs fees
+Wholesaler sale is reversed
+Stock is correctly restocked (batch-aware)
+
+All changes must be additive and must NOT break existing systems.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT modify:
+Payment flow (Stripe integration must remain intact)
+Order creation logic
+Existing stock deduction logic
+Do NOT overwrite historical data
+Use new logic layered on top
+💳 Refund Behaviour
+Customer receives:
+Full order total (including delivery + fees)
+📦 Stock Restock Logic (CRITICAL)
+🧠 Core Principle
+
+Refund = reverse the stock movement
+
+✅ Restock Rules
+1. Restock ONLY if stock was previously deducted
+
+Check:
+
+order.status = fulfilled OR completed
+
+👉 Prevent double restocking
+
+2. Restock per order item
+
+For each item:
+
+restock_quantity = refunded_quantity
+🔁 Batch-Aware Restocking (IMPORTANT for your system)
+
+If using batches:
+
+Preferred approach:
+Restock back into original batch
+{
+  "product_id": "...",
+  "batch_id": "...",
+  "quantity": 10
+}
+If original batch is:
+❌ Deleted
+❌ Fully depleted / archived
+
+👉 Then:
+
+Create a new batch:
+Batch name: "Refund Return"
+expiry_date: original OR null
+⚠️ Do NOT:
+Merge into random batches
+Ignore batch tracking
+Overwrite batch quantities incorrectly
+🔄 Stock Calculation Impact
+
+After restock:
+
+product.total_stock = SUM(all active batch quantities)
+
+👉 Must auto-update (no manual override)
+
+🔁 Partial Refund Handling
+
+If refund is partial:
+
+Restock ONLY refunded items/quantities
+
+Example:
+
+Ordered: 10 units  
+Refunded: 4 units  
+→ Restock: 4 units
+⚠️ Delivery Refund Logic
+Delivery has no stock impact
+Only affects financials
+🧾 Order State Management
+
+Update order:
+
+status = refunded OR partially_refunded
+
+Add:
+
+restock_status = completed
+
+👉 Prevent duplicate restocking
+
+🔐 Idempotency (VERY IMPORTANT)
+
+If refund endpoint is triggered twice:
+
+DO NOT restock twice
+
+Use:
+
+refund_id OR restock_flag
+⚙️ Backend Flow
+When refund is triggered:
+Call Stripe refund API
+On success:
+Update order status
+Reverse commission
+Trigger stock restock logic
+🧪 Edge Cases
+Cancelled before fulfilment:
+❌ No restock needed
+Returned damaged goods:
+Optional:
+restock = false
+reason = damaged
+📊 Audit Trail (IMPORTANT)
+
+Log:
+
+type: "refund_restock"
+order_id
+product_id
+batch_id
+quantity
+timestamp
+
+👉 This saves you later when debugging stock issues
+
+✅ Acceptance Criteria
+Full refund returns full payment to customer
+Stock is restored accurately
+Batch integrity is preserved
+No duplicate restocking
+Existing stock flows remain unchanged
+No impact on performance or current features
+🧠 Sanity Check
+
+If implementation:
+
+“Just increases product stock”
+
+🚫 WRONG → breaks batch tracking
+
+If implementation:
+
+“Reverses stock at batch level tied to the order”
+
+✅ Correct
