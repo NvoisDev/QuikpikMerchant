@@ -171,8 +171,8 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
 
               {/* Custom date inputs */}
               <div className="w-full sm:min-w-0 p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex-1">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
+                  <div className="flex-1 min-w-0 w-full">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       From
                     </label>
@@ -183,10 +183,10 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
                       className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
-                  <div className="flex items-center justify-center pt-6">
+                  <div className="hidden sm:flex items-center justify-center pt-6">
                     <div className="w-3 h-px bg-gray-300"></div>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 w-full">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       To
                     </label>
