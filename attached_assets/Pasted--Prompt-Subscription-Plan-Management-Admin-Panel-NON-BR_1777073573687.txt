@@ -1,0 +1,112 @@
+🧾 Prompt: Subscription Plan Management (Admin Panel – NON-BREAKING)
+🎯 Objective
+
+Enable the admin (Owner) to create, manage, and update subscription plans safely without breaking existing subscriptions, billing logic, or Stripe integration.
+
+🧠 Core Principle
+
+Subscription plans must be versioned, not edited
+
+Existing plans = locked
+New pricing/features = new plan
+🧱 Required Features
+1. Create New Plan
+
+Admin should be able to create a new plan with:
+
+- plan_name (e.g. Starter, Growth, Pro)
+- price (£)
+- billing_interval (monthly / yearly)
+- features (JSON or list)
+- stripe_price_id (linked from Stripe)
+- version (auto-increment)
+- status (active / archived)
+2. Archive Existing Plans
+Admin can mark a plan as:
+status = archived
+Archived plans:
+❌ Not visible to new users
+✅ Still valid for existing subscribers
+3. View Plan Usage
+
+Display per plan:
+
+Number of active subscribers
+Monthly revenue
+Plan version
+4. Assign Plan to Wholesaler
+Allow admin to:
+View current plan
+Upgrade / downgrade (manual control)
+🔄 Stripe Integration (CRITICAL)
+Each plan must map to:
+stripe_price_id
+When creating a new plan:
+A new price must be created in Stripe
+Store the returned price_id
+🚨 NON-NEGOTIABLE RULES
+1. DO NOT EDIT EXISTING PLANS
+No price changes
+No feature overwrites
+2. DO NOT MODIFY EXISTING STRIPE PRICES
+Stripe prices are immutable
+Always create new ones
+3. DO NOT AUTO-MIGRATE USERS
+Existing subscribers:
+Stay on current plan
+Migration must be:
+Manual OR user-confirmed
+4. DO NOT BREAK BILLING
+Subscription lifecycle must remain intact
+No interruption to active billing cycles
+🧪 Edge Cases
+Downgrade mid-cycle → apply next billing cycle
+Upgrade mid-cycle → prorate (via Stripe settings)
+Cancelled subscriptions → retain history
+⚙️ Backend Structure (Additive Only)
+Table:
+subscription_plans
+- id
+- name
+- price
+- billing_interval
+- stripe_price_id
+- features
+- version
+- status
+- created_at
+🎨 Admin UI Requirements
+
+Simple table:
+
+Plan	Price	Interval	Subscribers	Status	Actions
+
+Actions:
+
+Create new plan
+Archive plan
+View details
+🔐 Permissions
+Only Owner role can:
+Create plans
+Archive plans
+Assign plans
+🧪 Acceptance Criteria
+Admin can create new plans without affecting existing ones
+Existing subscribers remain unchanged
+Stripe billing continues without errors
+Archived plans are hidden from new users
+No breaking changes to current system
+🧠 Sanity Check
+
+If implementation:
+
+“Updates price on existing plan”
+
+🚫 WRONG
+
+If implementation:
+
+“Creates new plan + links new Stripe price”
+
+✅ Correct
