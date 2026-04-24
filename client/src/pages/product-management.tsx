@@ -1012,6 +1012,8 @@ export default function ProductManagement() {
       }
     },
     onError: (error: any) => {
+      setIsDialogOpen(false);
+      setEditingProduct(null);
       toast({
         title: "Error",
         description: error.message || "Failed to update product",

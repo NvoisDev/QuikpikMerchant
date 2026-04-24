@@ -549,74 +549,86 @@ export default function ProductDetail() {
                               </td>
                               <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
                               <td className="px-3 py-2 text-right">
-                                <div className="relative inline-block">
-                                  <button
-                                    onClick={() => openExpiryPopover(batch)}
-                                    disabled={isSavingThisBatch}
-                                    className="focus:outline-none"
-                                    title="Click to edit expiry date"
-                                  >
-                                    {isSavingThisBatch ? (
-                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${expiryInfo?.className ?? "bg-gray-50 border-gray-200 text-gray-500"}`}>
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      </span>
-                                    ) : expiryInfo ? (
-                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border cursor-pointer hover:opacity-80 transition-opacity ${expiryInfo.className}`}>
-                                        {batch.expiryDate
-                                          ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
-                                          : "—"}
-                                        <CalendarDays className="h-2.5 w-2.5 opacity-60" />
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
-                                        No expiry <CalendarDays className="h-2.5 w-2.5" />
-                                      </span>
-                                    )}
-                                  </button>
-
-                                  {isThisPopoverOpen && (
-                                    <div
-                                      ref={expiryPopoverRef}
-                                      className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px]"
+                                {isViewer ? (
+                                  expiryInfo ? (
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${expiryInfo.className}`}>
+                                      {batch.expiryDate
+                                        ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+                                        : "—"}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">No expiry</span>
+                                  )
+                                ) : (
+                                  <div className="relative inline-block">
+                                    <button
+                                      onClick={() => openExpiryPopover(batch)}
+                                      disabled={isSavingThisBatch}
+                                      className="focus:outline-none"
+                                      title="Click to edit expiry date"
                                     >
-                                      <p className="text-xs font-medium text-gray-600 mb-2">Set expiry date</p>
-                                      <input
-                                        type="date"
-                                        autoFocus
-                                        value={expiryInputValue}
-                                        disabled={updateExpiryMutation.isPending}
-                                        onChange={(e) => {
-                                          const newVal = e.target.value;
-                                          setExpiryInputValue(newVal);
-                                          if (newVal) {
-                                            updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: newVal });
-                                          }
-                                        }}
-                                        className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2 disabled:opacity-50"
-                                      />
-                                      <div className="flex gap-1.5 justify-end">
-                                        {batch.expiryDate && (
-                                          <button
-                                            onClick={() =>
-                                              updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: null })
+                                      {isSavingThisBatch ? (
+                                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${expiryInfo?.className ?? "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        </span>
+                                      ) : expiryInfo ? (
+                                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border cursor-pointer hover:opacity-80 transition-opacity ${expiryInfo.className}`}>
+                                          {batch.expiryDate
+                                            ? new Date(batch.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
+                                            : "—"}
+                                          <CalendarDays className="h-2.5 w-2.5 opacity-60" />
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
+                                          No expiry <CalendarDays className="h-2.5 w-2.5" />
+                                        </span>
+                                      )}
+                                    </button>
+
+                                    {isThisPopoverOpen && (
+                                      <div
+                                        ref={expiryPopoverRef}
+                                        className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px]"
+                                      >
+                                        <p className="text-xs font-medium text-gray-600 mb-2">Set expiry date</p>
+                                        <input
+                                          type="date"
+                                          autoFocus
+                                          value={expiryInputValue}
+                                          disabled={updateExpiryMutation.isPending}
+                                          onChange={(e) => {
+                                            const newVal = e.target.value;
+                                            setExpiryInputValue(newVal);
+                                            if (newVal) {
+                                              updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: newVal });
                                             }
-                                            disabled={updateExpiryMutation.isPending}
-                                            className="text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded px-2 py-1.5 disabled:opacity-50"
-                                            title="Remove expiry date"
+                                          }}
+                                          className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 mb-2 disabled:opacity-50"
+                                        />
+                                        <div className="flex gap-1.5 justify-end">
+                                          {batch.expiryDate && (
+                                            <button
+                                              onClick={() =>
+                                                updateExpiryMutation.mutate({ batchId: batch.id, expiryDate: null })
+                                              }
+                                              disabled={updateExpiryMutation.isPending}
+                                              className="text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded px-2 py-1.5 disabled:opacity-50"
+                                              title="Remove expiry date"
+                                            >
+                                              Clear
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={() => setExpiryPopoverBatchId(null)}
+                                            className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1.5"
                                           >
-                                            Clear
+                                            ✕
                                           </button>
-                                        )}
-                                        <button
-                                          onClick={() => setExpiryPopoverBatchId(null)}
-                                          className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1.5"
-                                        >
-                                          ✕
-                                        </button>
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <span className={`inline-block px-1.5 py-0.5 rounded-full text-xs capitalize ${
