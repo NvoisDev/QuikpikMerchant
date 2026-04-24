@@ -347,6 +347,20 @@ export default function ProductManagement() {
           console.log('📝 Safe data being set:', safeData);
           form.reset(safeData);
           console.log('✅ Form safely populated with complete data');
+
+          // Auto-fill unit weight on load if it's blank but unit of measure is weight-based
+          if (!safeData.unitWeight && safeData.unitSize && safeData.unitOfMeasure) {
+            const unit = BASE_UNITS.find(u => u.value === safeData.unitOfMeasure);
+            if (unit && unit.category === 'Weight' && unit.baseWeightKg) {
+              const size = parseFloat(safeData.unitSize as string);
+              if (size > 0) {
+                const autoKg = Math.round(size * unit.baseWeightKg * 1000) / 1000;
+                if (autoKg > 0) {
+                  form.setValue('unitWeight', autoKg.toString(), { shouldValidate: false });
+                }
+              }
+            }
+          }
         } catch (error) {
           console.error('❌ Safe form population failed:', error);
         }
@@ -420,6 +434,40 @@ export default function ProductManagement() {
               });
             }
           }
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, toast]);
+
+  // Auto-fill Unit Weight from Size per Unit when unit of measure is weight-based (kg, g, tonnes)
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name === 'unitSize' || name === 'unitOfMeasure') {
+        const { unitSize = '', unitOfMeasure = '' } = values;
+
+        if (!unitSize || !unitOfMeasure) return;
+
+        const size = parseFloat(unitSize as string);
+        if (!size || size <= 0) return;
+
+        const unit = BASE_UNITS.find(u => u.value === unitOfMeasure);
+        if (!unit || unit.category !== 'Weight' || !unit.baseWeightKg) return;
+
+        const calculatedKg = Math.round(size * unit.baseWeightKg * 1000) / 1000;
+        if (calculatedKg <= 0) return;
+
+        const currentUnitWeight = form.getValues('unitWeight');
+        const newUnitWeight = calculatedKg.toString();
+
+        if (currentUnitWeight !== newUnitWeight) {
+          form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
+          toast({
+            title: "Unit Weight Auto-Filled",
+            description: `${calculatedKg}kg per unit (${size}${unitOfMeasure})`,
+            duration: 2000,
+          });
         }
       }
     });

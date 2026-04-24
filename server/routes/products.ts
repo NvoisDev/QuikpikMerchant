@@ -146,9 +146,6 @@ export function registerProductRoutes(app: Express): void {
 
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
-      if (req.body.unitWeight !== undefined) {
-        console.log(`📦 Product ${id} unitWeight: incoming=${req.body.unitWeight}, parsed=${productData.unitWeight}`);
-      }
 
       // ── Stock validation ────────────────────────────────────────────────────
       if (req.body.stock !== undefined) {
