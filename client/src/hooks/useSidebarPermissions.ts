@@ -56,6 +56,7 @@ export function useSidebarPermissions() {
     filterNavigationItems,
     isTabRestricted,
     permissionChecks,
+    permissionsLoading,
   };
 }
 
@@ -70,7 +71,7 @@ export function getTabNameFromPath(path: string): string {
     '': 'dashboard',
     'dashboard': 'dashboard',
     'products': 'products',
-    'promotions': 'products',
+    'promotions': 'promotions',
     'orders': 'orders',
     'customers': 'customers',
     'campaigns': 'campaigns',

@@ -47,7 +47,7 @@ const navigation: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
-  { name: "Promotions", href: "/promotions", icon: Tag, tabName: "products" },
+  { name: "Promotions", href: "/promotions", icon: Tag, tabName: "promotions" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", soonBadge: true },
   { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", soonBadge: true },

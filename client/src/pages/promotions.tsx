@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Plus, Pencil, Trash2, Tag, Percent, Package, ShoppingCart, Flame, Calendar, ToggleLeft, ToggleRight, TrendingUp, Clock, AlertCircle, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
@@ -135,8 +136,23 @@ function formatDate(dateStr?: string): string {
 export default function Promotions() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const search = useSearch();
+
+  useEffect(() => {
+    if (permissionsLoading) return;
+    if (user?.role === 'team_member' && !checkTabAccess('promotions')) {
+      toast({
+        title: "Access restricted",
+        description: "You don't have permission to view the Promotions page.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
+
   const urlProductId = new URLSearchParams(search).get("productId") || "";
   const [filter, setFilter] = useState<"all" | "active" | "scheduled" | "expired">("all");
   const [productFilter, setProductFilter] = useState<string>(urlProductId);
