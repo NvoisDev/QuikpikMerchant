@@ -1775,7 +1775,12 @@ export function registerAdminRoutes(app: Express): void {
       // Tables we deliberately exclude from the TRUNCATE list:
       //  - 'users' / 'sessions' / 'session': handled separately with WHERE clauses
       //    or must be preserved entirely.
-      const preservedTables = new Set(['users', 'session', 'sessions']);
+      //  - 'user_subscriptions': handled with a WHERE-clause DELETE so the admin's
+      //    own subscription row is kept; TRUNCATE would wipe it before we could filter.
+      //  - 'subscription_plans': platform config (free/standard/premium plan definitions)
+      //    — never test data and must never be wiped. Also prevents CASCADE from reaching
+      //    user_subscriptions via the planId FK (user_subscriptions.planId → subscription_plans).
+      const preservedTables = new Set(['users', 'session', 'sessions', 'user_subscriptions', 'subscription_plans']);
 
       // Build the TRUNCATE target list — everything else in the schema.
       // This automatically includes any legacy tables in prod that reference
