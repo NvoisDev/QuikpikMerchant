@@ -72,7 +72,6 @@ import {
 } from "drizzle-orm";
 import { getEmailDeliveryAddress } from "../utils/address-helper";
 import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
-export { getPlanLimits };
 
 // ─── Pack Format Helper ────────────────────────────────────────────────────────
 /** Returns a pack descriptor string such as "24 × 330ml" when all three fields
