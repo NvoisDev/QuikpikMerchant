@@ -437,6 +437,16 @@ export function registerOrderRoutes(app: Express): void {
 
       if (paymentUpdate.shouldUpdatePaymentMethod) updateData.paymentMethod = method;
 
+      // Clear platform fees for offline payments — they were never collected via Stripe
+      const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
+      if (OFFLINE_METHODS.includes(method)) {
+        updateData.platformFee = '0.00';
+        updateData.customerTransactionFee = '0.00';
+        const subtotal = parseFloat(order.subtotal || '0');
+        const delivery = parseFloat(order.deliveryCost || '0');
+        updateData.total = (subtotal + delivery).toFixed(2);
+      }
+
       if (paymentUpdate.newPaymentStatus === 'paid' && order.status === 'confirmed') {
         updateData.status = 'paid';
       }

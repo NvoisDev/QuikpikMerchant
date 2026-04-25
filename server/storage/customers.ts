@@ -860,7 +860,7 @@ export class CustomerStorage extends OrderStorage {
     // Calculate net revenue by subtracting platform fees from total
     const [revenueStats] = await db
       .select({
-        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - CASE WHEN ${orders.paymentMethod} IN ('cash','bank_transfer','cheque','pay_later','other') THEN 0 ELSE COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0) END)`,
         ordersCount: count(orders.id)
       })
       .from(orders)
@@ -872,7 +872,7 @@ export class CustomerStorage extends OrderStorage {
     // Get current month stats
     const [currentMonthStats] = await db
       .select({
-        currentRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        currentRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - CASE WHEN ${orders.paymentMethod} IN ('cash','bank_transfer','cheque','pay_later','other') THEN 0 ELSE COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0) END)`,
         currentOrders: count(orders.id)
       })
       .from(orders)
@@ -885,7 +885,7 @@ export class CustomerStorage extends OrderStorage {
     // Get previous month stats
     const [previousMonthStats] = await db
       .select({
-        previousRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        previousRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - CASE WHEN ${orders.paymentMethod} IN ('cash','bank_transfer','cheque','pay_later','other') THEN 0 ELSE COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0) END)`,
         previousOrders: count(orders.id)
       })
       .from(orders)
@@ -946,7 +946,7 @@ export class CustomerStorage extends OrderStorage {
     // Get revenue and order count for the specified date range
     const [revenueStats] = await db
       .select({
-        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
+        totalRevenue: sql<number>`SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - CASE WHEN ${orders.paymentMethod} IN ('cash','bank_transfer','cheque','pay_later','other') THEN 0 ELSE COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0) END)`,
         ordersCount: count(orders.id)
       })
       .from(orders)
