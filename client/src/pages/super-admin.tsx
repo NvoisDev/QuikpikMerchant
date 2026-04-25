@@ -1803,7 +1803,7 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
 
   const goLiveReset = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/go-live-reset", { confirm: "RESET" });
+      const res = await apiRequest("POST", "/api/admin/go-live-reset", { confirm: "RESET", deleteProducts: true });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Reset failed"); }
       return res.json() as Promise<{ deleted: Record<string, number>; totalDeleted: number }>;
     },

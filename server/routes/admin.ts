@@ -1643,34 +1643,56 @@ export function registerAdminRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
 
+      const n = (rows: { n: unknown }[]) => Number(rows[0].n);
       const [
-        wholesalerCount, retailerCount, orderCount, orderItemCount,
-        productCount, productBatchCount, broadcastCount, messageTemplateCount,
-        templateCampaignCount, templateProductCount, customerGroupCount,
-        customerGroupMemberCount, relationshipCount, invitationCount,
-        registrationCount, subscriptionCount, teamMemberCount, priceListCount,
-        stockAlertCount, analyticsCount,
+        wholesalerCount, retailerCount, orderCount, orderItemCount, stockMovementCount,
+        productCount, productBatchCount, stockAlertCount,
+        broadcastCount, messageTemplateCount, templateCampaignCount, templateProductCount,
+        customerGroupCount, customerGroupMemberCount,
+        relationshipCount, invitationCount, registrationCount,
+        deliveryAddressCount, smsCodeCount,
+        onboardingCount, userBadgeCount,
+        subscriptionCount, teamMemberCount, tabPermissionCount,
+        priceListCount, priceListItemCount, priceListAssignmentCount,
+        customerInsightCount, businessIntelligenceCount, inventoryInsightCount,
+        financialPerformanceCount, productPerfCount, promotionAnalyticsCount,
+        stockUpdateNotifCount, customerProfileNotifCount,
       ] = await Promise.all([
-        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer')).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(orders).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(orderItems).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(products).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(productBatches).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(broadcasts).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(messageTemplates).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(templateCampaigns).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(templateProducts).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(customerGroups).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(customerGroupMembers).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(wholesalerCustomerRelationships).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(customerInvitationTokens).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(customerRegistrationRequests).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != (SELECT id FROM users WHERE email = 'hello@quikpik.co' LIMIT 1)`).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(teamMembers).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(priceLists).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(stockAlerts).then(r => Number(r[0].n)),
-        db.select({ n: count() }).from(customerInsights).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)).then(n),
+        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer')).then(n),
+        db.select({ n: count() }).from(orders).then(n),
+        db.select({ n: count() }).from(orderItems).then(n),
+        db.select({ n: count() }).from(stockMovements).then(n),
+        db.select({ n: count() }).from(products).then(n),
+        db.select({ n: count() }).from(productBatches).then(n),
+        db.select({ n: count() }).from(stockAlerts).then(n),
+        db.select({ n: count() }).from(broadcasts).then(n),
+        db.select({ n: count() }).from(messageTemplates).then(n),
+        db.select({ n: count() }).from(templateCampaigns).then(n),
+        db.select({ n: count() }).from(templateProducts).then(n),
+        db.select({ n: count() }).from(customerGroups).then(n),
+        db.select({ n: count() }).from(customerGroupMembers).then(n),
+        db.select({ n: count() }).from(wholesalerCustomerRelationships).then(n),
+        db.select({ n: count() }).from(customerInvitationTokens).then(n),
+        db.select({ n: count() }).from(customerRegistrationRequests).then(n),
+        db.select({ n: count() }).from(deliveryAddresses).then(n),
+        db.select({ n: count() }).from(smsVerificationCodes).then(n),
+        db.select({ n: count() }).from(onboardingMilestones).then(n),
+        db.select({ n: count() }).from(userBadges).then(n),
+        db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != (SELECT id FROM users WHERE email = 'hello@quikpik.co' LIMIT 1)`).then(n),
+        db.select({ n: count() }).from(teamMembers).then(n),
+        db.select({ n: count() }).from(tabPermissions).then(n),
+        db.select({ n: count() }).from(priceLists).then(n),
+        db.select({ n: count() }).from(priceListItems).then(n),
+        db.select({ n: count() }).from(priceListAssignments).then(n),
+        db.select({ n: count() }).from(customerInsights).then(n),
+        db.select({ n: count() }).from(businessIntelligence).then(n),
+        db.select({ n: count() }).from(inventoryInsights).then(n),
+        db.select({ n: count() }).from(financialPerformance).then(n),
+        db.select({ n: count() }).from(productPerformanceSummary).then(n),
+        db.select({ n: count() }).from(promotionAnalytics).then(n),
+        db.select({ n: count() }).from(stockUpdateNotifications).then(n),
+        db.select({ n: count() }).from(customerProfileUpdateNotifications).then(n),
       ]);
 
       const preview: Record<string, number> = {
@@ -1678,8 +1700,10 @@ export function registerAdminRoutes(app: Express): void {
         customers: retailerCount,
         orders: orderCount,
         orderItems: orderItemCount,
+        stockMovements: stockMovementCount,
         products: productCount,
         productBatches: productBatchCount,
+        stockAlerts: stockAlertCount,
         broadcasts: broadcastCount,
         messageTemplates: messageTemplateCount,
         campaigns: templateCampaignCount,
@@ -1689,11 +1713,18 @@ export function registerAdminRoutes(app: Express): void {
         relationships: relationshipCount,
         invitations: invitationCount,
         registrationRequests: registrationCount,
+        deliveryAddresses: deliveryAddressCount,
+        smsCodes: smsCodeCount,
+        onboardingMilestones: onboardingCount,
+        userBadges: userBadgeCount,
         subscriptions: subscriptionCount,
         teamMembers: teamMemberCount,
+        tabPermissions: tabPermissionCount,
         priceLists: priceListCount,
-        stockAlerts: stockAlertCount,
-        analyticsRecords: analyticsCount,
+        priceListItems: priceListItemCount,
+        priceListAssignments: priceListAssignmentCount,
+        analyticsInsights: customerInsightCount + businessIntelligenceCount + inventoryInsightCount + financialPerformanceCount + productPerfCount + promotionAnalyticsCount,
+        notifications: stockUpdateNotifCount + customerProfileNotifCount,
       };
       const totalRows = Object.values(preview).reduce((a, b) => a + b, 0);
       res.json({ preview, totalRows });
@@ -1705,12 +1736,15 @@ export function registerAdminRoutes(app: Express): void {
 
   // POST /api/admin/go-live-reset
   // Wipes all test data from the platform, preserving only the admin account.
-  // Requires { confirm: "RESET" } in body.
+  // Body: { confirm: "RESET", deleteProducts?: boolean }
+  // NOTE: products are always deleted — they cannot exist without their wholesaler (FK without CASCADE).
+  //       The deleteProducts field is accepted for API-contract compatibility but has no effect.
   app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
 
-      const { confirm } = req.body;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirm, deleteProducts: _deleteProducts } = req.body;
       if (confirm !== 'RESET') {
         return res.status(400).json({ error: 'Confirmation text must be exactly "RESET"' });
       }
@@ -1724,56 +1758,16 @@ export function registerAdminRoutes(app: Express): void {
       const c = <T>(label: string, rows: T[]) => { counts[label] = rows.length; return rows.length; };
 
       await db.transaction(async (trx) => {
-        // 1. Order line items and related
+        // ── Step 1: Order line items and related ───────────────────────────────
         c('orderItems',                  await trx.delete(orderItems).returning({ id: orderItems.id }));
         c('stockMovements',              await trx.delete(stockMovements).returning({ id: stockMovements.id }));
         c('campaignOrders',              await trx.delete(campaignOrders).returning({ id: campaignOrders.id }));
         c('orderCancellationRequests',   await trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
         c('orders',                      await trx.delete(orders).returning({ id: orders.id }));
 
-        // 2. Product-related (always deleted — products cannot exist without their wholesaler)
-        c('stockAlerts',                 await trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
-        c('productBatches',              await trx.delete(productBatches).returning({ id: productBatches.id }));
-        c('templateProducts',            await trx.delete(templateProducts).returning({ id: templateProducts.id }));
-        c('products',                    await trx.delete(products).returning({ id: products.id }));
-
-        // 3. Notifications
-        c('customerProfileUpdateNotifications', await trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
-        c('stockUpdateNotifications',    await trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
-
-        // 4. Broadcasts and messaging
-        c('broadcasts',                  await trx.delete(broadcasts).returning({ id: broadcasts.id }));
-        c('templateCampaigns',           await trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
-        c('messageTemplates',            await trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
-
-        // 5. Customer groups
-        c('customerGroupMembers',        await trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
-        c('customerGroups',              await trx.delete(customerGroups).returning({ id: customerGroups.id }));
-
-        // 6. Relationships and invitations
-        c('wholesalerCustomerRelationships', await trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
-        c('customerInvitationTokens',    await trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
-        c('customerRegistrationRequests',await trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
-
-        // 7. Address and auth data
-        c('deliveryAddresses',           await trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
-        c('smsVerificationCodes',        await trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
-
-        // 8. Gamification / onboarding
-        c('onboardingMilestones',        await trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
-        c('userBadges',                  await trx.delete(userBadges).returning({ id: userBadges.id }));
-
-        // 9. Subscriptions and team (preserve admin subscription)
-        c('userSubscriptions',           await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
-        c('teamMembers',                 await trx.delete(teamMembers).returning({ id: teamMembers.id }));
-        c('tabPermissions',              await trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
-
-        // 10. Price lists
-        c('priceListAssignments',        await trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
-        c('priceListItems',              await trx.delete(priceListItems).returning({ id: priceListItems.id }));
-        c('priceLists',                  await trx.delete(priceLists).returning({ id: priceLists.id }));
-
-        // 11. Analytics
+        // ── Step 2: Analytics that reference products (must precede products) ──
+        // These tables have non-cascading FK to products.id; delete before products
+        // to avoid FK constraint violations in the transaction.
         c('customerInsights',            await trx.delete(customerInsights).returning({ id: customerInsights.id }));
         c('businessIntelligence',        await trx.delete(businessIntelligence).returning({ id: businessIntelligence.id }));
         c('inventoryInsights',           await trx.delete(inventoryInsights).returning({ id: inventoryInsights.id }));
@@ -1781,15 +1775,56 @@ export function registerAdminRoutes(app: Express): void {
         c('productPerformanceSummary',   await trx.delete(productPerformanceSummary).returning({ id: productPerformanceSummary.id }));
         c('promotionAnalytics',          await trx.delete(promotionAnalytics).returning({ id: promotionAnalytics.id }));
 
-        // 12. Delete retailer users
-        c('retailerUsers',               await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
+        // ── Step 3: Notifications that reference products ──────────────────────
+        // stockUpdateNotifications.productId is NOT NULL with no cascade — must delete before products
+        c('customerProfileUpdateNotifications', await trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
+        c('stockUpdateNotifications',    await trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
 
-        // 13. Delete non-admin wholesaler users
+        // ── Step 4: Products (safe now — all product FK dependents cleared) ────
+        c('stockAlerts',                 await trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
+        c('productBatches',              await trx.delete(productBatches).returning({ id: productBatches.id }));
+        c('templateProducts',            await trx.delete(templateProducts).returning({ id: templateProducts.id }));
+        c('products',                    await trx.delete(products).returning({ id: products.id }));
+
+        // ── Step 5: Broadcasts and messaging ──────────────────────────────────
+        c('broadcasts',                  await trx.delete(broadcasts).returning({ id: broadcasts.id }));
+        c('templateCampaigns',           await trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
+        c('messageTemplates',            await trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
+
+        // ── Step 6: Customer groups ────────────────────────────────────────────
+        c('customerGroupMembers',        await trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
+        c('customerGroups',              await trx.delete(customerGroups).returning({ id: customerGroups.id }));
+
+        // ── Step 7: Relationships and invitations ──────────────────────────────
+        c('wholesalerCustomerRelationships', await trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
+        c('customerInvitationTokens',    await trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
+        c('customerRegistrationRequests',await trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
+
+        // ── Step 8: Address and auth data ─────────────────────────────────────
+        c('deliveryAddresses',           await trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
+        c('smsVerificationCodes',        await trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
+
+        // ── Step 9: Gamification / onboarding ─────────────────────────────────
+        c('onboardingMilestones',        await trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
+        c('userBadges',                  await trx.delete(userBadges).returning({ id: userBadges.id }));
+
+        // ── Step 10: Subscriptions and team (preserve admin subscription) ─────
+        c('userSubscriptions',           await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
+        c('teamMembers',                 await trx.delete(teamMembers).returning({ id: teamMembers.id }));
+        c('tabPermissions',              await trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
+
+        // ── Step 11: Price lists ───────────────────────────────────────────────
+        c('priceListAssignments',        await trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
+        c('priceListItems',              await trx.delete(priceListItems).returning({ id: priceListItems.id }));
+        c('priceLists',                  await trx.delete(priceLists).returning({ id: priceLists.id }));
+
+        // ── Step 12: Delete users ──────────────────────────────────────────────
+        c('retailerUsers',               await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
         c('wholesalerUsers',             await trx.delete(users).where(
           and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)
         ).returning({ id: users.id }));
 
-        // 14. Reset order number counter on admin user
+        // ── Step 13: Reset order number counter on admin user ──────────────────
         await trx.update(users).set({ orderNumberCounter: 0 }).where(eq(users.id, adminUser.id));
       });
 
