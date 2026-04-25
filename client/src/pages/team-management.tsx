@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
@@ -457,166 +457,161 @@ export default function TeamManagement() {
     <div className="bg-white min-h-screen">
       <PageHeader title="Team" description="Manage team access and permissions">
         {user?.role !== 'team_member' && (
-        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                if (!canAddMembers) {
-                  setShowUpgradeModal(true);
-                }
-              }}
-              className={canAddMembers ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}
-              disabled={!canAddMembers}
-            >
-              {!canAddMembers ? (
-                <Crown className="h-4 w-4 sm:mr-2" />
-              ) : (
-                <UserPlus className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">
-                {!canAddMembers ? "Upgrade Required" : "Invite Team Member"}
-              </span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleInviteMember)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="team.member@company.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mobile Number <span className="text-gray-400 font-normal">(optional — for SMS stock alerts)</span></FormLabel>
-                      <FormControl>
-                        <Input placeholder="+44XXXXXXXXXX" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role & Permissions</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="viewer" textValue="Viewer">
-                            <div className="flex flex-col py-1">
-                              <div className="flex items-center gap-2">
-                                <Eye className="w-4 h-4 text-purple-500" />
-                                <span className="font-medium">Viewer</span>
-                              </div>
-                              <span className="text-xs text-gray-500">Read-only — can view but cannot make any changes</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="member" textValue="Member">
-                            <div className="flex flex-col py-1">
-                              <div className="flex items-center gap-2">
-                                <Shield className="w-4 h-4 text-gray-400" />
-                                <span className="font-medium">Member</span>
-                              </div>
-                              <span className="text-xs text-gray-500">Access only to areas you allow in Tab Permissions</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="admin" textValue="Admin">
-                            <div className="flex flex-col py-1">
-                              <div className="flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-blue-500" />
-                                <span className="font-medium">Admin</span>
-                              </div>
-                              <span className="text-xs text-gray-500">Full access to all unrestricted business areas</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="bg-blue-50 p-3 rounded-lg mt-2 space-y-1">
-                        <p className="text-xs text-blue-800">
-                          <strong>Note:</strong> The Owner role cannot be assigned via invite — it belongs to the account holder only.
-                        </p>
-                        <p className="text-xs text-blue-700">
-                          <strong>Admin</strong> — full operational access to all business areas.{' '}
-                          <strong>Member</strong> — access limited to areas you configure in Tab Permissions.{' '}
-                          <strong>Viewer</strong> — read-only, cannot make any changes.
-                        </p>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsInviteDialogOpen(false)}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={inviteMemberMutation.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto"
-                  >
-                    {inviteMemberMutation.isPending ? "Sending..." : "Send Invitation"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+          <Button
+            onClick={() => canAddMembers ? setIsInviteDialogOpen(true) : setShowUpgradeModal(true)}
+            className={canAddMembers ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}
+          >
+            {!canAddMembers ? (
+              <Crown className="h-4 w-4 sm:mr-2" />
+            ) : (
+              <UserPlus className="h-4 w-4 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">
+              {!canAddMembers ? "Upgrade Required" : "Invite Team Member"}
+            </span>
+          </Button>
         )}
       </PageHeader>
+
+      {/* Invite Team Member Dialog — rendered at top level so it works on mobile too */}
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleInviteMember)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="team.member@company.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mobile Number <span className="text-gray-400 font-normal">(optional — for SMS stock alerts)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="+44XXXXXXXXXX" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role & Permissions</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="viewer" textValue="Viewer">
+                          <div className="flex flex-col py-1">
+                            <div className="flex items-center gap-2">
+                              <Eye className="w-4 h-4 text-purple-500" />
+                              <span className="font-medium">Viewer</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Read-only — can view but cannot make any changes</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="member" textValue="Member">
+                          <div className="flex flex-col py-1">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">Member</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Access only to areas you allow in Tab Permissions</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin" textValue="Admin">
+                          <div className="flex flex-col py-1">
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-blue-500" />
+                              <span className="font-medium">Admin</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Full access to all unrestricted business areas</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="bg-blue-50 p-3 rounded-lg mt-2 space-y-1">
+                      <p className="text-xs text-blue-800">
+                        <strong>Note:</strong> The Owner role cannot be assigned via invite — it belongs to the account holder only.
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        <strong>Admin</strong> — full operational access to all business areas.{' '}
+                        <strong>Member</strong> — access limited to areas you configure in Tab Permissions.{' '}
+                        <strong>Viewer</strong> — read-only, cannot make any changes.
+                      </p>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsInviteDialogOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={inviteMemberMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto"
+                >
+                  {inviteMemberMutation.isPending ? "Sending..." : "Send Invitation"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
       <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       {/* Read-only banner for team members */}
@@ -695,7 +690,23 @@ export default function TeamManagement() {
         <TabsContent value="members" className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Team Members</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Team Members</CardTitle>
+                {user?.role !== 'team_member' && (
+                  <Button
+                    size="sm"
+                    onClick={() => canAddMembers ? setIsInviteDialogOpen(true) : setShowUpgradeModal(true)}
+                    className={`lg:hidden ${canAddMembers ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
+                  >
+                    {canAddMembers ? (
+                      <UserPlus className="h-4 w-4 mr-1.5" />
+                    ) : (
+                      <Crown className="h-4 w-4 mr-1.5" />
+                    )}
+                    {canAddMembers ? "Invite Member" : "Upgrade"}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-0">
           <div className="space-y-2">
