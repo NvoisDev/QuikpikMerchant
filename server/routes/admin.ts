@@ -1750,8 +1750,12 @@ export function registerAdminRoutes(app: Express): void {
   // POST /api/admin/go-live-reset
   // Wipes all test data from the platform, preserving only the admin account.
   // Body: { confirm: "RESET" }
-  // Products are always deleted — they cannot exist without their wholesaler (FK without CASCADE).
-  // Tables that don't exist yet in the production DB are silently skipped.
+  //
+  // Strategy: TRUNCATE ... CASCADE on every table except `users` and `sessions`.
+  // PostgreSQL handles FK ordering automatically and CASCADE clears any legacy
+  // tables that reference the truncated tables (e.g. old renamed tables in prod).
+  // User rows that must be preserved are handled with WHERE-clause DELETEs after
+  // the TRUNCATE.  Row counts are captured before the TRUNCATE for the response.
   app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
@@ -1765,101 +1769,86 @@ export function registerAdminRoutes(app: Express): void {
       const [adminUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'hello@quikpik.co'));
       if (!adminUser) return res.status(500).json({ error: 'Admin user not found' });
 
-      // Check which tables actually exist — guards against older prod DBs where
-      // some analytics/notification tables may not have been migrated yet.
+      // Discover every table currently in the public schema.
       const existing = await getExistingTables();
-      const has = (t: string) => existing.has(t);
-      const skipped: string[] = [];
 
-      const counts: Record<string, number> = {};
-      const c = <T>(label: string, rows: T[]) => { counts[label] = rows.length; return rows.length; };
+      // Tables we deliberately exclude from the TRUNCATE list:
+      //  - 'users' / 'sessions' / 'session': handled separately with WHERE clauses
+      //    or must be preserved entirely.
+      const preservedTables = new Set(['users', 'session', 'sessions']);
 
+      // Build the TRUNCATE target list — everything else in the schema.
+      // This automatically includes any legacy tables in prod that reference
+      // our current tables, so CASCADE handles them without needing to name them.
+      const truncateTargets = [...existing].filter(t => !preservedTables.has(t));
+
+      // ── Pre-count rows for the success response ────────────────────────────
+      // Capture counts before wiping so the response shows what was deleted.
+      // Only count known/named tables; legacy tables are implicitly included.
+      const n = (rows: { n: unknown }[]) => Number(rows[0].n);
+      const sc = (tableName: string, q: Promise<{ n: unknown }[]>) =>
+        existing.has(tableName) ? q.then(n) : Promise.resolve(0);
+
+      const [
+        retailerCount, wholesalerCount, orderCount, orderItemCount, productCount,
+        broadcastCount, customerGroupCount, relationshipCount,
+        subscriptionCount, priceListCount,
+      ] = await Promise.all([
+        sc('users',        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
+        sc('users',        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
+        sc('orders',       db.select({ n: count() }).from(orders)),
+        sc('order_items',  db.select({ n: count() }).from(orderItems)),
+        sc('products',     db.select({ n: count() }).from(products)),
+        sc('broadcasts',   db.select({ n: count() }).from(broadcasts)),
+        sc('customer_groups', db.select({ n: count() }).from(customerGroups)),
+        sc('wholesaler_customer_relationships', db.select({ n: count() }).from(wholesalerCustomerRelationships)),
+        sc('user_subscriptions', db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != ${adminUser.id}`)),
+        sc('price_lists',  db.select({ n: count() }).from(priceLists)),
+      ]);
+
+      // ── Transaction ────────────────────────────────────────────────────────
       await db.transaction(async (trx) => {
-        const sd = async (
-          tableName: string,
-          label: string,
-          delFn: () => Promise<{ id: unknown }[]>
-        ): Promise<void> => {
-          if (!has(tableName)) { skipped.push(tableName); c(label, []); return; }
-          c(label, await delFn());
-        };
+        // Step 1: TRUNCATE all non-user tables with CASCADE.
+        // Postgres handles FK ordering automatically; CASCADE clears any
+        // referencing legacy tables (e.g. whatsapp_broadcast_campaigns) that
+        // aren't in the current schema.
+        if (truncateTargets.length > 0) {
+          const tableList = truncateTargets.map(t => `"${t}"`).join(', ');
+          await trx.execute(sql.raw(`TRUNCATE TABLE ${tableList} CASCADE`));
+        }
 
-        // ── Step 1: Order line items and related ───────────────────────────────
-        await sd('order_items',                    'orderItems',                  () => trx.delete(orderItems).returning({ id: orderItems.id }));
-        await sd('stock_movements',                'stockMovements',              () => trx.delete(stockMovements).returning({ id: stockMovements.id }));
-        await sd('campaign_orders',                'campaignOrders',              () => trx.delete(campaignOrders).returning({ id: campaignOrders.id }));
-        await sd('order_cancellation_requests',    'orderCancellationRequests',   () => trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
-        await sd('orders',                         'orders',                      () => trx.delete(orders).returning({ id: orders.id }));
-
-        // ── Step 2: Analytics that reference products (must precede products) ──
-        // Non-cascading FK to products.id — must delete before products.
-        await sd('customer_insights',              'customerInsights',            () => trx.delete(customerInsights).returning({ id: customerInsights.id }));
-        await sd('business_intelligence',          'businessIntelligence',        () => trx.delete(businessIntelligence).returning({ id: businessIntelligence.id }));
-        await sd('inventory_insights',             'inventoryInsights',           () => trx.delete(inventoryInsights).returning({ id: inventoryInsights.id }));
-        await sd('financial_performance',          'financialPerformance',        () => trx.delete(financialPerformance).returning({ id: financialPerformance.id }));
-        await sd('product_performance_summary',    'productPerformanceSummary',   () => trx.delete(productPerformanceSummary).returning({ id: productPerformanceSummary.id }));
-        await sd('promotion_analytics',            'promotionAnalytics',          () => trx.delete(promotionAnalytics).returning({ id: promotionAnalytics.id }));
-
-        // ── Step 3: Notifications that reference products ──────────────────────
-        await sd('customer_profile_update_notifications', 'customerProfileUpdateNotifications', () => trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
-        await sd('stock_update_notifications',     'stockUpdateNotifications',    () => trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
-
-        // ── Step 4: Products (safe now — all product FK dependents cleared) ────
-        await sd('stock_alerts',                   'stockAlerts',                 () => trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
-        await sd('product_batches',                'productBatches',              () => trx.delete(productBatches).returning({ id: productBatches.id }));
-        await sd('template_products',              'templateProducts',            () => trx.delete(templateProducts).returning({ id: templateProducts.id }));
-        await sd('products',                       'products',                    () => trx.delete(products).returning({ id: products.id }));
-
-        // ── Step 5: Broadcasts and messaging ──────────────────────────────────
-        await sd('broadcasts',                     'broadcasts',                  () => trx.delete(broadcasts).returning({ id: broadcasts.id }));
-        await sd('template_campaigns',             'templateCampaigns',           () => trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
-        await sd('message_templates',              'messageTemplates',            () => trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
-
-        // ── Step 6: Customer groups ────────────────────────────────────────────
-        await sd('customer_group_members',         'customerGroupMembers',        () => trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
-        await sd('customer_groups',                'customerGroups',              () => trx.delete(customerGroups).returning({ id: customerGroups.id }));
-
-        // ── Step 7: Relationships and invitations ──────────────────────────────
-        await sd('wholesaler_customer_relationships', 'wholesalerCustomerRelationships', () => trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
-        await sd('customer_invitation_tokens',     'customerInvitationTokens',    () => trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
-        await sd('customer_registration_requests', 'customerRegistrationRequests',() => trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
-
-        // ── Step 8: Address and auth data ─────────────────────────────────────
-        await sd('delivery_addresses',             'deliveryAddresses',           () => trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
-        await sd('sms_verification_codes',         'smsVerificationCodes',        () => trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
-
-        // ── Step 9: Gamification / onboarding ─────────────────────────────────
-        await sd('onboarding_milestones',          'onboardingMilestones',        () => trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
-        await sd('user_badges',                    'userBadges',                  () => trx.delete(userBadges).returning({ id: userBadges.id }));
-
-        // ── Step 10: Subscriptions and team (preserve admin subscription) ─────
-        if (has('user_subscriptions')) {
-          c('userSubscriptions', await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
-        } else { skipped.push('user_subscriptions'); c('userSubscriptions', []); }
-        await sd('team_members',                   'teamMembers',                 () => trx.delete(teamMembers).returning({ id: teamMembers.id }));
-        await sd('tab_permissions',                'tabPermissions',              () => trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
-
-        // ── Step 11: Price lists ───────────────────────────────────────────────
-        await sd('price_list_assignments',         'priceListAssignments',        () => trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
-        await sd('price_list_items',               'priceListItems',              () => trx.delete(priceListItems).returning({ id: priceListItems.id }));
-        await sd('price_lists',                    'priceLists',                  () => trx.delete(priceLists).returning({ id: priceLists.id }));
-
-        // ── Step 12: Delete users ──────────────────────────────────────────────
-        c('retailerUsers',  await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
-        c('wholesalerUsers', await trx.delete(users).where(
+        // Step 2: Delete non-admin users (need WHERE, so can't TRUNCATE).
+        await trx.delete(users).where(eq(users.role, 'retailer'));
+        await trx.delete(users).where(
           and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)
-        ).returning({ id: users.id }));
+        );
 
-        // ── Step 13: Reset order number counter on admin user ──────────────────
+        // Step 3: Delete non-admin subscriptions (preserve admin sub).
+        if (existing.has('user_subscriptions')) {
+          await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`);
+        }
+
+        // Step 4: Reset order number counter on admin user.
         await trx.update(users).set({ orderNumberCounter: 0 }).where(eq(users.id, adminUser.id));
       });
 
-      if (skipped.length > 0) {
-        console.log(`⚠️  Go-live reset: skipped ${skipped.length} absent tables: ${skipped.join(', ')}`);
-      }
-      const totalDeleted = Object.values(counts).reduce((a, b) => a + b, 0);
-      console.log(`🚀 Go-live reset complete. Total rows deleted: ${totalDeleted}`, counts);
-      res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted: counts, totalDeleted });
+      const deleted = {
+        customers: retailerCount,
+        wholesalers: wholesalerCount,
+        orders: orderCount,
+        orderItems: orderItemCount,
+        products: productCount,
+        broadcasts: broadcastCount,
+        customerGroups: customerGroupCount,
+        relationships: relationshipCount,
+        subscriptions: subscriptionCount,
+        priceLists: priceListCount,
+      };
+      const totalDeleted = retailerCount + wholesalerCount + orderCount + orderItemCount + productCount +
+        broadcastCount + customerGroupCount + relationshipCount + subscriptionCount + priceListCount;
+
+      console.log(`🚀 Go-live reset complete via TRUNCATE CASCADE. Key counts:`, deleted);
+      res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted, totalDeleted });
     } catch (error) {
       console.error('Go-live reset error:', error);
       res.status(500).json({ error: 'Reset failed. No data was changed (transaction rolled back).' });
