@@ -167,7 +167,6 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     </>
   );
 
-  /* ── Mobile: bottom sheet ─────────────────────────────────────────── */
   if (isMobile) {
     return (
       <>
@@ -187,12 +186,9 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
               <SheetTitle className="text-base">Select date range</SheetTitle>
             </SheetHeader>
 
-            {/* Presets — no height cap so all options are always visible */}
             <div className="px-3 pt-3 space-y-1">
               <PresetList />
             </div>
-
-            {/* Custom date range */}
             <div className="px-4 pt-4 pb-6">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Custom range</p>
               <div className="flex flex-col gap-2 mb-4">
@@ -239,7 +235,6 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     );
   }
 
-  /* ── Desktop: original popover (unchanged) ───────────────────────── */
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
