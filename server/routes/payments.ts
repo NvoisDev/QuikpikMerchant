@@ -735,6 +735,7 @@ export function registerPaymentRoutes(app: Express): void {
               errorType: 'webhook_price_fallback',
               message: `invoice.payment_succeeded: price ${invPriceId} not in subscription_plans; derived "${invPlanId}" from unit_amount ${invUnitAmount}`,
               context: { priceId: invPriceId, unitAmount: invUnitAmount, customerId: invCustId, userId: invUser.id },
+              severity: 'warning',
             }).catch(() => {});
           }
         }

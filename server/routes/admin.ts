@@ -576,7 +576,7 @@ export function registerAdminRoutes(app: Express): void {
       }
 
       // Find their active subscription in Stripe
-      const syncSubs = await stripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 5 });
+      const syncSubs = await stripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 1 });
       const syncSub = syncSubs.data[0];
       if (!syncSub) {
         return res.status(404).json({ error: `No active Stripe subscription found for customer ${syncCustId}` });
