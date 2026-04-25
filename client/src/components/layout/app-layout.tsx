@@ -6,7 +6,7 @@ import Logo from "@/components/ui/logo";
 import { Menu, Shield, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import ShareBellControls from "@/components/shared/ShareBellControls";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useImpersonation } from "@/contexts/impersonation-context";
 
@@ -44,6 +44,7 @@ function AppLayoutInner({ children }: AppLayoutProps) {
   const pageName = usePageName();
   const [, setLocation] = useLocation();
   const { impersonation, exitImpersonation } = useImpersonation();
+  const queryClient = useQueryClient();
 
   const isImpersonating = !!impersonation.wholesalerId;
 
@@ -54,12 +55,15 @@ function AppLayoutInner({ children }: AppLayoutProps) {
       }),
     onSuccess: () => {
       exitImpersonation();
+      // Restore the admin's own profile in the cache now that headers are cleared.
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/admin");
     },
     onError: () => {
       // Always clear local state even if the server request fails (e.g. expired token)
       // so the banner never stays "stuck" in an irrecoverable state
       exitImpersonation();
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/admin");
     },
   });
