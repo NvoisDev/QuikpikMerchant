@@ -2,7 +2,7 @@ import type { Express } from "express";
 import {
   and, count, createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl,
-  hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
+  getPlanLimits, hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
   requireAuth, requireNotViewer, requireOwner, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
   sgMail, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail
@@ -701,16 +701,12 @@ export function registerAuthRoutes(app: Express): void {
       const currentCount = await storage.getTeamMembersCount(userId);
       const userSubscription = await storage.getUser(userId);
       const tier = userSubscription?.subscriptionTier || 'free';
-      
-      let limit = 0;
-      switch (tier) {
-        case 'standard': limit = 2; break;
-        case 'premium': limit = 5; break;
-      }
-      
-      if (currentCount >= limit) {
+      const limit = getPlanLimits(tier).teamMembers;
+
+      // -1 means unlimited; only enforce when limit >= 0
+      if (limit >= 0 && currentCount >= limit) {
         return res.status(403).json({ 
-          message: `Your ${tier} plan allows up to ${limit} team members. Please upgrade to add more team members.`
+          message: `Your ${tier} plan allows up to ${limit} team member${limit === 1 ? '' : 's'}. Please upgrade to add more team members.`
         });
       }
 

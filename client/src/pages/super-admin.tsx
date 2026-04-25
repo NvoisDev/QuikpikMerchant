@@ -1771,6 +1771,8 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const [stripeSubId, setStripeSubId] = useState("");
   const [planOverride, setPlanOverride] = useState("");
+  const [syncEmail, setSyncEmail] = useState("");
+  const [syncPlanOverride, setSyncPlanOverride] = useState("");
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [resetResult, setResetResult] = useState<{ deleted: Record<string, number>; totalDeleted: number } | null>(null);
@@ -1795,6 +1797,24 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
       setPlanOverride("");
     },
     onError: () => toast({ title: "Activation failed", variant: "destructive" }),
+  });
+
+  const syncByEmail = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/subscriptions/sync-by-customer", {
+        email: syncEmail.trim().toLowerCase(),
+        ...(syncPlanOverride ? { planId: syncPlanOverride } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      return data as { planId?: string; userEmail?: string; stripeSubscriptionId?: string };
+    },
+    onSuccess: (data: { planId?: string; userEmail?: string; stripeSubscriptionId?: string }) => {
+      toast({ title: `Synced ${data?.planId ?? "plan"} for ${data?.userEmail ?? "user"}`, description: data?.stripeSubscriptionId });
+      setSyncEmail("");
+      setSyncPlanOverride("");
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
   const previewQuery = useQuery<{ preview: Record<string, number>; totalRows: number }>({
@@ -1915,6 +1935,29 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
           </div>
           <Button size="sm" className="text-white text-xs h-8 gap-1.5" style={{ background: GREEN }} disabled={!stripeSubId || activateSub.isPending} onClick={() => activateSub.mutate()}>
             {activateSub.isPending ? "Activating…" : "Activate Subscription"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Sync by Email utility */}
+      <Card className="border-gray-200 shadow-none rounded-xl">
+        <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Sync Subscription by Email</CardTitle></CardHeader>
+        <CardContent className="px-4 pb-4 space-y-3">
+          <p className="text-xs text-gray-500">Look up a user by email, find their active Stripe subscription, and sync it to our database. Use when a customer paid but is stuck on the free tier.</p>
+          <div className="space-y-2">
+            <Label className="text-xs text-gray-600">Customer Email</Label>
+            <Input className="text-xs h-8 border-gray-200" value={syncEmail} onChange={e => setSyncEmail(e.target.value)} placeholder="customer@example.com" type="email" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-gray-600">Plan Override (optional)</Label>
+            <select className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 h-8 text-gray-600 focus:outline-none bg-white" value={syncPlanOverride} onChange={e => setSyncPlanOverride(e.target.value)}>
+              <option value="">Auto-detect from Stripe price</option>
+              <option value="standard">Standard</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <Button size="sm" className="text-white text-xs h-8 gap-1.5" style={{ background: GREEN }} disabled={!syncEmail.trim() || syncByEmail.isPending} onClick={() => syncByEmail.mutate()}>
+            {syncByEmail.isPending ? "Syncing…" : "Sync from Stripe"}
           </Button>
         </CardContent>
       </Card>

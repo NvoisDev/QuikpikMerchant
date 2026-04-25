@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import {
-  ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, gte, inArray, isNull, lte, or, orders,
+  ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
@@ -545,6 +545,114 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('❌ Admin subscription activate error:', error);
       res.status(500).json({ error: 'Failed to activate subscription' });
+    }
+  });
+
+  // POST /api/admin/subscriptions/sync-by-customer — find user by email/customerId and pull active sub from Stripe
+  app.post('/api/admin/subscriptions/sync-by-customer', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { email, stripeCustomerId, planId: overridePlanId } = req.body;
+      if (!email && !stripeCustomerId) {
+        return res.status(400).json({ error: 'email or stripeCustomerId is required' });
+      }
+      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
+        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
+      }
+
+      // Find the user in our DB
+      const condition = email
+        ? eq(users.email, email.trim().toLowerCase())
+        : eq(users.stripeCustomerId, stripeCustomerId.trim());
+      const [syncUser] = await db.select().from(users).where(condition);
+      if (!syncUser) {
+        return res.status(404).json({ error: `No user found matching ${email || stripeCustomerId}` });
+      }
+
+      const syncCustId = syncUser.stripeCustomerId;
+      if (!syncCustId) {
+        return res.status(400).json({ error: `User ${syncUser.email} has no Stripe customer ID` });
+      }
+
+      // Find their active subscription in Stripe
+      const syncSubs = await stripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 5 });
+      const syncSub = syncSubs.data[0];
+      if (!syncSub) {
+        return res.status(404).json({ error: `No active Stripe subscription found for customer ${syncCustId}` });
+      }
+
+      const syncPriceId = syncSub.items?.data?.[0]?.price?.id;
+      const syncUnitAmount = syncSub.items?.data?.[0]?.price?.unit_amount ?? 0;
+
+      // Resolve plan: override → DB lookup → amount fallback
+      let resolvedPlanId: string | undefined = overridePlanId;
+      if (!resolvedPlanId) {
+        const [syncPlanRow] = await db.select().from(subscriptionPlans)
+          .where(eq(subscriptionPlans.stripePriceId, syncPriceId || ''));
+        resolvedPlanId = syncPlanRow?.planId && syncPlanRow.planId !== 'free' ? syncPlanRow.planId : undefined;
+      }
+      if (!resolvedPlanId) {
+        if (syncUnitAmount >= 4999) resolvedPlanId = 'premium';
+        else if (syncUnitAmount >= 1999) resolvedPlanId = 'standard';
+      }
+      if (!resolvedPlanId || resolvedPlanId === 'free') {
+        return res.status(400).json({ error: `Could not resolve paid plan for price ${syncPriceId} (amount ${syncUnitAmount}p) — pass planId to override` });
+      }
+
+      const syncLimits = getPlanLimits(resolvedPlanId);
+      const syncProductLimit = syncLimits.products;
+      const syncPeriodEnd = new Date(syncSub.current_period_end * 1000);
+      const syncPeriodStart = new Date(syncSub.current_period_start * 1000);
+
+      await storage.updateUser(syncUser.id, {
+        currentPlan: resolvedPlanId,
+        subscriptionTier: resolvedPlanId,
+        subscriptionStatus: 'active',
+        productLimit: syncProductLimit,
+        stripeSubscriptionId: syncSub.id,
+        subscriptionEndsAt: syncPeriodEnd,
+        subscriptionPeriodEnd: syncPeriodEnd,
+        subscriptionPeriodStart: syncPeriodStart,
+      });
+
+      const [existingSyncSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, syncUser.id));
+      if (existingSyncSub) {
+        await db.update(userSubscriptions).set({
+          planId: resolvedPlanId,
+          stripeSubscriptionId: syncSub.id,
+          status: 'active',
+          currentPeriodStart: syncPeriodStart,
+          currentPeriodEnd: syncPeriodEnd,
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date(),
+        }).where(eq(userSubscriptions.userId, syncUser.id));
+      } else {
+        await db.insert(userSubscriptions).values({
+          userId: syncUser.id,
+          planId: resolvedPlanId,
+          stripeSubscriptionId: syncSub.id,
+          status: 'active',
+          currentPeriodStart: syncPeriodStart,
+          currentPeriodEnd: syncPeriodEnd,
+          cancelAtPeriodEnd: false,
+        });
+      }
+
+      console.log(`🔧 Admin sync-by-customer: set ${resolvedPlanId} for ${syncUser.email} (${syncUser.id}) via sub ${syncSub.id}`);
+      return res.json({
+        success: true,
+        userId: syncUser.id,
+        userEmail: syncUser.email,
+        planId: resolvedPlanId,
+        stripeCustomerId: syncCustId,
+        stripeSubscriptionId: syncSub.id,
+        periodEnd: syncPeriodEnd.toISOString(),
+        source: overridePlanId ? 'override' : syncPriceId && !overridePlanId ? 'amount_fallback' : 'db_lookup',
+      });
+    } catch (error) {
+      console.error('❌ Admin sync-by-customer error:', error);
+      res.status(500).json({ error: 'Failed to sync subscription' });
     }
   });
 

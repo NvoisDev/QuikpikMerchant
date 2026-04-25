@@ -598,19 +598,37 @@ export function registerPaymentRoutes(app: Express): void {
           return res.json({ received: true, type: event.type });
         }
 
-        const [subPlan] = await db.select().from(subscriptionPlans)
+        const [subPlanRow] = await db.select().from(subscriptionPlans)
           .where(eq(subscriptionPlans.stripePriceId, subPriceId));
-        if (!subPlan || !subPlan.planId || subPlan.planId === 'free') {
-          console.log(`⚠️ No paid plan found for price ${subPriceId}`);
+        let subPlanId: string | undefined = subPlanRow?.planId;
+
+        // Fallback: derive plan from monthly unit amount when price isn't in our DB
+        if (!subPlanId || subPlanId === 'free') {
+          const unitAmount = subscription.items?.data?.[0]?.price?.unit_amount ?? 0;
+          if (unitAmount >= 4999) subPlanId = 'premium';
+          else if (unitAmount >= 1999) subPlanId = 'standard';
+          if (subPlanId && subPlanId !== 'free') {
+            console.warn(`⚠️ Price ${subPriceId} not in subscription_plans — derived plan "${subPlanId}" from amount ${unitAmount}p`);
+            await db.insert(systemErrorLogs).values({
+              errorType: 'webhook_price_fallback',
+              message: `${event.type}: price ${subPriceId} not found in subscription_plans; derived plan "${subPlanId}" from unit_amount ${unitAmount}`,
+              context: { priceId: subPriceId, unitAmount, customerId: subCustId, userId: subUser.id },
+              severity: 'warning',
+            }).catch(() => {});
+          }
+        }
+
+        if (!subPlanId || subPlanId === 'free') {
+          console.log(`⚠️ Could not resolve paid plan for price ${subPriceId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
-        if (subUser.currentPlan === subPlan.planId && subUser.subscriptionStatus === 'active') {
-          console.log(`ℹ️ User ${subUser.id} already on ${subPlan.planId} — skipping`);
+        if (subUser.currentPlan === subPlanId && subUser.subscriptionStatus === 'active') {
+          console.log(`ℹ️ User ${subUser.id} already on ${subPlanId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
-        const subProductLimit = subPlan.planId === 'premium' ? -1 : (subPlan.planId === 'standard' ? 5 : 2);
+        const subProductLimit = subPlanId === 'premium' ? -1 : (subPlanId === 'standard' ? 5 : 2);
         const subPeriodEnd = subscription.current_period_end
           ? new Date(subscription.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -619,8 +637,8 @@ export function registerPaymentRoutes(app: Express): void {
           : new Date();
 
         await storage.updateUser(subUser.id, {
-          currentPlan: subPlan.planId,
-          subscriptionTier: subPlan.planId,
+          currentPlan: subPlanId,
+          subscriptionTier: subPlanId,
           subscriptionStatus: 'active',
           productLimit: subProductLimit,
           stripeSubscriptionId: subscription.id,
@@ -629,7 +647,7 @@ export function registerPaymentRoutes(app: Express): void {
           subscriptionPeriodStart: subPeriodStart,
         });
 
-        if (subPlan.planId === 'standard' || subPlan.planId === 'premium') {
+        if (subPlanId === 'standard' || subPlanId === 'premium') {
           await unlockForUpgrade(subUser.id);
         }
 
@@ -639,7 +657,7 @@ export function registerPaymentRoutes(app: Express): void {
         const [existingSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, subUser.id));
         if (existingSubRow) {
           await db.update(userSubscriptions).set({
-            planId: subPlan.planId,
+            planId: subPlanId,
             stripeSubscriptionId: subscription.id,
             status: 'active',
             currentPeriodStart: subPeriodStart,
@@ -650,7 +668,7 @@ export function registerPaymentRoutes(app: Express): void {
         } else {
           await db.insert(userSubscriptions).values({
             userId: subUser.id,
-            planId: subPlan.planId,
+            planId: subPlanId,
             stripeSubscriptionId: subscription.id,
             status: 'active',
             currentPeriodStart: subPeriodStart,
@@ -659,8 +677,8 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        console.log(`✅ ${event.type}: Activated ${subPlan.planId} for user ${subUser.id} (${subUser.email})`);
-        return res.json({ received: true, type: event.type, userId: subUser.id, planId: subPlan.planId });
+        console.log(`✅ ${event.type}: Activated ${subPlanId} for user ${subUser.id} (${subUser.email})`);
+        return res.json({ received: true, type: event.type, userId: subUser.id, planId: subPlanId });
       }
 
       // ── Invoice paid (second fallback — covers subscription_create and renewals) ──
@@ -702,38 +720,58 @@ export function registerPaymentRoutes(app: Express): void {
         const invPriceId = invSub.items?.data?.[0]?.price?.id;
         if (!invPriceId) return res.json({ received: true, type: event.type });
 
-        const [invPlan] = await db.select().from(subscriptionPlans)
+        const [invPlanRow] = await db.select().from(subscriptionPlans)
           .where(eq(subscriptionPlans.stripePriceId, invPriceId));
-        if (!invPlan || !invPlan.planId || invPlan.planId === 'free') {
+        let invPlanId: string | undefined = invPlanRow?.planId;
+
+        // Fallback: derive plan from monthly unit amount when price isn't in our DB
+        if (!invPlanId || invPlanId === 'free') {
+          const invUnitAmount = invSub.items?.data?.[0]?.price?.unit_amount ?? 0;
+          if (invUnitAmount >= 4999) invPlanId = 'premium';
+          else if (invUnitAmount >= 1999) invPlanId = 'standard';
+          if (invPlanId && invPlanId !== 'free') {
+            console.warn(`⚠️ invoice price ${invPriceId} not in subscription_plans — derived "${invPlanId}" from ${invUnitAmount}p`);
+            await db.insert(systemErrorLogs).values({
+              errorType: 'webhook_price_fallback',
+              message: `invoice.payment_succeeded: price ${invPriceId} not in subscription_plans; derived "${invPlanId}" from unit_amount ${invUnitAmount}`,
+              context: { priceId: invPriceId, unitAmount: invUnitAmount, customerId: invCustId, userId: invUser.id },
+            }).catch(() => {});
+          }
+        }
+
+        if (!invPlanId || invPlanId === 'free') {
+          console.log(`⚠️ Could not resolve paid plan for invoice price ${invPriceId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
-        if (invUser.currentPlan === invPlan.planId && invUser.subscriptionStatus === 'active') {
-          console.log(`ℹ️ User ${invUser.id} already on ${invPlan.planId} — skipping`);
+        if (invUser.currentPlan === invPlanId && invUser.subscriptionStatus === 'active') {
+          console.log(`ℹ️ User ${invUser.id} already on ${invPlanId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
-        const invProductLimit = invPlan.planId === 'premium' ? -1 : (invPlan.planId === 'standard' ? 5 : 2);
+        const invProductLimit = invPlanId === 'premium' ? -1 : (invPlanId === 'standard' ? 5 : 2);
         const invPeriodEnd = new Date(invSub.current_period_end * 1000);
         const invPeriodStart = new Date(invSub.current_period_start * 1000);
 
         await storage.updateUser(invUser.id, {
-          currentPlan: invPlan.planId,
-          subscriptionTier: invPlan.planId,
+          currentPlan: invPlanId,
+          subscriptionTier: invPlanId,
           subscriptionStatus: 'active',
           productLimit: invProductLimit,
           stripeSubscriptionId: invSub.id,
           subscriptionEndsAt: invPeriodEnd,
+          subscriptionPeriodEnd: invPeriodEnd,
+          subscriptionPeriodStart: invPeriodStart,
         });
 
-        if (invPlan.planId === 'standard' || invPlan.planId === 'premium') {
+        if (invPlanId === 'standard' || invPlanId === 'premium') {
           await unlockForUpgrade(invUser.id);
         }
 
         const [existingInvSubRow] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, invUser.id));
         if (existingInvSubRow) {
           await db.update(userSubscriptions).set({
-            planId: invPlan.planId,
+            planId: invPlanId,
             stripeSubscriptionId: invSub.id,
             status: 'active',
             currentPeriodStart: invPeriodStart,
@@ -744,7 +782,7 @@ export function registerPaymentRoutes(app: Express): void {
         } else {
           await db.insert(userSubscriptions).values({
             userId: invUser.id,
-            planId: invPlan.planId,
+            planId: invPlanId,
             stripeSubscriptionId: invSub.id,
             status: 'active',
             currentPeriodStart: invPeriodStart,
@@ -753,8 +791,8 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        console.log(`✅ invoice.payment_succeeded: Activated ${invPlan.planId} for user ${invUser.id} (${invUser.email})`);
-        return res.json({ received: true, type: event.type, userId: invUser.id, planId: invPlan.planId });
+        console.log(`✅ invoice.payment_succeeded: Activated ${invPlanId} for user ${invUser.id} (${invUser.email})`);
+        return res.json({ received: true, type: event.type, userId: invUser.id, planId: invPlanId });
       }
 
       // ── Payment failure — write to system_error_logs ──────────────────────────

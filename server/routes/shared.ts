@@ -461,6 +461,7 @@ export const requireMemberPermission = (area: string) => async (req: any, res: a
 // PLAN_ENFORCEMENT_LIMITS is an alias for PLAN_LIMITS (single source of truth in server/config/plan-limits.ts).
 // `teamMembers` replaces the old `invitedMembersAllowed` field name.
 export const PLAN_ENFORCEMENT_LIMITS = PLAN_LIMITS;
+export { getPlanLimits };
 
 export async function enforceNewPlanLimits(
   userId: string, targetTier: string
