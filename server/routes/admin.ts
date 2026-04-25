@@ -825,7 +825,7 @@ export function registerAdminRoutes(app: Express): void {
         price: products.price,
         costPrice: products.costPrice,
         status: products.status,
-        baseUnitStock: products.baseUnitStock,
+        stock: products.stock,
         category: products.category,
       }).from(products)
         .leftJoin(users, eq(products.wholesalerId, users.id))
@@ -843,7 +843,7 @@ export function registerAdminRoutes(app: Express): void {
           margin,
           hasMissingCost: cost === null,
           hasLowMargin: margin !== null && margin < 10,
-          hasZeroStock: (p.baseUnitStock || 0) === 0,
+          hasZeroStock: (p.stock || 0) === 0,
         };
       });
 

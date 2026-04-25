@@ -94,14 +94,18 @@ export function registerProductRoutes(app: Express): void {
       // Create product + initial batch atomically so a batch-insert failure
       // never leaves a product without batch coverage.
       const product = await db.transaction(async (tx) => {
-        const [newProduct] = await tx.insert(products).values(productData).returning();
+        const initialStock = productData.stock ?? 0;
+        const [newProduct] = await tx.insert(products).values({
+          ...productData,
+          baseUnitStock: initialStock,
+        }).returning();
 
         // Auto-create an initial batch so the product is immediately FEFO-trackable
-        if ((newProduct.stock ?? 0) > 0) {
+        if (initialStock > 0) {
           await tx.insert(productBatches).values({
             productId: newProduct.id,
             batchNumber: 'Initial Stock',
-            quantity: newProduct.stock ?? 0,
+            quantity: initialStock,
             status: 'active',
             notes: 'Initial stock batch (auto-created on product creation)',
           });
