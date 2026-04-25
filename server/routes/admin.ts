@@ -32,9 +32,7 @@ export function registerAdminRoutes(app: Express): void {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      const PLAN_PRICES: Record<string, number> = { free: 0, standard: 19.99, premium: 39.99 };
-
-      const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth, todayOrdersData] = await Promise.all([
+      const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth, todayOrdersData, planRows] = await Promise.all([
         db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
           .from(users).where(eq(users.role, 'wholesaler')),
         db.select({
@@ -48,7 +46,15 @@ export function registerAdminRoutes(app: Express): void {
           .where(gte(orders.createdAt, monthStart)),
         db.select({ subtotal: orders.subtotal }).from(orders)
           .where(gte(orders.createdAt, todayStart)),
+        db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
+          .from(subscriptionPlans),
       ]);
+
+      // Build price map from real DB values so MRR is always accurate
+      const PLAN_PRICES: Record<string, number> = { free: 0 };
+      for (const p of planRows) {
+        PLAN_PRICES[p.planId] = parseFloat(p.monthlyPrice as string) || 0;
+      }
 
       const totalWholesalers = allWholesalers.length;
       const activeWholesalers = allWholesalers.filter(w => !w.archived).length;
