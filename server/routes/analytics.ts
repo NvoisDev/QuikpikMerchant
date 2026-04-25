@@ -773,10 +773,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       
-      const [orders, customers] = await Promise.all([
+      const [allOrders, customers] = await Promise.all([
         storage.getOrders(targetUserId),
         storage.getAllCustomers(targetUserId)
       ]);
+
+      // Exclude orders placed by test accounts (getAllCustomers already filters test accounts,
+      // so we use the resulting customer ID set as the filter for orders too).
+      const nonTestCustomerIds = new Set(customers.map(c => c.id));
+      const orders = allOrders.filter(order => nonTestCustomerIds.has(order.retailerId));
 
       const validOrders = orders.filter(order => 
         ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)

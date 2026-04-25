@@ -419,7 +419,10 @@ export class CustomerStorage extends OrderStorage {
       .select()
       .from(customerGroupMembers)
       .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
-      .where(eq(customerGroupMembers.groupId, groupId))
+      .where(and(
+        eq(customerGroupMembers.groupId, groupId),
+        eq(users.isTestAccount, false)
+      ))
       .orderBy(users.firstName);
     
     return members.map(member => member.users);
@@ -433,6 +436,7 @@ export class CustomerStorage extends OrderStorage {
       .where(
         and(
           eq(customerGroupMembers.groupId, groupId),
+          eq(users.isTestAccount, false),
           or(
             ilike(users.firstName, `%${searchTerm}%`),
             ilike(users.lastName, `%${searchTerm}%`),

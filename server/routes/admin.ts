@@ -1538,26 +1538,34 @@ export function registerAdminRoutes(app: Express): void {
         smsVerificationCodes: 0,
       };
 
-      // Step 3: Delete in dependency order
+      // Step 3: Delete order dependencies first, then the orders themselves
       if (testOrderIds.length > 0) {
-        const deletedItems = await db.delete(orderItems).where(inArray(orderItems.orderId, testOrderIds));
-        deleted.orderItems = (deletedItems as any).rowCount ?? 0;
+        const deletedItems = await db.delete(orderItems)
+          .where(inArray(orderItems.orderId, testOrderIds))
+          .returning({ id: orderItems.id });
+        deleted.orderItems = deletedItems.length;
 
-        const deletedOrders = await db.delete(orders).where(inArray(orders.id, testOrderIds));
-        deleted.orders = (deletedOrders as any).rowCount ?? 0;
+        const deletedMoves = await db.delete(stockMovements)
+          .where(inArray(stockMovements.orderId, testOrderIds))
+          .returning({ id: stockMovements.id });
+        deleted.stockMovements = deletedMoves.length;
 
-        const deletedMoves = await db.delete(stockMovements).where(inArray(stockMovements.orderId, testOrderIds));
-        deleted.stockMovements = (deletedMoves as any).rowCount ?? 0;
+        const deletedOrders = await db.delete(orders)
+          .where(inArray(orders.id, testOrderIds))
+          .returning({ id: orders.id });
+        deleted.orders = deletedOrders.length;
       }
 
-      // Step 4: Delete notifications and SMS codes tied to test users
-      const deletedNotifs = await db.delete(customerProfileUpdateNotifications)
-        .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds));
-      deleted.customerProfileUpdateNotifications = (deletedNotifs as any).rowCount ?? 0;
+      // Step 4: Delete customer-scoped notifications and SMS codes
+      const deletedProfileNotifs = await db.delete(customerProfileUpdateNotifications)
+        .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds))
+        .returning({ id: customerProfileUpdateNotifications.id });
+      deleted.customerProfileUpdateNotifications = deletedProfileNotifs.length;
 
       const deletedSms = await db.delete(smsVerificationCodes)
-        .where(inArray(smsVerificationCodes.customerId, testUserIds));
-      deleted.smsVerificationCodes = (deletedSms as any).rowCount ?? 0;
+        .where(inArray(smsVerificationCodes.customerId, testUserIds))
+        .returning({ id: smsVerificationCodes.id });
+      deleted.smsVerificationCodes = deletedSms.length;
 
       console.log(`🧹 Admin cleanup-test-data: removed`, deleted, `for ${testUserIds.length} test account(s)`);
       res.json({
