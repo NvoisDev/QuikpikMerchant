@@ -1526,55 +1526,60 @@ export function registerAdminRoutes(app: Express): void {
         return res.json({ message: 'No test accounts found. Nothing to delete.', deleted: {} });
       }
 
-      // Step 2: Find all order IDs belonging to test accounts
-      const testOrders = await db.select({ id: orders.id })
-        .from(orders)
-        .where(inArray(orders.retailerId, testUserIds));
-      const testOrderIds = testOrders.map(o => o.id);
+      // Wrap all deletions in a transaction so a mid-operation failure leaves no partial state
+      const { deleted } = await db.transaction(async (trx) => {
+        // Step 2: Find all order IDs belonging to test accounts
+        const testOrders = await trx.select({ id: orders.id })
+          .from(orders)
+          .where(inArray(orders.retailerId, testUserIds));
+        const txOrderIds = testOrders.map(o => o.id);
 
-      const deleted: Record<string, number> = {
-        orderItems: 0,
-        orders: 0,
-        stockMovements: 0,
-        stockUpdateNotifications: 0,
-        customerProfileUpdateNotifications: 0,
-        smsVerificationCodes: 0,
-      };
+        const counts: Record<string, number> = {
+          orderItems: 0,
+          orders: 0,
+          stockMovements: 0,
+          stockUpdateNotifications: 0,
+          customerProfileUpdateNotifications: 0,
+          smsVerificationCodes: 0,
+        };
 
-      // Step 3: Delete order dependencies first, then the orders themselves
-      if (testOrderIds.length > 0) {
-        const deletedItems = await db.delete(orderItems)
-          .where(inArray(orderItems.orderId, testOrderIds))
-          .returning({ id: orderItems.id });
-        deleted.orderItems = deletedItems.length;
+        // Step 3: Delete order dependencies first, then orders themselves
+        if (txOrderIds.length > 0) {
+          const di = await trx.delete(orderItems)
+            .where(inArray(orderItems.orderId, txOrderIds))
+            .returning({ id: orderItems.id });
+          counts.orderItems = di.length;
 
-        const deletedMoves = await db.delete(stockMovements)
-          .where(inArray(stockMovements.orderId, testOrderIds))
-          .returning({ id: stockMovements.id });
-        deleted.stockMovements = deletedMoves.length;
+          const dm = await trx.delete(stockMovements)
+            .where(inArray(stockMovements.orderId, txOrderIds))
+            .returning({ id: stockMovements.id });
+          counts.stockMovements = dm.length;
 
-        const deletedOrders = await db.delete(orders)
-          .where(inArray(orders.id, testOrderIds))
-          .returning({ id: orders.id });
-        deleted.orders = deletedOrders.length;
-      }
+          const do_ = await trx.delete(orders)
+            .where(inArray(orders.id, txOrderIds))
+            .returning({ id: orders.id });
+          counts.orders = do_.length;
+        }
 
-      // Step 4: Delete stock update notifications by wholesaler ID (covers test wholesaler accounts)
-      const deletedStockNotifs = await db.delete(stockUpdateNotifications)
-        .where(inArray(stockUpdateNotifications.wholesalerId, testUserIds))
-        .returning({ id: stockUpdateNotifications.id });
-      deleted.stockUpdateNotifications = deletedStockNotifs.length;
+        // Step 4: Delete stock update notifications by wholesaler ID (covers test wholesaler accounts)
+        const dsn = await trx.delete(stockUpdateNotifications)
+          .where(inArray(stockUpdateNotifications.wholesalerId, testUserIds))
+          .returning({ id: stockUpdateNotifications.id });
+        counts.stockUpdateNotifications = dsn.length;
 
-      // Step 5: Delete customer-scoped notifications and SMS codes
-      const deletedProfileNotifs = await db.delete(customerProfileUpdateNotifications)
-        .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds))
-        .returning({ id: customerProfileUpdateNotifications.id });
-      deleted.customerProfileUpdateNotifications = deletedProfileNotifs.length;
+        // Step 5: Delete customer-scoped notifications and SMS codes
+        const dpn = await trx.delete(customerProfileUpdateNotifications)
+          .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds))
+          .returning({ id: customerProfileUpdateNotifications.id });
+        counts.customerProfileUpdateNotifications = dpn.length;
 
-      const deletedSms = await db.delete(smsVerificationCodes)
-        .where(inArray(smsVerificationCodes.customerId, testUserIds))
-        .returning({ id: smsVerificationCodes.id });
-      deleted.smsVerificationCodes = deletedSms.length;
+        const dsms = await trx.delete(smsVerificationCodes)
+          .where(inArray(smsVerificationCodes.customerId, testUserIds))
+          .returning({ id: smsVerificationCodes.id });
+        counts.smsVerificationCodes = dsms.length;
+
+        return { deleted: counts };
+      });
 
       console.log(`🧹 Admin cleanup-test-data: removed`, deleted, `for ${testUserIds.length} test account(s)`);
       res.json({
