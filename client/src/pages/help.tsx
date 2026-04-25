@@ -74,7 +74,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 - **Standard Plan**: Up to 5 products, unlimited editing (£19.99/month)
 - **Premium Plan**: Unlimited products, unlimited editing (£49.99/month)
 
-All plans include a 4.6% platform fee on eligible online card orders. Offline, cash, and Pay Later orders have no platform fee unless an online payment is taken later.
+All plans include a platform service fee on eligible online card orders. Offline, cash, and Pay Later orders have no platform fee unless an online payment is taken later.
         `
       },
       {
@@ -1117,7 +1117,7 @@ When customers place orders for collection/pickup, the platform **automatically 
 Each order shows:
 - Customer details and delivery address
 - Order items with quantities and prices
-- Product/delivery subtotal, platform fee (4.6% on eligible online card payments), and your revenue
+- Product/delivery subtotal, platform fee (on eligible online card payments), and your revenue
 - Payment status
 - Order date and tracking
 
@@ -1146,8 +1146,8 @@ To receive payments from customers, you must set up Stripe Connect.
 #### Payment Flow
 When customers pay:
 1. Customer pays their checkout total through Stripe
-2. Customer card checkouts include a customer service fee of 5.5% + £0.50
-3. Quikpik automatically collects a 4.6% platform fee from the order subtotal on eligible online card orders
+2. Customer card checkouts include a customer service fee
+3. Quikpik automatically collects a platform fee from the order subtotal on eligible online card orders
 4. You receive the subtotal minus the platform fee directly to your bank account
 5. Order status updates to "Processing"
 
@@ -1157,9 +1157,9 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **Platform Fee**: 4.6% to Quikpik for platform services on eligible online card orders
-- **Customer Service Fee**: 5.5% + £0.50 shown to the customer on card checkout only; it is not your revenue
-- **You Keep**: The order subtotal after the 4.6% platform fee
+- **Platform Fee**: Quikpik's service charge on eligible online card orders
+- **Customer Service Fee**: A small fee shown to the customer on card checkout only; it is not your revenue
+- **You Keep**: The order subtotal after the platform fee
 - **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
 
 #### Bank Transfers
@@ -1428,10 +1428,10 @@ Accurate cost prices make the Margin Overview a reliable tool for pricing decisi
 
 #### Service Fees
 Regardless of subscription plan:
-- **Platform Fee**: 4.6% on eligible online card orders, paid by the wholesaler
-- **Customer Service Fee**: 5.5% + £0.50 added to customer card checkouts only
+- **Platform Fee**: Quikpik's service charge on eligible online card orders, paid by the wholesaler
+- **Customer Service Fee**: A small fee added to customer card checkouts only
 - **Payment Processing**: Handled by Stripe
-- **Your Revenue**: Order subtotal minus the 4.6% platform fee; the customer service fee is not wholesaler revenue
+- **Your Revenue**: Order subtotal minus the platform fee; the customer service fee is not wholesaler revenue
 - **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
         `
       }
@@ -1499,7 +1499,7 @@ Each order includes:
 - Customer contact information and delivery address
 - Product details with quantities and pricing
 - Payment information and Stripe transaction ID
-- Platform fee calculation (4.6% on eligible online card payments)
+- Platform fee calculation (on eligible online card payments)
 - Order timeline with colour-coded status entries
 - Payment summary showing subtotal, platform fee, any refunds, and your net amount
 
@@ -1513,7 +1513,7 @@ The timeline tracks every stage of an order:
 
 #### Payment Summary
 The payment summary in each order shows:
-- Subtotal and platform fee (4.6% on eligible online card payments)
+- Subtotal and platform fee (on eligible online card payments)
 - A **Refunded** or **Partial Refund** row in purple when a refund has been recorded
 - **Your Net Amount** — adjusted to reflect any refunds issued
 
@@ -1532,8 +1532,8 @@ The payment summary in each order shows:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Customer Service Fee**: Card checkouts add 5.5% + £0.50 for the customer
-3. **Platform Fee**: 4.6% deducted from the order subtotal for Quikpik
+2. **Customer Service Fee**: Card checkouts include a small service fee for the customer
+3. **Platform Fee**: A service fee deducted from the order subtotal for Quikpik
 4. **Wholesaler Payment**: Subtotal minus the platform fee transferred to your Stripe account
 5. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
 
@@ -1709,8 +1709,8 @@ The order is created immediately. No Stripe payment link is generated. The custo
 
 #### No Platform or Service Fees
 Offline orders are completely fee-free:
-- **No 4.6% platform fee** is charged on the order
-- **No 5.5% + £0.50 customer service fee** applies
+- **No platform fee** is charged on the order
+- **No customer service fee** applies
 - Fees only apply if an online Stripe card payment is made later (for example, if the customer pays a deposit or balance through a link you send)
 
 #### Marking the Order as Paid
@@ -1840,7 +1840,7 @@ A: Check that your Stripe account can accept payments. Contact Stripe support if
 A: Stripe invoices are automatically sent after successful payments. Check customer email addresses are correct and check their spam folder.
 
 **Q: Platform fee not being collected**
-A: Platform fees are calculated at 4.6% on eligible online card payments when Stripe Connect is set up correctly. Offline, cash, and Pay Later orders have no platform fee or customer service fee unless an online card payment is taken later. Verify your Stripe Connect setup is complete.
+A: Platform fees are calculated on eligible online card payments when Stripe Connect is set up correctly. Offline, cash, and Pay Later orders have no platform fee or customer service fee unless an online card payment is taken later. Verify your Stripe Connect setup is complete.
 
 #### Order Management Issues
 
@@ -2083,7 +2083,7 @@ Click any row in the payout table to open the **Payout breakdown** panel on the 
 
 #### How the Amount Is Calculated
 
-The amount shown per transaction is what you actually received — after Quikpik's **4.6% platform fee** has been deducted from the order subtotal. For example, if the order subtotal is £100, your share is approximately £95.40. Customer service fees are separate from your revenue.
+The amount shown per transaction is what you actually received — after Quikpik's platform fee has been deducted from the order subtotal. Customer service fees are separate from your revenue.
 
 #### Older Transactions Without an Order Link
 

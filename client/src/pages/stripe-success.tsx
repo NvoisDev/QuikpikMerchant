@@ -41,7 +41,7 @@ export default function StripeSuccess() {
               <div className="space-y-2">
                 <div className="font-medium text-gray-900">Platform Fees:</div>
                 <div className="text-sm text-gray-700 space-y-1">
-                  <div>• <strong>4.6%</strong> per successful transaction</div>
+                  <div>• A small service fee per successful transaction</div>
                   <div>• Fees are automatically deducted from each payment</div>
                   <div>• No monthly fees or setup costs</div>
                 </div>

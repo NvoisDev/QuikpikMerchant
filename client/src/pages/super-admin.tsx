@@ -23,7 +23,7 @@ import {
   ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
   Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
-  BadgeCheck,
+  BadgeCheck, Percent,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
@@ -83,6 +83,7 @@ interface WholesalerRow {
   currentPlan: string | null; stripeSubscriptionId: string | null;
   archived: boolean; createdAt: string;
   orderCount: number; totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
+  customFeePercentage: number | null;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -600,7 +601,7 @@ function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isA
           <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Revenue (all-time)</CardTitle></CardHeader>
           <CardContent className="px-4 pb-4 space-y-2.5">
             <Row label="Buyer fees (5.5% + £0.50)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
-            <Row label="Merchant fees (4.6%)"        value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
+            <Row label="Merchant fees"               value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
             <Row label="Subscription MRR"            value={fmt(subMRR)} color={PURPLE} />
             <div className="pt-1.5 border-t border-gray-100">
               <Row label="Total earned (fees + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossRevenue || 0) + subMRR)} color={GREEN} bold />
@@ -650,6 +651,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [impersonateTarget, setImpersonateTarget] = useState<WholesalerRow | null>(null);
   const [changePlanId, setChangePlanId] = useState("");
   const [changePlanConfirm, setChangePlanConfirm] = useState(false);
+  const [customFeeInput, setCustomFeeInput] = useState("");
 
   const { data: allPlansData } = useQuery<{ plans: AdminPlanRow[] }>({
     queryKey: ["/api/admin/plans"],
@@ -700,6 +702,19 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
   });
 
+  const customFeeMutation = useMutation({
+    mutationFn: async ({ id, fee }: { id: string; fee: number | null }) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-fee`, { customFeePercentage: fee });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      toast({ title: "Custom fee updated" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const { data: wholesalerOrders, isLoading: ordersLoading } = useQuery<{ orders: WholesalerOrderRow[] }>({
     queryKey: ["/api/admin/wholesalers", selectedWholesaler?.id, "orders"],
     queryFn: async () => {
@@ -714,7 +729,11 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     return wholesalers.filter(w => (w.subscriptionTier ?? "free") === planFilter);
   }, [wholesalers, planFilter]);
 
-  const openDrawer = (w: WholesalerRow) => { setSelectedWholesaler(w); setDrawerOpen(true); };
+  const openDrawer = (w: WholesalerRow) => {
+    setSelectedWholesaler(w);
+    setCustomFeeInput(w.customFeePercentage !== null && w.customFeePercentage !== undefined ? String(w.customFeePercentage) : "");
+    setDrawerOpen(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -859,6 +878,62 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   </div>
                 )}
               </div>
+              {/* Custom Platform Fee */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <Percent className="h-3.5 w-3.5 text-amber-500" />Custom Platform Fee
+                </p>
+                <p className="text-xs text-gray-400 mb-2">
+                  {selectedWholesaler.customFeePercentage !== null
+                    ? `Currently: ${selectedWholesaler.customFeePercentage}% (custom)`
+                    : "Currently: default rate (no override)"}
+                </p>
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="e.g. 3.5"
+                      value={customFeeInput}
+                      onChange={e => setCustomFeeInput(e.target.value)}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-2 pr-6 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white gap-1"
+                    disabled={customFeeMutation.isPending || customFeeInput === ""}
+                    onClick={() => {
+                      const val = parseFloat(customFeeInput);
+                      if (isNaN(val) || val < 0 || val > 100) {
+                        toast({ title: "Enter a valid percentage (0–100)", variant: "destructive" });
+                        return;
+                      }
+                      customFeeMutation.mutate({ id: selectedWholesaler.id, fee: val });
+                    }}
+                  >
+                    Set
+                  </Button>
+                  {selectedWholesaler.customFeePercentage !== null && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-gray-200"
+                      disabled={customFeeMutation.isPending}
+                      onClick={() => {
+                        customFeeMutation.mutate({ id: selectedWholesaler.id, fee: null });
+                        setCustomFeeInput("");
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Change Plan */}
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
@@ -1666,7 +1741,7 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Buyer Fees"    value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub="5.5% + £0.50 per order" icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
-        <StatCard label="Merchant Fees" value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub="4.6% per order"         icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
+        <StatCard label="Merchant Fees" value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub="per order"              icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
         <StatCard label="Order Revenue" value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
         <StatCard label="Period GMV"    value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
       </div>

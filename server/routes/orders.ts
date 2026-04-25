@@ -8,7 +8,7 @@ import {
   orderNotificationService, orderPhotoUpload, orders, products,
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
-  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus
+  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate
 } from "./shared";
 import { productBatches } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
@@ -1071,13 +1071,14 @@ export function registerOrderRoutes(app: Express): void {
         });
       }
 
-      const platformFee = subtotal * 0.046; // 4.6% platform fee (wholesaler cost)
-      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 (customer pays)
+      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 (customer pays) — always fixed
       const total = subtotal + customerTransactionFee; // total = what the customer pays
 
-      // Get wholesaler from first product
+      // Get wholesaler from first product (needed for per-wholesaler fee rate)
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
+      const feeRate = await getWholesalerFeeRate(wholesalerId);
+      const platformFee = subtotal * feeRate; // per-wholesaler platform fee (wholesaler cost)
 
       const orderData = insertOrderSchema.parse({
         orderNumber: await generateOrderNumber(wholesalerId),

@@ -1,0 +1,43 @@
+🧾 Prompt: Remove Public Fee Disclosure (Keep Fee Flexible) + Admin Negotiable Fee
+
+🎯 Objective
+
+Modify the platform to stop displaying a fixed transaction fee percentage (previously 4.6%) to wholesalers, while still allowing the admin to adjust fees per wholesaler as needed.
+
+⸻
+
+🚨 NON-NEGOTIABLE RULES
+
+* Do NOT remove the ability to set custom fees per wholesaler via the admin panel.
+* Do NOT disclose any specific default percentage publicly anywhere on the platform.
+* Ensure all calculations remain intact and accurate.
+* Do NOT disrupt existing user flows or payment logic (including Stripe).
+
+⸻
+
+🧱 Implementation Steps
+
+1. Remove Public Fee Mentions
+    Go through all customer-facing areas (checkout, order summaries, invoices, FAQs) and remove any mention of a fixed percentage fee. Replace it with a general “service fee” or “transaction fee” language—no numbers.
+2. Admin Panel Update
+    In the wholesaler management section, keep the custom fee field (as previously defined). Ensure that when a wholesaler’s order is calculated, it uses the custom fee if set, otherwise it defaults to a flexible calculation (e.g., a dynamic percentage or a backend configurable rate).
+3. Order Calculation Logic
+    Update the backend logic so it no longer relies on a hardcoded fee in any public-facing area. Instead, always check for a custom fee on a per-wholesaler basis, and keep the default logic hidden from customers.
+4. Communication Update
+    If you have any external communications (e.g., emails, onboarding steps), remove the specific fee references and just mention a general service fee structure.
+5. Audit & Testing
+    After the update, test:
+    * Wholesaler order flows (custom fees apply correctly).
+    * Invoices (no public fee amounts).
+    * Admin panel updates (custom fee field works).
+    * User communication (no fee specifics shown).
+
+⸻
+
+🧪 Acceptance Criteria
+
+* No fixed percentage is visible to wholesalers anywhere publicly.
+* Admin can still set custom fees per wholesaler.
+* Order calculations adjust based on those fees accurately.
+* Existing flows, payments, and logic remain intact.
+* Admin is still able to track and control fees privately

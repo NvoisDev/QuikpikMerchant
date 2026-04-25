@@ -123,7 +123,8 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
-  role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer' | 'team_member'
+  role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'customer' | 'team_member'
+  customFeePercentage: decimal("custom_fee_percentage", { precision: 5, scale: 2 }), // Per-wholesaler platform fee override (admin-set)
   wholesalerId: varchar("wholesaler_id"), // For customers/retailers: which wholesaler they belong to
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),

@@ -1035,7 +1035,7 @@ export default function OrderDetail() {
             )}
             {isStripePayment(order) && (
               <div className="flex justify-between text-red-600">
-                <span>Platform Fee (4.6%):</span>
+                <span>Platform Fee:</span>
                 <span>-{formatMoney(parseFloat(order.platformFee || '0') || (parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')) * 0.046)}</span>
               </div>
             )}

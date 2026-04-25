@@ -154,6 +154,9 @@ export function registerAdminRoutes(app: Express): void {
           platformFeesEarned: stats.platformFees,
           totalFeesEarned: stats.customerFees + stats.platformFees,
           lastOrderAt: stats.lastOrderAt,
+          customFeePercentage: w.customFeePercentage !== null && w.customFeePercentage !== undefined
+            ? parseFloat(w.customFeePercentage)
+            : null,
         };
       }).sort((a, b) => b.totalFeesEarned - a.totalFeesEarned);
 
@@ -248,6 +251,35 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin toggle-status error:', error);
       res.status(500).json({ error: 'Failed to toggle status' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/custom-fee
+  app.patch('/api/admin/wholesalers/:id/custom-fee', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { customFeePercentage } = req.body as { customFeePercentage: number | null };
+
+      if (customFeePercentage !== null) {
+        if (typeof customFeePercentage !== 'number' || customFeePercentage < 0 || customFeePercentage > 100) {
+          return res.status(400).json({ error: 'Fee must be a number between 0 and 100' });
+        }
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({ customFeePercentage: customFeePercentage !== null ? customFeePercentage.toFixed(2) : null })
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')))
+        .returning({ id: users.id, customFeePercentage: users.customFeePercentage });
+
+      if (!updated) return res.status(404).json({ error: 'Wholesaler not found' });
+
+      console.log(`✅ Admin set custom fee for wholesaler ${req.params.id}: ${customFeePercentage === null ? 'reset to default' : customFeePercentage + '%'}`);
+      res.json({ id: updated.id, customFeePercentage: updated.customFeePercentage });
+    } catch (error) {
+      console.error('Admin set-custom-fee error:', error);
+      res.status(500).json({ error: 'Failed to update custom fee' });
     }
   });
 

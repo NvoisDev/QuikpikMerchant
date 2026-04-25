@@ -112,7 +112,7 @@ export default function LandingPage() {
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">4.6% on online card orders</span>
+                  <span className="hidden sm:inline">Small fee on online card orders</span>
                   <span className="sm:hidden">Card order fees</span>
                 </span>
                 <span className="flex items-center justify-center lg:justify-start">
@@ -375,7 +375,7 @@ export default function LandingPage() {
                     { title: "Cancel anytime, 1 click", sub: "Zero risk, full control" },
                     { title: "WhatsApp messaging built in", sub: "Reach customers where they already are", comingSoon: true },
                     { title: "Automated order management", sub: "Orders, payments and tracking in one place" },
-                    { title: "4.6% on card orders only", sub: "Cash/offline orders: you keep 100%" },
+                    { title: "Low fees on card orders only", sub: "Cash/offline orders: you keep 100%" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-4 py-4">
                       <span className="text-primary font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">✓</span>

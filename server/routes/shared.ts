@@ -457,6 +457,31 @@ export const requireMemberPermission = (area: string) => async (req: any, res: a
   next();
 };
 
+// ─── Platform fee configuration ────────────────────────────────────────────────
+export const DEFAULT_PLATFORM_FEE_RATE = 0.046; // 4.6% — internal default, not disclosed publicly
+export const CUSTOMER_TRANSACTION_FEE_RATE = 0.055; // Fixed — never customised
+export const CUSTOMER_TRANSACTION_FEE_FLAT = 0.50;  // Fixed — never customised
+
+/**
+ * Returns the platform fee rate for a specific wholesaler.
+ * If the wholesaler has a custom fee set by admin, uses that; otherwise falls back to DEFAULT_PLATFORM_FEE_RATE.
+ */
+export async function getWholesalerFeeRate(wholesalerId: string): Promise<number> {
+  try {
+    const [wholesaler] = await db
+      .select({ customFeePercentage: users.customFeePercentage })
+      .from(users)
+      .where(eq(users.id, wholesalerId))
+      .limit(1);
+    if (wholesaler?.customFeePercentage !== null && wholesaler?.customFeePercentage !== undefined) {
+      return parseFloat(wholesaler.customFeePercentage) / 100;
+    }
+  } catch {
+    // Fall through to default
+  }
+  return DEFAULT_PLATFORM_FEE_RATE;
+}
+
 // ─── Plan enforcement ─────────────────────────────────────────────────────────
 // PLAN_ENFORCEMENT_LIMITS is an alias for PLAN_LIMITS (single source of truth in server/config/plan-limits.ts).
 // `teamMembers` replaces the old `invitedMembersAllowed` field name.

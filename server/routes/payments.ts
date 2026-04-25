@@ -7,7 +7,7 @@ import {
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
   sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
-  users, wrapCustomerEmail, z, systemErrorLogs,
+  users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
 
@@ -1743,8 +1743,9 @@ export function registerPaymentRoutes(app: Express): void {
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
-      const customerTransactionFee = isOffline ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 on products + delivery
-      const platformFee = isOffline ? 0 : subtotal * 0.046; // 4.6% platform fee on products + delivery
+      const customerTransactionFee = isOffline ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 — always fixed
+      const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
+      const platformFee = subtotal * feeRate; // per-wholesaler platform fee
       const total = subtotal + customerTransactionFee;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;

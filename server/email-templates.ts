@@ -196,7 +196,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     '<table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0">' +
     '<tr><td style="padding:4px 0"><b>Subtotal:</b></td><td style="padding:4px 0;text-align:right">\u00A3' + data.subtotal + '</td></tr>' +
     shippingRow +
-    '<tr><td style="padding:4px 0">Platform Fee (4.6%):</td><td style="padding:4px 0;text-align:right">-\u00A3' + (data.wholesalerPlatformFee || data.platformFee || '0.00') + '</td></tr>' +
+    '<tr><td style="padding:4px 0">Platform Fee:</td><td style="padding:4px 0;text-align:right">-\u00A3' + (data.wholesalerPlatformFee || data.platformFee || '0.00') + '</td></tr>' +
     '<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">You receive:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">\u00A3' + (parseFloat(data.subtotal) + parseFloat(data.shippingTotal || '0') - parseFloat(data.wholesalerPlatformFee || data.platformFee || '0')).toFixed(2) + '</td></tr>' +
     '</table>' +
     emailButton('View Orders', 'https://quikpik.co/orders');
@@ -215,7 +215,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     'Items:\n' + data.items.map(item => '- ' + item.productName + ' x ' + item.quantity + ' @ \u00A3' + item.unitPrice + ' = \u00A3' + item.total).join('\n') + '\n\n' +
     'Subtotal: \u00A3' + data.subtotal + '\n' +
     (data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? 'Shipping: \u00A3' + data.shippingTotal + '\n' : '') +
-    'Platform Fee (4.6%): -\u00A3' + (data.wholesalerPlatformFee || data.platformFee || '0.00') + '\n' +
+    'Platform Fee: -\u00A3' + (data.wholesalerPlatformFee || data.platformFee || '0.00') + '\n' +
     'You receive: \u00A3' + (parseFloat(data.subtotal) + parseFloat(data.shippingTotal || '0') - parseFloat(data.wholesalerPlatformFee || data.platformFee || '0')).toFixed(2) + '\n\n' +
     'View orders: https://quikpik.co/orders\nPowered by Quikpik';
 

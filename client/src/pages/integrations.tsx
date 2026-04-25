@@ -521,11 +521,11 @@ export default function Integrations() {
                       )}
                     </div>
                     <p className="text-gray-500 text-sm">By Stripe</p>
-                    <p className="text-gray-600 text-sm mt-2">Accept secure card payments and route funds directly to your connected bank account. Payments are processed on your behalf with a 4.6% platform fee.</p>
+                    <p className="text-gray-600 text-sm mt-2">Accept secure card payments and route funds directly to your connected bank account. Payments are processed on your behalf with a small platform service fee.</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 text-center">
-                  <div><p className="text-sm font-semibold text-gray-800">4.6%</p><p className="text-xs text-gray-500 mt-0.5">Platform fee</p></div>
+                  <div><p className="text-sm font-semibold text-gray-800">Service Fee</p><p className="text-xs text-gray-500 mt-0.5">Platform fee</p></div>
                   <div><p className="text-sm font-semibold text-gray-800">Payments</p><p className="text-xs text-gray-500 mt-0.5">Category</p></div>
                   <div><p className="text-sm font-semibold text-gray-800">UK, Europe, US & Canada</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
                 </div>
