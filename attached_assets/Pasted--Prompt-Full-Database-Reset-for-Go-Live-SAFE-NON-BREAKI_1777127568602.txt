@@ -1,0 +1,125 @@
+🧾 Prompt: Full Database Reset for Go-Live (SAFE, NON-BREAKING)
+🎯 Objective
+
+Prepare the platform for first real users by:
+
+Removing all test data (wholesalers, customers, orders, etc.)
+Resetting the system to a clean state
+Preserving core configuration and functionality
+
+This must be done safely without breaking the platform or integrations (including Stripe).
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT delete:
+Database schema
+Tables or relationships
+Core system configs
+Admin/Owner account
+Do NOT break:
+OTP login
+Payments (Stripe setup)
+Product/stock logic
+
+👉 This is a data reset, not a system reset
+
+🧹 PART 1: HARD DELETE (Test Data Only)
+Delete ALL:
+Users
+All wholesalers
+All customers
+👉 EXCEPT:
+Owner / Admin account
+Orders & Transactions
+Orders (quotes + online)
+Invoices
+Payments
+Refunds
+Operational Data
+Messages / chats
+Notifications
+Activity logs (optional)
+Products (IMPORTANT DECISION)
+
+Choose ONE:
+
+Option A (Recommended)
+Delete all products → start clean
+Option B
+Keep real products
+Remove test/fake ones
+Stock / Batches
+Clear all stock quantities
+Remove test batches
+
+👉 Avoid fake inventory at go-live
+
+🔁 PART 2: RESET COUNTERS
+
+Reset:
+
+invoice_counter → 0 or 1  
+order_counter → 0 or 1  
+quote_counter → 0 or 1  
+🧪 PART 3: CLEAN STATE CHECK
+
+After reset:
+
+No users (except admin)
+No orders
+No invoices
+No stock inconsistencies
+No test data visible
+🧍‍♂️ PART 4: CREATE FIRST REAL WHolesaler FLOW
+
+Ensure system supports:
+
+New wholesaler signup
+Product creation
+Stock setup
+Customer ordering
+
+👉 Test this flow AFTER reset
+
+🧪 PART 5: OPTIONAL – INTERNAL TEST ACCOUNT
+
+Create:
+
+name: "Internal Test"
+is_test_account: true
+
+Rules:
+
+Hidden from platform
+Not included in analytics
+Uses Stripe test mode only
+🔐 PART 6: STRIPE CONSIDERATION
+Do NOT delete Stripe config
+Do NOT touch API keys
+Ensure system is ready for:
+Live payments after reset
+⚠️ CRITICAL SAFETY STEP
+
+Before deletion:
+
+👉 Take a full database backup
+
+backup_before_reset.sql
+🧪 Acceptance Criteria
+Platform is completely clean
+No test users or orders exist
+Admin access remains intact
+System functions exactly as before
+Ready for first real wholesaler signup
+🧠 Sanity Check
+
+If implementation:
+
+“Drops tables or breaks schema”
+
+🚫 WRONG
+
+If implementation:
+
+“Deletes only data and preserves structure”
+
+✅ Correct

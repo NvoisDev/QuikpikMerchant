@@ -1637,14 +1637,80 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // GET /api/admin/go-live-reset/preview
+  // Returns row counts of everything that would be deleted — no data changes.
+  app.get('/api/admin/go-live-reset/preview', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
+
+      const [
+        wholesalerCount, retailerCount, orderCount, orderItemCount,
+        productCount, productBatchCount, broadcastCount, messageTemplateCount,
+        templateCampaignCount, templateProductCount, customerGroupCount,
+        customerGroupMemberCount, relationshipCount, invitationCount,
+        registrationCount, subscriptionCount, teamMemberCount, priceListCount,
+        stockAlertCount, analyticsCount,
+      ] = await Promise.all([
+        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer')).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(orders).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(orderItems).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(products).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(productBatches).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(broadcasts).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(messageTemplates).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(templateCampaigns).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(templateProducts).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(customerGroups).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(customerGroupMembers).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(wholesalerCustomerRelationships).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(customerInvitationTokens).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(customerRegistrationRequests).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != (SELECT id FROM users WHERE email = 'hello@quikpik.co' LIMIT 1)`).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(teamMembers).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(priceLists).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(stockAlerts).then(r => Number(r[0].n)),
+        db.select({ n: count() }).from(customerInsights).then(r => Number(r[0].n)),
+      ]);
+
+      const preview: Record<string, number> = {
+        wholesalers: wholesalerCount,
+        customers: retailerCount,
+        orders: orderCount,
+        orderItems: orderItemCount,
+        products: productCount,
+        productBatches: productBatchCount,
+        broadcasts: broadcastCount,
+        messageTemplates: messageTemplateCount,
+        campaigns: templateCampaignCount,
+        templateProducts: templateProductCount,
+        customerGroups: customerGroupCount,
+        customerGroupMembers: customerGroupMemberCount,
+        relationships: relationshipCount,
+        invitations: invitationCount,
+        registrationRequests: registrationCount,
+        subscriptions: subscriptionCount,
+        teamMembers: teamMemberCount,
+        priceLists: priceListCount,
+        stockAlerts: stockAlertCount,
+        analyticsRecords: analyticsCount,
+      };
+      const totalRows = Object.values(preview).reduce((a, b) => a + b, 0);
+      res.json({ preview, totalRows });
+    } catch (error) {
+      console.error('Go-live preview error:', error);
+      res.status(500).json({ error: 'Failed to fetch preview counts' });
+    }
+  });
+
   // POST /api/admin/go-live-reset
   // Wipes all test data from the platform, preserving only the admin account.
-  // Requires { confirm: "RESET", deleteProducts: boolean } in body.
+  // Requires { confirm: "RESET" } in body.
   app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
 
-      const { confirm, deleteProducts } = req.body;
+      const { confirm } = req.body;
       if (confirm !== 'RESET') {
         return res.status(400).json({ error: 'Confirmation text must be exactly "RESET"' });
       }
@@ -1665,13 +1731,11 @@ export function registerAdminRoutes(app: Express): void {
         c('orderCancellationRequests',   await trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
         c('orders',                      await trx.delete(orders).returning({ id: orders.id }));
 
-        // 2. Product-related
+        // 2. Product-related (always deleted — products cannot exist without their wholesaler)
         c('stockAlerts',                 await trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
         c('productBatches',              await trx.delete(productBatches).returning({ id: productBatches.id }));
-        if (deleteProducts) {
-          c('templateProducts',          await trx.delete(templateProducts).returning({ id: templateProducts.id }));
-          c('products',                  await trx.delete(products).returning({ id: products.id }));
-        }
+        c('templateProducts',            await trx.delete(templateProducts).returning({ id: templateProducts.id }));
+        c('products',                    await trx.delete(products).returning({ id: products.id }));
 
         // 3. Notifications
         c('customerProfileUpdateNotifications', await trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));

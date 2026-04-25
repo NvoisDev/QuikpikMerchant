@@ -1770,7 +1770,6 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
   const [planOverride, setPlanOverride] = useState("");
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState("");
-  const [deleteProducts, setDeleteProducts] = useState(true);
   const [resetResult, setResetResult] = useState<{ deleted: Record<string, number>; totalDeleted: number } | null>(null);
 
   const { data: stripeMode } = useQuery<StripeModeData>({
@@ -1795,18 +1794,23 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
     onError: () => toast({ title: "Activation failed", variant: "destructive" }),
   });
 
+  const previewQuery = useQuery<{ preview: Record<string, number>; totalRows: number }>({
+    queryKey: ["/api/admin/go-live-reset/preview"],
+    enabled: resetModalOpen && isAdmin,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
   const goLiveReset = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/go-live-reset", {
-        confirm: "RESET",
-        deleteProducts,
-      });
+      const res = await apiRequest("POST", "/api/admin/go-live-reset", { confirm: "RESET" });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Reset failed"); }
       return res.json() as Promise<{ deleted: Record<string, number>; totalDeleted: number }>;
     },
     onSuccess: (data) => {
       setResetResult(data);
       setResetConfirmText("");
+      setResetModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
       toast({ title: `Platform reset complete — ${data.totalDeleted} rows wiped` });
@@ -1950,35 +1954,43 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
 
       {/* Go-Live Reset confirmation modal */}
       <Dialog open={resetModalOpen} onOpenChange={open => { if (!open) { setResetConfirmText(""); setResetModalOpen(false); } }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold flex items-center gap-2 text-red-700">
               <AlertTriangle className="h-4 w-4" />Confirm Go-Live Reset
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-semibold text-red-800">This will permanently delete:</p>
-              <ul className="text-xs text-red-700 space-y-0.5 list-disc pl-4">
-                <li>All wholesaler accounts (except hello@quikpik.co)</li>
-                <li>All customer/retailer accounts</li>
-                <li>All orders and order items</li>
-                <li>All broadcasts, templates, and campaigns</li>
-                <li>All customer groups and relationships</li>
-                <li>All analytics and intelligence data</li>
-                <li>All subscriptions (except admin)</li>
-              </ul>
+            {/* Live preview counts */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-semibold text-red-800">The following will be permanently deleted:</p>
+              {previewQuery.isLoading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <RefreshCw className="h-3.5 w-3.5 text-red-400 animate-spin" />
+                  <span className="text-xs text-red-500">Calculating…</span>
+                </div>
+              ) : previewQuery.data ? (
+                <>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.entries(previewQuery.data.preview)
+                      .filter(([, v]) => v > 0)
+                      .map(([k, v]) => (
+                        <div key={k} className="flex justify-between items-center bg-white border border-red-100 rounded px-2 py-1">
+                          <span className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <span className="text-xs font-bold text-red-700">{v.toLocaleString()}</span>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="flex justify-between items-center border-t border-red-200 pt-2 mt-1">
+                    <span className="text-xs font-semibold text-red-800">Total rows</span>
+                    <span className="text-sm font-bold text-red-700">{previewQuery.data.totalRows.toLocaleString()}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-red-500">Could not load preview</p>
+              )}
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="deleteProductsCheck"
-                checked={deleteProducts}
-                onChange={e => setDeleteProducts(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-red-600"
-              />
-              <label htmlFor="deleteProductsCheck" className="text-xs text-gray-700">Also delete all products and product templates</label>
-            </div>
+
             <div className="space-y-2">
               <Label className="text-xs text-gray-700 font-semibold">Type <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-red-700">RESET</span> to confirm</Label>
               <Input
@@ -1994,8 +2006,8 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
             <Button
               size="sm"
               className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1.5"
-              disabled={resetConfirmText !== "RESET" || goLiveReset.isPending}
-              onClick={() => { goLiveReset.mutate(); setResetModalOpen(false); }}
+              disabled={resetConfirmText !== "RESET" || goLiveReset.isPending || previewQuery.isLoading}
+              onClick={() => goLiveReset.mutate()}
             >
               {goLiveReset.isPending ? "Resetting…" : "Reset platform"}
             </Button>
