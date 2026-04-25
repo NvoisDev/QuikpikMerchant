@@ -1411,8 +1411,8 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin, high
                         <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
                         <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
                         <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
-                        <TableCell className="text-xs text-right font-medium text-gray-700">{fmt(parseFloat(o.subtotal || "0"))}</TableCell>
-                        <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
+                        <TableCell className="text-xs text-right font-medium text-gray-700">{o.status === "cancelled" ? <span className="text-gray-400">£0.00</span> : fmt(parseFloat(o.subtotal || "0"))}</TableCell>
+                        <TableCell className="text-xs text-right font-medium text-indigo-600">{o.status === "cancelled" ? <span className="text-gray-400">—</span> : pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
                         <TableCell>
                           <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">{(o.status || "pending").replace(/_/g, " ")}</span>
                         </TableCell>
