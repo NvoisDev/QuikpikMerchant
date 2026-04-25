@@ -8,10 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import type { StripeCheckoutFormProps } from "./portal-types";
 
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+async function fetchStripePromise() {
+  try {
+    const res = await fetch('/api/config/stripe-key', { credentials: 'include' });
+    const data = res.ok ? await res.json() : {};
+    const key = data.publishableKey || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+    return key ? loadStripe(key) : null;
+  } catch {
+    const key = import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+    return key ? loadStripe(key) : null;
+  }
 }
-export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const PaymentFormContent = ({
   onSuccess,
@@ -265,13 +272,15 @@ const PaymentFormContent = ({
 
 export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, transactionFee, shippingCost, clientSecret, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    setStripePromise(fetchStripePromise());
     console.log('🚚 STRIPE FORM: Client secret provided:', !!clientSecret);
   }, [clientSecret]);
 
-  if (!clientSecret) {
+  if (!clientSecret || !stripePromise) {
     return (
       <div className="text-center py-8">
         <div className="flex flex-col items-center space-y-4">

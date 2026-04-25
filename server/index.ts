@@ -186,12 +186,18 @@ async function runStartupMigrations() {
 // and the old one is archived.
 // Set env var STRIPE_PRICE_FIX_SKIP=true to disable after a successful production run.
 async function fixStripePricesIfNeeded() {
-  if (!process.env.STRIPE_SECRET_KEY) return;
   if (process.env.STRIPE_PRICE_FIX_SKIP === 'true') {
     console.log('ℹ️ Stripe price fix skipped (STRIPE_PRICE_FIX_SKIP=true)');
     return;
   }
-  const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
+  let stripeClient: any;
+  try {
+    const { getStripeClient } = await import("./stripeConfig");
+    stripeClient = getStripeClient();
+  } catch {
+    console.warn('ℹ️ Stripe not configured — skipping price fix.');
+    return;
+  }
 
   const EXPECTED: Record<string, { unitAmount: number; currency: string; interval: string; productId: string }> = {
     standard: { unitAmount: 1999, currency: 'gbp', interval: 'month', productId: 'prod_U7iIITiYIFwLA2' },

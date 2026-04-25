@@ -3,13 +3,9 @@ import { db } from "./db";
 import { users, subscriptionPlans, userSubscriptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
+import { getStripeClient } from "./stripeConfig";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-08-27.basil",
-});
+const stripe = getStripeClient();
 
 export class SubscriptionService {
   

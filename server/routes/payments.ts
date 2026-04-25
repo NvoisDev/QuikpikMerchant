@@ -9,6 +9,7 @@ import {
   sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs,
 } from "./shared";
+import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -226,24 +227,39 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
+  // GET /api/config/stripe-key — returns the publishable key for the frontend
+  // Checks whether the requesting user is a test account and forces test key if so.
+  app.get('/api/config/stripe-key', (req: any, res) => {
+    const forceTest = Boolean(req.user?.isTestAccount);
+    const publishableKey = getPublishableKey(forceTest);
+    const environment = (forceTest || !isLiveMode()) ? 'test' : 'live';
+    res.json({ publishableKey, environment });
+  });
+
   // POST /api/webhooks/stripe
   app.post('/api/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const secrets = getWebhookSecrets();
 
-    if (!endpointSecret) {
-      console.error('❌ STRIPE_WEBHOOK_SECRET not configured');
+    if (secrets.length === 0) {
+      console.error('❌ No STRIPE_WEBHOOK_SECRET configured');
       return res.status(400).json({ error: 'Webhook secret not configured' });
     }
 
-    let event: Stripe.Event;
-    try {
-      event = stripe!.webhooks.constructEvent(req.body, sig, endpointSecret);
-      console.log(`✅ Stripe webhook verified: ${event.type} at ${new Date().toISOString()}`);
-    } catch (err) {
-      console.error('❌ Stripe webhook signature verification failed:', err);
+    let event: Stripe.Event | undefined;
+    for (const secret of secrets) {
+      try {
+        event = stripe!.webhooks.constructEvent(req.body, sig, secret);
+        break; // verified — stop trying
+      } catch {
+        // try the next secret
+      }
+    }
+    if (!event) {
+      console.error('❌ Stripe webhook signature verification failed (tried all secrets)');
       return res.status(400).json({ error: 'Invalid signature' });
     }
+    console.log(`✅ Stripe webhook verified: ${event.type} at ${new Date().toISOString()}`);
 
     try {
       if (event.type === 'checkout.session.completed') {
@@ -850,13 +866,13 @@ export function registerPaymentRoutes(app: Express): void {
 
   // POST /api/create-payment-intent
   app.post("/api/create-payment-intent", requireAuth, async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe not configured" });
-    }
-
     try {
       const { orderId } = req.body;
       const userId = req.user.id;
+      const forceTest = Boolean(req.user.isTestAccount);
+      let stripeClient: any;
+      try { stripeClient = getStripeClient(forceTest); }
+      catch { return res.status(500).json({ message: "Stripe not configured" }); }
 
       const order = await storage.getOrder(orderId);
       if (!order) {
@@ -876,7 +892,7 @@ export function registerPaymentRoutes(app: Express): void {
       }
 
       // Check if wholesaler's account can accept payments
-      const account = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+      const account = await stripeClient.accounts.retrieve(wholesaler.stripeAccountId);
       if (!account.charges_enabled) {
         return res.status(400).json({ 
           message: "Wholesaler's payment account is not fully set up. Please contact them to complete verification." 
@@ -910,7 +926,7 @@ export function registerPaymentRoutes(app: Express): void {
         paymentIntentData.receipt_email = retailer.email;
       }
 
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+      const paymentIntent = await stripeClient.paymentIntents.create(paymentIntentData);
 
       console.log(`💳 Payment intent created for Order #${orderId}`);
       if (retailer?.email) {

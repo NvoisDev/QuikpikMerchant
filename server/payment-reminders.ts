@@ -3,11 +3,9 @@ import { orders, users, orderItems, products } from '@shared/schema';
 import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
 import { sendPaymentReminderEmail } from './sendgrid-service';
 import { sendSMS } from './services/smsService';
-import Stripe from 'stripe';
+import { getStripeClient } from './stripeConfig';
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' })
-  : null;
+const stripe = (() => { try { return getStripeClient(); } catch { return null; } })();
 
 interface OrderWithPaymentTerms {
   id: number;

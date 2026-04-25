@@ -139,13 +139,17 @@ export {
 export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, RefundLineItem, CancellationRefundType, EmailRefundStatus };
 
 // ─── Singletons ───────────────────────────────────────────────────────────────
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
-}
-
-export const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" })
-  : null;
+/**
+ * `stripe` is the active-environment Stripe client (live or test, per STRIPE_ENVIRONMENT).
+ * Use `getStripeClient(true)` from stripeConfig.ts wherever you need to force test mode
+ * (e.g. for is_test_account users).
+ */
+export { getStripeClient, stripeTest, stripeLive, isLiveMode } from "../stripeConfig";
+import { getStripeClient } from "../stripeConfig";
+export const stripe = (() => {
+  try { return getStripeClient(); }
+  catch { return null; }
+})();
 
 export const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })

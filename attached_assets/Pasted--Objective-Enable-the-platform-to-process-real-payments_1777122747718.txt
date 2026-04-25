@@ -1,0 +1,110 @@
+🎯 Objective
+
+Enable the platform to process real payments by integrating Stripe live API keys, without breaking existing payment flows, test environment, or user experience.
+
+🚨 NON-NEGOTIABLE RULES
+1. DO NOT REMOVE TEST MODE
+Keep existing Stripe test keys
+System must support:
+test mode AND live mode
+2. DO NOT HARDCODE KEYS
+Use environment variables ONLY:
+STRIPE_SECRET_KEY
+STRIPE_PUBLISHABLE_KEY
+STRIPE_WEBHOOK_SECRET
+ENVIRONMENT = test | live
+3. NO CHANGES TO PAYMENT LOGIC
+Do NOT modify:
+Fee calculations
+Checkout flow
+Order creation logic
+
+👉 Only switch keys/environment
+
+🧠 Environment Logic
+IF ENVIRONMENT = "live"
+→ use LIVE Stripe keys
+
+IF ENVIRONMENT = "test"
+→ use TEST Stripe keys
+🔐 Add Live Keys
+
+From Stripe dashboard:
+
+Add:
+STRIPE_SECRET_KEY = sk_live_***
+STRIPE_PUBLISHABLE_KEY = pk_live_***
+🌐 Webhook Setup (CRITICAL)
+Create NEW webhook in Stripe (LIVE mode)
+Endpoint:
+https://yourdomain.com/webhooks/stripe
+Events to listen for:
+payment_intent.succeeded
+payment_intent.payment_failed
+checkout.session.completed
+invoice.payment_succeeded
+Store:
+STRIPE_WEBHOOK_SECRET = whsec_live_***
+⚠️ IMPORTANT: Separate Webhooks
+Test webhook ≠ Live webhook
+Do NOT reuse test webhook secret
+🧪 Test Before Full Launch
+Perform real transaction:
+Use small amount (£1–£5)
+
+Confirm:
+
+✅ Payment succeeds
+✅ Order created
+✅ Fees calculated correctly
+✅ Webhook updates order status
+✅ Invoice generated
+🔁 Test Account Safety
+
+If user:
+
+is_test_account = true
+
+Then:
+
+→ FORCE Stripe TEST mode
+
+👉 Prevent accidental real charges
+
+⚙️ Fallback Handling
+
+If webhook fails:
+
+Log error
+Retry processing
+Do NOT lose payment state
+🚫 What NOT to do
+❌ Mix test + live keys
+❌ Remove test environment
+❌ Skip webhook setup
+❌ Assume payments work without real test
+🧪 Acceptance Criteria
+Live payments process successfully
+Orders are created correctly
+Webhooks update system reliably
+Test environment still usable
+No disruption to existing features
+🧠 Sanity Check
+
+If implementation:
+
+“Replace test keys with live keys permanently”
+
+🚫 WRONG
+
+If implementation:
+
+“Supports both test and live environments”
+
+✅ Correct
+
+💡 Final instruction for your dev
+
+“Enable live payments without removing or affecting test mode, and ensure full webhook reliability.”
+
+🔥 Real talk

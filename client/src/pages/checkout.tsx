@@ -13,9 +13,17 @@ import { ArrowLeft, CreditCard, Truck } from 'lucide-react';
 import { Link } from "wouter";
 import { formatCurrency } from "@/lib/currencies";
 
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+async function fetchStripePromise() {
+  try {
+    const res = await fetch('/api/config/stripe-key', { credentials: 'include' });
+    const data = res.ok ? await res.json() : {};
+    const key = data.publishableKey || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+    return key ? loadStripe(key) : null;
+  } catch {
+    const key = import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+    return key ? loadStripe(key) : null;
+  }
+}
 
 const CheckoutForm = ({ orderId }: { orderId: number }) => {
   const stripe = useStripe();
@@ -75,6 +83,11 @@ export default function Checkout() {
   const { toast } = useToast();
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
+
+  useEffect(() => {
+    setStripePromise(fetchStripePromise());
+  }, []);
 
   // Get order from URL params or localStorage
   useEffect(() => {

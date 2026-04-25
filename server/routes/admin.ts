@@ -809,9 +809,16 @@ export function registerAdminRoutes(app: Express): void {
   app.get('/api/admin/stripe-mode', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const key = process.env.STRIPE_SECRET_KEY || '';
-      const mode = key.startsWith('sk_live_') ? 'live' : 'test';
-      res.json({ mode, keyPrefix: key.slice(0, 8) + '...' });
+      const { isLiveMode: liveMode, STRIPE_ENVIRONMENT: env } = await import('../stripeConfig');
+      const testKey = process.env.STRIPE_SECRET_KEY || '';
+      const liveKey = process.env.STRIPE_LIVE_SECRET_KEY || '';
+      res.json({
+        mode: liveMode() ? 'live' : 'test',
+        environment: env,
+        testKeyConfigured: testKey.length > 0,
+        liveKeyConfigured: liveKey.length > 0,
+        keyPrefix: (liveMode() ? liveKey : testKey).slice(0, 8) + '...',
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to determine Stripe mode' });
     }
