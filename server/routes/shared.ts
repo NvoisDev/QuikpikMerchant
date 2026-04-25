@@ -426,13 +426,15 @@ export const requireOwner = (req: any, res: any, next: any) => {
 export const requireMemberPermission = (area: string) => async (req: any, res: any, next: any) => {
   if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
     try {
-      const members = await storage.getTeamMembers(req.user.wholesalerId);
-      const member = members.find((m: any) => m.email === req.user.email);
-      if (!member) return res.status(403).json({ message: 'Team member record not found. Access denied.' });
-      if (member.role === 'admin') return next();
-      if (member.role === 'viewer') return res.status(403).json({ message: 'Viewers can only view data.' });
-      const permissions: string[] = Array.isArray(member.permissions) ? member.permissions : [];
-      if (!permissions.includes(area)) {
+      const teamMemberRole: string = req.user.teamMemberRole || 'member';
+      // Admins bypass all restrictions
+      if (teamMemberRole === 'admin') return next();
+      // Viewers can never write
+      if (teamMemberRole === 'viewer') return res.status(403).json({ message: 'Viewers can only view data.' });
+      // Members: check whether the owner has granted tab access for this area.
+      // Tab Permissions is the single source of truth — if you can see the tab, you can use it.
+      const hasAccess = await storage.checkTabAccess(req.user.wholesalerId, area, 'member');
+      if (!hasAccess) {
         return res.status(403).json({ message: `You do not have permission to manage ${area}.` });
       }
     } catch (err) {
