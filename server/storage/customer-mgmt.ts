@@ -96,7 +96,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .where(and(
         eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
         eq(wholesalerCustomerRelationships.status, 'active'),
-        eq(users.archived, false)
+        eq(users.archived, false),
+        eq(users.isTestAccount, false)
       ));
 
     if (customerRelationships.length === 0) return [];
@@ -256,6 +257,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       WHERE wcr.wholesaler_id = ${wholesalerId}
         AND wcr.status = 'active'
         AND u.archived = false
+        AND u.is_test_account = false
         AND u.role = 'retailer'
         AND (
           LOWER(u.first_name) LIKE ${term} OR
@@ -312,6 +314,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       WHERE cg.wholesaler_id = ${wholesalerId}
         AND u.role IN ('customer', 'retailer')
+        AND u.is_test_account = false
     `);
 
     // Get active customers (those who have placed orders in last 3 months)
@@ -326,6 +329,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       INNER JOIN orders o ON u.id = o.retailer_id
       WHERE cg.wholesaler_id = ${wholesalerId}
         AND u.role IN ('customer', 'retailer')
+        AND u.is_test_account = false
         AND o.created_at >= ${threeMonthsAgo}
     `);
 
@@ -341,6 +345,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       WHERE cg.wholesaler_id = ${wholesalerId}
         AND u.role IN ('customer', 'retailer')
+        AND u.is_test_account = false
         AND u.created_at >= ${thisMonth}
     `);
 
@@ -360,6 +365,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
       WHERE cg.wholesaler_id = ${wholesalerId}
         AND u.role IN ('customer', 'retailer')
+        AND u.is_test_account = false
       GROUP BY u.id, u.first_name, u.last_name
       HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(o.subtotal::numeric, o.total::numeric) - COALESCE(o.platform_fee::numeric, 0)) ELSE 0 END) > 0
       ORDER BY total_spent DESC

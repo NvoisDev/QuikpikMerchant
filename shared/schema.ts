@@ -250,6 +250,7 @@ export const users = pgTable("users", {
   geocodeStatus: varchar("geocode_status", { length: 10 }), // 'success' | 'flagged'
 
   isSuspicious: boolean("is_suspicious").default(false), // Admin-flagged suspicious customer
+  isTestAccount: boolean("is_test_account").default(false), // Internal test accounts — hidden from wholesaler views and analytics
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

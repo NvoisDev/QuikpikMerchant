@@ -170,6 +170,9 @@ async function runStartupMigrations() {
     `DROP TABLE IF EXISTS negotiations`,
     `ALTER TABLE products DROP COLUMN IF EXISTS negotiation_enabled`,
     `ALTER TABLE products DROP COLUMN IF EXISTS minimum_bid_price`,
+    // Task #538: Test account isolation — add flag and mark the Quikpik internal test account
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN NOT NULL DEFAULT FALSE`,
+    `UPDATE users SET is_test_account = true WHERE email = 'hello@quikpik.co'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

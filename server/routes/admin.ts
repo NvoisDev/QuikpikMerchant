@@ -5,6 +5,7 @@ import {
   requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
+  smsVerificationCodes,
 } from "./shared";
 
 // Helper: get the effective admin email (handles impersonation mode)
@@ -1505,6 +1506,96 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin search error:', error);
       res.status(500).json({ error: 'Failed to search' });
+    }
+  });
+
+  // POST /api/admin/cleanup-test-data
+  // Deletes all orders, order items, stock movements, notifications, and SMS codes
+  // for users flagged as is_test_account = true.
+  app.post('/api/admin/cleanup-test-data', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
+
+      // Step 1: Find all test account user IDs
+      const testUsers = await db.select({ id: users.id }).from(users).where(eq(users.isTestAccount, true));
+      const testUserIds = testUsers.map(u => u.id);
+
+      if (testUserIds.length === 0) {
+        return res.json({ message: 'No test accounts found. Nothing to delete.', deleted: {} });
+      }
+
+      // Step 2: Find all order IDs belonging to test accounts
+      const testOrders = await db.select({ id: orders.id })
+        .from(orders)
+        .where(inArray(orders.retailerId, testUserIds));
+      const testOrderIds = testOrders.map(o => o.id);
+
+      const deleted: Record<string, number> = {
+        orderItems: 0,
+        orders: 0,
+        stockMovements: 0,
+        customerProfileUpdateNotifications: 0,
+        smsVerificationCodes: 0,
+      };
+
+      // Step 3: Delete in dependency order
+      if (testOrderIds.length > 0) {
+        const deletedItems = await db.delete(orderItems).where(inArray(orderItems.orderId, testOrderIds));
+        deleted.orderItems = (deletedItems as any).rowCount ?? 0;
+
+        const deletedOrders = await db.delete(orders).where(inArray(orders.id, testOrderIds));
+        deleted.orders = (deletedOrders as any).rowCount ?? 0;
+
+        const deletedMoves = await db.delete(stockMovements).where(inArray(stockMovements.orderId, testOrderIds));
+        deleted.stockMovements = (deletedMoves as any).rowCount ?? 0;
+      }
+
+      // Step 4: Delete notifications and SMS codes tied to test users
+      const deletedNotifs = await db.delete(customerProfileUpdateNotifications)
+        .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds));
+      deleted.customerProfileUpdateNotifications = (deletedNotifs as any).rowCount ?? 0;
+
+      const deletedSms = await db.delete(smsVerificationCodes)
+        .where(inArray(smsVerificationCodes.customerId, testUserIds));
+      deleted.smsVerificationCodes = (deletedSms as any).rowCount ?? 0;
+
+      console.log(`🧹 Admin cleanup-test-data: removed`, deleted, `for ${testUserIds.length} test account(s)`);
+      res.json({
+        message: `Cleanup complete. Deleted data for ${testUserIds.length} test account(s).`,
+        testAccounts: testUserIds,
+        deleted,
+      });
+    } catch (error) {
+      console.error('Admin cleanup-test-data error:', error);
+      res.status(500).json({ error: 'Failed to clean up test data' });
+    }
+  });
+
+  // PATCH /api/admin/users/:id/test-account
+  // Toggles the is_test_account flag on any user.
+  app.patch('/api/admin/users/:id/test-account', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
+
+      const userId = req.params.id;
+      const { isTestAccount } = req.body;
+
+      if (typeof isTestAccount !== 'boolean') {
+        return res.status(400).json({ error: 'isTestAccount must be a boolean' });
+      }
+
+      const [updated] = await db.update(users)
+        .set({ isTestAccount })
+        .where(eq(users.id, userId))
+        .returning({ id: users.id, email: users.email, isTestAccount: users.isTestAccount });
+
+      if (!updated) return res.status(404).json({ error: 'User not found' });
+
+      console.log(`🏷️ Admin set is_test_account=${isTestAccount} on user ${userId} (${updated.email})`);
+      res.json({ success: true, user: updated });
+    } catch (error) {
+      console.error('Admin test-account toggle error:', error);
+      res.status(500).json({ error: 'Failed to update test account flag' });
     }
   });
 
