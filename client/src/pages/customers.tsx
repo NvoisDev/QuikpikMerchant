@@ -1685,6 +1685,16 @@ export default function Customers() {
                 className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
+            {!isViewer && (
+              <Button
+                size="sm"
+                className="lg:hidden h-8 bg-green-600 hover:bg-green-700 text-white shrink-0"
+                onClick={() => setIsAddCustomerDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
