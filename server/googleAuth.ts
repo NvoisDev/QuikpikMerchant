@@ -321,7 +321,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
             if (member) (req.user as any).teamMemberRole = member.role;
-          } catch { /* silent — downstream endpoints fall back to 'member' */ }
+          } catch (err) {
+            console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
+          }
         }
         return next();
       }
@@ -369,7 +371,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
             if (member) (req.user as any).teamMemberRole = member.role;
-          } catch { /* silent — downstream endpoints fall back to 'member' */ }
+          } catch (err) {
+            console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
+          }
         }
         // Update session for consistency
         (req.session as any).user = user;
