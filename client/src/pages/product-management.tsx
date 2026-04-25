@@ -405,7 +405,24 @@ export default function ProductManagement() {
             if (currentWeight !== newWeight) {
               console.log('⚖️ Auto-calculating package weight:', { packQuantity, unitOfMeasure, unitSize, calculatedWeight });
               form.setValue('totalPackageWeight', newWeight, { shouldValidate: false });
-              
+
+              // Also immediately calculate unit weight here, because programmatic setValue
+              // on totalPackageWeight does not reliably trigger the separate unitWeight watch.
+              const qty = parseFloat(packQuantity as string) || 1;
+              if (qty > 0) {
+                const calculatedUnitWeight = Math.round((calculatedWeight / qty) * 1000) / 1000;
+                if (calculatedUnitWeight > 0) {
+                  const currentUnitWeight = form.getValues('unitWeight');
+                  const newUnitWeight = calculatedUnitWeight.toString();
+                  const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+                  if (canOverwrite && currentUnitWeight !== newUnitWeight) {
+                    console.log('⚖️ Auto-calculating unit weight (from package weight effect):', { calculatedWeight, qty, calculatedUnitWeight });
+                    form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
+                    lastAutoFilledUnitWeight.current = newUnitWeight;
+                  }
+                }
+              }
+
               // Show calculation info
               toast({
                 title: "Weight Auto-Calculated",
