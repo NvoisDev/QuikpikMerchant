@@ -6,7 +6,16 @@ import {
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
   smsVerificationCodes, stockUpdateNotifications,
+  customerGroups, customerGroupMembers, wholesalerCustomerRelationships,
+  customerRegistrationRequests, orderCancellationRequests, teamMembers, priceLists, priceListItems,
+  priceListAssignments, campaignOrders,
 } from "./shared";
+import {
+  broadcasts, tabPermissions, userBadges, onboardingMilestones, deliveryAddresses,
+  messageTemplates, templateProducts, templateCampaigns, stockAlerts,
+  customerInsights, businessIntelligence, inventoryInsights, financialPerformance,
+  productPerformanceSummary, promotionAnalytics, customerInvitationTokens,
+} from "@shared/schema";
 
 // Helper: get the effective admin email (handles impersonation mode)
 function getAdminEmail(req: any): string | undefined {
@@ -1625,6 +1634,107 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin test-account toggle error:', error);
       res.status(500).json({ error: 'Failed to update test account flag' });
+    }
+  });
+
+  // POST /api/admin/go-live-reset
+  // Wipes all test data from the platform, preserving only the admin account.
+  // Requires { confirm: "RESET", deleteProducts: boolean } in body.
+  app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
+
+      const { confirm, deleteProducts } = req.body;
+      if (confirm !== 'RESET') {
+        return res.status(400).json({ error: 'Confirmation text must be exactly "RESET"' });
+      }
+
+      // Find admin user ID (hello@quikpik.co)
+      const [adminUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'hello@quikpik.co'));
+      if (!adminUser) return res.status(500).json({ error: 'Admin user not found' });
+
+      const counts: Record<string, number> = {};
+
+      const c = <T>(label: string, rows: T[]) => { counts[label] = rows.length; return rows.length; };
+
+      await db.transaction(async (trx) => {
+        // 1. Order line items and related
+        c('orderItems',                  await trx.delete(orderItems).returning({ id: orderItems.id }));
+        c('stockMovements',              await trx.delete(stockMovements).returning({ id: stockMovements.id }));
+        c('campaignOrders',              await trx.delete(campaignOrders).returning({ id: campaignOrders.id }));
+        c('orderCancellationRequests',   await trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
+        c('orders',                      await trx.delete(orders).returning({ id: orders.id }));
+
+        // 2. Product-related
+        c('stockAlerts',                 await trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
+        c('productBatches',              await trx.delete(productBatches).returning({ id: productBatches.id }));
+        if (deleteProducts) {
+          c('templateProducts',          await trx.delete(templateProducts).returning({ id: templateProducts.id }));
+          c('products',                  await trx.delete(products).returning({ id: products.id }));
+        }
+
+        // 3. Notifications
+        c('customerProfileUpdateNotifications', await trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
+        c('stockUpdateNotifications',    await trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
+
+        // 4. Broadcasts and messaging
+        c('broadcasts',                  await trx.delete(broadcasts).returning({ id: broadcasts.id }));
+        c('templateCampaigns',           await trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
+        c('messageTemplates',            await trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
+
+        // 5. Customer groups
+        c('customerGroupMembers',        await trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
+        c('customerGroups',              await trx.delete(customerGroups).returning({ id: customerGroups.id }));
+
+        // 6. Relationships and invitations
+        c('wholesalerCustomerRelationships', await trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
+        c('customerInvitationTokens',    await trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
+        c('customerRegistrationRequests',await trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
+
+        // 7. Address and auth data
+        c('deliveryAddresses',           await trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
+        c('smsVerificationCodes',        await trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
+
+        // 8. Gamification / onboarding
+        c('onboardingMilestones',        await trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
+        c('userBadges',                  await trx.delete(userBadges).returning({ id: userBadges.id }));
+
+        // 9. Subscriptions and team (preserve admin subscription)
+        c('userSubscriptions',           await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
+        c('teamMembers',                 await trx.delete(teamMembers).returning({ id: teamMembers.id }));
+        c('tabPermissions',              await trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
+
+        // 10. Price lists
+        c('priceListAssignments',        await trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
+        c('priceListItems',              await trx.delete(priceListItems).returning({ id: priceListItems.id }));
+        c('priceLists',                  await trx.delete(priceLists).returning({ id: priceLists.id }));
+
+        // 11. Analytics
+        c('customerInsights',            await trx.delete(customerInsights).returning({ id: customerInsights.id }));
+        c('businessIntelligence',        await trx.delete(businessIntelligence).returning({ id: businessIntelligence.id }));
+        c('inventoryInsights',           await trx.delete(inventoryInsights).returning({ id: inventoryInsights.id }));
+        c('financialPerformance',        await trx.delete(financialPerformance).returning({ id: financialPerformance.id }));
+        c('productPerformanceSummary',   await trx.delete(productPerformanceSummary).returning({ id: productPerformanceSummary.id }));
+        c('promotionAnalytics',          await trx.delete(promotionAnalytics).returning({ id: promotionAnalytics.id }));
+
+        // 12. Delete retailer users
+        c('retailerUsers',               await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
+
+        // 13. Delete non-admin wholesaler users
+        c('wholesalerUsers',             await trx.delete(users).where(
+          and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)
+        ).returning({ id: users.id }));
+
+        // 14. Reset order number counter on admin user
+        await trx.update(users).set({ orderNumberCounter: 0 }).where(eq(users.id, adminUser.id));
+      });
+
+      const totalDeleted = Object.values(counts).reduce((a, b) => a + b, 0);
+      console.log(`🚀 Go-live reset complete. Total rows deleted: ${totalDeleted}`, counts);
+      res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted: counts, totalDeleted });
+    } catch (error) {
+      console.error('Go-live reset error:', error);
+      res.status(500).json({ error: 'Reset failed. No data was changed (transaction rolled back).' });
     }
   });
 
