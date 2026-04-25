@@ -607,8 +607,13 @@ export function registerAdminRoutes(app: Express): void {
 
       const syncLimits = getPlanLimits(resolvedPlanId);
       const syncProductLimit = syncLimits.products;
-      const syncPeriodEnd = new Date(syncSub.current_period_end * 1000);
-      const syncPeriodStart = new Date(syncSub.current_period_start * 1000);
+
+      // Safely parse period timestamps — newer Stripe API versions may return undefined
+      const rawPeriodEnd = (syncSub as any).current_period_end;
+      const rawPeriodStart = (syncSub as any).current_period_start;
+      const syncPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const syncPeriodStart = rawPeriodStart ? new Date(rawPeriodStart * 1000) : new Date();
+      const isPeriodValid = !isNaN(syncPeriodEnd.getTime()) && !isNaN(syncPeriodStart.getTime());
 
       await storage.updateUser(syncUser.id, {
         currentPlan: resolvedPlanId,
@@ -616,9 +621,7 @@ export function registerAdminRoutes(app: Express): void {
         subscriptionStatus: 'active',
         productLimit: syncProductLimit,
         stripeSubscriptionId: syncSub.id,
-        subscriptionEndsAt: syncPeriodEnd,
-        subscriptionPeriodEnd: syncPeriodEnd,
-        subscriptionPeriodStart: syncPeriodStart,
+        ...(isPeriodValid ? { subscriptionEndsAt: syncPeriodEnd, subscriptionPeriodEnd: syncPeriodEnd, subscriptionPeriodStart: syncPeriodStart } : {}),
       });
 
       const [existingSyncSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, syncUser.id));
@@ -627,8 +630,7 @@ export function registerAdminRoutes(app: Express): void {
           planId: resolvedPlanId,
           stripeSubscriptionId: syncSub.id,
           status: 'active',
-          currentPeriodStart: syncPeriodStart,
-          currentPeriodEnd: syncPeriodEnd,
+          ...(isPeriodValid ? { currentPeriodStart: syncPeriodStart, currentPeriodEnd: syncPeriodEnd } : {}),
           cancelAtPeriodEnd: false,
           updatedAt: new Date(),
         }).where(eq(userSubscriptions.userId, syncUser.id));
