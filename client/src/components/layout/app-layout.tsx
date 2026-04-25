@@ -55,15 +55,16 @@ function AppLayoutInner({ children }: AppLayoutProps) {
       }),
     onSuccess: () => {
       exitImpersonation();
-      // Restore the admin's own profile in the cache now that headers are cleared.
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Wipe the full cache so no impersonated data lingers after returning
+      // to the admin panel. Everything re-fetches fresh as the real admin.
+      queryClient.clear();
       setLocation("/admin");
     },
     onError: () => {
       // Always clear local state even if the server request fails (e.g. expired token)
       // so the banner never stays "stuck" in an irrecoverable state
       exitImpersonation();
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.clear();
       setLocation("/admin");
     },
   });

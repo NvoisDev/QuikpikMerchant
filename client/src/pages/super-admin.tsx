@@ -683,9 +683,10 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     onSuccess: (data) => {
       setImpersonateTarget(null);
       startImpersonation(data.wholesalerId, data.businessName, data.token);
-      // Force a fresh fetch of the auth user so the dashboard reflects the
-      // impersonated wholesaler instead of the cached admin profile.
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Wipe the entire query cache so no stale admin data bleeds through
+      // into the impersonated dashboard. Everything will be re-fetched fresh
+      // with the impersonation headers attached.
+      queryClient.clear();
       toast({ title: "Impersonation active", description: `Now viewing as ${data.businessName || "wholesaler"}` });
       setLocation("/dashboard");
     },
