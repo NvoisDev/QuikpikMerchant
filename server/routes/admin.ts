@@ -1637,13 +1637,26 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // Shared helper: fetch the set of table names that actually exist in public schema.
+  // Used by both the preview and reset endpoints to guard against missing tables
+  // in older production databases where not all migrations have run yet.
+  const getExistingTables = async (): Promise<Set<string>> => {
+    const result = await db.execute(sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);
+    return new Set((result as any).rows.map((r: any) => r.tablename as string));
+  };
+
   // GET /api/admin/go-live-reset/preview
   // Returns row counts of everything that would be deleted — no data changes.
   app.get('/api/admin/go-live-reset/preview', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
 
+      const existing = await getExistingTables();
+      const has = (t: string) => existing.has(t);
       const n = (rows: { n: unknown }[]) => Number(rows[0].n);
+      const sc = (tableName: string, q: Promise<{ n: unknown }[]>) =>
+        has(tableName) ? q.then(n) : Promise.resolve(0);
+
       const [
         wholesalerCount, retailerCount, orderCount, orderItemCount, stockMovementCount,
         productCount, productBatchCount, stockAlertCount,
@@ -1658,41 +1671,41 @@ export function registerAdminRoutes(app: Express): void {
         financialPerformanceCount, productPerfCount, promotionAnalyticsCount,
         stockUpdateNotifCount, customerProfileNotifCount,
       ] = await Promise.all([
-        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)).then(n),
-        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer')).then(n),
-        db.select({ n: count() }).from(orders).then(n),
-        db.select({ n: count() }).from(orderItems).then(n),
-        db.select({ n: count() }).from(stockMovements).then(n),
-        db.select({ n: count() }).from(products).then(n),
-        db.select({ n: count() }).from(productBatches).then(n),
-        db.select({ n: count() }).from(stockAlerts).then(n),
-        db.select({ n: count() }).from(broadcasts).then(n),
-        db.select({ n: count() }).from(messageTemplates).then(n),
-        db.select({ n: count() }).from(templateCampaigns).then(n),
-        db.select({ n: count() }).from(templateProducts).then(n),
-        db.select({ n: count() }).from(customerGroups).then(n),
-        db.select({ n: count() }).from(customerGroupMembers).then(n),
-        db.select({ n: count() }).from(wholesalerCustomerRelationships).then(n),
-        db.select({ n: count() }).from(customerInvitationTokens).then(n),
-        db.select({ n: count() }).from(customerRegistrationRequests).then(n),
-        db.select({ n: count() }).from(deliveryAddresses).then(n),
-        db.select({ n: count() }).from(smsVerificationCodes).then(n),
-        db.select({ n: count() }).from(onboardingMilestones).then(n),
-        db.select({ n: count() }).from(userBadges).then(n),
-        db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != (SELECT id FROM users WHERE email = 'hello@quikpik.co' LIMIT 1)`).then(n),
-        db.select({ n: count() }).from(teamMembers).then(n),
-        db.select({ n: count() }).from(tabPermissions).then(n),
-        db.select({ n: count() }).from(priceLists).then(n),
-        db.select({ n: count() }).from(priceListItems).then(n),
-        db.select({ n: count() }).from(priceListAssignments).then(n),
-        db.select({ n: count() }).from(customerInsights).then(n),
-        db.select({ n: count() }).from(businessIntelligence).then(n),
-        db.select({ n: count() }).from(inventoryInsights).then(n),
-        db.select({ n: count() }).from(financialPerformance).then(n),
-        db.select({ n: count() }).from(productPerformanceSummary).then(n),
-        db.select({ n: count() }).from(promotionAnalytics).then(n),
-        db.select({ n: count() }).from(stockUpdateNotifications).then(n),
-        db.select({ n: count() }).from(customerProfileUpdateNotifications).then(n),
+        sc('users',                                  db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
+        sc('users',                                  db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
+        sc('orders',                                 db.select({ n: count() }).from(orders)),
+        sc('order_items',                            db.select({ n: count() }).from(orderItems)),
+        sc('stock_movements',                        db.select({ n: count() }).from(stockMovements)),
+        sc('products',                               db.select({ n: count() }).from(products)),
+        sc('product_batches',                        db.select({ n: count() }).from(productBatches)),
+        sc('stock_alerts',                           db.select({ n: count() }).from(stockAlerts)),
+        sc('broadcasts',                             db.select({ n: count() }).from(broadcasts)),
+        sc('message_templates',                      db.select({ n: count() }).from(messageTemplates)),
+        sc('template_campaigns',                     db.select({ n: count() }).from(templateCampaigns)),
+        sc('template_products',                      db.select({ n: count() }).from(templateProducts)),
+        sc('customer_groups',                        db.select({ n: count() }).from(customerGroups)),
+        sc('customer_group_members',                 db.select({ n: count() }).from(customerGroupMembers)),
+        sc('wholesaler_customer_relationships',      db.select({ n: count() }).from(wholesalerCustomerRelationships)),
+        sc('customer_invitation_tokens',             db.select({ n: count() }).from(customerInvitationTokens)),
+        sc('customer_registration_requests',         db.select({ n: count() }).from(customerRegistrationRequests)),
+        sc('delivery_addresses',                     db.select({ n: count() }).from(deliveryAddresses)),
+        sc('sms_verification_codes',                 db.select({ n: count() }).from(smsVerificationCodes)),
+        sc('onboarding_milestones',                  db.select({ n: count() }).from(onboardingMilestones)),
+        sc('user_badges',                            db.select({ n: count() }).from(userBadges)),
+        sc('user_subscriptions',                     db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != (SELECT id FROM users WHERE email = 'hello@quikpik.co' LIMIT 1)`)),
+        sc('team_members',                           db.select({ n: count() }).from(teamMembers)),
+        sc('tab_permissions',                        db.select({ n: count() }).from(tabPermissions)),
+        sc('price_lists',                            db.select({ n: count() }).from(priceLists)),
+        sc('price_list_items',                       db.select({ n: count() }).from(priceListItems)),
+        sc('price_list_assignments',                 db.select({ n: count() }).from(priceListAssignments)),
+        sc('customer_insights',                      db.select({ n: count() }).from(customerInsights)),
+        sc('business_intelligence',                  db.select({ n: count() }).from(businessIntelligence)),
+        sc('inventory_insights',                     db.select({ n: count() }).from(inventoryInsights)),
+        sc('financial_performance',                  db.select({ n: count() }).from(financialPerformance)),
+        sc('product_performance_summary',            db.select({ n: count() }).from(productPerformanceSummary)),
+        sc('promotion_analytics',                    db.select({ n: count() }).from(promotionAnalytics)),
+        sc('stock_update_notifications',             db.select({ n: count() }).from(stockUpdateNotifications)),
+        sc('customer_profile_update_notifications',  db.select({ n: count() }).from(customerProfileUpdateNotifications)),
       ]);
 
       const preview: Record<string, number> = {
@@ -1738,6 +1751,7 @@ export function registerAdminRoutes(app: Express): void {
   // Wipes all test data from the platform, preserving only the admin account.
   // Body: { confirm: "RESET" }
   // Products are always deleted — they cannot exist without their wholesaler (FK without CASCADE).
+  // Tables that don't exist yet in the production DB are silently skipped.
   app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
@@ -1751,74 +1765,88 @@ export function registerAdminRoutes(app: Express): void {
       const [adminUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'hello@quikpik.co'));
       if (!adminUser) return res.status(500).json({ error: 'Admin user not found' });
 
-      const counts: Record<string, number> = {};
+      // Check which tables actually exist — guards against older prod DBs where
+      // some analytics/notification tables may not have been migrated yet.
+      const existing = await getExistingTables();
+      const has = (t: string) => existing.has(t);
+      const skipped: string[] = [];
 
+      const counts: Record<string, number> = {};
       const c = <T>(label: string, rows: T[]) => { counts[label] = rows.length; return rows.length; };
 
       await db.transaction(async (trx) => {
+        const sd = async <T extends { id: unknown }>(
+          tableName: string,
+          label: string,
+          delFn: () => Promise<T[]>
+        ): Promise<T[]> => {
+          if (!has(tableName)) { skipped.push(tableName); c(label, []); return []; }
+          return c(label, await delFn()) as unknown as T[];
+        };
+
         // ── Step 1: Order line items and related ───────────────────────────────
-        c('orderItems',                  await trx.delete(orderItems).returning({ id: orderItems.id }));
-        c('stockMovements',              await trx.delete(stockMovements).returning({ id: stockMovements.id }));
-        c('campaignOrders',              await trx.delete(campaignOrders).returning({ id: campaignOrders.id }));
-        c('orderCancellationRequests',   await trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
-        c('orders',                      await trx.delete(orders).returning({ id: orders.id }));
+        await sd('order_items',                    'orderItems',                  () => trx.delete(orderItems).returning({ id: orderItems.id }));
+        await sd('stock_movements',                'stockMovements',              () => trx.delete(stockMovements).returning({ id: stockMovements.id }));
+        await sd('campaign_orders',                'campaignOrders',              () => trx.delete(campaignOrders).returning({ id: campaignOrders.id }));
+        await sd('order_cancellation_requests',    'orderCancellationRequests',   () => trx.delete(orderCancellationRequests).returning({ id: orderCancellationRequests.id }));
+        await sd('orders',                         'orders',                      () => trx.delete(orders).returning({ id: orders.id }));
 
         // ── Step 2: Analytics that reference products (must precede products) ──
-        // These tables have non-cascading FK to products.id; delete before products
-        // to avoid FK constraint violations in the transaction.
-        c('customerInsights',            await trx.delete(customerInsights).returning({ id: customerInsights.id }));
-        c('businessIntelligence',        await trx.delete(businessIntelligence).returning({ id: businessIntelligence.id }));
-        c('inventoryInsights',           await trx.delete(inventoryInsights).returning({ id: inventoryInsights.id }));
-        c('financialPerformance',        await trx.delete(financialPerformance).returning({ id: financialPerformance.id }));
-        c('productPerformanceSummary',   await trx.delete(productPerformanceSummary).returning({ id: productPerformanceSummary.id }));
-        c('promotionAnalytics',          await trx.delete(promotionAnalytics).returning({ id: promotionAnalytics.id }));
+        // Non-cascading FK to products.id — must delete before products.
+        await sd('customer_insights',              'customerInsights',            () => trx.delete(customerInsights).returning({ id: customerInsights.id }));
+        await sd('business_intelligence',          'businessIntelligence',        () => trx.delete(businessIntelligence).returning({ id: businessIntelligence.id }));
+        await sd('inventory_insights',             'inventoryInsights',           () => trx.delete(inventoryInsights).returning({ id: inventoryInsights.id }));
+        await sd('financial_performance',          'financialPerformance',        () => trx.delete(financialPerformance).returning({ id: financialPerformance.id }));
+        await sd('product_performance_summary',    'productPerformanceSummary',   () => trx.delete(productPerformanceSummary).returning({ id: productPerformanceSummary.id }));
+        await sd('promotion_analytics',            'promotionAnalytics',          () => trx.delete(promotionAnalytics).returning({ id: promotionAnalytics.id }));
 
         // ── Step 3: Notifications that reference products ──────────────────────
-        // stockUpdateNotifications.productId is NOT NULL with no cascade — must delete before products
-        c('customerProfileUpdateNotifications', await trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
-        c('stockUpdateNotifications',    await trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
+        await sd('customer_profile_update_notifications', 'customerProfileUpdateNotifications', () => trx.delete(customerProfileUpdateNotifications).returning({ id: customerProfileUpdateNotifications.id }));
+        await sd('stock_update_notifications',     'stockUpdateNotifications',    () => trx.delete(stockUpdateNotifications).returning({ id: stockUpdateNotifications.id }));
 
         // ── Step 4: Products (safe now — all product FK dependents cleared) ────
-        c('stockAlerts',                 await trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
-        c('productBatches',              await trx.delete(productBatches).returning({ id: productBatches.id }));
-        c('templateProducts',            await trx.delete(templateProducts).returning({ id: templateProducts.id }));
-        c('products',                    await trx.delete(products).returning({ id: products.id }));
+        await sd('stock_alerts',                   'stockAlerts',                 () => trx.delete(stockAlerts).returning({ id: stockAlerts.id }));
+        await sd('product_batches',                'productBatches',              () => trx.delete(productBatches).returning({ id: productBatches.id }));
+        await sd('template_products',              'templateProducts',            () => trx.delete(templateProducts).returning({ id: templateProducts.id }));
+        await sd('products',                       'products',                    () => trx.delete(products).returning({ id: products.id }));
 
         // ── Step 5: Broadcasts and messaging ──────────────────────────────────
-        c('broadcasts',                  await trx.delete(broadcasts).returning({ id: broadcasts.id }));
-        c('templateCampaigns',           await trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
-        c('messageTemplates',            await trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
+        await sd('broadcasts',                     'broadcasts',                  () => trx.delete(broadcasts).returning({ id: broadcasts.id }));
+        await sd('template_campaigns',             'templateCampaigns',           () => trx.delete(templateCampaigns).returning({ id: templateCampaigns.id }));
+        await sd('message_templates',              'messageTemplates',            () => trx.delete(messageTemplates).returning({ id: messageTemplates.id }));
 
         // ── Step 6: Customer groups ────────────────────────────────────────────
-        c('customerGroupMembers',        await trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
-        c('customerGroups',              await trx.delete(customerGroups).returning({ id: customerGroups.id }));
+        await sd('customer_group_members',         'customerGroupMembers',        () => trx.delete(customerGroupMembers).returning({ id: customerGroupMembers.id }));
+        await sd('customer_groups',                'customerGroups',              () => trx.delete(customerGroups).returning({ id: customerGroups.id }));
 
         // ── Step 7: Relationships and invitations ──────────────────────────────
-        c('wholesalerCustomerRelationships', await trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
-        c('customerInvitationTokens',    await trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
-        c('customerRegistrationRequests',await trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
+        await sd('wholesaler_customer_relationships', 'wholesalerCustomerRelationships', () => trx.delete(wholesalerCustomerRelationships).returning({ id: wholesalerCustomerRelationships.id }));
+        await sd('customer_invitation_tokens',     'customerInvitationTokens',    () => trx.delete(customerInvitationTokens).returning({ id: customerInvitationTokens.id }));
+        await sd('customer_registration_requests', 'customerRegistrationRequests',() => trx.delete(customerRegistrationRequests).returning({ id: customerRegistrationRequests.id }));
 
         // ── Step 8: Address and auth data ─────────────────────────────────────
-        c('deliveryAddresses',           await trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
-        c('smsVerificationCodes',        await trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
+        await sd('delivery_addresses',             'deliveryAddresses',           () => trx.delete(deliveryAddresses).returning({ id: deliveryAddresses.id }));
+        await sd('sms_verification_codes',         'smsVerificationCodes',        () => trx.delete(smsVerificationCodes).returning({ id: smsVerificationCodes.id }));
 
         // ── Step 9: Gamification / onboarding ─────────────────────────────────
-        c('onboardingMilestones',        await trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
-        c('userBadges',                  await trx.delete(userBadges).returning({ id: userBadges.id }));
+        await sd('onboarding_milestones',          'onboardingMilestones',        () => trx.delete(onboardingMilestones).returning({ id: onboardingMilestones.id }));
+        await sd('user_badges',                    'userBadges',                  () => trx.delete(userBadges).returning({ id: userBadges.id }));
 
         // ── Step 10: Subscriptions and team (preserve admin subscription) ─────
-        c('userSubscriptions',           await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
-        c('teamMembers',                 await trx.delete(teamMembers).returning({ id: teamMembers.id }));
-        c('tabPermissions',              await trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
+        if (has('user_subscriptions')) {
+          c('userSubscriptions', await trx.delete(userSubscriptions).where(sql`user_id != ${adminUser.id}`).returning({ id: userSubscriptions.id }));
+        } else { skipped.push('user_subscriptions'); c('userSubscriptions', []); }
+        await sd('team_members',                   'teamMembers',                 () => trx.delete(teamMembers).returning({ id: teamMembers.id }));
+        await sd('tab_permissions',                'tabPermissions',              () => trx.delete(tabPermissions).returning({ id: tabPermissions.id }));
 
         // ── Step 11: Price lists ───────────────────────────────────────────────
-        c('priceListAssignments',        await trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
-        c('priceListItems',              await trx.delete(priceListItems).returning({ id: priceListItems.id }));
-        c('priceLists',                  await trx.delete(priceLists).returning({ id: priceLists.id }));
+        await sd('price_list_assignments',         'priceListAssignments',        () => trx.delete(priceListAssignments).returning({ id: priceListAssignments.id }));
+        await sd('price_list_items',               'priceListItems',              () => trx.delete(priceListItems).returning({ id: priceListItems.id }));
+        await sd('price_lists',                    'priceLists',                  () => trx.delete(priceLists).returning({ id: priceLists.id }));
 
         // ── Step 12: Delete users ──────────────────────────────────────────────
-        c('retailerUsers',               await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
-        c('wholesalerUsers',             await trx.delete(users).where(
+        c('retailerUsers',  await trx.delete(users).where(eq(users.role, 'retailer')).returning({ id: users.id }));
+        c('wholesalerUsers', await trx.delete(users).where(
           and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)
         ).returning({ id: users.id }));
 
@@ -1826,6 +1854,9 @@ export function registerAdminRoutes(app: Express): void {
         await trx.update(users).set({ orderNumberCounter: 0 }).where(eq(users.id, adminUser.id));
       });
 
+      if (skipped.length > 0) {
+        console.log(`⚠️  Go-live reset: skipped ${skipped.length} absent tables: ${skipped.join(', ')}`);
+      }
       const totalDeleted = Object.values(counts).reduce((a, b) => a + b, 0);
       console.log(`🚀 Go-live reset complete. Total rows deleted: ${totalDeleted}`, counts);
       res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted: counts, totalDeleted });
