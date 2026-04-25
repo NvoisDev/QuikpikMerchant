@@ -1788,27 +1788,62 @@ export function registerAdminRoutes(app: Express): void {
       const truncateTargets = [...existing].filter(t => !preservedTables.has(t));
 
       // ── Pre-count rows for the success response ────────────────────────────
-      // Capture counts before wiping so the response shows what was deleted.
-      // Only count known/named tables; legacy tables are implicitly included.
+      // Capture counts before wiping so the response mirrors the preview breakdown
+      // the admin saw before confirming. Legacy tables are wiped implicitly by CASCADE
+      // but aren't counted here (they weren't shown in the preview either).
       const n = (rows: { n: unknown }[]) => Number(rows[0].n);
       const sc = (tableName: string, q: Promise<{ n: unknown }[]>) =>
         existing.has(tableName) ? q.then(n) : Promise.resolve(0);
 
       const [
-        retailerCount, wholesalerCount, orderCount, orderItemCount, productCount,
-        broadcastCount, customerGroupCount, relationshipCount,
-        subscriptionCount, priceListCount,
+        wholesalerCount, retailerCount, orderCount, orderItemCount, stockMovementCount,
+        productCount, productBatchCount, stockAlertCount,
+        broadcastCount, messageTemplateCount, templateCampaignCount, templateProductCount,
+        customerGroupCount, customerGroupMemberCount,
+        relationshipCount, invitationCount, registrationCount,
+        deliveryAddressCount, smsCodeCount,
+        onboardingCount, userBadgeCount,
+        subscriptionCount, teamMemberCount, tabPermissionCount,
+        priceListCount, priceListItemCount, priceListAssignmentCount,
+        customerInsightCount, businessIntelligenceCount, inventoryInsightCount,
+        financialPerformanceCount, productPerfCount, promotionAnalyticsCount,
+        stockUpdateNotifCount, customerProfileNotifCount,
       ] = await Promise.all([
-        sc('users',        db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
-        sc('users',        db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
-        sc('orders',       db.select({ n: count() }).from(orders)),
-        sc('order_items',  db.select({ n: count() }).from(orderItems)),
-        sc('products',     db.select({ n: count() }).from(products)),
-        sc('broadcasts',   db.select({ n: count() }).from(broadcasts)),
-        sc('customer_groups', db.select({ n: count() }).from(customerGroups)),
-        sc('wholesaler_customer_relationships', db.select({ n: count() }).from(wholesalerCustomerRelationships)),
-        sc('user_subscriptions', db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != ${adminUser.id}`)),
-        sc('price_lists',  db.select({ n: count() }).from(priceLists)),
+        sc('users',                                  db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
+        sc('users',                                  db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
+        sc('orders',                                 db.select({ n: count() }).from(orders)),
+        sc('order_items',                            db.select({ n: count() }).from(orderItems)),
+        sc('stock_movements',                        db.select({ n: count() }).from(stockMovements)),
+        sc('products',                               db.select({ n: count() }).from(products)),
+        sc('product_batches',                        db.select({ n: count() }).from(productBatches)),
+        sc('stock_alerts',                           db.select({ n: count() }).from(stockAlerts)),
+        sc('broadcasts',                             db.select({ n: count() }).from(broadcasts)),
+        sc('message_templates',                      db.select({ n: count() }).from(messageTemplates)),
+        sc('template_campaigns',                     db.select({ n: count() }).from(templateCampaigns)),
+        sc('template_products',                      db.select({ n: count() }).from(templateProducts)),
+        sc('customer_groups',                        db.select({ n: count() }).from(customerGroups)),
+        sc('customer_group_members',                 db.select({ n: count() }).from(customerGroupMembers)),
+        sc('wholesaler_customer_relationships',      db.select({ n: count() }).from(wholesalerCustomerRelationships)),
+        sc('customer_invitation_tokens',             db.select({ n: count() }).from(customerInvitationTokens)),
+        sc('customer_registration_requests',         db.select({ n: count() }).from(customerRegistrationRequests)),
+        sc('delivery_addresses',                     db.select({ n: count() }).from(deliveryAddresses)),
+        sc('sms_verification_codes',                 db.select({ n: count() }).from(smsVerificationCodes)),
+        sc('onboarding_milestones',                  db.select({ n: count() }).from(onboardingMilestones)),
+        sc('user_badges',                            db.select({ n: count() }).from(userBadges)),
+        sc('user_subscriptions',                     db.select({ n: count() }).from(userSubscriptions).where(sql`user_id != ${adminUser.id}`)),
+        sc('team_members',                           db.select({ n: count() }).from(teamMembers)),
+        sc('tab_permissions',                        db.select({ n: count() }).from(tabPermissions)),
+        sc('price_lists',                            db.select({ n: count() }).from(priceLists)),
+        sc('price_list_items',                       db.select({ n: count() }).from(priceListItems)),
+        sc('price_list_assignments',                 db.select({ n: count() }).from(priceListAssignments)),
+        sc('customer_insights',                      db.select({ n: count() }).from(customerInsights)),
+        sc('business_intelligence',                  db.select({ n: count() }).from(businessIntelligence)),
+        sc('inventory_insights',                     db.select({ n: count() }).from(inventoryInsights)),
+        sc('financial_performance',                  db.select({ n: count() }).from(financialPerformance)),
+        sc('product_performance_summary',            db.select({ n: count() }).from(productPerformanceSummary)),
+        sc('promotion_analytics',                    db.select({ n: count() }).from(promotionAnalytics)),
+        sc('stock_update_notifications',             db.select({ n: count() }).from(stockUpdateNotifications)),
+        sc('customer_profile_update_notifications',  db.select({ n: count() }).from(customerProfileUpdateNotifications)),
       ]);
 
       // ── Transaction ────────────────────────────────────────────────────────
@@ -1837,20 +1872,38 @@ export function registerAdminRoutes(app: Express): void {
         await trx.update(users).set({ orderNumberCounter: 0 }).where(eq(users.id, adminUser.id));
       });
 
-      const deleted = {
-        customers: retailerCount,
+      const deleted: Record<string, number> = {
         wholesalers: wholesalerCount,
+        customers: retailerCount,
         orders: orderCount,
         orderItems: orderItemCount,
+        stockMovements: stockMovementCount,
         products: productCount,
+        productBatches: productBatchCount,
+        stockAlerts: stockAlertCount,
         broadcasts: broadcastCount,
+        messageTemplates: messageTemplateCount,
+        campaigns: templateCampaignCount,
+        templateProducts: templateProductCount,
         customerGroups: customerGroupCount,
+        customerGroupMembers: customerGroupMemberCount,
         relationships: relationshipCount,
+        invitations: invitationCount,
+        registrationRequests: registrationCount,
+        deliveryAddresses: deliveryAddressCount,
+        smsCodes: smsCodeCount,
+        onboardingMilestones: onboardingCount,
+        userBadges: userBadgeCount,
         subscriptions: subscriptionCount,
+        teamMembers: teamMemberCount,
+        tabPermissions: tabPermissionCount,
         priceLists: priceListCount,
+        priceListItems: priceListItemCount,
+        priceListAssignments: priceListAssignmentCount,
+        analyticsInsights: customerInsightCount + businessIntelligenceCount + inventoryInsightCount + financialPerformanceCount + productPerfCount + promotionAnalyticsCount,
+        notifications: stockUpdateNotifCount + customerProfileNotifCount,
       };
-      const totalDeleted = retailerCount + wholesalerCount + orderCount + orderItemCount + productCount +
-        broadcastCount + customerGroupCount + relationshipCount + subscriptionCount + priceListCount;
+      const totalDeleted = Object.values(deleted).reduce((a, b) => a + b, 0);
 
       console.log(`🚀 Go-live reset complete via TRUNCATE CASCADE. Key counts:`, deleted);
       res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted, totalDeleted });
