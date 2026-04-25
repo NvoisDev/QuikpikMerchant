@@ -1780,7 +1780,12 @@ export function registerAdminRoutes(app: Express): void {
       //  - 'subscription_plans': platform config (free/standard/premium plan definitions)
       //    — never test data and must never be wiped. Also prevents CASCADE from reaching
       //    user_subscriptions via the planId FK (user_subscriptions.planId → subscription_plans).
-      const preservedTables = new Set(['users', 'session', 'sessions', 'user_subscriptions', 'subscription_plans']);
+      const preservedTables = new Set([
+        'users', 'session', 'sessions',
+        'user_subscriptions',    // handled with WHERE DELETE — admin sub must survive
+        'subscription_plans',    // platform config; also blocks CASCADE into user_subscriptions
+        '__drizzle_migrations',  // migration bookkeeping — never test data
+      ]);
 
       // Build the TRUNCATE target list — everything else in the schema.
       // This automatically includes any legacy tables in prod that reference
@@ -1845,6 +1850,8 @@ export function registerAdminRoutes(app: Express): void {
         sc('stock_update_notifications',             db.select({ n: count() }).from(stockUpdateNotifications)),
         sc('customer_profile_update_notifications',  db.select({ n: count() }).from(customerProfileUpdateNotifications)),
       ]);
+
+      console.log(`🗑️  Go-live reset: TRUNCATE CASCADE targeting ${truncateTargets.length} tables: ${truncateTargets.join(', ')}`);
 
       // ── Transaction ────────────────────────────────────────────────────────
       await db.transaction(async (trx) => {
