@@ -1093,6 +1093,12 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
 
   async checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean> {
     try {
+      // Admin team members bypass all tab restrictions
+      if (userRole === 'admin') return true;
+
+      // Viewer inherits member tab access (same tabs, read-only UI enforced in frontend)
+      const effectiveRole = userRole === 'viewer' ? 'member' : userRole;
+
       const permission = await db
         .select()
         .from(tabPermissions)
@@ -1117,7 +1123,7 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
       }
 
       // Check if user role is in allowed roles
-      return tabPermission.allowedRoles.includes(userRole);
+      return tabPermission.allowedRoles.includes(effectiveRole);
     } catch (error) {
       console.error("Error checking tab access:", error);
       // Default to allow access on error

@@ -62,7 +62,8 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const { isDesktopCollapsed, toggleDesktopCollapsed, isMobileOpen, closeMobileSidebar } = useSidebarContext();
-  const { checkTabAccess } = useSidebarPermissions();
+  const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
+  const isTeamMember = user?.role === 'team_member';
 
   const { data: subscriptionData } = useQuery({
     queryKey: ["/api/subscriptions/current"],
@@ -159,6 +160,19 @@ export default function Sidebar() {
 
           <nav className="flex-1 py-3 overflow-y-auto">
             <div className={cn("space-y-0.5", dc ? "lg:px-1 px-3" : "px-3")}>
+              {/* Show skeleton rows while team-member permissions are being fetched */}
+              {isTeamMember && permissionsLoading && Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex items-center rounded-lg px-3 py-2.5",
+                    dc ? "lg:justify-center lg:px-2" : ""
+                  )}
+                >
+                  <div className={cn("h-4 w-4 rounded bg-slate-700 animate-pulse flex-shrink-0", dc ? "lg:mr-0 mr-3" : "mr-3")} />
+                  {!dc && <div className="h-3 rounded bg-slate-700 animate-pulse flex-1 max-w-[120px]" />}
+                </div>
+              ))}
               {navigation.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = location === item.href && item.href !== "#";

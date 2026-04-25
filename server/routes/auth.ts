@@ -1611,8 +1611,8 @@ export function registerAuthRoutes(app: Express): void {
         return res.json({}); // Return empty object for non-team members
       }
       
-      const tabNames = ['dashboard', 'products', 'promotions', 'orders', 'customers', 'campaigns', 'analytics', 'integrations', 'marketplace', 'team-management', 'subscription', 'settings'];
-      const userRole = 'member';
+      const tabNames = ['dashboard', 'products', 'promotions', 'orders', 'customers', 'campaigns', 'analytics', 'integrations', 'marketplace', 'team-management', 'subscription', 'settings', 'finance'];
+      const userRole: string = user.teamMemberRole || 'member';
       const permissionChecks: Record<string, boolean> = {};
       
       // Check access for each tab

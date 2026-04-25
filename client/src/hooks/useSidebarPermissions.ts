@@ -27,9 +27,9 @@ export function useSidebarPermissions() {
       return true;
     }
 
-    // While permissions are loading, show tabs to avoid a blank nav flash
+    // While permissions are loading, hide tabs (avoid flash of restricted content)
     if (permissionsLoading) {
-      return true;
+      return false;
     }
 
     // Once loaded, only show if the backend explicitly returned true
