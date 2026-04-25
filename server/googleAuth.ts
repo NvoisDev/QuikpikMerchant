@@ -314,6 +314,15 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         
         console.log(`✅ Auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
+        // Enrich team members with their role from the teamMembers table so
+        // downstream endpoints can use req.user.teamMemberRole directly.
+        if (user.role === 'team_member' && user.wholesalerId) {
+          try {
+            const members = await storage.getTeamMembers(user.wholesalerId);
+            const member = members.find((m: any) => m.email === user.email);
+            if (member) (req.user as any).teamMemberRole = member.role;
+          } catch { /* silent — downstream endpoints fall back to 'member' */ }
+        }
         return next();
       }
     }
@@ -354,7 +363,14 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         
         console.log(`✅ Legacy auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
-        
+        // Enrich team members with their role from the teamMembers table
+        if (user.role === 'team_member' && user.wholesalerId) {
+          try {
+            const members = await storage.getTeamMembers(user.wholesalerId);
+            const member = members.find((m: any) => m.email === user.email);
+            if (member) (req.user as any).teamMemberRole = member.role;
+          } catch { /* silent — downstream endpoints fall back to 'member' */ }
+        }
         // Update session for consistency
         (req.session as any).user = user;
         return next();
