@@ -426,14 +426,20 @@ export const requireOwner = (req: any, res: any, next: any) => {
 export const requireMemberPermission = (area: string) => async (req: any, res: any, next: any) => {
   if (req.user?.role === 'team_member' && req.user?.wholesalerId) {
     try {
-      const teamMemberRole: string = req.user.teamMemberRole || 'member';
+      // Role must be explicitly resolved — never default to 'member' for write paths.
+      // req.user.teamMemberRole is populated by requireAuth (Task #535). If missing, deny.
+      const teamMemberRole: string | undefined = req.user.teamMemberRole;
+      if (!teamMemberRole) {
+        return res.status(403).json({ message: 'Unable to verify role. Access denied.' });
+      }
       // Admins bypass all restrictions
       if (teamMemberRole === 'admin') return next();
       // Viewers can never write
       if (teamMemberRole === 'viewer') return res.status(403).json({ message: 'Viewers can only view data.' });
       // Members: check whether the owner has granted tab access for this area.
       // Tab Permissions is the single source of truth — if you can see the tab, you can use it.
-      const hasAccess = await storage.checkTabAccess(req.user.wholesalerId, area, 'member');
+      // failOpen=false: storage errors must deny, not grant, on write paths.
+      const hasAccess = await storage.checkTabAccess(req.user.wholesalerId, area, 'member', false);
       if (!hasAccess) {
         return res.status(403).json({ message: `You do not have permission to manage ${area}.` });
       }

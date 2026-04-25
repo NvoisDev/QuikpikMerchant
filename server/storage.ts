@@ -345,7 +345,7 @@ export interface IStorage {
   getTabPermissions(wholesalerId: string): Promise<TabPermission[]>;
   updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles?: string[]): Promise<TabPermission>;
   createDefaultTabPermissions(wholesalerId: string): Promise<void>;
-  checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean>;
+  checkTabAccess(wholesalerId: string, tabName: string, userRole: string, failOpen?: boolean): Promise<boolean>;
 
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
@@ -1091,7 +1091,7 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
     }
   }
 
-  async checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean> {
+  async checkTabAccess(wholesalerId: string, tabName: string, userRole: string, failOpen = true): Promise<boolean> {
     try {
       // Admin team members bypass all tab restrictions
       if (userRole === 'admin') return true;
@@ -1126,8 +1126,9 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
       return tabPermission.allowedRoles.includes(effectiveRole);
     } catch (error) {
       console.error("Error checking tab access:", error);
-      // Default to allow access on error
-      return true;
+      // failOpen=true (default): used for sidebar visibility — missing tab just disappears, not an error.
+      // failOpen=false: used for write-path authorization — storage errors must deny, not grant access.
+      return failOpen;
     }
   }
 
