@@ -5,7 +5,7 @@ import {
   requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
-  smsVerificationCodes,
+  smsVerificationCodes, stockUpdateNotifications,
 } from "./shared";
 
 // Helper: get the effective admin email (handles impersonation mode)
@@ -1534,6 +1534,7 @@ export function registerAdminRoutes(app: Express): void {
         orderItems: 0,
         orders: 0,
         stockMovements: 0,
+        stockUpdateNotifications: 0,
         customerProfileUpdateNotifications: 0,
         smsVerificationCodes: 0,
       };
@@ -1556,7 +1557,13 @@ export function registerAdminRoutes(app: Express): void {
         deleted.orders = deletedOrders.length;
       }
 
-      // Step 4: Delete customer-scoped notifications and SMS codes
+      // Step 4: Delete stock update notifications by wholesaler ID (covers test wholesaler accounts)
+      const deletedStockNotifs = await db.delete(stockUpdateNotifications)
+        .where(inArray(stockUpdateNotifications.wholesalerId, testUserIds))
+        .returning({ id: stockUpdateNotifications.id });
+      deleted.stockUpdateNotifications = deletedStockNotifs.length;
+
+      // Step 5: Delete customer-scoped notifications and SMS codes
       const deletedProfileNotifs = await db.delete(customerProfileUpdateNotifications)
         .where(inArray(customerProfileUpdateNotifications.customerId, testUserIds))
         .returning({ id: customerProfileUpdateNotifications.id });
