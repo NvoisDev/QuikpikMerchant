@@ -210,13 +210,15 @@ export function registerAdminRoutes(app: Express): void {
 
       let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0;
       const processedOrders = recentOrders.map(o => {
-        const isCancelled = o.status === 'cancelled';
-        const custFee = isCancelled ? 0 : parseFloat(o.customerTransactionFee || '0');
-        const platFee = isCancelled ? 0 : parseFloat(o.platformFee || '0');
-        const sub = isCancelled ? 0 : parseFloat(o.subtotal || '0');
-        totalCustomerFees += custFee;
-        totalPlatformFees += platFee;
-        totalGMV += sub;
+        const custFee = parseFloat(o.customerTransactionFee || '0');
+        const platFee = parseFloat(o.platformFee || '0');
+        const sub = parseFloat(o.subtotal || '0');
+        // Cancelled orders are excluded from platform totals — they never completed
+        if (o.status !== 'cancelled') {
+          totalCustomerFees += custFee;
+          totalPlatformFees += platFee;
+          totalGMV += sub;
+        }
         return {
           ...o,
           customerTransactionFee: custFee,
