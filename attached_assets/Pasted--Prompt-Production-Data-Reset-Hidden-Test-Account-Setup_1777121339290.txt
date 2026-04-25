@@ -1,0 +1,126 @@
+🧾 Prompt: Production Data Reset + Hidden Test Account Setup (SAFE FOR GO-LIVE)
+🎯 Objective
+
+Prepare the platform for go-live by:
+
+Clearing all non-production (test) data
+Creating a hidden test account/environment that:
+Does NOT appear to real users
+Does NOT affect analytics or reporting
+Can still be used for ongoing testing
+🚨 NON-NEGOTIABLE RULES
+Do NOT delete:
+Core system configurations
+Admin accounts
+Product structure/schema
+Do NOT break:
+Authentication (OTP login)
+Payments (Stripe)
+WhatsApp integration
+
+👉 This must be a controlled cleanup, NOT a wipe of the system
+
+🧹 PART 1: Data Cleanup (Pre-Go-Live Reset)
+✅ Delete / Clear:
+Orders (quotes + online)
+Invoices
+Payments (test records)
+Messages / chats
+Notifications
+Temporary customers (if clearly test)
+⚠️ Review Before Deleting:
+Products:
+Keep real products
+Remove obvious test items (e.g. “Test Product”, “Sample”)
+Customers:
+Keep real onboarding users (if any)
+Remove test numbers/emails
+❌ Do NOT delete:
+Wholesaler accounts (unless test)
+Product catalog structure
+Pricing setup
+Batch/stock structure (unless fake data)
+🧠 Optional (safer approach)
+
+Instead of hard delete:
+
+mark records as:
+is_test = true
+or
+status = archived
+
+👉 Allows rollback if needed
+
+🧪 PART 2: Hidden Test Account (VERY IMPORTANT)
+Create a dedicated test user:
+phone_number: your number or internal number
+name: "Test Account"
+is_test_account: true
+🔒 Visibility Rules
+
+Test accounts MUST:
+
+❌ Not appear in:
+Customer lists
+Wholesaler dashboards
+Analytics
+Reports
+❌ Not receive:
+Broadcasts
+Promotions
+⚙️ Backend Logic
+
+Add condition:
+
+WHERE is_test_account = false
+
+👉 Apply to:
+
+Listings
+dashboards
+analytics queries
+💬 Messaging Isolation
+Test account messages should:
+NOT trigger real workflows
+NOT notify real wholesalers (optional but recommended)
+💳 Payments (IMPORTANT)
+
+For test account:
+
+Either:
+Use Stripe test mode
+OR:
+Block real payments
+
+👉 Prevent accidental real charges
+
+🔁 PART 3: Safe Testing Mode (Optional but powerful)
+
+Add:
+
+environment = "test" | "live"
+
+OR
+
+is_internal = true
+
+👉 Allows:
+
+Internal testing without affecting live users
+🧪 FINAL CHECKLIST BEFORE GO-LIVE
+No fake orders visible
+No test customers visible
+Pricing looks correct
+Fees display correctly (“Service Fee”)
+Stock levels are accurate
+Invoices clean (no test refs like “INV-001 test”)
+⚠️ Common Mistakes to Avoid
+❌ Deleting everything (breaking relationships)
+❌ Leaving test orders visible
+❌ Test account appearing in analytics
+❌ Accidentally charging real cards from test account
+✅ Acceptance Criteria
+Platform looks clean and production-ready
+No test data visible to users
+Test account exists but is fully hidden
+All systems (payments, WhatsApp, stock) still function normally
