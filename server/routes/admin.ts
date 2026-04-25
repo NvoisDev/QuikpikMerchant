@@ -1736,15 +1736,13 @@ export function registerAdminRoutes(app: Express): void {
 
   // POST /api/admin/go-live-reset
   // Wipes all test data from the platform, preserving only the admin account.
-  // Body: { confirm: "RESET", deleteProducts?: boolean }
-  // NOTE: products are always deleted — they cannot exist without their wholesaler (FK without CASCADE).
-  //       The deleteProducts field is accepted for API-contract compatibility but has no effect.
+  // Body: { confirm: "RESET" }
+  // Products are always deleted — they cannot exist without their wholesaler (FK without CASCADE).
   app.post('/api/admin/go-live-reset', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) return res.status(403).json({ error: 'Forbidden' });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { confirm, deleteProducts: _deleteProducts } = req.body;
+      const { confirm } = req.body;
       if (confirm !== 'RESET') {
         return res.status(400).json({ error: 'Confirmation text must be exactly "RESET"' });
       }

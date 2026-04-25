@@ -1803,7 +1803,7 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
 
   const goLiveReset = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/go-live-reset", { confirm: "RESET", deleteProducts: true });
+      const res = await apiRequest("POST", "/api/admin/go-live-reset", { confirm: "RESET" });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Reset failed"); }
       return res.json() as Promise<{ deleted: Record<string, number>; totalDeleted: number }>;
     },
@@ -1812,6 +1812,7 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
       setResetConfirmText("");
       setResetModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
       toast({ title: `Platform reset complete — ${data.totalDeleted} rows wiped` });
     },
