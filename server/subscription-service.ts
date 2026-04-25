@@ -99,13 +99,20 @@ export class SubscriptionService {
         return createdPlans;
       }
 
-      // Always sync features and limits so changes in code are reflected in DB
+      // Always sync all plan fields so any code-level change is reflected in DB on restart
       for (const plan of defaultPlans) {
         await db.update(subscriptionPlans)
-          .set({ features: plan.features, limits: plan.limits })
+          .set({
+            monthlyPrice: plan.monthlyPrice,
+            currency: plan.currency,
+            description: plan.description,
+            features: plan.features,
+            limits: plan.limits,
+            sortOrder: plan.sortOrder,
+          })
           .where(eq(subscriptionPlans.planId, plan.planId));
       }
-      console.log('✅ Subscription plan features/limits synced');
+      console.log('✅ Subscription plan data synced');
       return await db.select().from(subscriptionPlans);
       
     } catch (error) {
