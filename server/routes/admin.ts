@@ -39,13 +39,13 @@ export function registerAdminRoutes(app: Express): void {
           subtotal: orders.subtotal,
           platformFee: orders.platformFee,
           customerTransactionFee: orders.customerTransactionFee,
-        }).from(orders),
+        }).from(orders).where(sql`${orders.status} != 'cancelled'`),
         db.select({ count: count() }).from(users)
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart))),
         db.select({ count: count() }).from(orders)
-          .where(gte(orders.createdAt, monthStart)),
+          .where(and(gte(orders.createdAt, monthStart), sql`${orders.status} != 'cancelled'`)),
         db.select({ subtotal: orders.subtotal }).from(orders)
-          .where(gte(orders.createdAt, todayStart)),
+          .where(and(gte(orders.createdAt, todayStart), sql`${orders.status} != 'cancelled'`)),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
           .from(subscriptionPlans),
       ]);
@@ -124,19 +124,22 @@ export function registerAdminRoutes(app: Express): void {
           platformFee: orders.platformFee,
           customerTransactionFee: orders.customerTransactionFee,
           createdAt: orders.createdAt,
+          status: orders.status,
         }).from(orders).where(inArray(orders.wholesalerId, wholesalerIds));
 
         for (const o of orderStats) {
           const wid = o.wholesalerId;
           if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
-          ordersByWholesaler[wid].count++;
-          ordersByWholesaler[wid].gmv += parseFloat(o.subtotal || '0');
-          ordersByWholesaler[wid].customerFees += parseFloat(o.customerTransactionFee || '0');
-          ordersByWholesaler[wid].platformFees += parseFloat(o.platformFee || '0');
           const oDate = o.createdAt ? new Date(o.createdAt) : null;
           if (oDate && (!ordersByWholesaler[wid].lastOrderAt || oDate > ordersByWholesaler[wid].lastOrderAt!)) {
             ordersByWholesaler[wid].lastOrderAt = oDate;
           }
+          // Cancelled orders don't count towards GMV, fees, or order count
+          if (o.status === 'cancelled') continue;
+          ordersByWholesaler[wid].count++;
+          ordersByWholesaler[wid].gmv += parseFloat(o.subtotal || '0');
+          ordersByWholesaler[wid].customerFees += parseFloat(o.customerTransactionFee || '0');
+          ordersByWholesaler[wid].platformFees += parseFloat(o.platformFee || '0');
         }
       }
 
