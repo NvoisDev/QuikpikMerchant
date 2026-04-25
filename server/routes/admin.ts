@@ -1641,8 +1641,8 @@ export function registerAdminRoutes(app: Express): void {
   // Used by both the preview and reset endpoints to guard against missing tables
   // in older production databases where not all migrations have run yet.
   const getExistingTables = async (): Promise<Set<string>> => {
-    const result = await db.execute(sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);
-    return new Set((result as any).rows.map((r: any) => r.tablename as string));
+    const result = await db.execute<{ tablename: string }>(sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);
+    return new Set(result.rows.map(r => r.tablename));
   };
 
   // GET /api/admin/go-live-reset/preview
@@ -1775,13 +1775,13 @@ export function registerAdminRoutes(app: Express): void {
       const c = <T>(label: string, rows: T[]) => { counts[label] = rows.length; return rows.length; };
 
       await db.transaction(async (trx) => {
-        const sd = async <T extends { id: unknown }>(
+        const sd = async (
           tableName: string,
           label: string,
-          delFn: () => Promise<T[]>
-        ): Promise<T[]> => {
-          if (!has(tableName)) { skipped.push(tableName); c(label, []); return []; }
-          return c(label, await delFn()) as unknown as T[];
+          delFn: () => Promise<{ id: unknown }[]>
+        ): Promise<void> => {
+          if (!has(tableName)) { skipped.push(tableName); c(label, []); return; }
+          c(label, await delFn());
         };
 
         // ── Step 1: Order line items and related ───────────────────────────────
