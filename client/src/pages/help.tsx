@@ -1158,7 +1158,7 @@ Your payment account has two key states:
 
 #### Revenue Breakdown
 - **Platform Fee**: Quikpik's service charge on eligible online card orders
-- **Customer Service Fee**: A small fee shown to the customer on card checkout only; it is not your revenue
+- **Customer Service Fee**: 5.5% + £0.50 shown to the customer on card checkout only; it is not your revenue
 - **You Keep**: The order subtotal after the platform fee
 - **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
 
@@ -1429,7 +1429,7 @@ Accurate cost prices make the Margin Overview a reliable tool for pricing decisi
 #### Service Fees
 Regardless of subscription plan:
 - **Platform Fee**: Quikpik's service charge on eligible online card orders, paid by the wholesaler
-- **Customer Service Fee**: A small fee added to customer card checkouts only
+- **Customer Service Fee**: 5.5% + £0.50 added to customer card checkouts only
 - **Payment Processing**: Handled by Stripe
 - **Your Revenue**: Order subtotal minus the platform fee; the customer service fee is not wholesaler revenue
 - **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
@@ -1532,7 +1532,7 @@ The payment summary in each order shows:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Customer Service Fee**: Card checkouts include a small service fee for the customer
+2. **Customer Service Fee**: 5.5% + £0.50 added to customer card checkouts (not your revenue)
 3. **Platform Fee**: A service fee deducted from the order subtotal for Quikpik
 4. **Wholesaler Payment**: Subtotal minus the platform fee transferred to your Stripe account
 5. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
