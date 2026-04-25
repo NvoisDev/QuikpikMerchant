@@ -585,16 +585,21 @@ export function registerAdminRoutes(app: Express): void {
       const syncPriceId = syncSub.items?.data?.[0]?.price?.id;
       const syncUnitAmount = syncSub.items?.data?.[0]?.price?.unit_amount ?? 0;
 
-      // Resolve plan: override → DB lookup → amount fallback
+      // Resolve plan: override → DB lookup → amount fallback; track resolution source
       let resolvedPlanId: string | undefined = overridePlanId;
+      let planSource: 'override' | 'db_lookup' | 'amount_fallback' = 'override';
       if (!resolvedPlanId) {
         const [syncPlanRow] = await db.select().from(subscriptionPlans)
           .where(eq(subscriptionPlans.stripePriceId, syncPriceId || ''));
-        resolvedPlanId = syncPlanRow?.planId && syncPlanRow.planId !== 'free' ? syncPlanRow.planId : undefined;
+        if (syncPlanRow?.planId && syncPlanRow.planId !== 'free') {
+          resolvedPlanId = syncPlanRow.planId;
+          planSource = 'db_lookup';
+        }
       }
       if (!resolvedPlanId) {
         if (syncUnitAmount >= 4999) resolvedPlanId = 'premium';
         else if (syncUnitAmount >= 1999) resolvedPlanId = 'standard';
+        if (resolvedPlanId) planSource = 'amount_fallback';
       }
       if (!resolvedPlanId || resolvedPlanId === 'free') {
         return res.status(400).json({ error: `Could not resolve paid plan for price ${syncPriceId} (amount ${syncUnitAmount}p) — pass planId to override` });
@@ -648,7 +653,7 @@ export function registerAdminRoutes(app: Express): void {
         stripeCustomerId: syncCustId,
         stripeSubscriptionId: syncSub.id,
         periodEnd: syncPeriodEnd.toISOString(),
-        source: overridePlanId ? 'override' : syncPriceId && !overridePlanId ? 'amount_fallback' : 'db_lookup',
+        source: planSource,
       });
     } catch (error) {
       console.error('❌ Admin sync-by-customer error:', error);

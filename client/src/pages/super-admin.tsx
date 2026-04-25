@@ -1801,15 +1801,17 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
 
   const syncByEmail = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/subscriptions/sync-by-customer", {
-        email: syncEmail.trim().toLowerCase(),
-        ...(syncPlanOverride ? { planId: syncPlanOverride } : {}),
-      });
+      const identifier = syncEmail.trim();
+      const isCustomerId = identifier.startsWith("cus_");
+      const body = isCustomerId
+        ? { stripeCustomerId: identifier, ...(syncPlanOverride ? { planId: syncPlanOverride } : {}) }
+        : { email: identifier.toLowerCase(), ...(syncPlanOverride ? { planId: syncPlanOverride } : {}) };
+      const res = await apiRequest("POST", "/api/admin/subscriptions/sync-by-customer", body);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Sync failed");
-      return data as { planId?: string; userEmail?: string; stripeSubscriptionId?: string };
+      return data as { planId?: string; userEmail?: string; stripeSubscriptionId?: string; source?: string };
     },
-    onSuccess: (data: { planId?: string; userEmail?: string; stripeSubscriptionId?: string }) => {
+    onSuccess: (data: { planId?: string; userEmail?: string; stripeSubscriptionId?: string; source?: string }) => {
       toast({ title: `Synced ${data?.planId ?? "plan"} for ${data?.userEmail ?? "user"}`, description: data?.stripeSubscriptionId });
       setSyncEmail("");
       setSyncPlanOverride("");
@@ -1941,12 +1943,12 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
 
       {/* Sync by Email utility */}
       <Card className="border-gray-200 shadow-none rounded-xl">
-        <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Sync Subscription by Email</CardTitle></CardHeader>
+        <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Sync Subscription from Stripe</CardTitle></CardHeader>
         <CardContent className="px-4 pb-4 space-y-3">
-          <p className="text-xs text-gray-500">Look up a user by email, find their active Stripe subscription, and sync it to our database. Use when a customer paid but is stuck on the free tier.</p>
+          <p className="text-xs text-gray-500">Look up a user by email or Stripe customer ID, find their active Stripe subscription, and sync it to our database. Use when a customer paid but is stuck on the free tier.</p>
           <div className="space-y-2">
-            <Label className="text-xs text-gray-600">Customer Email</Label>
-            <Input className="text-xs h-8 border-gray-200" value={syncEmail} onChange={e => setSyncEmail(e.target.value)} placeholder="customer@example.com" type="email" />
+            <Label className="text-xs text-gray-600">Email or Stripe Customer ID</Label>
+            <Input className="text-xs h-8 border-gray-200" value={syncEmail} onChange={e => setSyncEmail(e.target.value)} placeholder="customer@example.com or cus_abc123…" />
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-gray-600">Plan Override (optional)</Label>
