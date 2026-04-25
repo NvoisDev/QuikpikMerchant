@@ -76,7 +76,7 @@ describe('guest browsing regression coverage', () => {
 
   it('keeps public help copy aligned with guest browsing, OTP, and fee rules', () => {
     expect(landingPageSource).toContain('prices and ordering stay locked until the seller approves them');
-    expect(landingPageSource).toContain('4.6% on online card orders');
+    expect(landingPageSource).toContain('Small fee on online card orders');
     expect(landingPageSource).toContain('Support Available');
     expect(landingPageSource).not.toContain("products and prices without registration");
     expect(landingPageSource).not.toContain('Premium Support Included');
