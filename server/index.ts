@@ -212,10 +212,27 @@ async function fixStripePricesIfNeeded() {
   let checked = 0, fixed = 0;
   for (const plan of plans) {
     const expected = EXPECTED[plan.planId];
-    if (!expected || !plan.stripePriceId) continue;
+    if (!expected) continue;
     checked++;
 
     try {
+      // No price ID yet — create one from scratch
+      if (!plan.stripePriceId) {
+        console.log(`🆕 No Stripe price recorded for ${plan.planId} — creating one`);
+        const newPrice = await stripeClient.prices.create({
+          unit_amount: expected.unitAmount,
+          currency: expected.currency,
+          recurring: { interval: 'month' },
+          product: expected.productId,
+        });
+        await db.update(subscriptionPlans)
+          .set({ stripePriceId: newPrice.id, stripeProductId: expected.productId })
+          .where(eq(subscriptionPlans.planId, plan.planId));
+        console.log(`✅ Created Stripe price for ${plan.planId}: ${newPrice.id} (product: ${expected.productId})`);
+        fixed++;
+        continue;
+      }
+
       const price = await stripeClient.prices.retrieve(plan.stripePriceId);
       const productId = typeof price.product === 'string' ? price.product : price.product?.id;
       const isCorrect =

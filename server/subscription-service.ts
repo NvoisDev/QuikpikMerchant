@@ -46,8 +46,8 @@ export class SubscriptionService {
         {
           name: "Standard",
           planId: "standard", 
-          stripeProductId: "prod_standard", // Will be updated with real Stripe product ID
-          stripePriceId: "price_standard", // Will be updated with real Stripe price ID
+          stripeProductId: null,
+          stripePriceId: null,
           monthlyPrice: "19.99",
           currency: "GBP",
           description: "Perfect for growing wholesale businesses",
@@ -70,8 +70,8 @@ export class SubscriptionService {
         {
           name: "Premium",
           planId: "premium",
-          stripeProductId: "prod_premium", // Will be updated with real Stripe product ID  
-          stripePriceId: "price_premium", // Will be updated with real Stripe price ID
+          stripeProductId: null,
+          stripePriceId: null,
           monthlyPrice: "39.99",
           currency: "GBP", 
           description: "Everything you need to scale your wholesale business",
