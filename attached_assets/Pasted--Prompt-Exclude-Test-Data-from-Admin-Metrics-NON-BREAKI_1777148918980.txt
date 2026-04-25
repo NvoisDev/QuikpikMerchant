@@ -1,0 +1,95 @@
+🧾 Prompt: Exclude Test Data from Admin Metrics (NON-BREAKING)
+🎯 Objective
+
+Ensure that all admin panel metrics, dashboards, and financial reports display only live (real) data, excluding any test activity.
+
+This includes:
+
+Sales / revenue
+Costs / margins
+Subscription figures
+Orders / transactions
+🧠 Core Principle
+
+Test data should exist (for safety), but be completely invisible in reporting
+
+🧱 PART 1: Data Flagging (REQUIRED)
+
+Ensure the following flags exist and are used consistently:
+
+users.is_test_account = true/false
+orders.is_test = true/false
+payments.is_test = true/false
+subscriptions.is_test = true/false
+🧠 Rule:
+Any record linked to a test account MUST be treated as test data
+⚙️ PART 2: Filtering Logic (CRITICAL)
+
+Apply global filter to ALL admin queries:
+
+WHERE is_test = false
+
+AND / OR:
+
+WHERE users.is_test_account = false
+📊 PART 3: Apply to ALL Admin Areas
+1. Dashboard Metrics
+
+Exclude test data from:
+
+Total revenue
+Total orders
+Margin calculations
+Active users
+2. Financials
+
+Exclude:
+
+Test payments
+Test refunds
+Test subscription revenue
+3. Subscription Metrics
+Only count live wholesalers on real plans
+Exclude test subscriptions entirely
+4. Orders & Sales Tables
+Hide test orders by default
+Do NOT mix test + live data
+🔍 OPTIONAL (Recommended)
+Add Admin Toggle:
+[ Show Test Data ] (OFF by default)
+
+👉 Allows debugging without polluting metrics
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT delete test data
+Do NOT break existing queries
+Do NOT impact live calculations
+Do NOT mix test + live in any totals
+🧪 Acceptance Criteria
+All admin metrics reflect only real users and transactions
+Test accounts and their data are fully excluded
+Financial reports are accurate and clean
+Optional toggle allows viewing test data separately
+No performance or query issues introduced
+🧠 Sanity Check
+
+If implementation:
+
+“Deletes all test data”
+
+⚠️ Not required (and risky)
+
+If implementation:
+
+“Filters test data out of admin views only”
+
+✅ Correct
+
+💡 Extra (highly recommended)
+
+If not already in place:
+
+👉 Automatically mark:
+
+Your internal account → is_test_account = true
+Any test orders → is_test = true

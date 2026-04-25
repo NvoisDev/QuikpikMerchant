@@ -83,7 +83,7 @@ interface WholesalerRow {
   currentPlan: string | null; stripeSubscriptionId: string | null;
   archived: boolean; createdAt: string;
   orderCount: number; totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
-  customFeePercentage: number | null;
+  customFeePercentage: number | null; isTestAccount?: boolean;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -771,9 +771,12 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 </TableHeader>
                 <TableBody>
                   {filtered.map(w => (
-                    <TableRow key={w.id} className="hover:bg-green-50/30 cursor-pointer" onClick={() => openDrawer(w)}>
+                    <TableRow key={w.id} className={`hover:bg-green-50/30 cursor-pointer ${w.isTestAccount ? "opacity-60" : ""}`} onClick={() => openDrawer(w)}>
                       <TableCell>
-                        <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName} ${w.lastName}`}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName} ${w.lastName}`}</p>
+                          {w.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium">Test</span>}
+                        </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>{planBadge(w.subscriptionTier)}</TableCell>

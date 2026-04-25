@@ -34,18 +34,22 @@ export function registerAdminRoutes(app: Express): void {
 
       const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth, todayOrdersData, planRows] = await Promise.all([
         db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
-          .from(users).where(eq(users.role, 'wholesaler')),
+          .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false))),
         db.select({
           subtotal: orders.subtotal,
           platformFee: orders.platformFee,
           customerTransactionFee: orders.customerTransactionFee,
-        }).from(orders).where(sql`${orders.status} != 'cancelled'`),
+        }).from(orders)
+          .innerJoin(users, eq(orders.wholesalerId, users.id))
+          .where(and(sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
         db.select({ count: count() }).from(users)
-          .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart))),
+          .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false))),
         db.select({ count: count() }).from(orders)
-          .where(and(gte(orders.createdAt, monthStart), sql`${orders.status} != 'cancelled'`)),
+          .innerJoin(users, eq(orders.wholesalerId, users.id))
+          .where(and(gte(orders.createdAt, monthStart), sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
         db.select({ subtotal: orders.subtotal }).from(orders)
-          .where(and(gte(orders.createdAt, todayStart), sql`${orders.status} != 'cancelled'`)),
+          .innerJoin(users, eq(orders.wholesalerId, users.id))
+          .where(and(gte(orders.createdAt, todayStart), sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
           .from(subscriptionPlans),
       ]);
@@ -166,8 +170,13 @@ export function registerAdminRoutes(app: Express): void {
           customFeePercentage: w.customFeePercentage !== null && w.customFeePercentage !== undefined
             ? parseFloat(w.customFeePercentage)
             : null,
+          isTestAccount: w.isTestAccount ?? false,
         };
-      }).sort((a, b) => b.totalFeesEarned - a.totalFeesEarned);
+      }).sort((a, b) => {
+        // Test accounts always sort to the bottom
+        if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
+        return b.totalFeesEarned - a.totalFeesEarned;
+      });
 
       res.json(result);
     } catch (error) {
@@ -202,8 +211,9 @@ export function registerAdminRoutes(app: Express): void {
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .leftJoin(users, eq(orders.wholesalerId, users.id))
+        .innerJoin(users, eq(orders.wholesalerId, users.id))
         .where(and(
+          eq(users.isTestAccount, false),
           from ? gte(orders.createdAt, new Date(from)) : undefined,
           toDate ? lte(orders.createdAt, toDate) : undefined,
           filterWholesalerId ? eq(orders.wholesalerId, filterWholesalerId) : undefined,
@@ -835,7 +845,7 @@ export function registerAdminRoutes(app: Express): void {
         category: products.category,
       }).from(products)
         .leftJoin(users, eq(products.wholesalerId, users.id))
-        .where(inArray(products.status, ['active', 'inactive', 'locked']))
+        .where(and(inArray(products.status, ['active', 'inactive', 'locked']), eq(users.isTestAccount, false)))
         .orderBy(desc(products.id));
 
       const enriched = productList.map(p => {
