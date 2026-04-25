@@ -102,7 +102,7 @@ interface StripeModeData { mode: 'live' | 'test'; keyPrefix: string; }
 interface CustomerRow {
   id: string; name: string; businessName: string | null; email: string | null;
   phoneNumber: string | null; postalCode: string | null; wholesalerName: string | null;
-  subscriptionTier: string | null; isSuspicious: boolean | null;
+  subscriptionTier: string | null; isSuspicious: boolean | null; isTestAccount: boolean | null;
   orderCount: number | null; customerType: string | null;
 }
 interface ProductRow {
@@ -1082,7 +1082,10 @@ function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highli
                         ) : <span className="text-xs text-gray-300">—</span>}
                       </TableCell>
                       <TableCell>
-                        {c.isSuspicious && <span className="text-xs bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded font-medium flex items-center gap-1 w-fit"><Flag className="h-3 w-3" />Suspicious</span>}
+                        <div className="flex flex-col gap-1">
+                          {c.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium w-fit">Test</span>}
+                          {c.isSuspicious && <span className="text-xs bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded font-medium flex items-center gap-1 w-fit"><Flag className="h-3 w-3" />Suspicious</span>}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={e => { e.stopPropagation(); setSelectedCustomer(c); setDrawerOpen(true); }}>
@@ -1102,7 +1105,12 @@ function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highli
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-sm font-semibold">{selectedCustomer?.name}</SheetTitle>
+            <SheetTitle className="text-sm font-semibold flex items-center gap-2">
+              {selectedCustomer?.name}
+              {selectedCustomer?.isTestAccount && (
+                <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium">Test</span>
+              )}
+            </SheetTitle>
           </SheetHeader>
           {selectedCustomer && (
             <div className="space-y-4">

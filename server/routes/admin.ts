@@ -557,6 +557,7 @@ export function registerAdminRoutes(app: Express): void {
         postalCode: users.postalCode,
         customerType: users.customerType,
         isSuspicious: users.isSuspicious,
+        isTestAccount: users.isTestAccount,
         archived: users.archived,
         createdAt: users.createdAt,
       }).from(users).where(and(
@@ -595,6 +596,7 @@ export function registerAdminRoutes(app: Express): void {
         postalCode: c.postalCode,
         customerType: c.customerType,
         isSuspicious: c.isSuspicious,
+        isTestAccount: c.isTestAccount,
         archived: c.archived,
         wholesalerName: c.wholesalerId ? (wholesalerMap[c.wholesalerId] || 'Unknown') : 'No wholesaler',
         wholesalerId: c.wholesalerId,
