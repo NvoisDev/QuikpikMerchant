@@ -72,7 +72,7 @@ export class SubscriptionService {
           planId: "premium",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "39.99",
+          monthlyPrice: "49.99",
           currency: "GBP", 
           description: "Everything you need to scale your wholesale business",
           features: [
