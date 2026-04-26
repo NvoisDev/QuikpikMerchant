@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, startTransition } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -1087,18 +1087,18 @@ export default function ProductManagement() {
     }
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = useCallback((product: any) => {
     setEditingProduct(product);
     setIsDialogOpen(true);
-  };
+  }, []);
 
-  const handleDelete = (id: number) => {
+  const handleDelete = useCallback((id: number) => {
     if (confirm("Are you sure you want to delete this product?")) {
       deleteProductMutation.mutate(id);
     }
-  };
+  }, [deleteProductMutation]);
 
-  const handleDuplicate = (product: any) => {
+  const handleDuplicate = useCallback((product: any) => {
     // Reset the form with the product data but clear the ID to create a new product
     setEditingProduct(null); // Set to null so it creates instead of edits
     
@@ -1143,9 +1143,9 @@ export default function ProductManagement() {
       form.reset();
     }
     setIsDialogOpen(true);
-  };
+  }, [form]);
 
-  const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => {
+  const handleStatusChange = useCallback((id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => {
     // Only allow valid status updates that the mutation accepts
     if (status === "locked") {
       toast({
@@ -1156,7 +1156,17 @@ export default function ProductManagement() {
       return;
     }
     updateProductStatusMutation.mutate({ id, status });
-  };
+  }, [updateProductStatusMutation, toast]);
+
+  const handleManageStock = useCallback((p: any) => {
+    setStockProduct(p);
+    setStockAdjustmentType("increase");
+    setStockQuantity("");
+    setStockReason("");
+    setBatchExpiry("");
+    setBatchRef("");
+    setBatchCostPrice(p.costPrice ? String(p.costPrice) : "");
+  }, []);
 
   const { data: stockMovements, isLoading: isLoadingMovements } = useQuery({
     queryKey: [`/api/products/${stockProduct?.id}/stock-movements`],
@@ -2916,7 +2926,7 @@ export default function ProductManagement() {
                     onDelete={handleDelete}
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
-                    onManageStock={(p) => { setStockProduct(p); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(p.costPrice ? String(p.costPrice) : ""); }}
+                    onManageStock={handleManageStock}
                     isViewer={isViewer}
                   />
                 </div>
