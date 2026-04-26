@@ -88,6 +88,7 @@ interface WholesalerRow {
   totalGMV: number; gmvWithFees: number; gmvWithoutFees: number; totalFeesEarned: number; lastOrderAt: string | null;
   customFeePercentage: number | null; isTestAccount?: boolean;
   lastLoginAt?: string | null;
+  enableMultiProfile?: boolean;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -721,6 +722,20 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const multiProfileMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const r = await apiRequest("PATCH", `/api/admin/users/${id}/enable-multi-profile`, { enableMultiProfile: enabled });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      setSelectedWholesaler(prev => prev ? { ...prev, enableMultiProfile: variables.enabled } : prev);
+      toast({ title: variables.enabled ? "Multi-profile enabled" : "Multi-profile disabled" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const { data: wholesalerOrders, isLoading: ordersLoading } = useQuery<{ orders: WholesalerOrderRow[] }>({
     queryKey: ["/api/admin/wholesalers", selectedWholesaler?.id, "orders"],
     queryFn: async () => {
@@ -1034,6 +1049,32 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   <p className="text-xs text-amber-600 mt-1">This is already their current plan.</p>
                 )}
               </div>
+              {/* Multi-Profile Toggle */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" style={{ color: BLUE }} />Enable Multi Profile
+                </p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Allows this wholesaler to create multiple business profiles and choose one per order/quote.
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => multiProfileMutation.mutate({ id: selectedWholesaler.id, enabled: !selectedWholesaler.enableMultiProfile })}
+                    disabled={multiProfileMutation.isPending}
+                    className="flex items-center gap-2 text-xs font-medium"
+                  >
+                    {selectedWholesaler.enableMultiProfile ? (
+                      <ToggleRight className="h-5 w-5" style={{ color: BLUE }} />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-gray-400" />
+                    )}
+                    <span className={selectedWholesaler.enableMultiProfile ? "text-blue-700" : "text-gray-400"}>
+                      {selectedWholesaler.enableMultiProfile ? "Enabled" : "Disabled"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="outline" className="text-xs flex-1" onClick={() => { toggleStatus.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
                   {selectedWholesaler.archived ? "Activate account" : "Suspend account"}

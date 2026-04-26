@@ -256,6 +256,9 @@ export const users = pgTable("users", {
 
   lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
 
+  // Multi-business profile feature (admin-enabled per wholesaler)
+  enableMultiProfile: boolean("enable_multi_profile").default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -564,6 +567,28 @@ export const stockMovements = pgTable("stock_movements", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Business profiles — one wholesaler can have multiple trading identities
+export const businessProfiles = pgTable("business_profiles", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  logoUrl: varchar("logo_url"),
+  address: text("address"),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  wholesalerIdIdx: index("business_profiles_wholesaler_id_idx").on(table.wholesalerId),
+}));
+
+export const insertBusinessProfileSchema = createInsertSchema(businessProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBusinessProfile = z.infer<typeof insertBusinessProfileSchema>;
+export type BusinessProfile = typeof businessProfiles.$inferSelect;
+
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderNumber: varchar("order_number").notNull(), // Unique order number per wholesaler (e.g., "QP-001", "QP-002")
@@ -637,6 +662,9 @@ export const orders = pgTable("orders", {
   stockRestoredCount: integer("stock_restored_count").default(0), // Number of units returned to inventory
   restockStatus: varchar("restock_status"), // Idempotency guard: null | 'completed'
   placedByName: varchar("placed_by_name"), // Name of team member who placed the order (null = wholesaler owner)
+
+  // Multi-business profile: which profile was used for this order
+  businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

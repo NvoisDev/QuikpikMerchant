@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,212 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+interface BusinessProfile {
+  id: number;
+  wholesalerId: string;
+  name: string;
+  logoUrl: string | null;
+  address: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function BusinessProfilesSection() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editing, setEditing] = useState<BusinessProfile | null>(null);
+  const [form, setForm] = useState({ name: '', logoUrl: '', address: '' });
+
+  const { data: profiles = [], isLoading } = useQuery<BusinessProfile[]>({
+    queryKey: ["/api/business-profiles"],
+  });
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: '', logoUrl: '', address: '' });
+    setShowDialog(true);
+  };
+
+  const openEdit = (p: BusinessProfile) => {
+    setEditing(p);
+    setForm({ name: p.name, logoUrl: p.logoUrl || '', address: p.address || '' });
+    setShowDialog(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { name: string; logoUrl: string; address: string }) => {
+      const payload = {
+        name: data.name,
+        logoUrl: data.logoUrl || null,
+        address: data.address || null,
+      };
+      if (editing) {
+        const r = await apiRequest("PATCH", `/api/business-profiles/${editing.id}`, payload);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+        return r.json();
+      } else {
+        const r = await apiRequest("POST", "/api/business-profiles", payload);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+        return r.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-profiles"] });
+      toast({ title: editing ? "Profile updated" : "Profile created" });
+      setShowDialog(false);
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("DELETE", `/api/business-profiles/${id}`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-profiles"] });
+      toast({ title: "Profile deleted" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("POST", `/api/business-profiles/${id}/set-default`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-profiles"] });
+      toast({ title: "Default profile updated" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">Business Profiles</h3>
+          <p className="text-sm text-gray-500 mt-0.5">Create multiple trading identities. Choose one when creating a quote or order.</p>
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={openAdd}>
+          <Plus className="h-4 w-4" />Add Profile
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-gray-400">Loading profiles…</div>
+      ) : (
+        <div className="space-y-3">
+          {profiles.map(p => (
+            <div key={p.id} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3">
+              {p.logoUrl ? (
+                <img src={p.logoUrl} alt={p.name} className="h-10 w-10 rounded object-cover flex-shrink-0" />
+              ) : (
+                <div className="h-10 w-10 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-5 w-5 text-blue-500" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
+                  {p.isDefault && (
+                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded">
+                      <Star className="h-2.5 w-2.5" />Default
+                    </span>
+                  )}
+                </div>
+                {p.address && <p className="text-xs text-gray-500 mt-0.5 truncate">{p.address}</p>}
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {!p.isDefault && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => setDefaultMutation.mutate(p.id)}
+                    disabled={setDefaultMutation.isPending}
+                  >
+                    Set default
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(p)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                {!p.isDefault && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200"
+                    onClick={() => deleteMutation.mutate(p.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-blue-500" />
+              {editing ? "Edit Profile" : "Add Profile"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs text-gray-600">Profile name *</Label>
+              <Input
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Main Trading Co."
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600">Logo URL (optional)</Label>
+              <Input
+                value={form.logoUrl}
+                onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))}
+                placeholder="https://..."
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600">Address (optional)</Label>
+              <Input
+                value={form.address}
+                onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                placeholder="123 High Street, London, EC1A 1BB"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!form.name.trim() || saveMutation.isPending}
+              onClick={() => saveMutation.mutate(form)}
+            >
+              {saveMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -333,6 +539,21 @@ export default function Settings() {
                   </div>
                 )}
 
+                {/* Business Profiles - only when enableMultiProfile is on */}
+                {user.role !== 'team_member' && user.enableMultiProfile && (
+                  <div
+                    className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
+                      activeTab === "profiles"
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setActiveTab("profiles")}
+                  >
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                    <span className="text-sm sm:text-base">Business Profiles</span>
+                  </div>
+                )}
+
                 {/* Notification Settings */}
                 <div 
                   className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
@@ -360,6 +581,7 @@ export default function Settings() {
                 <span className="text-base sm:text-xl">
                   {activeTab === "account" && "Account Settings"}
                   {activeTab === "business" && "Business Settings"}
+                  {activeTab === "profiles" && "Business Profiles"}
                   {activeTab === "notifications" && "Notification Settings"}
                 </span>
               </CardTitle>
@@ -1046,6 +1268,10 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
+              )}
+
+              {activeTab === "profiles" && (
+                <BusinessProfilesSection />
               )}
 
               {activeTab === "notifications" && (

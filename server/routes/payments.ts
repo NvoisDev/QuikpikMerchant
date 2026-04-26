@@ -10,6 +10,7 @@ import {
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
+import { businessProfiles } from "@shared/schema";
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -1664,7 +1665,7 @@ export function registerPaymentRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage, fulfillmentType, deliveryAddressId, hasDeliveryAddress: !!deliveryAddress, hasCustomAddressFields: !!customAddressFields });
       
@@ -1692,6 +1693,18 @@ export function registerPaymentRoutes(app: Express): void {
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) {
         return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+
+      // Validate businessProfileId ownership (prevent cross-tenant assignment)
+      const resolvedBusinessProfileId: number | null = businessProfileId ? (typeof businessProfileId === 'number' ? businessProfileId : parseInt(businessProfileId)) : null;
+      if (resolvedBusinessProfileId) {
+        const [profileCheck] = await db
+          .select({ id: businessProfiles.id })
+          .from(businessProfiles)
+          .where(and(eq(businessProfiles.id, resolvedBusinessProfileId), eq(businessProfiles.wholesalerId, wholesalerId)));
+        if (!profileCheck) {
+          return res.status(400).json({ error: 'Invalid business profile' });
+        }
       }
 
       // PRE-VALIDATE STOCK for all items before creating any DB records
@@ -1811,6 +1824,7 @@ export function registerPaymentRoutes(app: Express): void {
           ? { paymentMethod: 'pay_later' }
           : (requestedPaymentMethod ? { paymentMethod: requestedPaymentMethod } : {})),
         ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
+        ...(resolvedBusinessProfileId ? { businessProfileId: resolvedBusinessProfileId } : {}),
       }).returning();
 
       // Collect pack descriptors for Stripe line item descriptions

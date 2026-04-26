@@ -173,6 +173,20 @@ async function runStartupMigrations() {
     // Task #538: Test account isolation — add flag and mark the Quikpik internal test account
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN NOT NULL DEFAULT FALSE`,
     `UPDATE users SET is_test_account = true WHERE email = 'hello@quikpik.co'`,
+    // Task #595: Multi-business profiles for wholesalers
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS enable_multi_profile BOOLEAN NOT NULL DEFAULT FALSE`,
+    `CREATE TABLE IF NOT EXISTS business_profiles (
+      id SERIAL PRIMARY KEY,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR NOT NULL,
+      logo_url VARCHAR,
+      address TEXT,
+      is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS bp_wholesaler_id_idx ON business_profiles(wholesaler_id)`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS business_profile_id INTEGER REFERENCES business_profiles(id) ON DELETE SET NULL`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

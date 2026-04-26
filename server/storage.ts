@@ -73,7 +73,7 @@ import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 import { InventoryCalculator } from "../shared/inventory-calculator.js";
-import { DeliveryStorage } from './storage/delivery';
+import { BusinessProfileStorage } from './storage/business-profiles';
 import { formatPhoneToInternational } from "../shared/phone-utils";
 
 export interface IStorage {
@@ -348,6 +348,14 @@ export interface IStorage {
   createDefaultTabPermissions(wholesalerId: string): Promise<void>;
   checkTabAccess(wholesalerId: string, tabName: string, userRole: string, failOpen?: boolean): Promise<boolean>;
 
+  // Business Profile operations
+  getBusinessProfiles(wholesalerId: string): Promise<import('@shared/schema').BusinessProfile[]>;
+  getBusinessProfile(id: number): Promise<import('@shared/schema').BusinessProfile | undefined>;
+  createBusinessProfile(data: import('@shared/schema').InsertBusinessProfile): Promise<import('@shared/schema').BusinessProfile>;
+  updateBusinessProfile(id: number, data: Partial<import('@shared/schema').InsertBusinessProfile>): Promise<import('@shared/schema').BusinessProfile | undefined>;
+  deleteBusinessProfile(id: number, wholesalerId: string): Promise<boolean>;
+  setDefaultBusinessProfile(id: number, wholesalerId: string): Promise<import('@shared/schema').BusinessProfile | undefined>;
+
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
     products: (TemplateProduct & { product: Product })[];
@@ -443,7 +451,7 @@ function resolveLivePromo(offers: any[], basePrice: string): { promoActive: bool
   return { promoActive: true, promoPrice };
 }
 
-export class DatabaseStorage extends DeliveryStorage implements IStorage {
+export class DatabaseStorage extends BusinessProfileStorage implements IStorage {
   // Gamification operations implementation
   async getUserBadges(userId: string): Promise<UserBadge[]> {
     return await db

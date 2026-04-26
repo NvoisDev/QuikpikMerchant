@@ -24,6 +24,8 @@ import {
   deliveryAddresses,
   wholesalerCustomerRelationships,
   productBatches,
+  businessProfiles,
+  type BusinessProfile,
   type User,
   type UpsertUser,
   type Product,
@@ -265,7 +267,7 @@ export class OrderStorage extends ProductStorage {
     return ordersWithItems;
   }
 
-  async getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined> {
+  async getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User; businessProfileName?: string | null }) | undefined> {
     const [order] = await db.select().from(orders).where(eq(orders.id, id));
     if (!order) return undefined;
     
@@ -286,11 +288,19 @@ export class OrderStorage extends ProductStorage {
       .select()
       .from(users)
       .where(eq(users.id, order.wholesalerId));
+
+    // Get business profile name if set
+    let businessProfileName: string | null = null;
+    if (order.businessProfileId) {
+      const [profile] = await db.select().from(businessProfiles).where(eq(businessProfiles.id, order.businessProfileId));
+      businessProfileName = profile?.name ?? null;
+    }
     
     return {
       ...order,
       retailer: retailer!,
       wholesaler: wholesaler!,
+      businessProfileName,
       items: items.map(item => ({
         ...item.order_items,
         product: item.products!

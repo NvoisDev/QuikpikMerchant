@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
-  RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse
+  RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +69,8 @@ interface Order {
   stripePaymentLinkUrl?: string;
   customerTransactionFee?: string;
   wholesalerBusinessName?: string;
+  businessProfileId?: number | null;
+  businessProfileName?: string | null;
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
@@ -896,6 +898,17 @@ export default function OrderDetail() {
             )}
           </div>
         </div>
+
+        {/* Business Profile */}
+        {order.businessProfileName && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-blue-600 font-medium">Trading As</p>
+              <p className="text-sm font-semibold text-blue-900">{order.businessProfileName}</p>
+            </div>
+          </div>
+        )}
 
         {/* Customer Information */}
         <div>
