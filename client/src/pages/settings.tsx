@@ -55,7 +55,7 @@ function BusinessProfilesSection() {
         logoUrl: data.logoUrl || null,
         address: data.address || null,
       };
-      if (data.id) {
+      if (data.id != null) {
         const r = await apiRequest("PATCH", `/api/business-profiles/${data.id}`, payload);
         return r.json();
       } else {
