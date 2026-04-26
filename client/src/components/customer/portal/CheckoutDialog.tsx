@@ -674,7 +674,7 @@ export function CheckoutDialog({
                         });
                         if (!response.ok) {
                           const errData = await response.json().catch(() => ({}));
-                          throw new Error(errData.message || 'Failed to place order');
+                          throw new Error(errData.error || errData.message || 'Failed to place order');
                         }
                         const orderData = await response.json();
                         const currentShippingOption = customerData.shippingOption;

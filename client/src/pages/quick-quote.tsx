@@ -206,9 +206,12 @@ export default function QuickQuote() {
       });
     },
     onError: (error: Error) => {
+      const e = error as Error & { errorType?: string; available?: number; requested?: number; productName?: string };
       toast({
-        title: "Error",
-        description: error.message || "Failed to add customer",
+        title: e.errorType === "OUT_OF_STOCK" ? "Stock Unavailable" : "Error",
+        description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
+          ? `Only ${e.available} units of "${e.productName || "this product"}" are in stock — you requested ${e.requested}. Please reduce the quantity.`
+          : (error.message || "Failed to add customer"),
         variant: "destructive",
       });
     },
@@ -250,9 +253,12 @@ export default function QuickQuote() {
       });
     },
     onError: (error: Error) => {
+      const e = error as Error & { errorType?: string; available?: number; requested?: number; productName?: string };
       toast({
-        title: "Error",
-        description: error.message || "Failed to create quote",
+        title: e.errorType === "OUT_OF_STOCK" ? "Stock Unavailable" : "Error",
+        description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
+          ? `Only ${e.available} units of "${e.productName || "this product"}" are in stock — you requested ${e.requested}. Please reduce the quantity.`
+          : (error.message || "Failed to create quote"),
         variant: "destructive",
       });
     },
