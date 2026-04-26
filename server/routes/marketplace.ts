@@ -1716,7 +1716,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               return {
                 ...item,
                 productName: product?.name || `Product #${item.productId}`,
-                product: product ? { name: product.name } : null
+                product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
               };
             }));
             
@@ -2149,7 +2149,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           const savedItems = await storage.getOrderItems(order.id);
           const enrichedItems = await Promise.all(savedItems.map(async (item) => {
             const prod = await storage.getProduct(item.productId);
-            return { ...item, productName: prod?.name || `Product #${item.productId}`, product: prod ? { name: prod.name } : null };
+            return { ...item, productName: prod?.name || `Product #${item.productId}`, product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           }));
           await sendCustomerInvoiceEmail(
             { name: customerName, email: customerEmail, phone: customerPhone, address: deliveryAddress || undefined },
@@ -3054,7 +3054,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           };
           await sendCustomerInvoiceEmail(customerForEmail, order, orderItems.map(item => ({
             ...item,
-            product: { name: product.name, price: item.unitPrice }
+            product: { name: product.name, price: item.unitPrice, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
           })), wholesaler);
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
@@ -3214,7 +3214,7 @@ Please contact the customer to confirm this order.
           return {
             ...item,
             productName: product?.name || 'Product',
-            product: product ? { name: product.name, price: item.unitPrice } : null
+            product: product ? { name: product.name, price: item.unitPrice, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
           };
         }));
         

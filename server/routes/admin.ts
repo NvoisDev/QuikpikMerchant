@@ -966,6 +966,9 @@ export function registerAdminRoutes(app: Express): void {
         quantity: orderItems.quantity,
         unitPrice: orderItems.unitPrice,
         total: orderItems.total,
+        quantityInPack: products.quantityInPack,
+        unitSize: products.unitSize,
+        unitOfMeasure: products.unitOfMeasure,
       }).from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(eq(orderItems.orderId, order.id));
@@ -975,6 +978,7 @@ export function registerAdminRoutes(app: Express): void {
         quantity: i.quantity,
         unitPrice: parseFloat(i.unitPrice || '0'),
         total: parseFloat(i.total || '0'),
+        product: { name: i.productName || 'Product', quantityInPack: i.quantityInPack, unitSize: i.unitSize, unitOfMeasure: i.unitOfMeasure },
       })), wholesaler);
 
       res.json({ success: true });
