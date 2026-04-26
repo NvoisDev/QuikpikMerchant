@@ -298,6 +298,9 @@ interface ReorderPreview {
     inStock: boolean;
     totalPackageWeight?: string | null;
     palletWeight?: string | null;
+    packQuantity?: number | null;
+    unitSize?: string | null;
+    unitOfMeasure?: string | null;
   }>;
   subtotal: string;
   transactionFee: string;
@@ -431,6 +434,9 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                 <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{item.productName}</p>
+                    {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
+                      <p className="text-xs text-gray-400 leading-tight">{item.packQuantity} × {parseFloat(String(item.unitSize))}{item.unitOfMeasure}</p>
+                    )}
                     <p className="text-xs text-gray-500">
                       {item.quantity} {item.sellingType} x {fmt(item.unitPrice)}
                     </p>

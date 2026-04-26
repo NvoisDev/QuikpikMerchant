@@ -3545,6 +3545,9 @@ Please contact the customer to confirm this order.
           inStock: product ? (product.stock || 0) >= item.quantity : false,
           totalPackageWeight: product?.totalPackageWeight || null,
           palletWeight: product?.palletWeight || null,
+          packQuantity: product?.quantityInPack ?? null,
+          unitSize: product?.unitSize ?? null,
+          unitOfMeasure: product?.unitOfMeasure ?? null,
         };
       });
 
