@@ -1,0 +1,177 @@
+🧾 Prompt: System Hardening & Consolidation (NON-BREAKING, INCREMENTAL)
+🎯 Objective
+
+Improve system consistency, maintainability, and scalability by addressing known risks:
+
+Duplicate fee logic
+Hardcoded values
+Stock handling on quotes
+Refund tracking gaps
+Utility duplication
+
+This must be done incrementally, without breaking existing functionality, flows, or integrations (including Stripe).
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT rewrite large parts of the system
+DO NOT change database schema unless additive only
+DO NOT break existing APIs or flows
+DO NOT change business logic outcomes
+DO NOT deploy all changes at once (phased rollout required)
+
+👉 This is refactoring + consolidation, not rebuilding
+
+🧱 PART 1: Centralise Fee Calculation (HIGHEST PRIORITY)
+Problem
+
+Fee logic exists in multiple places → risk of inconsistency
+
+Action
+
+Create a single utility:
+
+server/utils/fee-calculator.ts
+Function:
+calculateFees({
+  subtotal,
+  wholesalerId,
+  isOffline
+})
+
+Returns:
+
+{
+  customerFee,
+  wholesalerFee,
+  total
+}
+Rules
+Use:
+Default customer fee (5.5% + £0.50)
+Wholesaler custom fee if exists, else 4.6%
+Replace existing logic in:
+orders.ts
+payments.ts
+Safety
+DO NOT delete old logic immediately
+Replace gradually and test both flows
+🧱 PART 2: Move Hardcoded Values to Config
+Create:
+server/config/constants.ts
+Move:
+CUSTOMER_FEE_PERCENT = 0.055  
+CUSTOMER_FIXED_FEE = 0.50  
+DEFAULT_PLATFORM_FEE = 0.046  
+ADMIN_EMAILS = [...]  
+DEFAULT_FROM_EMAIL  
+APP_URL
+Replace all inline values with imports
+Safety
+Keep values EXACTLY the same
+Do NOT change behaviour
+🧱 PART 3: Quote Expiry (STOCK PROTECTION)
+Problem
+
+Stock deducted before payment → can block inventory
+
+Add (additive only):
+orders.quote_expires_at (nullable)
+orders.is_expired (boolean)
+Logic:
+On quote creation:
+quote_expires_at = now + defined window (e.g. 2 hours)
+On expiry:
+Mark as expired
+Restore stock
+Safety
+Apply ONLY to new quotes
+Do NOT retroactively modify old orders
+🧱 PART 4: Refund Accountability (Pay Later)
+Problem
+
+“Refund later” has no enforcement
+
+Add:
+orders.refund_status:
+- none
+- pending_manual
+- completed
+Logic:
+If refundType = later:
+refund_status = pending_manual
+Admin visibility:
+Show pending refunds
+Allow manual marking as completed
+Safety
+Do NOT change existing refund logic
+Add tracking only
+🧱 PART 5: Centralise Utilities
+Create:
+server/utils/
+- phone.ts
+- url.ts
+- error-handler.ts
+Move duplicated logic:
+Phone number normalisation
+Base URL resolution
+Error formatting
+Safety
+Replace gradually
+Do NOT mass-refactor in one go
+🧱 PART 6: Remove Scattered Test Identifiers
+Problem
+
+hello@quikpik.co used in multiple places
+
+Replace with:
+is_test_account = true
+Logic:
+Analytics:
+WHERE users.is_test_account = false
+Safety
+Keep fallback temporarily
+Remove gradually
+🧪 PART 7: Validation & Testing (CRITICAL)
+
+After EACH change:
+
+Test:
+
+Order creation (quote + checkout)
+Fee calculation accuracy
+Stripe payment + webhook
+Refund flow
+Stock deduction + restoration
+Admin analytics
+🚀 DEPLOYMENT STRATEGY
+Phase 1:
+Fee calculator
+Config constants
+Phase 2:
+Utility centralisation
+Phase 3:
+Quote expiry
+Phase 4:
+Refund tracking
+
+👉 Deploy each phase independently
+👉 Verify before moving forward
+
+🧪 Acceptance Criteria
+No change to existing user experience
+No change to financial outputs
+No broken flows
+Codebase becomes more centralised and maintainable
+All new logic is additive and reversible
+🧠 FINAL SANITY CHECK
+
+If implementation:
+
+“Refactors everything at once”
+
+🚫 STOP
+
+If implementation:
+
+“Improves structure step-by-step without changing behaviour”
+
+✅ Correct
