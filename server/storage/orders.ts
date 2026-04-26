@@ -236,6 +236,17 @@ export class OrderStorage extends ProductStorage {
       return acc;
     }, {} as Record<number, any[]>);
     
+    // Batch fetch business profiles for orders that have a businessProfileId
+    const profileIds = Array.from(new Set(filteredOrderResults.map(o => o.businessProfileId).filter((id): id is number => id != null)));
+    let profileMap: Record<number, string> = {};
+    if (profileIds.length > 0) {
+      const profiles = await db
+        .select({ id: businessProfiles.id, name: businessProfiles.name })
+        .from(businessProfiles)
+        .where(sql`${businessProfiles.id} IN (${sql.join(profileIds.map(id => sql`${id}`), sql`, `)})`);
+      profileMap = profiles.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {} as Record<number, string>);
+    }
+
     // Transform results using filtered results
     const ordersWithItems = filteredOrderResults.map(order => {
       const retailer = userMap[order.retailerId];
@@ -259,6 +270,7 @@ export class OrderStorage extends ProductStorage {
           businessName: wholesaler.businessName,
           preferredCurrency: wholesaler.preferredCurrency,
         } : null,
+        businessProfileName: order.businessProfileId ? (profileMap[order.businessProfileId] ?? null) : null,
         items: itemsByOrderId[order.id] || []
       };
     });

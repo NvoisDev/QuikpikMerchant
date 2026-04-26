@@ -55,6 +55,8 @@ interface Order {
   stripePaymentLinkUrl?: string;
   customerTransactionFee?: string;
   wholesalerBusinessName?: string;
+  businessProfileId?: number | null;
+  businessProfileName?: string | null;
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
@@ -1180,7 +1182,14 @@ export default function OrdersFresh() {
                         )}
                     <TableRow className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
-                        {order.orderNumber || `#${order.id}`}
+                        <div>{order.orderNumber || `#${order.id}`}</div>
+                        {order.businessProfileName && (
+                          <div className="mt-0.5">
+                            <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-normal px-1.5 py-0" variant="outline">
+                              {order.businessProfileName}
+                            </Badge>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">
                         <div>
@@ -1337,6 +1346,11 @@ export default function OrdersFresh() {
                           <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
                           <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
                           {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
+                          {order.businessProfileName && (
+                            <Badge className="mt-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-normal px-1.5 py-0" variant="outline">
+                              {order.businessProfileName}
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>

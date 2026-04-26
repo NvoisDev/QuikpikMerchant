@@ -10,7 +10,7 @@ import {
   sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate
 } from "./shared";
-import { productBatches } from "@shared/schema";
+import { productBatches, businessProfiles } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
 
 /**
@@ -930,10 +930,22 @@ export function registerOrderRoutes(app: Express): void {
         });
       }
 
-      // Attach cancellation request to each order
+      // Batch-fetch business profile names for orders that have a businessProfileId
+      const profileIds = Array.from(new Set(ordersResult.map(o => o.businessProfileId).filter((id): id is number => id != null)));
+      let profileNameMap: Record<number, string> = {};
+      if (profileIds.length > 0) {
+        const profiles = await db
+          .select({ id: businessProfiles.id, name: businessProfiles.name })
+          .from(businessProfiles)
+          .where(inArray(businessProfiles.id, profileIds));
+        profileNameMap = profiles.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {} as Record<number, string>);
+      }
+
+      // Attach cancellation request and business profile name to each order
       const ordersWithRequests = ordersResult.map(order => ({
         ...order,
-        cancellationRequest: cancellationRequestsMap[order.id] || null
+        cancellationRequest: cancellationRequestsMap[order.id] || null,
+        businessProfileName: order.businessProfileId ? (profileNameMap[order.businessProfileId] ?? null) : null,
       }));
       
       res.json({
