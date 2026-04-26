@@ -139,7 +139,7 @@ export function registerAdminRoutes(app: Express): void {
       const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
 
       const wholesalerIds = wholesalersList.map(w => w.id);
-      let ordersByWholesaler: Record<string, { count: number; cancelledCount: number; gmv: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
+      let ordersByWholesaler: Record<string, { count: number; cancelledCount: number; gmv: number; gmvWithFees: number; gmvWithoutFees: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
 
       if (wholesalerIds.length > 0) {
         const orderStats = await db.select({
@@ -153,7 +153,7 @@ export function registerAdminRoutes(app: Express): void {
 
         for (const o of orderStats) {
           const wid = o.wholesalerId;
-          if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, cancelledCount: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+          if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, cancelledCount: 0, gmv: 0, gmvWithFees: 0, gmvWithoutFees: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
           const oDate = o.createdAt ? new Date(o.createdAt) : null;
           if (oDate && (!ordersByWholesaler[wid].lastOrderAt || oDate > ordersByWholesaler[wid].lastOrderAt!)) {
             ordersByWholesaler[wid].lastOrderAt = oDate;
@@ -162,15 +162,21 @@ export function registerAdminRoutes(app: Express): void {
             ordersByWholesaler[wid].cancelledCount++;
             continue;
           }
+          const subtotal = parseFloat(o.subtotal || '0');
+          const custFee = parseFloat(o.customerTransactionFee || '0');
+          const platFee = parseFloat(o.platformFee || '0');
+          const hasFees = (custFee + platFee) > 0;
           ordersByWholesaler[wid].count++;
-          ordersByWholesaler[wid].gmv += parseFloat(o.subtotal || '0');
-          ordersByWholesaler[wid].customerFees += parseFloat(o.customerTransactionFee || '0');
-          ordersByWholesaler[wid].platformFees += parseFloat(o.platformFee || '0');
+          ordersByWholesaler[wid].gmv += subtotal;
+          ordersByWholesaler[wid].gmvWithFees += hasFees ? subtotal : 0;
+          ordersByWholesaler[wid].gmvWithoutFees += hasFees ? 0 : subtotal;
+          ordersByWholesaler[wid].customerFees += custFee;
+          ordersByWholesaler[wid].platformFees += platFee;
         }
       }
 
       const result = wholesalersList.map(w => {
-        const stats = ordersByWholesaler[w.id] || { count: 0, cancelledCount: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+        const stats = ordersByWholesaler[w.id] || { count: 0, cancelledCount: 0, gmv: 0, gmvWithFees: 0, gmvWithoutFees: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
         const totalOrderCount = stats.count + stats.cancelledCount;
         const cancellationRate = totalOrderCount > 0 ? Math.round((stats.cancelledCount / totalOrderCount) * 100) : 0;
         return {
@@ -190,6 +196,8 @@ export function registerAdminRoutes(app: Express): void {
           totalOrderCount,                   // all statuses
           cancellationRate,                  // %
           totalGMV: stats.gmv,
+          gmvWithFees: stats.gmvWithFees,
+          gmvWithoutFees: stats.gmvWithoutFees,
           customerFeesEarned: stats.customerFees,
           platformFeesEarned: stats.platformFees,
           totalFeesEarned: stats.customerFees + stats.platformFees,

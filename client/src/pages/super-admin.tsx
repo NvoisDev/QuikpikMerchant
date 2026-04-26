@@ -85,7 +85,7 @@ interface WholesalerRow {
   currentPlan: string | null; stripeSubscriptionId: string | null;
   archived: boolean; createdAt: string;
   orderCount: number; cancelledCount: number; totalOrderCount: number; cancellationRate: number;
-  totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
+  totalGMV: number; gmvWithFees: number; gmvWithoutFees: number; totalFeesEarned: number; lastOrderAt: string | null;
   customFeePercentage: number | null; isTestAccount?: boolean;
   lastLoginAt?: string | null;
 }
@@ -757,6 +757,34 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
         </select>
       </div>
 
+      {/* Global GMV totals strip */}
+      {(() => {
+        const totalGMVWithFees = filtered.reduce((s, w) => s + (w.gmvWithFees ?? 0), 0);
+        const totalGMVWithoutFees = filtered.reduce((s, w) => s + (w.gmvWithoutFees ?? 0), 0);
+        const totalGMV = filtered.reduce((s, w) => s + (w.totalGMV ?? 0), 0);
+        const totalFees = filtered.reduce((s, w) => s + (w.totalFeesEarned ?? 0), 0);
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-3" style={{ borderLeftWidth: 3, borderLeftColor: PURPLE }}>
+              <p className="text-xs text-gray-400">Total GMV</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: PURPLE }}>{fmt(totalGMV)}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-3" style={{ borderLeftWidth: 3, borderLeftColor: GREEN }}>
+              <p className="text-xs text-gray-400">GMV (with fees)</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: GREEN }}>{fmt(totalGMVWithFees)}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-3" style={{ borderLeftWidth: 3, borderLeftColor: AMBER }}>
+              <p className="text-xs text-gray-400">GMV (no fees)</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: AMBER }}>{fmt(totalGMVWithoutFees)}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-3" style={{ borderLeftWidth: 3, borderLeftColor: BLUE }}>
+              <p className="text-xs text-gray-400">Total Fees Earned</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: BLUE }}>{fmt(totalFees)}</p>
+            </div>
+          </div>
+        );
+      })()}
+
       <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
         <CardHeader className="px-4 pt-4 pb-3 border-b border-gray-100">
           <CardTitle className="text-sm font-semibold text-gray-700">All Wholesalers ({filtered.length})</CardTitle>
@@ -769,7 +797,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-[#f0faf4]">
-                    {["Business","Plan","Orders","GMV","Total Fees","Last Order","Status",""].map((h, i) => (
+                    {["Business","Plan","Orders","GMV (with fees)","GMV (no fees)","Total Fees","Last Order","Status",""].map((h, i) => (
                       <TableHead key={i} className="text-xs font-semibold" style={{ color: GREEN }}>{h}</TableHead>
                     ))}
                   </TableRow>
@@ -786,7 +814,8 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>{planBadge(w.subscriptionTier)}</TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{w.orderCount}</TableCell>
-                      <TableCell className="text-xs text-right text-gray-600">{fmt(w.totalGMV)}</TableCell>
+                      <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithFees ?? 0)}</TableCell>
+                      <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithoutFees ?? 0)}</TableCell>
                       <TableCell className="text-xs text-right font-bold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
                       <TableCell className="text-xs text-gray-400">{w.lastOrderAt ? format(new Date(w.lastOrderAt), "dd MMM yy") : "—"}</TableCell>
                       <TableCell>
@@ -846,11 +875,22 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   <p className="text-sm font-bold mt-1" style={{ color: (selectedWholesaler.cancelledCount ?? 0) > 0 ? "#dc2626" : "#6b7280" }}>{selectedWholesaler.cancelledCount ?? 0}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{selectedWholesaler.cancellationRate ?? 0}% rate</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-400">Total GMV</p>
-                  <p className="text-sm font-bold text-gray-800 mt-1">{fmt(selectedWholesaler.totalGMV)}</p>
+                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                  <p className="text-xs text-gray-400 mb-1.5">GMV Breakdown</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">Total GMV</span>
+                    <span className="text-xs font-bold text-gray-800">{fmt(selectedWholesaler.totalGMV)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">GMV (with fees)</span>
+                    <span className="text-xs font-medium" style={{ color: GREEN }}>{fmt(selectedWholesaler.gmvWithFees ?? 0)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">GMV (no fees)</span>
+                    <span className="text-xs font-medium" style={{ color: AMBER }}>{fmt(selectedWholesaler.gmvWithoutFees ?? 0)}</span>
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
                   <p className="text-xs text-gray-400">Platform Earned</p>
                   <p className="text-sm font-bold mt-1" style={{ color: GREEN }}>{fmt(selectedWholesaler.totalFeesEarned)}</p>
                 </div>
