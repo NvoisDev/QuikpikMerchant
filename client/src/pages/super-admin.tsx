@@ -23,7 +23,7 @@ import {
   ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
   Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
-  BadgeCheck, Percent, FileText,
+  BadgeCheck, Percent, FileText, UserPlus,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
@@ -662,6 +662,8 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [changePlanConfirm, setChangePlanConfirm] = useState(false);
   const [customFeeInput, setCustomFeeInput] = useState("");
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
+  const [createTesterOpen, setCreateTesterOpen] = useState(false);
+  const [testerForm, setTesterForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
 
   const { data: allPlansData } = useQuery<{ plans: AdminPlanRow[] }>({
     queryKey: ["/api/admin/plans"],
@@ -754,6 +756,25 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const createTesterMutation = useMutation({
+    mutationFn: async (body: { firstName: string; lastName: string; email: string; password: string }) => {
+      const r = await apiRequest("POST", "/api/admin/create-test-account", body);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to create tester"); }
+      return r.json() as Promise<{ success: boolean; id: string; email: string; emailSent: boolean }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      if (data.emailSent) {
+        toast({ title: "Tester account created", description: "An invite email has been sent with their login details." });
+      } else {
+        toast({ title: "Tester account created", description: "Account ready, but the invite email could not be delivered. Share credentials manually.", variant: "destructive" });
+      }
+      setCreateTesterOpen(false);
+      setTesterForm({ firstName: "", lastName: "", email: "", password: "" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const { data: wholesalerOrders, isLoading: ordersLoading } = useQuery<{ orders: WholesalerOrderRow[] }>({
     queryKey: ["/api/admin/wholesalers", selectedWholesaler?.id, "orders"],
     queryFn: async () => {
@@ -782,13 +803,18 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
           <h2 className="text-lg font-bold text-gray-900">Wholesalers</h2>
           <p className="text-xs text-gray-400">Manage wholesaler accounts and status</p>
         </div>
-        <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 h-8 text-gray-600 focus:outline-none focus:border-gray-400 bg-white">
-          <option value="">All plans</option>
-          <option value="free">Free</option>
-          <option value="standard">Standard</option>
-          <option value="premium">Premium</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 h-8 text-gray-600 focus:outline-none focus:border-gray-400 bg-white">
+            <option value="">All plans</option>
+            <option value="free">Free</option>
+            <option value="standard">Standard</option>
+            <option value="premium">Premium</option>
+          </select>
+          <Button size="sm" className="text-white text-xs gap-1.5 h-8" style={{ background: "#7c3aed" }} onClick={() => setCreateTesterOpen(true)}>
+            <UserPlus className="h-3.5 w-3.5" />Create Tester
+          </Button>
+        </div>
       </div>
 
       {/* Global GMV totals strip */}
@@ -1215,6 +1241,82 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
             <Button size="sm" variant="outline" className="text-xs" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
             <Button size="sm" className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={impersonateMutation.isPending} onClick={() => impersonateTarget && impersonateMutation.mutate(impersonateTarget.id)}>
               {impersonateMutation.isPending ? "Loading..." : "Confirm & View Dashboard"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Tester Dialog */}
+      <Dialog open={createTesterOpen} onOpenChange={open => { if (!open) { setCreateTesterOpen(false); setTesterForm({ firstName: "", lastName: "", email: "", password: "" }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <UserPlus className="h-4 w-4" style={{ color: PURPLE }} />
+              Create Tester Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-xs text-gray-500 bg-purple-50 border border-purple-100 rounded-lg p-3">
+              Creates a new wholesaler account flagged as a test account. A welcome email with login credentials will be sent to the tester.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-600">First name *</Label>
+                <Input
+                  value={testerForm.firstName}
+                  onChange={e => setTesterForm(f => ({ ...f, firstName: e.target.value }))}
+                  placeholder="Jane"
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Last name *</Label>
+                <Input
+                  value={testerForm.lastName}
+                  onChange={e => setTesterForm(f => ({ ...f, lastName: e.target.value }))}
+                  placeholder="Smith"
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-600">Email *</Label>
+                <Input
+                  type="email"
+                  value={testerForm.email}
+                  onChange={e => setTesterForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="tester@example.com"
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-600">Temporary password *</Label>
+                <Input
+                  type="password"
+                  value={testerForm.password}
+                  onChange={e => setTesterForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Min. 8 characters"
+                  className="h-8 text-xs mt-1"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => { setCreateTesterOpen(false); setTesterForm({ firstName: "", lastName: "", email: "", password: "" }); }}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs text-white"
+              style={{ background: PURPLE }}
+              disabled={
+                !testerForm.firstName.trim() || !testerForm.lastName.trim() ||
+                !testerForm.email.trim() || !testerForm.password ||
+                createTesterMutation.isPending
+              }
+              onClick={() => createTesterMutation.mutate(testerForm)}
+            >
+              {createTesterMutation.isPending ? "Creating…" : "Create tester"}
             </Button>
           </DialogFooter>
         </DialogContent>

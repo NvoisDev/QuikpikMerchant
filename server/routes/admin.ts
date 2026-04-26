@@ -8,7 +8,7 @@ import {
   smsVerificationCodes, stockUpdateNotifications,
   customerGroups, customerGroupMembers, wholesalerCustomerRelationships,
   customerRegistrationRequests, orderCancellationRequests, teamMembers, priceLists, priceListItems,
-  priceListAssignments, campaignOrders,
+  priceListAssignments, campaignOrders, sendEmail,
 } from "./shared";
 import {
   broadcasts, tabPermissions, userBadges, onboardingMilestones, deliveryAddresses,
@@ -2153,6 +2153,84 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Go-live reset error:', error);
       res.status(500).json({ error: 'Reset failed. No data was changed (transaction rolled back).' });
+    }
+  });
+
+  // POST /api/admin/create-test-account
+  app.post('/api/admin/create-test-account', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { firstName, lastName, email, password } = req.body as {
+        firstName: string; lastName: string; email: string; password: string;
+      };
+
+      if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !password) {
+        return res.status(400).json({ error: 'First name, last name, email, and password are required.' });
+      }
+
+      if (typeof password !== 'string' || password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+      }
+
+      const emailNorm = email.trim().toLowerCase();
+
+      const existing = await storage.getUserByEmail(emailNorm);
+      if (existing) {
+        return res.status(409).json({ error: 'An account with this email already exists.' });
+      }
+
+      const newUser = await storage.createUserWithPassword({
+        id: crypto.randomUUID(),
+        email: emailNorm,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        businessName: `${firstName.trim()} ${lastName.trim()} (Test)`,
+        role: 'wholesaler',
+        isTestAccount: true,
+        isFirstLogin: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }, password);
+
+      const appUrl = process.env.APP_URL || 'https://quikpik.co';
+      const html = `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#1a7a3d;">Welcome to Quikpik — Your Test Account is Ready</h2>
+          <p>Hi ${firstName.trim()},</p>
+          <p>Your tester account has been created by the Quikpik team. Here are your login credentials:</p>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
+            <p style="margin:4px 0;"><strong>Email:</strong> ${emailNorm}</p>
+            <p style="margin:4px 0;"><strong>Password:</strong> ${password}</p>
+          </div>
+          <p>
+            <a href="${appUrl}/login" style="display:inline-block;background:#1a7a3d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+              Log in to Quikpik
+            </a>
+          </p>
+          <p style="color:#6b7280;font-size:13px;">Please change your password after your first login. If you have any questions, reach out to us at hello@quikpik.co.</p>
+        </div>
+      `;
+
+      let emailSent = true;
+      try {
+        await sendEmail({
+          to: emailNorm,
+          from: 'hello@quikpik.co',
+          subject: 'Your Quikpik Tester Account',
+          html,
+          text: `Welcome to Quikpik!\n\nHi ${firstName.trim()},\n\nYour tester account has been set up.\n\nEmail: ${emailNorm}\nPassword: ${password}\n\nLog in at: ${appUrl}/login\n\nPlease change your password after first login.`,
+        });
+      } catch (emailErr) {
+        emailSent = false;
+        console.warn(`⚠️ Invite email failed for new tester ${emailNorm}:`, emailErr);
+      }
+
+      console.log(`✅ Admin created test account for ${emailNorm} (emailSent=${emailSent})`);
+      res.json({ success: true, id: newUser.id, email: newUser.email, emailSent });
+    } catch (error) {
+      console.error('Admin create-test-account error:', error);
+      res.status(500).json({ error: 'Failed to create tester account.' });
     }
   });
 
