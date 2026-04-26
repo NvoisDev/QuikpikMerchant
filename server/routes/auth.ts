@@ -4,7 +4,7 @@ import {
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl,
   getPlanLimits, hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
   requireAuth, requireNotViewer, requireOwner, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
-  sgMail, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
+  sgMail, sql, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail
 } from "./shared";
 
@@ -344,6 +344,13 @@ export function registerAuthRoutes(app: Express): void {
         const wholesalerInfo = await storage.getUser(responseUser.wholesalerId);
         const members = await storage.getTeamMembers(responseUser.wholesalerId);
         const member = members.find((m: any) => m.email === responseUser.email);
+
+        // If the team member record no longer exists (deleted), force logout immediately
+        if (!member) {
+          req.session.destroy(() => {});
+          return res.status(401).json({ message: "Your team access has been removed." });
+        }
+
         const teamMemberRole = member?.role ?? 'member';
         if (wholesalerInfo) {
           responseUser = {
@@ -851,6 +858,17 @@ export function registerAuthRoutes(app: Express): void {
       }
       
       await storage.deleteTeamMember(parseInt(id));
+
+      // Destroy any active sessions for the removed team member so they are
+      // immediately logged out rather than retaining access until expiry
+      try {
+        await db.execute(
+          sql`DELETE FROM sessions WHERE sess->'user'->>'email' = ${target.email}`
+        );
+      } catch (_) {
+        // Non-fatal: session cleanup failure should not prevent the delete response
+      }
+
       res.json({ message: "Team member removed successfully" });
     } catch (error) {
       console.error("Error deleting team member:", error);
@@ -1197,8 +1215,13 @@ export function registerAuthRoutes(app: Express): void {
       const allMembers = await storage.getAllTeamMembers();
       const teamMember = allMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
 
+      // Block login if the team member record no longer exists (e.g. was deleted)
+      if (!teamMember) {
+        return res.status(403).json({ message: "Your access has been removed. Please contact your team administrator." });
+      }
+
       // Block suspended team members
-      if (teamMember?.status === 'suspended') {
+      if (teamMember.status === 'suspended') {
         return res.status(403).json({ message: "Your account has been suspended. Please contact your team administrator." });
       }
       
