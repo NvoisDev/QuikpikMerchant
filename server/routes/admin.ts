@@ -869,7 +869,13 @@ export function registerAdminRoutes(app: Express): void {
         price: products.price,
         costPrice: products.costPrice,
         status: products.status,
-        stock: products.stock,
+        baseUnitStock: sql<number>`COALESCE((
+          SELECT SUM(${productBatches.quantity})
+          FROM ${productBatches}
+          WHERE ${productBatches.productId} = ${products.id}
+            AND ${productBatches.status} = 'active'
+            AND (${productBatches.expiryDate} IS NULL OR ${productBatches.expiryDate} >= CURRENT_DATE)
+        ), 0)`,
         category: products.category,
       }).from(products)
         .leftJoin(users, eq(products.wholesalerId, users.id))
@@ -887,7 +893,7 @@ export function registerAdminRoutes(app: Express): void {
           margin,
           hasMissingCost: cost === null,
           hasLowMargin: margin !== null && margin < 10,
-          hasZeroStock: (p.stock || 0) === 0,
+          hasZeroStock: (Number(p.baseUnitStock) || 0) === 0,
         };
       });
 
