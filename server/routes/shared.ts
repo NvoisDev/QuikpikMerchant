@@ -737,17 +737,25 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     let btY: number;
     if (customerBusinessName) {
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerBusinessName, c2, metaY + 12, { width: COL_W - 8 });
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Attn: ${customerName}`, c2, metaY + 24, { width: COL_W - 8 });
-      btY = metaY + 38;
+      const bizNameH = doc.font('Helvetica-Bold').fontSize(10).heightOfString(customerBusinessName, { width: COL_W - 8 });
+      const attnY = metaY + 12 + bizNameH + 2;
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Attn: ${customerName}`, c2, attnY, { width: COL_W - 8 });
+      btY = attnY + doc.font('Helvetica').fontSize(9).heightOfString(`Attn: ${customerName}`, { width: COL_W - 8 }) + 2;
     } else {
       doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(customerName, c2, metaY + 12, { width: COL_W - 8 });
-      btY = metaY + 26;
+      btY = metaY + 12 + doc.font('Helvetica-Bold').fontSize(10).heightOfString(customerName, { width: COL_W - 8 }) + 2;
     }
-    for (const line of addressLines) { doc.font('Helvetica').fontSize(9).fillColor(DARK).text(line, c2, btY, { width: COL_W - 8, lineBreak: false }); btY += 12; }
+    for (const line of addressLines) {
+      doc.font('Helvetica').fontSize(9).fillColor(DARK).text(line, c2, btY, { width: COL_W - 8 });
+      btY += doc.font('Helvetica').fontSize(9).heightOfString(line, { width: COL_W - 8 }) + 3;
+    }
     const cPhone = order.customerPhone || order.retailer?.phoneNumber;
-    if (cPhone) { doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(String(cPhone), c2, btY, { width: COL_W - 8 }); btY += 12; }
+    if (cPhone) {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(String(cPhone), c2, btY, { width: COL_W - 8 });
+      btY += doc.font('Helvetica-Bold').fontSize(10).heightOfString(String(cPhone), { width: COL_W - 8 }) + 3;
+    }
     const cEmail = order.customerEmail || order.retailer?.email;
-    if (cEmail) doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(String(cEmail), c2, btY, { width: COL_W - 8, lineBreak: false });
+    if (cEmail) doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(String(cEmail), c2, btY, { width: COL_W - 8 });
     doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('FROM', c3, metaY, { width: COL_W - 8 });
     doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(businessName, c3, metaY + 12, { width: COL_W - 8 });
     let fromY = metaY + 12 + doc.font('Helvetica-Bold').fontSize(10).heightOfString(businessName, { width: COL_W - 8 }) + 4;
