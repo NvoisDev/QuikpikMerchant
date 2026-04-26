@@ -109,8 +109,8 @@ describe('international phone support', () => {
     // Must have editable state — not a static select-none span
     expect(customerAuthComponentSource).toContain('countryCode, setCountryCode');
     expect(customerAuthComponentSource).toContain("useState(DEFAULT_COUNTRY_CODE)");
-    // UI must have an input for country code (not a static emoji badge)
-    expect(customerAuthComponentSource).toContain('aria-label="Country code"');
+    // UI must use the CountryCodePicker component (searchable flag/name/dial-code dropdown)
+    expect(customerAuthComponentSource).toContain('CountryCodePicker');
     // Phone must be composed from state, not COUNTRY_CODE constant
     expect(customerAuthComponentSource).toContain('countryCode.trim()');
     // Static "+44" badge must not be present
@@ -121,7 +121,8 @@ describe('international phone support', () => {
     expect(customerLoginSource).toContain("DEFAULT_COUNTRY_CODE = '+44'");
     expect(customerLoginSource).toContain('countryCode, setCountryCode');
     expect(customerLoginSource).toContain("useState(DEFAULT_COUNTRY_CODE)");
-    expect(customerLoginSource).toContain('aria-label="Country code"');
+    // UI must use the CountryCodePicker component (searchable flag/name/dial-code dropdown)
+    expect(customerLoginSource).toContain('CountryCodePicker');
     expect(customerLoginSource).toContain('countryCode.trim()');
     expect(customerLoginSource).not.toContain("🇬🇧 {COUNTRY_CODE}");
   });

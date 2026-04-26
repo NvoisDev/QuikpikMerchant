@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, ShieldCheck, Phone, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { CountryCodePicker } from "@/components/ui/country-code-picker";
 
 interface WholesalerOption {
   customerId: string;
@@ -328,17 +329,9 @@ export default function CustomerLogin() {
                       <Phone className="h-4 w-4" /> Mobile Number
                     </Label>
                     <div className="flex">
-                      <Input
-                        id="country-code"
-                        type="text"
+                      <CountryCodePicker
                         value={countryCode}
-                        onChange={e => {
-                          const v = e.target.value.replace(/[^\d+]/g, '') || '+';
-                          setCountryCode(v.startsWith('+') ? v : '+' + v);
-                          setError('');
-                        }}
-                        className="rounded-r-none h-12 text-base border-gray-300 focus:border-green-600 w-20 text-center font-medium"
-                        aria-label="Country code"
+                        onChange={code => { setCountryCode(code); setError(''); }}
                         disabled={isLoading}
                       />
                       <Input

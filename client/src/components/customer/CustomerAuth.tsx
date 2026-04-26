@@ -9,6 +9,8 @@ import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Stor
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 import { formatPhoneToInternational, isValidMobile } from "@shared/phone-utils";
+import { CountryCodePicker } from "@/components/ui/country-code-picker";
+
 
 interface CustomerAuthProps {
   wholesalerId?: string;
@@ -355,17 +357,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                   <Phone className="h-4 w-4" /> Mobile Number
                 </Label>
                 <div className="flex">
-                  <Input
-                    id="country-code"
-                    type="text"
+                  <CountryCodePicker
                     value={countryCode}
-                    onChange={e => {
-                      const v = e.target.value.replace(/[^\d+]/g, '') || '+';
-                      setCountryCode(v.startsWith('+') ? v : '+' + v);
-                      setError('');
-                    }}
-                    className="rounded-r-none h-12 text-base border-gray-300 focus:border-green-600 w-20 text-center font-medium"
-                    aria-label="Country code"
+                    onChange={code => { setCountryCode(code); setError(''); }}
                     disabled={isLoading}
                   />
                   <Input
