@@ -1879,6 +1879,11 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
     staleTime: 10 * 60 * 1000,
   });
 
+  const { data: settingsPlansData } = useQuery<{ plans: AdminPlanRow[] }>({
+    queryKey: ["/api/admin/plans"],
+    enabled: isAdmin,
+  });
+
   const activateSub = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/subscriptions/activate", {
@@ -1995,7 +2000,7 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
         <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Subscription Plans</CardTitle></CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {(allPlansData?.plans ?? []).filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map(plan => {
+            {(settingsPlansData?.plans ?? []).filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map(plan => {
               const price = parseFloat(plan.monthlyPrice as string);
               const productLimit = (plan.limits as any)?.products;
               const productLabel = productLimit === -1 ? "Unlimited products"
