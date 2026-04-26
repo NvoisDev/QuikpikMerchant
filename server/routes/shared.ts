@@ -59,7 +59,7 @@ import {
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-  generateDowngradeEffectiveEmail,
+  generateDowngradeEffectiveEmail, formatPackDescriptor,
   type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem,
 } from "../email-templates";
 import { sendWelcomeMessages } from "../services/welcomeMessageService.js";
@@ -73,19 +73,6 @@ import {
 import { getEmailDeliveryAddress } from "../utils/address-helper";
 import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
 
-// ─── Pack Format Helper ────────────────────────────────────────────────────────
-/** Returns a pack descriptor string such as "24 × 330ml" when all three fields
- *  are present and packQuantity > 1, otherwise returns an empty string. */
-export function formatPackDescriptor(
-  packQuantity: number | null | undefined,
-  unitSize: number | string | null | undefined,
-  unitOfMeasure: string | null | undefined
-): string {
-  if (packQuantity && packQuantity > 1 && unitSize && unitOfMeasure) {
-    return `${packQuantity} × ${parseFloat(String(unitSize))}${unitOfMeasure}`;
-  }
-  return '';
-}
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export {
@@ -127,7 +114,7 @@ export {
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-  generateDowngradeEffectiveEmail,
+  generateDowngradeEffectiveEmail, formatPackDescriptor,
   sendWelcomeMessages,
   orderNotificationService,
   quickOrderService,
@@ -880,11 +867,9 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       else if (item.unitPrice && item.quantity) total = (parseFloat(item.unitPrice) * parseInt(item.quantity)).toFixed(2);
       const promoLabel = item.appliedOfferLabel || '';
       const freeItemsCount = item.freeItems || 0;
-      const packQty = item.product?.quantityInPack;
-      const packSize = item.product?.unitSize;
-      const packMeasure = item.product?.unitOfMeasure;
-      const packBadge = (packQty && packQty > 1 && packSize && packMeasure)
-        ? `<br><span style="color:#6b7280;font-size:11px;">${packQty} × ${parseFloat(String(packSize))}${packMeasure}</span>` : '';
+      const packDescriptor = formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
+      const packBadge = packDescriptor
+        ? `<br><span style="color:#6b7280;font-size:11px;">${packDescriptor}</span>` : '';
       const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';
       const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE ITEMS</span>` : '';
       return `<tr><td style="padding:8px;border-bottom:1px solid #ddd;">${productName}${packBadge}${promoBadge}${freeBadge}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${unitPrice}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${total}</td></tr>`;

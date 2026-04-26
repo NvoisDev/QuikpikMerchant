@@ -3,7 +3,7 @@ import { whatsAppBusinessService } from "../whatsapp-simple";
 import { sendSMS } from "../services/smsService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
-import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, getEmailLogoUrl } from "../email-templates";
+import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, emailTable, getEmailLogoUrl, formatPackDescriptor } from "../email-templates";
 
 export interface OrderStatusNotification {
   orderId: number;
@@ -178,8 +178,25 @@ export class OrderNotificationService {
       const wholesaler = order ? await storage.getUser(order.wholesalerId) : null;
       const businessName = wholesaler?.businessName || notification.wholesalerName;
 
-      const emailBody = `${emailHeading('Order Update', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Hi ${notification.customerName},</p>${emailCard(`<p style="margin:0 0 8px"><strong>Order:</strong> ${notification.orderNumber}</p><p style="margin:0 0 8px"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p><p style="margin:0">${emailContent.body}</p>${notification.trackingNumber ? `<p style="margin:8px 0 0"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}${notification.estimatedDelivery ? `<p style="margin:8px 0 0"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}`)}`;
+      let itemsSection = '';
+      if (order) {
+        try {
+          const orderItems = await storage.getOrderItems(order.id);
+          if (orderItems.length > 0) {
+            const itemRows = await Promise.all(orderItems.map(async (oi) => {
+              const product = await storage.getProduct(oi.productId);
+              const descriptor = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
+              const name = (product?.name || `Product #${oi.productId}`) + (descriptor ? ` (${descriptor})` : '');
+              return [name, String(oi.quantity)];
+            }));
+            itemsSection = emailTable(['Item', 'Qty'], itemRows);
+          }
+        } catch (itemErr) {
+          console.error(`⚠️ Could not fetch order items for status email (order ${notification.orderId}):`, itemErr);
+        }
+      }
 
+      const emailBody = `${emailHeading('Order Update', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Hi ${notification.customerName},</p>${emailCard(`<p style="margin:0 0 8px"><strong>Order:</strong> ${notification.orderNumber}</p><p style="margin:0 0 8px"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p><p style="margin:0">${emailContent.body}</p>${notification.trackingNumber ? `<p style="margin:8px 0 0"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}${notification.estimatedDelivery ? `<p style="margin:8px 0 0"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}`)}${itemsSection}`;
 
       await sendEmail({
         to: notification.customerEmail,

@@ -1,6 +1,17 @@
 import { formatDeliveryAddress, formatDeliveryAddressHTML } from '../shared/utils/address-formatter';
 import type { EmailRefundStatus } from '../shared/schema';
 
+export function formatPackDescriptor(
+  packQuantity: number | null | undefined,
+  unitSize: number | string | null | undefined,
+  unitOfMeasure: string | null | undefined
+): string {
+  if (packQuantity && packQuantity > 1 && unitSize && unitOfMeasure) {
+    return `${packQuantity} × ${parseFloat(String(unitSize))}${unitOfMeasure}`;
+  }
+  return '';
+}
+
 function formatDeliveryAddressForEmail(address: string): string {
   if (!address) return '';
   return formatDeliveryAddressHTML(address);
@@ -305,6 +316,7 @@ export interface RefundLineItem {
   quantity: number;
   unitPrice: number;
   sellingType?: string;
+  packDescriptor?: string;
 }
 
 export function buildItemisedRefundEmail(options: {
@@ -341,7 +353,7 @@ export function buildItemisedRefundEmail(options: {
     '</p>';
 
   const returnRows = returnedItems.map(item => [
-    item.productName,
+    item.productName + (item.packDescriptor ? ' (' + item.packDescriptor + ')' : ''),
     item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
     '\u00A3' + item.unitPrice.toFixed(2),
     '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),
@@ -368,7 +380,7 @@ export function buildItemisedRefundEmail(options: {
   let retainedSection = '';
   if (retainedItems && retainedItems.length > 0) {
     const retainedRows = retainedItems.map(item => [
-      item.productName,
+      item.productName + (item.packDescriptor ? ' (' + item.packDescriptor + ')' : ''),
       item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
       '\u00A3' + item.unitPrice.toFixed(2),
       '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),

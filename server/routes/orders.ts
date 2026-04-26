@@ -3,7 +3,7 @@ import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import {
   SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
   createStripeRefundReceipt, db, desc, emailBadge, emailButton, emailCard, emailHeading, eq,
-  generateOrderNumber, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
+  formatPackDescriptor, generateOrderNumber, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
   orderNotificationService, orderPhotoUpload, orders, products,
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
@@ -1486,6 +1486,7 @@ export function registerOrderRoutes(app: Express): void {
                   quantity: returnQty,
                   unitPrice: parseFloat(oi.unitPrice),
                   sellingType: ri.sellingType || oi.sellingType || 'units',
+                  packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
                 });
                 const keptQty = oi.quantity - returnQty;
                 if (keptQty > 0) {
@@ -1494,6 +1495,7 @@ export function registerOrderRoutes(app: Express): void {
                     quantity: keptQty,
                     unitPrice: parseFloat(oi.unitPrice),
                     sellingType: ri.sellingType || oi.sellingType || 'units',
+                    packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
                   });
                 }
               }
@@ -1507,6 +1509,7 @@ export function registerOrderRoutes(app: Express): void {
                   quantity: oi.quantity,
                   unitPrice: parseFloat(oi.unitPrice),
                   sellingType: oi.sellingType || 'units',
+                  packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
                 });
               }
             }
@@ -1518,6 +1521,7 @@ export function registerOrderRoutes(app: Express): void {
                 quantity: oi.quantity,
                 unitPrice: parseFloat(oi.unitPrice),
                 sellingType: oi.sellingType || 'units',
+                packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
               });
             }
           }
@@ -1940,6 +1944,7 @@ export function registerOrderRoutes(app: Express): void {
               quantity: oi.quantity,
               unitPrice: parseFloat(oi.unitPrice),
               sellingType: oi.sellingType || 'units',
+              packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
             });
           }
         }
