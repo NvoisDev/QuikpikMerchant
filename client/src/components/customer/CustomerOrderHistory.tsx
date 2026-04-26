@@ -741,26 +741,33 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess, ope
 };
 
 export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, currency, downloadingInvoiceId, onDownloadInvoice }: { order: Order, onViewDetails: () => void, customerPhone: string, onSuccess: () => void, currency: string, downloadingInvoiceId: number | null, onDownloadInvoice: () => void }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = order.status !== 'cancelled' && order.status !== 'fulfilled' && order.status !== 'completed';
 
+  const handleAction = (action: () => void) => {
+    setMenuOpen(false);
+    // Defer until after the dropdown has fully closed to avoid stuck hover states
+    setTimeout(action, 50);
+  };
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-8 px-3 border-theme-primary text-theme-primary hover-bg-theme-secondary">
             Actions <ChevronDown className="h-3 w-3 ml-1" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="w-48">
-          <DropdownMenuItem onClick={onViewDetails}>
+          <DropdownMenuItem onClick={() => handleAction(onViewDetails)}>
             <Eye className="h-4 w-4 mr-2" /> View Details
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setReorderOpen(true)}>
+          <DropdownMenuItem onClick={() => handleAction(() => setReorderOpen(true))}>
             <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDownloadInvoice} disabled={downloadingInvoiceId === order.id}>
+          <DropdownMenuItem onClick={() => handleAction(onDownloadInvoice)} disabled={downloadingInvoiceId === order.id}>
             {downloadingInvoiceId === order.id
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               : <Download className="h-4 w-4 mr-2" />}
@@ -769,7 +776,7 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
           {canCancel && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => setCancelOpen(true)}>
+              <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleAction(() => setCancelOpen(true))}>
                 <X className="h-4 w-4 mr-2" /> Cancel Order
               </DropdownMenuItem>
             </>
