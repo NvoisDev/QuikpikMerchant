@@ -1995,21 +1995,25 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
         <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Subscription Plans</CardTitle></CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-              <p className="text-xs font-medium text-gray-500">Free</p>
-              <p className="text-xl font-bold text-gray-700 mt-1">£0</p>
-              <p className="text-xs text-gray-400 mt-1">10 products</p>
-            </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-              <p className="text-xs font-medium text-blue-600">Standard</p>
-              <p className="text-xl font-bold text-blue-700 mt-1">£19.99<span className="text-sm font-normal">/mo</span></p>
-              <p className="text-xs text-blue-500 mt-1">50 products</p>
-            </div>
-            <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
-              <p className="text-xs font-medium" style={{ color: GREEN }}>Premium</p>
-              <p className="text-xl font-bold mt-1" style={{ color: GREEN }}>£39.99<span className="text-sm font-normal">/mo</span></p>
-              <p className="text-xs mt-1" style={{ color: GREEN }}>Unlimited products</p>
-            </div>
+            {(allPlansData?.plans ?? []).filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map(plan => {
+              const price = parseFloat(plan.monthlyPrice as string);
+              const productLimit = (plan.limits as any)?.products;
+              const productLabel = productLimit === -1 ? "Unlimited products"
+                : productLimit > 0 ? `Up to ${productLimit} products`
+                : "—";
+              const isFree = price === 0;
+              const isPremium = plan.planId === "premium";
+              const isStandard = plan.planId === "standard";
+              return (
+                <div key={plan.planId} className={`rounded-xl p-4 text-center border ${isPremium ? "bg-green-50 border-green-100" : isStandard ? "bg-blue-50 border-blue-100" : "bg-gray-50 border-gray-200"}`}>
+                  <p className={`text-xs font-medium ${isPremium ? "" : isStandard ? "text-blue-600" : "text-gray-500"}`} style={isPremium ? { color: GREEN } : undefined}>{plan.name}</p>
+                  <p className={`text-xl font-bold mt-1 ${isPremium ? "" : isStandard ? "text-blue-700" : "text-gray-700"}`} style={isPremium ? { color: GREEN } : undefined}>
+                    {isFree ? "£0" : <>{`£${price.toFixed(2)}`}<span className="text-sm font-normal">/mo</span></>}
+                  </p>
+                  <p className={`text-xs mt-1 ${isPremium ? "" : isStandard ? "text-blue-500" : "text-gray-400"}`} style={isPremium ? { color: GREEN } : undefined}>{productLabel}</p>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
