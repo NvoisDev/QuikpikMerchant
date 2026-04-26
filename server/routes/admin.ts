@@ -250,6 +250,7 @@ export function registerAdminRoutes(app: Express): void {
           paymentStatus: orders.paymentStatus,
           createdAt: orders.createdAt,
           stripeActualFee: orders.stripeActualFee,
+          paymentMethod: orders.paymentMethod,
         })
         .from(orders)
         .innerJoin(users, eq(orders.wholesalerId, users.id))
@@ -268,10 +269,13 @@ export function registerAdminRoutes(app: Express): void {
         const platFee = parseFloat(o.platformFee || '0');
         const sub = parseFloat(o.subtotal || '0');
         const isCancelled = o.status === 'cancelled';
-        // Use actual Stripe fee if captured at payment time; fall back to formula estimate
+        // Only these methods route through Stripe; everything else (cash, bank_transfer, cheque, pay_later, other, unknown) never does
+        const stripePaymentMethods = ['card', 'payment_link'];
+        const isStripePayment = stripePaymentMethods.includes(o.paymentMethod ?? '');
+        // Use actual Stripe fee if captured at payment time; fall back to formula estimate for Stripe orders only
         const actualFee = o.stripeActualFee != null ? parseFloat(o.stripeActualFee) : null;
-        const stripeFeIsEstimated = actualFee === null && !isCancelled;
-        const stripeFee = isCancelled ? 0 : (actualFee ?? parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2)));
+        const stripeFeIsEstimated = isStripePayment && actualFee === null && !isCancelled;
+        const stripeFee = isCancelled || !isStripePayment ? 0 : (actualFee ?? parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2)));
         const grossProfit = isCancelled ? 0 : parseFloat((custFee + platFee - stripeFee).toFixed(2));
         if (!isCancelled) {
           totalCustomerFees += custFee;
