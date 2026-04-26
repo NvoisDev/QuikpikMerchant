@@ -1,0 +1,145 @@
+🧾 Prompt: Final Stripe Safety & Context Audit (NON-BREAKING, READ-ONLY)
+🎯 Objective
+
+Perform a final verification to ensure:
+
+Stripe is ONLY initialised in one place
+ALL Stripe usage is account-aware and context-safe
+No edge cases exist where the wrong Stripe environment could be used
+Logging is sufficient for debugging in production
+🚨 NON-NEGOTIABLE RULES
+DO NOT modify any code
+DO NOT refactor anything
+DO NOT deploy changes
+
+👉 This is a final verification audit only
+
+🧱 PART 1: Stripe Initialisation Check (CRITICAL)
+Search entire codebase for:
+new Stripe(
+Confirm:
+✅ Stripe is ONLY initialised in:
+server/stripeConfig.ts
+❌ Flag ANY occurrence outside this file
+Output:
+Total initialisations found
+File + line for each
+Confirmation of single-source initialisation
+🧱 PART 2: getStripeClient Enforcement
+Confirm:
+ALL Stripe calls go through:
+getStripeClient()
+Double-check:
+No helper functions bypass this
+No background services bypass this
+No legacy utilities using direct Stripe instances
+🧱 PART 3: Wholesaler Context Integrity (VERY IMPORTANT)
+
+For EVERY Stripe call, confirm:
+
+getStripeClient(Boolean(wholesaler.isTestAccount))
+Validate:
+Wholesaler is ALWAYS:
+Loaded from DB
+Derived from order
+Derived from authenticated user
+🚨 Flag if:
+wholesaler is undefined
+wholesaler is inferred indirectly without validation
+fallback values are used (e.g. false by default)
+🧱 PART 4: Edge Case Review
+
+Specifically review these scenarios:
+
+1. Webhooks
+
+Confirm:
+
+Wholesaler is derived from:
+order
+subscription
+customer mapping
+Correct Stripe client is selected BEFORE any Stripe calls
+2. Admin Actions
+
+Confirm:
+
+Admin-triggered refunds/load actions:
+Load wholesaler from order
+Pass correct isTestAccount flag
+3. Background Jobs / Cron (if any)
+
+Confirm:
+
+Any scheduled job using Stripe:
+Resolves wholesaler context correctly
+4. Payment Links / Reminders
+
+Confirm:
+
+Wholesaler derived from:
+order → customer → wholesaler
+🧱 PART 5: Logging Verification (Upgrade Check)
+
+Current log:
+
+Stripe client: LIVE / TEST
+Confirm:
+Log fires on EVERY getStripeClient() call
+Recommend (do not implement yet, just confirm feasibility):
+Stripe client: TEST | Wholesaler: [id]
+Validate:
+No sensitive data exposed
+Logging is useful for debugging
+🧱 PART 6: Failure Scenario Review
+
+Confirm behaviour if:
+
+❗ wholesaler.isTestAccount is missing
+Does system:
+Fail safely?
+Default to live? (this is risky)
+❗ Invalid wholesaler context
+Is error thrown?
+Or silently continues?
+
+👉 Preferred:
+
+Fail fast > silent incorrect Stripe usage
+🧪 PART 7: Final Output Required
+
+Provide:
+
+1. Stripe Initialisation Summary
+Total instances
+Locations
+Confirmation of single source
+2. Context Safety Summary
+✅ All Stripe calls have valid wholesaler context
+OR
+⚠️ List of weak points
+3. Edge Case Findings
+Webhooks
+Admin
+Background jobs
+Payment links
+4. Logging Assessment
+Sufficient / Needs improvement
+5. Risk Level
+Low / Medium / High
+6. Final Verdict
+SAFE FOR PRODUCTION  
+OR  
+NOT SAFE — FIX REQUIRED
+🧠 What YOU want to see
+✅ Perfect answer:
+1 Stripe initialisation only
+0 context gaps
+All flows validated
+Low risk
+🚫 Red flags:
+“Should be fine”
+“Edge cases unlikely”
+“Defaults to false”
+
+👉 That’s how payment bugs sneak in
