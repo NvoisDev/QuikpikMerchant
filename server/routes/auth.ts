@@ -89,7 +89,12 @@ export function registerAuthRoutes(app: Express): void {
       
       // Create or update user in database
       const user = await createOrUpdateUser(googleUser);
-      
+
+      // Stamp last login time for wholesalers and admins
+      if (user.role === 'wholesaler' || user.role === 'admin') {
+        await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+      }
+
       // Set user session in passport format for compatibility
       (req.session as any).passport = {
         user: {

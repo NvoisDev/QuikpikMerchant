@@ -84,6 +84,7 @@ interface WholesalerRow {
   archived: boolean; createdAt: string;
   orderCount: number; totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
   customFeePercentage: number | null; isTestAccount?: boolean;
+  lastLoginAt?: string | null;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -850,6 +851,22 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400">Last Active</p>
                   <p className="text-sm font-medium text-gray-800 mt-1">{selectedWholesaler.lastOrderAt ? format(new Date(selectedWholesaler.lastOrderAt), "dd MMM yyyy") : "No orders yet"}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                  <p className="text-xs text-gray-400">Last Login</p>
+                  <p className="text-sm font-medium text-gray-800 mt-1">
+                    {selectedWholesaler.lastLoginAt
+                      ? new Date(selectedWholesaler.lastLoginAt).toLocaleString('en-GB', {
+                          timeZone: 'Europe/London',
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        })
+                      : "Never"}
+                  </p>
                 </div>
               </div>
               <div className="border-t border-gray-100 pt-3">

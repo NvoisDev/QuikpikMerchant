@@ -253,6 +253,8 @@ export const users = pgTable("users", {
   isSuspicious: boolean("is_suspicious").default(false), // Admin-flagged suspicious customer
   isTestAccount: boolean("is_test_account").default(false), // Internal test accounts — hidden from wholesaler views and analytics
 
+  lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

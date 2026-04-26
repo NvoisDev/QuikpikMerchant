@@ -171,6 +171,7 @@ export function registerAdminRoutes(app: Express): void {
             ? parseFloat(w.customFeePercentage)
             : null,
           isTestAccount: w.isTestAccount ?? false,
+          lastLoginAt: w.lastLoginAt ?? null,
         };
       }).sort((a, b) => {
         // Test accounts always sort to the bottom
