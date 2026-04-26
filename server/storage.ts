@@ -74,6 +74,7 @@ import { eq, desc, and, sql, sum, count, or, ilike, isNull, inArray, gt } from "
 import { hashPassword, verifyPassword } from "./passwordUtils";
 import { InventoryCalculator } from "../shared/inventory-calculator.js";
 import { DeliveryStorage } from './storage/delivery';
+import { formatPhoneToInternational } from "../shared/phone-utils";
 
 export interface IStorage {
   // User operations (required for auth)
@@ -777,10 +778,12 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
   }
 
   async findCustomersByPhone(phoneNumber: string): Promise<Array<{ customerId: string | null; wholesalerId: string; businessName: string; logoUrl: string | null; logoType: string | null; status: 'active' | 'pending' | 'rejected' }>> {
-    // Normalise: strip spaces, ensure +44 prefix for UK numbers
-    const normalised = phoneNumber.startsWith('+') ? phoneNumber.replace(/\s/g, '') : phoneNumber.replace(/\s/g, '');
-    const ukLocal   = normalised.replace(/^\+44/, '0');
-    const ukE164    = normalised.startsWith('0') ? '+44' + normalised.slice(1) : normalised;
+    // Normalise input to E.164 using the shared utility so the primary lookup value is always consistent
+    const normalised = formatPhoneToInternational(phoneNumber);
+    // Derive all common stored variants so existing records in any format are still matched
+    const ukLocal   = normalised.replace(/^\+44/, '0');      // 07700900000
+    const ukNoPlus  = normalised.replace(/^\+/, '');         // 447700900000
+    const ukBare    = normalised.replace(/^\+44/, '');       // 7700900000
 
     // Active relationships
     const activeRows = await db.execute(sql`
@@ -797,7 +800,8 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
         AND (
           REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${normalised}
           OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukLocal}
-          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukE164}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukNoPlus}
+          OR REGEXP_REPLACE(COALESCE(u.phone_number, ''), '[^0-9+]', '', 'g') = ${ukBare}
         )
       ORDER BY business_name
     `);
@@ -815,7 +819,8 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
         AND (
           REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${normalised}
           OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukLocal}
-          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukE164}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukNoPlus}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukBare}
         )
       ORDER BY business_name
     `);
@@ -833,7 +838,8 @@ export class DatabaseStorage extends DeliveryStorage implements IStorage {
         AND (
           REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${normalised}
           OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukLocal}
-          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukE164}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukNoPlus}
+          OR REGEXP_REPLACE(crr.customer_phone, '[^0-9+]', '', 'g') = ${ukBare}
         )
       ORDER BY business_name
     `);

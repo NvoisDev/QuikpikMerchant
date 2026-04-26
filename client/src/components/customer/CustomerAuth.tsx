@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
+import { formatPhoneToInternational, isValidUKMobile } from "@shared/phone-utils";
 
 interface CustomerAuthProps {
   wholesalerId?: string;
@@ -67,8 +68,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
   const otpRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Full phone (normalised E.164): strip leading 0 from local part
-  const fullPhone = countryCode.trim() + phoneLocal.replace(/^0/, '');
+  // Full phone (normalised E.164): pass the raw phone field directly through the shared normaliser
+  // using the chosen country code as the default. This correctly handles all entry paths:
+  // "07700900000", "7700900000", "447700900000", "+447700900000".
+  const fullPhone = formatPhoneToInternational(phoneLocal.replace(/\s/g, ''), countryCode.trim() || '+44');
 
   // Fetch wholesaler branding when wholesalerId is known
   useEffect(() => {
@@ -138,6 +141,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
     const digits = phoneLocal.replace(/\D/g, '');
     if (digits.length < 7) {
       setError('Please enter a valid phone number');
+      return;
+    }
+
+    if (!isValidUKMobile(fullPhone)) {
+      setError('Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)');
       return;
     }
 

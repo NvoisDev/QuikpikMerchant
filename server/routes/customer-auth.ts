@@ -6,6 +6,7 @@ import {
   smsVerificationCodes, sql, storage, users, verifyEmailCode, wholesalerCustomerRelationships,
   wrapCustomerEmail
 } from "./shared";
+import { formatPhoneToInternational, isValidUKMobile } from "../../shared/phone-utils";
 
 // ─── Shared session helper ───────────────────────────────────────────────────
 async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
@@ -65,7 +66,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: 'A valid phone number is required' });
       }
 
-      const normalised = phoneNumber.trim();
+      const normalised = formatPhoneToInternational(phoneNumber.trim());
+      if (!isValidUKMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      }
 
       // Rate limit: 1 OTP per 2 minutes per number
       const recent = await storage.getRecentPhoneVerification(normalised, 2);
@@ -104,7 +108,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: 'Phone number and code are required' });
       }
 
-      const normalised = phoneNumber.trim();
+      const normalised = formatPhoneToInternational(phoneNumber.trim());
+      if (!isValidUKMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      }
       const trimmedCode = code.trim();
 
       // Fetch the most recent verification record for this phone (regardless of code)
@@ -186,7 +193,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: 'Phone number, code, and wholesaler ID are required' });
       }
 
-      const normalised = phoneNumber.trim();
+      const normalised = formatPhoneToInternational(phoneNumber.trim());
+      if (!isValidUKMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      }
       const trimmedCode = String(code).trim();
 
       // Validate OTP proof via session nonce — session-bound, prevents cross-session bypass.
