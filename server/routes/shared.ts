@@ -881,7 +881,20 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       wholesaler.vatNumber ? `<p style="margin:2px 0;color:#6b7280;font-size:13px;">VAT No: ${wholesaler.vatNumber}</p>` : '',
       wholesaler.companyRegistrationNumber ? `<p style="margin:2px 0;color:#6b7280;font-size:13px;">Co. Reg: ${wholesaler.companyRegistrationNumber}</p>` : '',
     ].filter(Boolean).join('');
-    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">Order Confirmation</h2><p>Dear ${customerName},</p><p>Thank you for your order!</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
+    const isDeposit = order.paymentStatus === 'part_paid';
+    const amountPaid = order.amountPaid ? parseFloat(order.amountPaid) : null;
+    const amountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : null;
+    const orderTotal = order.total ? parseFloat(order.total) : null;
+    const paymentSummaryHtml = (isDeposit && amountPaid !== null && amountOutstanding !== null)
+      ? `<div style="background:#fefce8;border:1px solid #fde047;padding:15px;border-radius:5px;margin:20px 0"><h4 style="margin:0 0 10px;color:#713f12;">Deposit Payment Summary</h4><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Deposit Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr>${orderTotal !== null ? `<tr><td style="padding:4px 0;color:#6b7280;">Order Total:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${orderTotal.toFixed(2)}</td></tr>` : ''}<tr><td style="padding:4px 0;color:#6b7280;font-weight:bold;">Outstanding Balance:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#b45309;">${currencySymbol}${amountOutstanding.toFixed(2)}</td></tr></table><p style="margin:10px 0 0;font-size:13px;color:#78350f;">The remaining balance will be collected separately before your order is dispatched.</p></div>`
+      : (amountPaid !== null && amountPaid > 0 && orderTotal !== null
+          ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Amount Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`
+          : '');
+    const emailTitle = isDeposit ? 'Deposit Received' : 'Order Confirmation';
+    const emailIntro = isDeposit
+      ? `Thank you — your deposit payment has been received. We'll be in touch once the remaining balance is settled.`
+      : `Thank you for your order!`;
+    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">${emailTitle}</h2><p>Dear ${customerName},</p><p>${emailIntro}</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${paymentSummaryHtml}${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
     if (!process.env.SENDGRID_API_KEY) {
       console.log("SendGrid not configured — email skipped for order #" + order.id);
       return;
@@ -895,13 +908,17 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod));
       pdfAttachment = { content: pdfBuffer.toString('base64'), filename: `invoice-${order.orderNumber || order.id}.pdf`, type: 'application/pdf', disposition: 'attachment' };
     } catch (pdfError) { console.error('⚠️ Could not generate PDF for email (email still sends without it):', pdfError); }
-    await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `Order Confirmation ${orderRef} - ${businessName}`, html: emailHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
+    await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `${emailTitle} ${orderRef} - ${businessName}`, html: emailHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
     console.log(`✅ Confirmation email sent to ${customer.email} for order #${order.id}`);
     if (wholesaler.email) {
       try {
         const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
-        const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">New Order Received — ${orderRef}</h2><p>Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
-        await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `New Order ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
+        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : 'New Order Received';
+        const wholesalerBodyLabel = isDeposit
+          ? `Deposit of ${currencySymbol}${amountPaid !== null ? amountPaid.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. Outstanding balance: ${currencySymbol}${amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?'}. Invoice attached as PDF.`
+          : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
+        const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">${wholesalerSubjectLabel} — ${orderRef}</h2><p>${wholesalerBodyLabel}</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
+        await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
         console.log(`✅ Wholesaler invoice copy sent to ${wholesaler.email}`);
       } catch (err: any) { console.error('⚠️ Failed to send wholesaler invoice copy (non-fatal):', err?.message); }
     }

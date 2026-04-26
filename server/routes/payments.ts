@@ -391,7 +391,14 @@ export function registerPaymentRoutes(app: Express): void {
                         : null,
                     };
                   }));
-                  await sendCustomerInvoiceEmail(customerForEmail, existingOrder, enrichedItems, wholesaler);
+                  // Pass the updated payment values so the email reflects the current transaction
+                  const orderForEmail = {
+                    ...existingOrder,
+                    amountPaid: cumulativePaid.toFixed(2),
+                    amountOutstanding: newOutstanding.toFixed(2),
+                    paymentStatus,
+                  };
+                  await sendCustomerInvoiceEmail(customerForEmail, orderForEmail, enrichedItems, wholesaler);
                   console.log(`📧 Confirmation email sent to ${customerForEmail.email} for order ${orderNumber}`);
                 }
               } catch (emailErr) {
