@@ -906,13 +906,15 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
 }
 
 export async function createStripeRefundReceipt(order: any, refund: any, wholesaler: any, customer: any, reason: string): Promise<any> {
-  if (!stripe || !wholesaler.stripeAccountId) { console.log('Stripe not configured or no Connect account, skipping refund receipt'); return; }
+  let stripeClient: ReturnType<typeof getStripeClient> | null = null;
+  try { stripeClient = getStripeClient(Boolean(wholesaler?.isTestAccount)); } catch { /* key not configured */ }
+  if (!stripeClient || !wholesaler.stripeAccountId) { console.log('Stripe not configured or no Connect account, skipping refund receipt'); return; }
   try {
     if (refund?.id) {
-      const invoices = await stripe.invoices.list({ customer: customer.email, limit: 10 }, { stripeAccount: wholesaler.stripeAccountId });
+      const invoices = await stripeClient.invoices.list({ customer: customer.email, limit: 10 }, { stripeAccount: wholesaler.stripeAccountId });
       const originalInvoice = invoices.data.find(inv => inv.metadata?.order_id === order.id.toString());
       if (originalInvoice) {
-        const creditNote = await stripe.creditNotes.create({ invoice: originalInvoice.id, amount: refund.amount, reason: 'requested_by_customer', memo: reason || 'Refund processed', metadata: { order_id: order.id.toString(), refund_id: refund.id, refund_reason: reason || 'Customer requested refund' } }, { stripeAccount: wholesaler.stripeAccountId });
+        const creditNote = await stripeClient.creditNotes.create({ invoice: originalInvoice.id, amount: refund.amount, reason: 'requested_by_customer', memo: reason || 'Refund processed', metadata: { order_id: order.id.toString(), refund_id: refund.id, refund_reason: reason || 'Customer requested refund' } }, { stripeAccount: wholesaler.stripeAccountId });
         console.log(`✅ Stripe credit note created for refund ${refund.id}`);
         return creditNote;
       }
