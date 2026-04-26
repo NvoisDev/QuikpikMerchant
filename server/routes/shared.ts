@@ -750,18 +750,24 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (cEmail) doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(String(cEmail), c2, btY, { width: COL_W - 8, lineBreak: false });
     doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('FROM', c3, metaY, { width: COL_W - 8 });
     doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(businessName, c3, metaY + 12, { width: COL_W - 8 });
-    let fromY = metaY + 26;
-    if (wholesaler.businessPhone) { doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(wholesaler.businessPhone, c3, fromY, { width: COL_W - 8 }); fromY += 13; }
+    let fromY = metaY + 12 + doc.font('Helvetica-Bold').fontSize(10).heightOfString(businessName, { width: COL_W - 8 }) + 4;
+    if (wholesaler.businessPhone) {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(wholesaler.businessPhone, c3, fromY, { width: COL_W - 8 });
+      fromY += doc.font('Helvetica-Bold').fontSize(10).heightOfString(wholesaler.businessPhone, { width: COL_W - 8 }) + 3;
+    }
     const fromLines: string[] = [];
     if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
     const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
     if (cityPostal) fromLines.push(cityPostal);
     if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
     if (wholesaler.email) fromLines.push(wholesaler.email);
-    for (const line of fromLines) { doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(line, c3, fromY, { width: COL_W - 8 }); fromY += 12; }
-    if (wholesaler.legalBusinessName) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Trading as: ${wholesaler.legalBusinessName}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
-    if (wholesaler.vatNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`VAT Number: ${wholesaler.vatNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
-    if (wholesaler.companyRegistrationNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
+    for (const line of fromLines) {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(line, c3, fromY, { width: COL_W - 8 });
+      fromY += doc.font('Helvetica').fontSize(9).heightOfString(line, { width: COL_W - 8 }) + 3;
+    }
+    if (wholesaler.legalBusinessName) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Trading as: ${wholesaler.legalBusinessName}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`Trading as: ${wholesaler.legalBusinessName}`, { width: COL_W - 8 }) + 2; }
+    if (wholesaler.vatNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`VAT Number: ${wholesaler.vatNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`VAT Number: ${wholesaler.vatNumber}`, { width: COL_W - 8 }) + 2; }
+    if (wholesaler.companyRegistrationNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, { width: COL_W - 8 }) + 2; }
     const tableY = metaY + 120;
     const CW_PRODUCT = Math.round(CONTENT_W * 0.50), CW_QTY = Math.round(CONTENT_W * 0.11);
     const CW_PRICE = Math.round(CONTENT_W * 0.20), CW_TOTAL = CONTENT_W - CW_PRODUCT - CW_QTY - CW_PRICE;
