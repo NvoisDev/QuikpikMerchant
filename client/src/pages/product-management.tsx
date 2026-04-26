@@ -1092,11 +1092,12 @@ export default function ProductManagement() {
     setIsDialogOpen(true);
   }, []);
 
+  const deleteProductMutate = deleteProductMutation.mutate;
   const handleDelete = useCallback((id: number) => {
     if (confirm("Are you sure you want to delete this product?")) {
-      deleteProductMutation.mutate(id);
+      deleteProductMutate(id);
     }
-  }, [deleteProductMutation]);
+  }, [deleteProductMutate]);
 
   const handleDuplicate = useCallback((product: any) => {
     // Reset the form with the product data but clear the ID to create a new product
@@ -1145,6 +1146,7 @@ export default function ProductManagement() {
     setIsDialogOpen(true);
   }, [form]);
 
+  const updateProductStatusMutate = updateProductStatusMutation.mutate;
   const handleStatusChange = useCallback((id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => {
     // Only allow valid status updates that the mutation accepts
     if (status === "locked") {
@@ -1155,8 +1157,8 @@ export default function ProductManagement() {
       });
       return;
     }
-    updateProductStatusMutation.mutate({ id, status });
-  }, [updateProductStatusMutation, toast]);
+    updateProductStatusMutate({ id, status });
+  }, [updateProductStatusMutate, toast]);
 
   const handleManageStock = useCallback((p: any) => {
     setStockProduct(p);
