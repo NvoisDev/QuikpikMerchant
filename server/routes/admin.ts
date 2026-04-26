@@ -1410,12 +1410,14 @@ export function registerAdminRoutes(app: Express): void {
 
       const plans = await db.select().from(subscriptionPlans).orderBy(asc(subscriptionPlans.sortOrder), asc(subscriptionPlans.createdAt));
 
-      // Count active subscribers per planId
+      // Count active subscribers per planId (exclude test accounts)
       const subCounts = await db
         .select({ planId: userSubscriptions.planId, cnt: count() })
         .from(userSubscriptions)
+        .innerJoin(users, eq(userSubscriptions.userId, users.id))
         .where(and(
           sql`${userSubscriptions.status} IN ('active','trialing','past_due')`,
+          eq(users.isTestAccount, false),
         ))
         .groupBy(userSubscriptions.planId);
       const countMap: Record<string, number> = {};
