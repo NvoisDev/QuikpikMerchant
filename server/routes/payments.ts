@@ -314,9 +314,10 @@ export function registerPaymentRoutes(app: Express): void {
               const pi = await stripeForFee.paymentIntents.retrieve(piId, {
                 expand: ['latest_charge.balance_transaction'],
               });
-              const charge = pi.latest_charge as any;
-              const bt = charge?.balance_transaction;
-              if (bt && typeof bt === 'object' && typeof bt.fee === 'number') {
+              const charge = typeof pi.latest_charge === 'object' ? pi.latest_charge as Stripe.Charge : null;
+              const btRaw = charge?.balance_transaction;
+              const bt = typeof btRaw === 'object' ? btRaw as Stripe.BalanceTransaction : null;
+              if (bt && typeof bt.fee === 'number') {
                 // fee is in pence — convert to pounds and accumulate for deposit orders
                 const thisFee = bt.fee / 100;
                 const existingFee = parseFloat(existingOrder.stripeActualFee || '0');
