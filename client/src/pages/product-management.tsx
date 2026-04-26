@@ -968,11 +968,9 @@ export default function ProductManagement() {
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
+      setIsDialogOpen(false);
+      setTimeout(() => form.reset(), 0);
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      startTransition(() => {
-        setIsDialogOpen(false);
-        form.reset();
-      });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -980,10 +978,8 @@ export default function ProductManagement() {
     },
     onError: (error: any) => {
       if (error.message.includes("403") && error.message.toLowerCase().includes("product limit")) {
-        startTransition(() => {
-          setIsDialogOpen(false);
-          setShowUpgradeModal(true);
-        });
+        setIsDialogOpen(false);
+        setShowUpgradeModal(true);
       } else {
         toast({
           title: "Error",
@@ -1019,26 +1015,22 @@ export default function ProductManagement() {
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
     onSuccess: () => {
+      setIsDialogOpen(false);
+      setEditingProduct(null);
+      if (navigateBackTo) {
+        const dest = navigateBackTo;
+        setNavigateBackTo(null);
+        navigate(dest);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      startTransition(() => {
-        setIsDialogOpen(false);
-        setEditingProduct(null);
-        if (navigateBackTo) {
-          const dest = navigateBackTo;
-          setNavigateBackTo(null);
-          navigate(dest);
-        }
-      });
       toast({
         title: "Saved",
         description: "Product updated successfully",
       });
     },
     onError: (error: any) => {
-      startTransition(() => {
-        setIsDialogOpen(false);
-        setEditingProduct(null);
-      });
+      setIsDialogOpen(false);
+      setEditingProduct(null);
       toast({
         title: "Error",
         description: error.message || "Failed to update product",
@@ -1955,16 +1947,14 @@ export default function ProductManagement() {
               <Dialog 
                 open={isDialogOpen} 
                 onOpenChange={(open) => {
-                  startTransition(() => {
-                    setIsDialogOpen(open);
-                    if (!open && navigateBackTo) {
-                      const dest = navigateBackTo;
-                      setNavigateBackTo(null);
-                      navigate(dest);
-                    } else if (!open) {
-                      setNavigateBackTo(null);
-                    }
-                  });
+                  setIsDialogOpen(open);
+                  if (!open && navigateBackTo) {
+                    const dest = navigateBackTo;
+                    setNavigateBackTo(null);
+                    navigate(dest);
+                  } else if (!open) {
+                    setNavigateBackTo(null);
+                  }
                 }}
               >
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
