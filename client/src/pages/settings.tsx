@@ -874,7 +874,7 @@ export default function Settings() {
                     {!isEditingBusiness ? (
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                         <div>
-                          <dt className="text-sm font-medium text-gray-500">Business Name</dt>
+                          <dt className="text-sm font-medium text-gray-500">Trading Name</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.businessName || 'Not set'}</dd>
                         </div>
                         <div>
@@ -962,7 +962,8 @@ export default function Settings() {
                     ) : (
                       <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Business Name</label>
+                          <label className="text-sm font-medium text-gray-500">Trading Name</label>
+                          <p className="text-xs text-gray-400 mb-1">The name your customers see</p>
                           <input
                             type="text"
                             value={businessForm.businessName}
@@ -1210,6 +1211,7 @@ export default function Settings() {
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="sm:col-span-2">
                               <label className="text-sm font-medium text-gray-500">Legal Business Name</label>
+                              <p className="text-xs text-gray-400 mb-1">Your registered company name</p>
                               <input
                                 type="text"
                                 value={businessForm.legalBusinessName}
