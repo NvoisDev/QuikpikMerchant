@@ -213,7 +213,10 @@ export function registerMarketplaceRoutes(app: Express): void {
           wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName}`,
           wholesalerEmail: wholesalerUser.email || '',
           wholesalerPhone: wholesalerUser.businessPhone || '',
-          deliveryNote: (wholesalerUser as any).deliveryNote || null
+          deliveryNote: (wholesalerUser as any).deliveryNote || null,
+          legalBusinessName: wholesalerUser.legalBusinessName || null,
+          vatNumber: wholesalerUser.vatNumber || null,
+          companyRegistrationNumber: wholesalerUser.companyRegistrationNumber || null,
         } : null;
 
         return {
@@ -236,6 +239,9 @@ export function registerMarketplaceRoutes(app: Express): void {
             email: wholesalerDetails.wholesalerEmail || '',
             phone: wholesalerDetails.wholesalerPhone || '',
             deliveryNote: wholesalerDetails.deliveryNote || null,
+            legalBusinessName: wholesalerDetails.legalBusinessName,
+            vatNumber: wholesalerDetails.vatNumber,
+            companyRegistrationNumber: wholesalerDetails.companyRegistrationNumber,
           } : null
         };
       }));

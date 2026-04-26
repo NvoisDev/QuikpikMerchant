@@ -56,6 +56,9 @@ export interface Order {
     city?: string;
     postalCode?: string;
     country?: string;
+    legalBusinessName?: string | null;
+    vatNumber?: string | null;
+    companyRegistrationNumber?: string | null;
   };
   fulfillmentType: string;
   deliveryCarrier: string;
@@ -940,6 +943,25 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
           </div>
         </div>
 
+        {/* Seller Information */}
+        {order.wholesaler && (order.wholesaler.legalBusinessName || order.wholesaler.vatNumber || order.wholesaler.companyRegistrationNumber) && (
+          <div>
+            <h3 className="font-medium mb-1 text-sm sm:text-base">Seller Information</h3>
+            <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+              <div className="text-xs break-words"><strong>{order.wholesaler.businessName}</strong></div>
+              {order.wholesaler.legalBusinessName && (
+                <div className="text-xs text-gray-600">Trading as: {order.wholesaler.legalBusinessName}</div>
+              )}
+              {order.wholesaler.vatNumber && (
+                <div className="text-xs text-gray-600">VAT No: {order.wholesaler.vatNumber}</div>
+              )}
+              {order.wholesaler.companyRegistrationNumber && (
+                <div className="text-xs text-gray-600">Co. Reg: {order.wholesaler.companyRegistrationNumber}</div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Address Information */}
         <div>
           {order.fulfillmentType === 'pickup' ? (
@@ -1467,6 +1489,25 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             )}
           </div>
         </div>
+
+        {/* Seller Information */}
+        {order.wholesaler && (order.wholesaler.legalBusinessName || order.wholesaler.vatNumber || order.wholesaler.companyRegistrationNumber) && (
+          <div>
+            <h3 className="font-medium mb-1 text-sm sm:text-base">Seller Information</h3>
+            <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+              <div className="text-xs break-words"><strong>{order.wholesaler.businessName}</strong></div>
+              {order.wholesaler.legalBusinessName && (
+                <div className="text-xs text-gray-600">Trading as: {order.wholesaler.legalBusinessName}</div>
+              )}
+              {order.wholesaler.vatNumber && (
+                <div className="text-xs text-gray-600">VAT No: {order.wholesaler.vatNumber}</div>
+              )}
+              {order.wholesaler.companyRegistrationNumber && (
+                <div className="text-xs text-gray-600">Co. Reg: {order.wholesaler.companyRegistrationNumber}</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Address Information */}
         <div>
