@@ -1,0 +1,96 @@
+🧾 Managing Your Business Information & Trading Names
+Overview
+
+Quikpik allows you to operate under one legal business while presenting different trading names (brands) to your customers.
+
+This is useful if you:
+
+Sell under multiple brand names
+Serve different customer types
+Want different invoice branding
+🏢 Your Legal Business Information
+
+Your legal business is the official company responsible for:
+
+Payments
+Tax (VAT)
+Invoicing
+Compliance
+You’ll need to provide:
+Legal Business Name
+VAT Number (if applicable)
+Company Registration Number (if applicable)
+Registered Address
+
+👉 This information will appear on all invoices for compliance.
+
+🏷️ What Are Business Profiles?
+
+Business Profiles are your trading names (also known as “doing business as”).
+
+Examples:
+
+Fresh Foods Ltd (legal company)
+Trading as:
+City Grocers
+Urban Fresh Supplies
+🔄 How It Works
+You operate one account, one stock system, one warehouse
+You can create multiple business profiles (if enabled)
+When creating a quote or invoice, you can choose which name to display
+🧾 What Customers See
+
+On invoices and quotes, customers will see:
+
+Your selected business profile (brand name)
+Your legal business details (for compliance)
+
+Example:
+
+City Grocers
+Trading as: Fresh Foods Ltd
+VAT: 123456789
+
+⚙️ How to Set It Up
+1. Add Your Legal Business Details
+
+Go to:
+Settings → Business Information
+
+Fill in:
+
+Legal name
+VAT number
+Address
+2. Create Business Profiles (if enabled)
+
+Go to:
+Settings → Business Profiles
+
+You can:
+
+Add new profiles
+Set a default profile
+Edit names and branding
+3. Select Profile When Creating Quotes
+
+When creating a quote or order:
+
+Choose your Business Profile from the dropdown
+This determines what your customer sees
+⚠️ Important Notes
+All payments go to the same business account
+Business profiles are for branding only
+You cannot use different VAT numbers under one account
+Your legal business remains responsible for all transactions
+❓ Need Help?
+
+If you want to enable multiple business profiles or need help setting this up, contact support via the admin panel.
+
+💡 Tip
+
+Use different profiles to:
+
+Separate premium vs budget product lines
+Brand differently for different customers
+Keep your operations simple while presenting flexibility
