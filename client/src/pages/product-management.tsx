@@ -298,8 +298,16 @@ export default function ProductManagement() {
 
   // Load product data into form when editing (prevents stack overflow)
   useEffect(() => {
+    if (isDialogOpen && !editingProduct) {
+      // New product — reset the ref so auto-calculation is not blocked by a previous edit
+      lastAutoFilledUnitWeight.current = '';
+    }
+
     if (isDialogOpen && editingProduct) {
       console.log('🔄 Loading product data into form safely', editingProduct);
+      // Reset the auto-fill ref before the timeout so stale values from a previous
+      // product edit do not block auto-calculation on the newly-opened product.
+      lastAutoFilledUnitWeight.current = '';
       // Use setTimeout to avoid race conditions
       setTimeout(() => {
         try {
@@ -414,7 +422,7 @@ export default function ProductManagement() {
                 if (calculatedUnitWeight > 0) {
                   const currentUnitWeight = form.getValues('unitWeight');
                   const newUnitWeight = calculatedUnitWeight.toString();
-                  const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+                  const canOverwrite = !currentUnitWeight || currentUnitWeight === lastAutoFilledUnitWeight.current;
                   if (canOverwrite && currentUnitWeight !== newUnitWeight) {
                     console.log('⚖️ Auto-calculating unit weight (from package weight effect):', { calculatedWeight, qty, calculatedUnitWeight });
                     form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
@@ -483,8 +491,12 @@ export default function ProductManagement() {
     const subscription = form.watch((values, { name }) => {
       if (name !== 'totalPackageWeight' && name !== 'packQuantity') return;
 
-      const { totalPackageWeight = '', packQuantity = '' } = values;
+      const { totalPackageWeight = '', packQuantity: watchedPackQuantity = '' } = values;
       if (!totalPackageWeight) return;
+
+      // Use form.getValues as a fallback in case the watch snapshot is stale
+      // (e.g. only one of the two fields changed and the other is not yet reflected in values)
+      const packQuantity = watchedPackQuantity || form.getValues('packQuantity') || '';
 
       const pkgWeight = parseFloat(totalPackageWeight as string);
       const qty = parseFloat(packQuantity as string) || 1;
@@ -496,7 +508,7 @@ export default function ProductManagement() {
       const currentUnitWeight = form.getValues('unitWeight');
       const newUnitWeight = calculatedUnitWeight.toString();
 
-      const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+      const canOverwrite = !currentUnitWeight || currentUnitWeight === lastAutoFilledUnitWeight.current;
       if (!canOverwrite || currentUnitWeight === newUnitWeight) return;
 
       form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
@@ -535,8 +547,8 @@ export default function ProductManagement() {
       const currentUnitWeight = form.getValues('unitWeight');
       const newUnitWeight = calculatedKg.toString();
 
-      // Only auto-fill if the field is blank or still holds our last auto-filled value
-      const canOverwrite = currentUnitWeight === '' || currentUnitWeight === lastAutoFilledUnitWeight.current;
+      // Only auto-fill if the field is blank (undefined/null/"") or still holds our last auto-filled value
+      const canOverwrite = !currentUnitWeight || currentUnitWeight === lastAutoFilledUnitWeight.current;
       if (!canOverwrite || currentUnitWeight === newUnitWeight) return;
 
       form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
