@@ -19,11 +19,17 @@ function formatDeliveryAddressPlainText(address: string): string {
 export function getEmailLogoUrl(
   wholesalerId: string | undefined | null,
   logoType: string | null | undefined,
-  logoUrl: string | null | undefined
+  logoUrl: string | null | undefined,
+  updatedAt?: Date | string | null
 ): string | undefined {
   if (!logoUrl) return undefined;
   if (logoType === 'custom' && wholesalerId) {
-    return `https://quikpik.app/api/logo/${wholesalerId}`;
+    const base = `https://quikpik.app/api/logo/${wholesalerId}`;
+    if (updatedAt) {
+      const ts = Math.floor(new Date(updatedAt).getTime() / 1000);
+      return `${base}?v=${ts}`;
+    }
+    return base;
   }
   if (logoUrl.startsWith('http')) return logoUrl;
   return undefined;

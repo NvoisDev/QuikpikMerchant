@@ -22,7 +22,7 @@ export function registerSystemRoutes(app: Express): void {
         const [, mimeType, base64Data] = match;
         const buffer = Buffer.from(base64Data, 'base64');
         res.setHeader('Content-Type', mimeType);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Cache-Control', 'no-store');
         return res.send(buffer);
       }
       if (logoUrl.startsWith('http')) return res.redirect(logoUrl);

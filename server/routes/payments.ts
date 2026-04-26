@@ -2112,13 +2112,15 @@ export function registerPaymentRoutes(app: Express): void {
           for (const item of items) {
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
             const productName = product?.name || `Product #${item.productId}`;
+            const packDesc = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
+            const displayName = packDesc ? `${productName} (${packDesc})` : productName;
             const sellingType = item.sellingType || 'units';
             const itemTotal = item.customPrice * item.quantity;
             const unitWeightKg = sellingType === 'pallets'
               ? parseFloat(product?.palletWeight || product?.pallet_weight || '0')
               : parseFloat(product?.unitWeight || product?.unit_weight || '0');
             if (unitWeightKg > 0) wholesalerTotalWeightKg += unitWeightKg * item.quantity;
-            itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${productName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
+            itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${displayName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
           }
           const wholesalerWeightRowHtml = wholesalerTotalWeightKg > 0 ? `<tr><td style="padding:4px 0">Total Weight:</td><td style="padding:4px 0;text-align:right">${wholesalerTotalWeightKg.toFixed(2)} kg</td></tr>` : '';
 
@@ -2140,7 +2142,7 @@ export function registerPaymentRoutes(app: Express): void {
           const wholesalerDeposit = isDeposit ? subtotal * (validDepositPercentage / 100) : 0;
           const wholesalerOutstanding = isDeposit ? subtotal - wholesalerDeposit : 0;
           const quoteEmailBody = `${emailHeading('Quote Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${wholesalerWeightRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
-          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${subtotal.toFixed(2)}` });
+          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Quote ${orderNumber} sent to ${customer.firstName} - £${subtotal.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({
             to: wholesaler.email,
@@ -2166,13 +2168,15 @@ export function registerPaymentRoutes(app: Express): void {
           for (const item of items) {
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
             const productName = product?.name || `Product #${item.productId}`;
+            const packDesc = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
+            const displayName = packDesc ? `${productName} (${packDesc})` : productName;
             const sellingType = item.sellingType || 'units';
             const itemTotal = item.customPrice * item.quantity;
             const unitWeightKg = sellingType === 'pallets'
               ? parseFloat(product?.palletWeight || product?.pallet_weight || '0')
               : parseFloat(product?.unitWeight || product?.unit_weight || '0');
             if (unitWeightKg > 0) totalWeightKg += unitWeightKg * item.quantity;
-            customerItemsHtml.push(`<li style="margin: 6px 0;"><strong>${productName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
+            customerItemsHtml.push(`<li style="margin: 6px 0;"><strong>${displayName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
             pdfItems.push({ productName, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), lineTotal: itemTotal, appliedOfferLabel: null });
           }
           const custDeliveryRowHtml = quoteDeliveryCharge > 0 ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>` : '';
@@ -2188,7 +2192,7 @@ export function registerPaymentRoutes(app: Express): void {
           const custPaymentBadge = isPayLater ? emailBadge('Pay Later — No payment required now', '#3b82f6') : (isDeposit ? emailBadge(`Deposit required: £${depositAmount.toFixed(2)}`, '#f59e0b') : emailBadge(`Payment required: £${total.toFixed(2)}`, '#10b981'));
           const quoteTxFee = !isPayLater ? Math.max(0, total - productSubtotal - quoteDeliveryCharge) : 0;
           const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${new Date().toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${!isPayLater && quoteTxFee > 0 ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:14px">Service Fee (5.5% + £0.50):</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:14px">£${quoteTxFee.toFixed(2)}</td></tr>` : ''}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr>${totalWeightKg > 0 ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:14px">Total Weight:</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:14px">${totalWeightKg.toFixed(2)} kg</td></tr>` : ''}</table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}`;
-          const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
+          const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
 
           // Generate PDF invoice attachment (non-blocking — email still sends without it if PDF fails)
           let quoteAttachment: SendGridAttachment | null = null;
