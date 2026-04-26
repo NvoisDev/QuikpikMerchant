@@ -662,7 +662,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (promoLabel && freeCount > 0) promoLine = `${promoLabel} · +${freeCount} free included`;
     else if (promoLabel) promoLine = promoLabel;
     else if (freeCount > 0) promoLine = `+${freeCount} free included`;
-    const packInfo = formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
+    const packInfo = formatPackDescriptor(item.product?.packQuantity || item.product?.quantityInPack, item.product?.sizePerUnit || item.product?.unitSize, item.product?.unitOfMeasure);
     return {
       name: item.product?.name || item.productName || 'Product',
       qty: Number(item.quantity) || 0,
