@@ -95,12 +95,14 @@ interface WholesalerRow {
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
+  totalStripeProcessingFees: number; totalGrossProfit: number; grossMarginPct: number;
 }
 interface RevenueOrder {
   id: number; orderNumber: string; wholesalerId: string; wholesalerName: string | null;
   customerName: string | null; subtotal: string; platformFee: string | null;
-  customerTransactionFee: string | null; totalQuikpikIncome: number; status: string;
-  paymentStatus: string | null; createdAt: string;
+  customerTransactionFee: string | null; totalQuikpikIncome: number;
+  stripeProcessingFee: number; grossProfit: number;
+  status: string; paymentStatus: string | null; createdAt: string;
 }
 interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; }
 interface PayoutStatusData {
@@ -124,6 +126,7 @@ interface ProductRow {
 interface WholesalerRevenueSummary {
   name: string; tier: string; orders: number; gmv: number;
   buyerFees: number; merchantFees: number; total: number;
+  stripeFees: number; grossProfit: number;
 }
 interface WholesalerOrderRow {
   id: number; orderNumber: string; customerName: string | null; wholesalerName: string | null;
@@ -611,9 +614,11 @@ function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isA
           <CardContent className="px-4 pb-4 space-y-2.5">
             <Row label="Buyer fees (5.5% + £0.50)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
             <Row label="Merchant fees"               value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
+            <Row label="Stripe fees (est. 1.4% + £0.20)" value={revenueLoading ? "—" : `-${fmt(revenueTotals.totalStripeProcessingFees || 0)}`} color={RED} />
             <Row label="Subscription MRR"            value={fmt(subMRR)} color={PURPLE} />
-            <div className="pt-1.5 border-t border-gray-100">
-              <Row label="Total earned (fees + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossRevenue || 0) + subMRR)} color={GREEN} bold />
+            <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
+              <Row label="Gross profit (order fees)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)} color={GREEN} bold />
+              <Row label="Total earned (profit + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossProfit || 0) + subMRR)} color={GREEN} bold />
             </div>
           </CardContent>
         </Card>
@@ -1943,18 +1948,21 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
   });
 
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
-  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0 };
+  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0 };
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
     for (const o of revenueOrders) {
+      if (o.status === "cancelled") continue;
       const key = o.wholesalerId ?? "unknown";
-      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0 };
+      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0 };
       map[key].orders++;
       map[key].gmv += Number(o.subtotal || 0);
       map[key].buyerFees += Number(o.customerTransactionFee || 0);
       map[key].merchantFees += Number(o.platformFee || 0);
       map[key].total += Number(o.customerTransactionFee || 0) + Number(o.platformFee || 0);
+      map[key].stripeFees += Number(o.stripeProcessingFee || 0);
+      map[key].grossProfit += Number(o.grossProfit || 0);
     }
     for (const w of wholesalers) { if (map[w.id]) map[w.id].tier = w.subscriptionTier || "free"; }
     return Object.values(map).sort((a, b) => b.total - a.total);
@@ -2029,6 +2037,13 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
         <StatCard label="Period GMV"    value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
       </div>
 
+      {/* Gross profit cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <StatCard label="Stripe Fees (est.)"  value={isLoading ? "…" : fmt(revenueTotals.totalStripeProcessingFees)}  sub="1.4% + £0.20 per order"  icon={<CreditCard className="h-4 w-4" />}  color={RED} />
+        <StatCard label="Gross Profit"         value={isLoading ? "…" : fmt(revenueTotals.totalGrossProfit)}           sub="Revenue minus Stripe fees" icon={<TrendingUp className="h-4 w-4" />}  color={GREEN} />
+        <StatCard label="Gross Margin"         value={isLoading ? "…" : `${revenueTotals.grossMarginPct ?? 0}%`}       sub="Profit / order revenue"    icon={<TrendingUp className="h-4 w-4" />}  color={PURPLE} />
+      </div>
+
       {/* Take rate */}
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardContent className="px-4 py-3 flex flex-wrap gap-6">
@@ -2048,7 +2063,7 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-blue-50">
-                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Take Rate"].map((h, i) => (
+                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
                     <TableHead key={i} className="text-xs font-semibold text-blue-700">{h}</TableHead>
                   ))}
                 </TableRow>
@@ -2063,6 +2078,8 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
                     <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.buyerFees)}</TableCell>
                     <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.merchantFees)}</TableCell>
                     <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.total)}</TableCell>
+                    <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>-{fmt(w.stripeFees)}</TableCell>
+                    <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(w.grossProfit)}</TableCell>
                     <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(w.total, w.gmv)}</TableCell>
                   </TableRow>
                 ))}
@@ -2084,7 +2101,7 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-blue-50">
-                      {["Order #","Wholesaler","Customer","GMV","Buyer Fee","Merchant Fee","Total","Take Rate","Date"].map((h, i) => (
+                      {["Order #","Wholesaler","Customer","GMV","Buyer Fee","Merchant Fee","Total","Stripe Fee","Gross Profit","Take Rate","Date"].map((h, i) => (
                         <TableHead key={i} className="text-xs font-semibold text-blue-700">{h}</TableHead>
                       ))}
                     </TableRow>
@@ -2099,6 +2116,8 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
                         <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(parseFloat(o.customerTransactionFee || "0"))}</TableCell>
                         <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(parseFloat(o.platformFee || "0"))}</TableCell>
                         <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(o.totalQuikpikIncome)}</TableCell>
+                        <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>-{fmt(o.stripeProcessingFee ?? 0)}</TableCell>
+                        <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(o.grossProfit ?? 0)}</TableCell>
                         <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
                         <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
                       </TableRow>

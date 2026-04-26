@@ -261,16 +261,20 @@ export function registerAdminRoutes(app: Express): void {
         .orderBy(desc(orders.createdAt))
         .limit(1000);
 
-      let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0;
+      let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0, totalStripeProcessingFees = 0;
       const processedOrders = recentOrders.map(o => {
         const custFee = parseFloat(o.customerTransactionFee || '0');
         const platFee = parseFloat(o.platformFee || '0');
         const sub = parseFloat(o.subtotal || '0');
+        // Stripe processes the full customer-facing amount (subtotal + buyer fee)
+        const stripeFee = parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2));
+        const grossProfit = parseFloat((custFee + platFee - stripeFee).toFixed(2));
         // Cancelled orders are excluded from platform totals — they never completed
         if (o.status !== 'cancelled') {
           totalCustomerFees += custFee;
           totalPlatformFees += platFee;
           totalGMV += sub;
+          totalStripeProcessingFees += stripeFee;
         }
         return {
           ...o,
@@ -278,16 +282,27 @@ export function registerAdminRoutes(app: Express): void {
           platformFee: platFee,
           subtotal: sub,
           totalQuikpikIncome: custFee + platFee,
+          stripeProcessingFee: stripeFee,
+          grossProfit,
         };
       });
+
+      const totalGrossRevenue = totalCustomerFees + totalPlatformFees;
+      const totalGrossProfit = parseFloat((totalGrossRevenue - totalStripeProcessingFees).toFixed(2));
+      const grossMarginPct = totalGrossRevenue > 0
+        ? parseFloat(((totalGrossProfit / totalGrossRevenue) * 100).toFixed(1))
+        : 0;
 
       res.json({
         orders: processedOrders,
         totals: {
           totalCustomerFees,
           totalPlatformFees,
-          totalGrossRevenue: totalCustomerFees + totalPlatformFees,
+          totalGrossRevenue,
           totalGMV,
+          totalStripeProcessingFees: parseFloat(totalStripeProcessingFees.toFixed(2)),
+          totalGrossProfit,
+          grossMarginPct,
         },
       });
     } catch (error) {
