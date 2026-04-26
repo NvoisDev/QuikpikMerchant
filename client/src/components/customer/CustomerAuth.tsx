@@ -9,7 +9,7 @@ import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Stor
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
 import { formatPhoneToInternational, isValidMobile } from "@shared/phone-utils";
-import { CountryCodePicker } from "@/components/ui/country-code-picker";
+import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 
 
 interface CustomerAuthProps {
@@ -38,14 +38,13 @@ interface WholesalerInfo {
 
 type AuthStep = 'phone' | 'otp' | 'select' | 'no-account';
 
-const DEFAULT_COUNTRY_CODE = '+44';
 const COUNTRY_CODE_STORAGE_KEY = 'customerPreferredCountryCode';
 
 function getSavedCountryCode(): string {
   try {
-    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || DEFAULT_COUNTRY_CODE;
+    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || detectCountryDialCode();
   } catch {
-    return DEFAULT_COUNTRY_CODE;
+    return detectCountryDialCode();
   }
 }
 
@@ -56,6 +55,7 @@ function saveCountryCode(code: string): void {
     // ignore storage errors
   }
 }
+
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -69,7 +69,7 @@ function formatCountdown(secs: number) {
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
   const [step, setStep] = useState<AuthStep>('phone');
-  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // editable, persisted in localStorage
+  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // localStorage preference, falls back to auto-detected timezone
   const [phoneLocal, setPhoneLocal] = useState('');          // digits after country code
   const [otpCode, setOtpCode] = useState('');
   const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);

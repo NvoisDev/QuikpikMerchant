@@ -103,12 +103,12 @@ describe('phone OTP auth security contract', () => {
 
 describe('international phone support', () => {
 
-  it('CustomerAuth.tsx uses editable country code state (not hardcoded +44 static span)', () => {
-    // Must have a DEFAULT_COUNTRY_CODE constant (UK default)
-    expect(customerAuthComponentSource).toContain("DEFAULT_COUNTRY_CODE = '+44'");
+  it('CustomerAuth.tsx uses editable country code state with auto-detection and localStorage persistence', () => {
+    // Must import and use detectCountryDialCode for timezone-based auto-detection
+    expect(customerAuthComponentSource).toContain('detectCountryDialCode');
     // Must have editable state — not a static select-none span
     expect(customerAuthComponentSource).toContain('countryCode, setCountryCode');
-    // Country code state must be initialised (either from localStorage or the default constant)
+    // Country code state must be initialised from localStorage (falling back to auto-detected timezone)
     expect(customerAuthComponentSource).toMatch(/useState\((getSavedCountryCode|DEFAULT_COUNTRY_CODE)\)/);
     // UI must use the CountryCodePicker component (searchable flag/name/dial-code dropdown)
     expect(customerAuthComponentSource).toContain('CountryCodePicker');
@@ -118,10 +118,11 @@ describe('international phone support', () => {
     expect(customerAuthComponentSource).not.toContain("🇬🇧 {COUNTRY_CODE}");
   });
 
-  it('CustomerLogin.tsx uses editable country code state (not hardcoded +44 static span)', () => {
-    expect(customerLoginSource).toContain("DEFAULT_COUNTRY_CODE = '+44'");
+  it('CustomerLogin.tsx uses editable country code state with auto-detection and localStorage persistence', () => {
+    // Must import and use detectCountryDialCode for timezone-based auto-detection
+    expect(customerLoginSource).toContain('detectCountryDialCode');
     expect(customerLoginSource).toContain('countryCode, setCountryCode');
-    // Country code state must be initialised (either from localStorage or the default constant)
+    // Country code state must be initialised from localStorage (falling back to auto-detected timezone)
     expect(customerLoginSource).toMatch(/useState\((getSavedCountryCode|DEFAULT_COUNTRY_CODE)\)/);
     // UI must use the CountryCodePicker component (searchable flag/name/dial-code dropdown)
     expect(customerLoginSource).toContain('CountryCodePicker');

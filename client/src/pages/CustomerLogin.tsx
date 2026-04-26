@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Loader2, ShoppingBag, Package, TrendingUp, Clock, Star, Users, ArrowLeft, Building2, ShieldCheck, Phone, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { CountryCodePicker } from "@/components/ui/country-code-picker";
+import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 
 interface WholesalerOption {
   customerId: string;
@@ -20,14 +20,13 @@ interface WholesalerOption {
 
 type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
 
-const DEFAULT_COUNTRY_CODE = '+44';
 const COUNTRY_CODE_STORAGE_KEY = 'customerPreferredCountryCode';
 
 function getSavedCountryCode(): string {
   try {
-    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || DEFAULT_COUNTRY_CODE;
+    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || detectCountryDialCode();
   } catch {
-    return DEFAULT_COUNTRY_CODE;
+    return detectCountryDialCode();
   }
 }
 
@@ -38,6 +37,7 @@ function saveCountryCode(code: string): void {
     // ignore storage errors
   }
 }
+
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -80,7 +80,7 @@ export default function CustomerLogin() {
   const { backToHome } = useAuth();
 
   const [step, setStep] = useState<LoginStep>('phone');
-  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // editable, persisted in localStorage
+  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // localStorage preference, falls back to auto-detected timezone
   const [phoneLocal, setPhoneLocal] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
