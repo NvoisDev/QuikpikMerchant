@@ -1,0 +1,139 @@
+🧾 Prompt: Legal Business Information + Trading Profiles (NON-BREAKING, COMPLIANT)
+🎯 Objective
+
+Introduce full legal business information for each wholesaler and ensure all invoices and documents are compliant, while supporting multiple trading names (business profiles).
+
+This must be implemented without breaking existing flows, data, or invoices.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT remove or overwrite existing data
+DO NOT break invoice generation
+DO NOT impact payments or Stripe integration
+All changes must be additive and backward compatible
+🧱 PART 1: Add Legal Business Information (REQUIRED)
+Update wholesaler (users) table:
+
+Add fields:
+
+legal_business_name (string, required for new users)
+company_registration_number (string, optional)
+vat_number (string, optional)
+registered_address (text, optional)
+country (string, optional)
+Behaviour:
+Existing wholesalers:
+Fields can be NULL initially
+New wholesalers:
+Prompt to complete during onboarding or first invoice creation
+🧱 PART 2: Business Profiles (Trading Names)
+Create new table:
+business_profiles
+- id
+- wholesaler_id
+- display_name (required)
+- logo_url (optional)
+- address (optional)
+- is_default (boolean)
+Rules:
+Every wholesaler must have at least 1 profile
+Default profile = current business name (migrated)
+Multiple profiles only if:
+wholesaler.enable_multi_profile = true
+🧱 PART 3: Invoice Logic (CRITICAL FOR COMPLIANCE)
+When generating invoices:
+Display:
+[Business Profile Display Name]
+Trading as: [Legal Business Name]
+
+Registered Address: [registered_address]
+VAT Number: [vat_number] (if exists)
+Company No: [company_registration_number] (if exists)
+Rules:
+ALWAYS show legal entity
+Profile name = branding only
+VAT shown only if provided
+🧱 PART 4: Admin Panel Updates
+In Super Admin:
+
+Add:
+
+1. Wholesaler Business Info Section
+Legal Business Name
+Company Number
+VAT Number
+Registered Address
+Country
+
+👉 Editable by admin (for support purposes)
+
+2. Enable Business Profiles Toggle
+Enable Multiple Business Profiles: ON/OFF
+🧱 PART 5: Wholesaler UI (IMPORTANT)
+Settings Page
+
+Add section:
+
+“Business Information”
+
+Fields:
+
+Legal Business Name
+VAT Number
+Company Number
+Registered Address
+“Business Profiles” Section
+Add / Edit / Delete profiles
+Set default profile
+🧱 PART 6: Quote & Invoice Flow
+When creating quote:
+
+IF multi-profile enabled:
+
+Dropdown:
+Select Business Profile
+Save:
+order.business_profile_id
+Use this profile for:
+Invoice
+Customer-facing docs
+Notifications
+🧱 PART 7: Backward Compatibility
+Existing orders:
+Use default profile
+Existing invoices:
+Remain unchanged
+No forced migration required
+🧪 PART 8: Validation
+Legal business name required before:
+Generating invoice
+VAT format validation (basic)
+Ensure at least 1 business profile exists
+🚀 Deployment Strategy
+Phase 1:
+Add DB fields
+Add business_profiles table
+Phase 2:
+Admin + wholesaler UI
+Phase 3:
+Invoice updates
+Phase 4:
+Profile selection in quotes
+🧪 Acceptance Criteria
+Wholesalers can store full legal info
+Invoices display compliant business details
+Multiple trading names supported cleanly
+No disruption to existing orders or payments
+Admin can manage and support easily
+🧠 Final sanity check
+
+If implementation:
+
+“Replaces existing business name everywhere”
+
+🚫 WRONG
+
+If implementation:
+
+“Adds legal layer + optional profiles without breaking flows”
+
+✅ Correct
