@@ -392,8 +392,9 @@ export default function ProductManagement() {
               lastAutoFilledUnitWeight.current = autoStr;
             }
           } else {
-            // DB has a value the user set manually — don't track it as auto-filled
-            lastAutoFilledUnitWeight.current = '';
+            // Treat the saved value as the last auto-filled value so that subsequent
+            // changes to Total Package Weight or Pack Quantity can still trigger an update
+            lastAutoFilledUnitWeight.current = safeData.unitWeight || '';
           }
         } catch (error) {
           console.error('❌ Safe form population failed:', error);
