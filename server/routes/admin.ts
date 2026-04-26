@@ -327,7 +327,7 @@ export function registerAdminRoutes(app: Express): void {
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(eq(users.role, 'retailer'))
+        .where(inArray(users.role, ['customer', 'retailer']))
         .orderBy(desc(users.createdAt));
 
       const customerIds = customers.map(c => c.id);
@@ -394,7 +394,7 @@ export function registerAdminRoutes(app: Express): void {
         .where(eq(users.id, req.params.id))
         .limit(1);
       if (!target[0]) return res.status(404).json({ error: 'Customer not found' });
-      if (target[0].role !== 'retailer') return res.status(400).json({ error: 'Target user is not a customer' });
+      if (!['customer', 'retailer'].includes(target[0].role)) return res.status(400).json({ error: 'Target user is not a customer' });
 
       const updateData: Record<string, string | null> = {};
       if (customerType !== undefined) updateData.customerType = customerType || null;
@@ -468,7 +468,7 @@ export function registerAdminRoutes(app: Express): void {
       const pending = await db
         .select({ id: users.id, postalCode: users.postalCode })
         .from(users)
-        .where(and(eq(users.role, 'retailer'), or(isNull(users.latitude), isNull(users.longitude))));
+        .where(and(inArray(users.role, ['customer', 'retailer']), or(isNull(users.latitude), isNull(users.longitude))));
 
       let success = 0, flagged = 0;
       for (const customer of pending) {
@@ -740,7 +740,7 @@ export function registerAdminRoutes(app: Express): void {
         archived: users.archived,
         createdAt: users.createdAt,
       }).from(users).where(and(
-        eq(users.role, 'retailer'),
+        inArray(users.role, ['customer', 'retailer']),
         searchTerm ? or(
           ilike(users.firstName, searchTerm),
           ilike(users.lastName, searchTerm),
@@ -819,7 +819,7 @@ export function registerAdminRoutes(app: Express): void {
       const [targetUser] = await db.select({ id: users.id, role: users.role })
         .from(users).where(eq(users.id, req.params.id)).limit(1);
       if (!targetUser) return res.status(404).json({ error: 'User not found' });
-      if (targetUser.role !== 'retailer') return res.status(400).json({ error: 'Can only flag customers (retailer role)' });
+      if (!['customer', 'retailer'].includes(targetUser.role)) return res.status(400).json({ error: 'Can only flag customers (retailer role)' });
       const { isSuspicious } = req.body;
       await db.update(users).set({ isSuspicious: !!isSuspicious }).where(eq(users.id, req.params.id));
       res.json({ id: req.params.id, isSuspicious: !!isSuspicious });
@@ -1634,7 +1634,7 @@ export function registerAdminRoutes(app: Express): void {
           wholesalerId: users.wholesalerId,
         }).from(users)
           .where(and(
-            eq(users.role, 'retailer'),
+            inArray(users.role, ['customer', 'retailer']),
             or(
               ilike(users.firstName, searchPat),
               ilike(users.lastName, searchPat),
@@ -1842,7 +1842,7 @@ export function registerAdminRoutes(app: Express): void {
         stockUpdateNotifCount, customerProfileNotifCount,
       ] = await Promise.all([
         sc('users',                                  db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
-        sc('users',                                  db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
+        sc('users',                                  db.select({ n: count() }).from(users).where(inArray(users.role, ['customer', 'retailer']))),
         sc('orders',                                 db.select({ n: count() }).from(orders)),
         sc('order_items',                            db.select({ n: count() }).from(orderItems)),
         sc('stock_movements',                        db.select({ n: count() }).from(stockMovements)),
@@ -1985,7 +1985,7 @@ export function registerAdminRoutes(app: Express): void {
         stockUpdateNotifCount, customerProfileNotifCount,
       ] = await Promise.all([
         sc('users',                                  db.select({ n: count() }).from(users).where(and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`))),
-        sc('users',                                  db.select({ n: count() }).from(users).where(eq(users.role, 'retailer'))),
+        sc('users',                                  db.select({ n: count() }).from(users).where(inArray(users.role, ['customer', 'retailer']))),
         sc('orders',                                 db.select({ n: count() }).from(orders)),
         sc('order_items',                            db.select({ n: count() }).from(orderItems)),
         sc('stock_movements',                        db.select({ n: count() }).from(stockMovements)),
@@ -2035,7 +2035,7 @@ export function registerAdminRoutes(app: Express): void {
         }
 
         // Step 2: Delete non-admin users (need WHERE, so can't TRUNCATE).
-        await trx.delete(users).where(eq(users.role, 'retailer'));
+        await trx.delete(users).where(inArray(users.role, ['customer', 'retailer']));
         await trx.delete(users).where(
           and(eq(users.role, 'wholesaler'), sql`email != 'hello@quikpik.co'`)
         );
