@@ -2,7 +2,7 @@ import type { Express } from "express";
 import {
   InventoryCalculator, SendGridAttachment, SubscriptionService, and, buildInvoicePdf, db,
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
-  formatPackDescriptor,
+  formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
@@ -358,7 +358,48 @@ export function registerPaymentRoutes(app: Express): void {
             .where(eq(orders.id, parseInt(orderId)));
           
           console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}, old payment link cleared`);
-          
+
+          // Send order confirmation email on the first payment for this order (checkout confirmation).
+          // previouslyPaid === 0 guards against duplicate emails on deposit follow-ups and
+          // webhook retries. Covers both full-payment and deposit (part_paid) checkouts.
+          if (previouslyPaid === 0) {
+            (async () => {
+              try {
+                const wholesaler = await storage.getUser(existingOrder.wholesalerId);
+                const retailerId = existingOrder.retailerId;
+                const customer = retailerId ? await storage.getUser(retailerId) : null;
+                const customerForEmail = customer || {
+                  name: existingOrder.customerName || 'Customer',
+                  email: session.customer_details?.email || null,
+                  firstName: existingOrder.customerName || 'Customer',
+                  lastName: '',
+                };
+                if (wholesaler && customerForEmail.email) {
+                  const savedItems = await storage.getOrderItems(existingOrder.id);
+                  const enrichedItems = await Promise.all(savedItems.map(async (item: any) => {
+                    const product = await storage.getProduct(item.productId);
+                    return {
+                      ...item,
+                      productName: product?.name || `Product #${item.productId}`,
+                      packDescriptor: formatPackDescriptor(
+                        product?.quantityInPack,
+                        product?.unitSize,
+                        product?.unitOfMeasure,
+                      ),
+                      product: product
+                        ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
+                        : null,
+                    };
+                  }));
+                  await sendCustomerInvoiceEmail(customerForEmail, existingOrder, enrichedItems, wholesaler);
+                  console.log(`📧 Confirmation email sent to ${customerForEmail.email} for order ${orderNumber}`);
+                }
+              } catch (emailErr) {
+                console.error(`⚠️ Failed to send confirmation email for order ${orderNumber}:`, emailErr);
+              }
+            })();
+          }
+
           return res.json({
             received: true,
             message: `Order ${orderNumber} payment processed`,

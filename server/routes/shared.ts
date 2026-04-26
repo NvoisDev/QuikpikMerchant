@@ -867,7 +867,7 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       else if (item.unitPrice && item.quantity) total = (parseFloat(item.unitPrice) * parseInt(item.quantity)).toFixed(2);
       const promoLabel = item.appliedOfferLabel || '';
       const freeItemsCount = item.freeItems || 0;
-      const packDescriptor = formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
+      const packDescriptor = item.packDescriptor ?? formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
       const packBadge = packDescriptor
         ? `<br><span style="color:#6b7280;font-size:11px;">${packDescriptor}</span>` : '';
       const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';

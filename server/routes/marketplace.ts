@@ -5,7 +5,7 @@ import {
   generateOrderNotificationMessage, generateOrderNumber, generateWholesalerOrderNotificationEmail,
   getCurrencySymbol, getEmailLogoUrl, getUserPlanLimits, gte, inArray, like,
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
-  parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
+  formatPackDescriptor, parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, sum, users, validatePhoneNumber,
   getStripeClient, isLiveMode,
   whatsAppBusinessService, wrapCustomerEmail,
@@ -1743,6 +1743,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               return {
                 ...item,
                 productName: product?.name || `Product #${item.productId}`,
+                packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
                 product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
               };
             }));
@@ -2176,7 +2177,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           const savedItems = await storage.getOrderItems(order.id);
           const enrichedItems = await Promise.all(savedItems.map(async (item) => {
             const prod = await storage.getProduct(item.productId);
-            return { ...item, productName: prod?.name || `Product #${item.productId}`, product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
+            return { ...item, productName: prod?.name || `Product #${item.productId}`, packDescriptor: formatPackDescriptor(prod?.quantityInPack, prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           }));
           await sendCustomerInvoiceEmail(
             { name: customerName, email: customerEmail, phone: customerPhone, address: deliveryAddress || undefined },
@@ -3081,6 +3082,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           };
           await sendCustomerInvoiceEmail(customerForEmail, order, orderItems.map(item => ({
             ...item,
+            packDescriptor: formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure),
             product: { name: product.name, price: item.unitPrice, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
           })), wholesaler);
         } catch (emailError) {
@@ -3241,6 +3243,7 @@ Please contact the customer to confirm this order.
           return {
             ...item,
             productName: product?.name || 'Product',
+            packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
             product: product ? { name: product.name, price: item.unitPrice, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
           };
         }));

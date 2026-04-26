@@ -3,7 +3,7 @@ import { ilike } from "drizzle-orm";
 import {
   ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, subscriptionPlans, userSubscriptions, users, products, orderItems,
-  sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
+  sendCustomerInvoiceEmail, formatPackDescriptor, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
   smsVerificationCodes, stockUpdateNotifications,
   customerGroups, customerGroupMembers, wholesalerCustomerRelationships,
@@ -1079,9 +1079,11 @@ export function registerAdminRoutes(app: Express): void {
 
       await sendCustomerInvoiceEmail(customer, order, items.map(i => ({
         name: i.productName || 'Product',
+        productName: i.productName || 'Product',
         quantity: i.quantity,
         unitPrice: parseFloat(i.unitPrice || '0'),
         total: parseFloat(i.total || '0'),
+        packDescriptor: formatPackDescriptor(i.quantityInPack, i.unitSize, i.unitOfMeasure),
         product: { name: i.productName || 'Product', quantityInPack: i.quantityInPack, unitSize: i.unitSize, unitOfMeasure: i.unitOfMeasure },
       })), wholesaler);
 

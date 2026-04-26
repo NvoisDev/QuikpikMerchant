@@ -1152,7 +1152,7 @@ export function registerOrderRoutes(app: Express): void {
           // Send confirmation email to customer
           await sendCustomerInvoiceEmail(customer, order, await Promise.all(orderItems.map(async item => {
             const prod = await storage.getProduct(item.productId);
-            return { ...item, productName: prod?.name || 'Product', product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
+            return { ...item, productName: prod?.name || 'Product', packDescriptor: formatPackDescriptor(prod?.quantityInPack, prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           })), wholesaler);
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
@@ -2392,6 +2392,7 @@ export function registerOrderRoutes(app: Express): void {
           return {
             ...item,
             productName: product?.name || `Product #${item.productId}`,
+            packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
             product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
           };
         }));
@@ -2748,6 +2749,7 @@ export function registerOrderRoutes(app: Express): void {
         return {
           ...item,
           productName: product?.name || `Product #${item.productId}`,
+          packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
           product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
         };
       }));
