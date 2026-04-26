@@ -2441,6 +2441,15 @@ export default function ProductManagement() {
                               )}
                             />
                           </div>
+
+                          <div className="bg-blue-100 p-3 rounded-lg">
+                            <p className="text-sm text-blue-700">
+                              <strong>Example:</strong> For "24 x 250ml cans", enter: Quantity = 24, Unit = ml, Size = 250
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              This replaces the need for predefined formats and allows any combination
+                            </p>
+                          </div>
                           
                           {/* Total Package Weight for Shipping */}
                           <div className="pt-4 border-t">
@@ -2491,15 +2500,6 @@ export default function ProductManagement() {
                                 </FormItem>
                               )}
                             />
-                          </div>
-                          
-                          <div className="bg-blue-100 p-3 rounded-lg">
-                            <p className="text-sm text-blue-700">
-                              <strong>Example:</strong> For "24 x 250ml cans", enter: Quantity = 24, Unit = ml, Size = 250
-                            </p>
-                            <p className="text-xs text-blue-600 mt-1">
-                              This replaces the need for predefined formats and allows any combination
-                            </p>
                           </div>
                         </div>
                       </div>
