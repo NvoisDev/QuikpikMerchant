@@ -1,0 +1,112 @@
+🧾 Prompt: Fix SubscriptionService Stripe Context (NON-BREAKING)
+
+Give your dev this 👇
+
+🎯 Objective
+
+Ensure SubscriptionService uses account-aware Stripe client selection, removing the module-level Stripe singleton and aligning with the platform-wide getStripeClient() pattern.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT change business logic
+DO NOT change subscription behaviour
+DO NOT break existing flows
+DO NOT refactor unrelated code
+
+👉 Only fix Stripe client selection
+
+🧱 PART 1: Remove Global Stripe Singleton
+
+In:
+
+server/subscription-service.ts
+❌ Remove:
+const stripe = getStripeClient();
+🧱 PART 2: Inject Context Per Method
+
+Update all public methods to accept:
+
+isTestAccount: boolean
+Example:
+upgradeSubscriptionWithProration(userId, planId, isTestAccount)
+🧱 PART 3: Create Local Stripe Client Inside Methods
+
+Inside EACH method:
+
+const stripe = getStripeClient(isTestAccount);
+
+👉 Replace all usage of module-level stripe
+
+🧱 PART 4: Update Call Sites
+
+Wherever SubscriptionService is called:
+
+Pass:
+Boolean(req.user.isTestAccount)
+
+OR
+
+Boolean(wholesaler.isTestAccount)
+Apply to:
+payments.ts
+admin.ts
+any future usage
+🧱 PART 5: Fail-Safe (IMPORTANT)
+
+If isTestAccount is:
+
+undefined
+null
+
+👉 DO NOT default to LIVE
+
+Instead:
+throw new Error("Missing isTestAccount context for Stripe operation");
+
+👉 This enforces:
+
+fail fast > fail wrong
+🧪 PART 6: Testing
+
+Test:
+
+✅ Test Account
+Upgrade → uses TEST Stripe
+Downgrade → uses TEST Stripe
+Cancel → uses TEST Stripe
+✅ Live Account
+All flows use LIVE Stripe
+❗ Edge Case
+Missing context → throws error (expected)
+🧪 Acceptance Criteria
+No module-level Stripe client in SubscriptionService
+All methods use getStripeClient(isTestAccount)
+All call sites pass correct context
+No regression in subscription flows
+🧠 Final Sanity Check
+
+If implementation:
+
+“Still uses shared Stripe or defaults to LIVE”
+
+🚫 WRONG
+
+If implementation:
+
+“Every Stripe call is context-driven”
+
+✅ Correct
+
+🔥 My honest recommendation
+
+Don’t delay this.
+
+It’s:
+
+Small fix
+High impact
+Easy to miss later
+🧠 After this fix…
+
+👉 You can confidently say:
+
+“Every Stripe interaction in my system is safe and consistent”

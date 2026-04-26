@@ -1289,11 +1289,13 @@ export function registerPaymentRoutes(app: Express): void {
 
       const targetPlan = validPlans[0];
       
+      const isTestAccount = Boolean(req.user.isTestAccount);
+
       // Get or create Stripe customer
-      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId);
+      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, isTestAccount);
       
       // Check for existing active subscription
-      const existingSubscription = await SubscriptionService.getCurrentSubscription(userId);
+      const existingSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
       
       if (existingSubscription && existingSubscription.stripeSubscriptionId) {
         // UPGRADE FLOW: User has existing subscription - modify it with proration
@@ -1303,7 +1305,8 @@ export function registerPaymentRoutes(app: Express): void {
           const updatedSubscription = await SubscriptionService.upgradeSubscriptionWithProration(
             existingSubscription.stripeSubscriptionId,
             priceId,
-            targetPlan.planId
+            targetPlan.planId,
+            isTestAccount,
           );
           
           // Update user's plan immediately for upgrades (instant access).
@@ -1548,6 +1551,7 @@ export function registerPaymentRoutes(app: Express): void {
         // Cancel subscription at period end using service method
         const subscription = await SubscriptionService.cancelSubscription(
           user.stripeSubscriptionId,
+          Boolean(req.user.isTestAccount),
           { cancelAtPeriodEnd: true }
         );
 

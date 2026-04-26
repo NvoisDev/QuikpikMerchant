@@ -5,7 +5,10 @@ import { eq, and } from "drizzle-orm";
 
 import { getStripeClient } from "./stripeConfig";
 
-const stripe = getStripeClient();
+function requireStripe(isTestAccount: boolean | null | undefined) {
+  if (isTestAccount == null) throw new Error("Missing isTestAccount context for Stripe operation");
+  return getStripeClient(isTestAccount);
+}
 
 export class SubscriptionService {
   
@@ -124,7 +127,8 @@ export class SubscriptionService {
   /**
    * Create or update a subscription - handles both new subscriptions and plan changes
    */
-  static async createSubscription(stripeCustomerId: string, priceId: string): Promise<Stripe.Subscription> {
+  static async createSubscription(stripeCustomerId: string, priceId: string, isTestAccount: boolean): Promise<Stripe.Subscription> {
+    const stripe = requireStripe(isTestAccount);
     try {
       console.log('🔄 Creating/updating subscription:', { stripeCustomerId, priceId });
 
@@ -177,8 +181,10 @@ export class SubscriptionService {
   static async upgradeSubscriptionWithProration(
     subscriptionId: string, 
     newPriceId: string, 
-    newPlanId: string
+    newPlanId: string,
+    isTestAccount: boolean,
   ): Promise<Stripe.Subscription> {
+    const stripe = requireStripe(isTestAccount);
     try {
       console.log('🚀 Upgrading subscription with proration:', { subscriptionId, newPriceId, newPlanId });
 
@@ -225,8 +231,10 @@ export class SubscriptionService {
   static async immediateDowngradeWithProration(
     subscriptionId: string, 
     newPriceId: string, 
-    newPlanId: string
+    newPlanId: string,
+    isTestAccount: boolean,
   ): Promise<Stripe.Subscription> {
+    const stripe = requireStripe(isTestAccount);
     try {
       console.log('📉 Downgrading subscription with immediate proration:', { subscriptionId, newPriceId, newPlanId });
 
@@ -318,7 +326,8 @@ export class SubscriptionService {
   /**
    * Get current active subscription for a user
    */
-  static async getCurrentSubscription(userId: string) {
+  static async getCurrentSubscription(userId: string, isTestAccount: boolean) {
+    const stripe = requireStripe(isTestAccount);
     try {
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user) {
@@ -350,7 +359,8 @@ export class SubscriptionService {
   /**
    * Get or create Stripe customer for a user
    */
-  static async getOrCreateStripeCustomer(userId: string): Promise<string> {
+  static async getOrCreateStripeCustomer(userId: string, isTestAccount: boolean): Promise<string> {
+    const stripe = requireStripe(isTestAccount);
     try {
       // Get user from database
       const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -427,11 +437,12 @@ export class SubscriptionService {
   /**
    * Handle prorated free downgrade with credit calculation and immediate effect
    */
-  static async proratedFreeDowngrade(subscriptionId: string, userId: string): Promise<{
+  static async proratedFreeDowngrade(subscriptionId: string, userId: string, isTestAccount: boolean): Promise<{
     success: boolean;
     proratedCredit: number;
     message: string;
   }> {
+    const stripe = requireStripe(isTestAccount);
     try {
       console.log('🆓 Processing prorated free downgrade:', { subscriptionId, userId });
 
@@ -552,10 +563,11 @@ export class SubscriptionService {
   /**
    * Cancel subscription with proper Stripe integration (delegated from routes)
    */
-  static async cancelSubscription(subscriptionId: string, options?: {
+  static async cancelSubscription(subscriptionId: string, isTestAccount: boolean, options?: {
     cancelAtPeriodEnd?: boolean;
     prorate?: boolean;
   }): Promise<Stripe.Subscription> {
+    const stripe = requireStripe(isTestAccount);
     try {
       console.log('🛑 Cancelling subscription:', subscriptionId, options);
 

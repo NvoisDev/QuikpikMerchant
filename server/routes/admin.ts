@@ -1637,10 +1637,11 @@ export function registerAdminRoutes(app: Express): void {
       const productLimit = (limits?.products ?? 2);
       const currentStripeSubId = targetUser.stripeSubscriptionId;
 
+      const isTargetTestAccount = Boolean(targetUser.isTestAccount);
       if (currentStripeSubId) {
         if (newPlanId === 'free') {
           // Downgrade to free: cancel the Stripe subscription with proration
-          await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id);
+          await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id, isTargetTestAccount);
         } else if (targetPlan.stripePriceId) {
           // Paid → paid: branch upgrade vs downgrade by comparing prices
           const [currentPlan] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
@@ -1655,12 +1656,14 @@ export function registerAdminRoutes(app: Express): void {
               currentStripeSubId,
               targetPlan.stripePriceId,
               newPlanId,
+              isTargetTestAccount,
             );
           } else {
             await SubscriptionService.upgradeSubscriptionWithProration(
               currentStripeSubId,
               targetPlan.stripePriceId,
               newPlanId,
+              isTargetTestAccount,
             );
           }
           // Update DB to reflect new plan
