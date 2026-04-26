@@ -1881,7 +1881,8 @@ export function registerPaymentRoutes(app: Express): void {
             stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0),
             stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
             reason: `Quote order sale - ${quantity} ${sellingType}`,
-            orderId: quoteOrder.id
+            orderId: quoteOrder.id,
+            businessProfileId: quoteOrder.businessProfileId ?? null,
           });
           
           console.log(`✅ QUOTE STOCK: ${product.name} ${sellingType}: ${sellingType === 'pallets' ? product.palletStock : product.stock} → ${sellingType === 'pallets' ? newPalletStock : newUnitStock}`);

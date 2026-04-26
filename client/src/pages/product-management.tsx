@@ -3794,6 +3794,9 @@ export default function ProductManagement() {
                           <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-0.5 sm:gap-0">
                             <span>
                               {movement.reason || (movement.customerName ? `Customer: ${movement.customerName}` : '')}
+                              {movement.businessProfileName && (
+                                <span className="ml-1 text-blue-600 font-medium">· {movement.businessProfileName}</span>
+                              )}
                             </span>
                             <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
                               {movement.stockBefore} → {movement.stockAfter}

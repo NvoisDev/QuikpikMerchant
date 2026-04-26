@@ -530,7 +530,11 @@ export class ProductStorage extends UserStorageBase {
   }
 
   /** Create a new batch (stock-in event). Updates product.stock to reflect new total. */
-  async createProductBatch(batch: InsertProductBatch, wholesalerId?: string): Promise<ProductBatch> {
+  async createProductBatch(
+    batch: InsertProductBatch,
+    wholesalerId?: string,
+    opts?: { orderId?: number | null; businessProfileId?: number | null; movementType?: string; reason?: string }
+  ): Promise<ProductBatch> {
     // Capture stock before so we can compute the before→after delta for the movement log
     const [productBefore] = await db
       .select({ stock: products.stock })
@@ -550,18 +554,20 @@ export class ProductStorage extends UserStorageBase {
         .from(products)
         .where(eq(products.id, batch.productId));
       const stockAfter = Number(productAfter?.stock ?? 0);
-      const reason = newBatch.batchNumber
+      const defaultReason = newBatch.batchNumber
         ? `New batch stock-in (ref: ${newBatch.batchNumber})`
         : 'New batch stock-in';
       await db.insert(stockMovements).values({
         productId: batch.productId,
         wholesalerId,
-        movementType: 'manual_increase',
+        movementType: opts?.movementType ?? 'manual_increase',
         quantity: Number(batch.quantity),
         unitType: 'units',
         stockBefore,
         stockAfter,
-        reason,
+        reason: opts?.reason ?? defaultReason,
+        orderId: opts?.orderId ?? null,
+        businessProfileId: opts?.businessProfileId ?? null,
       });
     }
 
@@ -635,7 +641,8 @@ export class ProductStorage extends UserStorageBase {
     delta: number,
     reason: string,
     wholesalerId: string,
-    orderId?: number
+    orderId?: number,
+    businessProfileId?: number | null
   ): Promise<void> {
     const [batch] = await db.select().from(productBatches).where(eq(productBatches.id, batchId));
     if (!batch) throw new Error(`Batch ${batchId} not found`);
@@ -663,6 +670,7 @@ export class ProductStorage extends UserStorageBase {
         stockAfter: after,
         reason,
         orderId: orderId ?? null,
+        businessProfileId: businessProfileId ?? null,
       });
     }
 

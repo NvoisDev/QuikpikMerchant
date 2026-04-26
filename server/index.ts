@@ -191,6 +191,9 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS legal_business_name VARCHAR(255)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS vat_number VARCHAR(50)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS company_registration_number VARCHAR(50)`,
+    // Task #605: Track stock depletion by business profile
+    `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS business_profile_id INTEGER`,
+    `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_business_profile_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_business_profile_id_fkey FOREIGN KEY (business_profile_id) REFERENCES business_profiles(id) ON DELETE SET NULL; END IF; END $$`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

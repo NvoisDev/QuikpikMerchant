@@ -26,7 +26,8 @@ async function restockUnitsToOrigin(
   qty: number,
   wholesalerId: string,
   orderId: number,
-  orderNumber: string
+  orderNumber: string,
+  businessProfileId?: number | null
 ): Promise<void> {
   if (batchId) {
     try {
@@ -43,7 +44,8 @@ async function restockUnitsToOrigin(
           qty,
           `Order cancellation return — ${qty} units restored to batch ${existingBatch.batchNumber || batchId}`,
           wholesalerId,
-          orderId
+          orderId,
+          businessProfileId ?? null
         );
         return;
       }
@@ -60,7 +62,13 @@ async function restockUnitsToOrigin(
         status: 'active',
         notes: `Return restock from order ${orderNumber}`,
       },
-      wholesalerId
+      wholesalerId,
+      {
+        orderId,
+        businessProfileId: businessProfileId ?? null,
+        movementType: 'return',
+        reason: `Order cancellation return — ${qty} units restocked (new batch, original batch not found)`,
+      }
     );
     return;
   }
@@ -81,6 +89,7 @@ async function restockUnitsToOrigin(
     stockAfter,
     reason: `Order cancellation — ${qty} units returned`,
     orderId,
+    businessProfileId: businessProfileId ?? null,
   });
 }
 
@@ -1272,9 +1281,10 @@ export function registerOrderRoutes(app: Express): void {
                     stockAfter,
                     reason: `Order cancellation - ${returnQty} pallets returned`,
                     orderId: id,
+                    businessProfileId: order.businessProfileId ?? null,
                   });
                 } else {
-                  await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber);
+                  await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
                 }
                 stockRestoredCount += returnQty;
                 console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
@@ -1318,9 +1328,10 @@ export function registerOrderRoutes(app: Express): void {
                   stockAfter,
                   reason: `Order cancelled - ${item.quantity} pallets returned`,
                   orderId: id,
+                  businessProfileId: order.businessProfileId ?? null,
                 });
               } else if (item.productId) {
-                await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, id, order.orderNumber);
+                await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
               }
               stockRestoredCount += item.quantity;
             }
@@ -1831,9 +1842,10 @@ export function registerOrderRoutes(app: Express): void {
                     stockAfter,
                     reason: `Order cancellation (customer request) — ${item.quantity} pallets returned`,
                     orderId: order.id,
+                    businessProfileId: order.businessProfileId ?? null,
                   });
                 } else {
-                  await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, order.id, order.orderNumber);
+                  await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, order.id, order.orderNumber, order.businessProfileId ?? null);
                 }
               }
             }

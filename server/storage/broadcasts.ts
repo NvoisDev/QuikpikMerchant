@@ -23,6 +23,7 @@ import {
   tabPermissions,
   deliveryAddresses,
   wholesalerCustomerRelationships,
+  businessProfiles,
   type User,
   type UpsertUser,
   type Product,
@@ -480,7 +481,7 @@ export class BroadcastStorage extends CustomerStorage {
     }
   }
 
-  async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null })[]> {
+  async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null; businessProfileName?: string | null })[]> {
     return await db
       .select({
         id: stockMovements.id,
@@ -494,11 +495,14 @@ export class BroadcastStorage extends CustomerStorage {
         reason: stockMovements.reason,
         orderId: stockMovements.orderId,
         customerName: stockMovements.customerName,
+        businessProfileId: stockMovements.businessProfileId,
         createdAt: stockMovements.createdAt,
         orderNumber: orders.orderNumber,
+        businessProfileName: businessProfiles.name,
       })
       .from(stockMovements)
       .leftJoin(orders, eq(stockMovements.orderId, orders.id))
+      .leftJoin(businessProfiles, eq(stockMovements.businessProfileId, businessProfiles.id))
       .where(eq(stockMovements.productId, productId))
       .orderBy(desc(stockMovements.createdAt));
   }

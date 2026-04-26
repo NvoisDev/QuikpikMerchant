@@ -519,6 +519,7 @@ export class OrderStorage extends ProductStorage {
               reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
               orderId: newOrder.id,
               customerName,
+              businessProfileId: order.businessProfileId ?? null,
             });
 
             if (primaryBatchId === null) primaryBatchId = batch.id;
@@ -870,6 +871,8 @@ export class OrderStorage extends ProductStorage {
                 ? `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units incl. ${freeItemsQty} free (promo)`
                 : `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
               orderId: newOrder.id,
+              customerName: orderData.customerName ?? null,
+              businessProfileId: orderData.businessProfileId ?? null,
             });
 
             if (primaryBatchId === null) primaryBatchId = batch.id;
