@@ -965,21 +965,14 @@ export default function ProductManagement() {
         promotionalOffers: data.promotionalOffers || [],
       };
       
-      // Debug: Log the processed data being sent to server
-      console.log('🔍 PALLET CONFIG DEBUG: Processed product data being sent to server:', {
-        unitsPerPallet: productData.unitsPerPallet,
-        palletPrice: productData.palletPrice,
-        palletMoq: productData.palletMoq,
-        palletStock: productData.palletStock,
-        palletWeight: productData.palletWeight
-      });
-      
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      setIsDialogOpen(false);
-      form.reset();
+      startTransition(() => {
+        setIsDialogOpen(false);
+        form.reset();
+      });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -987,8 +980,10 @@ export default function ProductManagement() {
     },
     onError: (error: any) => {
       if (error.message.includes("403") && error.message.toLowerCase().includes("product limit")) {
-        setIsDialogOpen(false);
-        setShowUpgradeModal(true);
+        startTransition(() => {
+          setIsDialogOpen(false);
+          setShowUpgradeModal(true);
+        });
       } else {
         toast({
           title: "Error",
@@ -1021,35 +1016,29 @@ export default function ProductManagement() {
         promotionalOffers: productData.promotionalOffers || [],
       };
       
-      // Debug: Log the processed data being sent to server for update
-      console.log('🔍 PALLET CONFIG DEBUG: Update data being sent to server for product', id, ':', {
-        sellingFormat: updatedData.sellingFormat,
-        unitsPerPallet: updatedData.unitsPerPallet,
-        palletPrice: updatedData.palletPrice,
-        palletMoq: updatedData.palletMoq,
-        palletStock: updatedData.palletStock,
-        palletWeight: updatedData.palletWeight
-      });
-      
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      setIsDialogOpen(false);
-      setEditingProduct(null);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      startTransition(() => {
+        setIsDialogOpen(false);
+        setEditingProduct(null);
+        if (navigateBackTo) {
+          const dest = navigateBackTo;
+          setNavigateBackTo(null);
+          navigate(dest);
+        }
+      });
       toast({
         title: "Saved",
         description: "Product updated successfully",
       });
-      if (navigateBackTo) {
-        const dest = navigateBackTo;
-        setNavigateBackTo(null);
-        navigate(dest);
-      }
     },
     onError: (error: any) => {
-      setIsDialogOpen(false);
-      setEditingProduct(null);
+      startTransition(() => {
+        setIsDialogOpen(false);
+        setEditingProduct(null);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to update product",
@@ -1099,18 +1088,6 @@ export default function ProductManagement() {
   });
 
   const onSubmit = (data: ProductFormData) => {
-    // Debug: Log all pallet configuration data before submission
-    console.log('🔍 PALLET CONFIG DEBUG: Form submission data:', {
-      sellingFormat: data.sellingFormat,
-      unitsPerPallet: data.unitsPerPallet,
-      palletPrice: data.palletPrice,
-      palletMoq: data.palletMoq,
-      palletStock: data.palletStock,
-      palletWeight: data.palletWeight,
-      isEditing: !!editingProduct,
-      editingProductId: editingProduct?.id
-    });
-    
     if (editingProduct) {
       updateProductMutation.mutate({ ...data, id: editingProduct.id });
     } else {
@@ -1130,13 +1107,6 @@ export default function ProductManagement() {
   };
 
   const handleDuplicate = (product: any) => {
-    console.log('🔍 DUPLICATE HANDLER DEBUG:', {
-      productId: product.id,
-      productName: product.name,
-      authUser: user,
-      mockUser: !user ? "Using mock user for testing" : "Using real user"
-    });
-    
     // Reset the form with the product data but clear the ID to create a new product
     setEditingProduct(null); // Set to null so it creates instead of edits
     
@@ -1184,7 +1154,6 @@ export default function ProductManagement() {
   };
 
   const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => {
-    console.log("Status change handler called:", id, status);
     // Only allow valid status updates that the mutation accepts
     if (status === "locked") {
       toast({
