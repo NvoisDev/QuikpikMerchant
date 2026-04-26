@@ -199,14 +199,15 @@ async function fixStripePricesIfNeeded() {
     return;
   }
 
-  const EXPECTED: Record<string, { unitAmount: number; currency: string; interval: string; productId: string }> = {
-    standard: { unitAmount: 1999, currency: 'gbp', interval: 'month', productId: 'prod_U7iIITiYIFwLA2' },
-    premium:  { unitAmount: 4999, currency: 'gbp', interval: 'month', productId: 'prod_U7iHoOyKGNk4CG' },
+  const EXPECTED: Record<string, { unitAmount: number; currency: string; interval: string }> = {
+    standard: { unitAmount: 1999, currency: 'gbp', interval: 'month' },
+    premium:  { unitAmount: 4999, currency: 'gbp', interval: 'month' },
   };
 
   const plans = await db.select({
     planId: subscriptionPlans.planId,
     stripePriceId: subscriptionPlans.stripePriceId,
+    stripeProductId: subscriptionPlans.stripeProductId,
   }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium']));
 
   let checked = 0, fixed = 0;
@@ -218,17 +219,21 @@ async function fixStripePricesIfNeeded() {
     try {
       // No price ID yet — create one from scratch
       if (!plan.stripePriceId) {
+        if (!plan.stripeProductId) {
+          console.warn(`⚠️ No Stripe product ID in DB for ${plan.planId} — skipping price creation`);
+          continue;
+        }
         console.log(`🆕 No Stripe price recorded for ${plan.planId} — creating one`);
         const newPrice = await stripeClient.prices.create({
           unit_amount: expected.unitAmount,
           currency: expected.currency,
           recurring: { interval: 'month' },
-          product: expected.productId,
+          product: plan.stripeProductId,
         });
         await db.update(subscriptionPlans)
-          .set({ stripePriceId: newPrice.id, stripeProductId: expected.productId })
+          .set({ stripePriceId: newPrice.id })
           .where(eq(subscriptionPlans.planId, plan.planId));
-        console.log(`✅ Created Stripe price for ${plan.planId}: ${newPrice.id} (product: ${expected.productId})`);
+        console.log(`✅ Created Stripe price for ${plan.planId}: ${newPrice.id} (product: ${plan.stripeProductId})`);
         fixed++;
         continue;
       }
@@ -240,10 +245,15 @@ async function fixStripePricesIfNeeded() {
         price.unit_amount === expected.unitAmount &&
         price.currency === expected.currency &&
         price.recurring?.interval === expected.interval &&
-        productId === expected.productId;
+        (!plan.stripeProductId || productId === plan.stripeProductId);
 
       if (isCorrect) {
         console.log(`✅ Stripe price for ${plan.planId} is correct (${expected.unitAmount}p GBP/month)`);
+        continue;
+      }
+
+      if (!plan.stripeProductId) {
+        console.warn(`⚠️ No Stripe product ID in DB for ${plan.planId} — skipping price correction`);
         continue;
       }
 
@@ -252,7 +262,7 @@ async function fixStripePricesIfNeeded() {
         unit_amount: expected.unitAmount,
         currency: expected.currency,
         recurring: { interval: 'month' },
-        product: expected.productId,
+        product: plan.stripeProductId,
       });
 
       // Archive the old incorrect price
