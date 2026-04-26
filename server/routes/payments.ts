@@ -305,6 +305,29 @@ export function registerPaymentRoutes(app: Express): void {
           
           console.log(`📊 Payment update: This payment £${thisPayment.toFixed(2)}, Previously paid £${previouslyPaid.toFixed(2)}, Total paid £${cumulativePaid.toFixed(2)}, Outstanding £${newOutstanding.toFixed(2)}, Status: ${paymentStatus}`);
           
+          // Capture actual Stripe processing fee from balance_transaction (non-blocking)
+          const piId = session.payment_intent as string | null;
+          let actualStripeFee: number | null = null;
+          if (piId) {
+            try {
+              const stripeForFee = getStripeClient(!event.livemode);
+              const pi = await stripeForFee.paymentIntents.retrieve(piId, {
+                expand: ['latest_charge.balance_transaction'],
+              });
+              const charge = pi.latest_charge as any;
+              const bt = charge?.balance_transaction;
+              if (bt && typeof bt === 'object' && typeof bt.fee === 'number') {
+                // fee is in pence — convert to pounds and accumulate for deposit orders
+                const thisFee = bt.fee / 100;
+                const existingFee = parseFloat(existingOrder.stripeActualFee || '0');
+                actualStripeFee = parseFloat((existingFee + thisFee).toFixed(2));
+                console.log(`💳 Stripe actual fee for order ${orderNumber}: £${thisFee.toFixed(2)} (cumulative: £${actualStripeFee.toFixed(2)})`);
+              }
+            } catch (feeErr) {
+              console.warn(`⚠️ Could not retrieve Stripe fee for order ${orderNumber}:`, feeErr);
+            }
+          }
+
           // Update order with payment details
           // Clear old payment link - user will generate a fresh balance link if needed
           await db.update(orders)
@@ -325,6 +348,8 @@ export function registerPaymentRoutes(app: Express): void {
               stripePaymentLinkId: null,
               // Set payment method to 'payment_link' only if not already recorded manually
               ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
+              // Store actual Stripe fee if we managed to retrieve it
+              ...(actualStripeFee !== null ? { stripeActualFee: actualStripeFee.toFixed(2) } : {}),
             })
             .where(eq(orders.id, parseInt(orderId)));
           

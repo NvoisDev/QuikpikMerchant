@@ -101,7 +101,7 @@ interface RevenueOrder {
   id: number; orderNumber: string; wholesalerId: string; wholesalerName: string | null;
   customerName: string | null; subtotal: string; platformFee: string | null;
   customerTransactionFee: string | null; totalQuikpikIncome: number;
-  stripeProcessingFee: number; grossProfit: number;
+  stripeProcessingFee: number; stripeFeIsEstimated: boolean; grossProfit: number;
   status: string; paymentStatus: string | null; createdAt: string;
 }
 interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; }
@@ -2039,7 +2039,7 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
 
       {/* Gross profit cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard label="Stripe Fees (est.)"  value={isLoading ? "…" : fmt(revenueTotals.totalStripeProcessingFees)}  sub="1.4% + £0.20 per order"  icon={<CreditCard className="h-4 w-4" />}  color={RED} />
+        <StatCard label="Stripe Fees"  value={isLoading ? "…" : fmt(revenueTotals.totalStripeProcessingFees)}  sub="Actual · est. 1.4%+£0.20 fallback"  icon={<CreditCard className="h-4 w-4" />}  color={RED} />
         <StatCard label="Gross Profit"         value={isLoading ? "…" : fmt(revenueTotals.totalGrossProfit)}           sub="Revenue minus Stripe fees" icon={<TrendingUp className="h-4 w-4" />}  color={GREEN} />
         <StatCard label="Gross Margin"         value={isLoading ? "…" : `${revenueTotals.grossMarginPct ?? 0}%`}       sub="Profit / order revenue"    icon={<TrendingUp className="h-4 w-4" />}  color={PURPLE} />
       </div>
@@ -2116,7 +2116,9 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
                         <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(parseFloat(o.customerTransactionFee || "0"))}</TableCell>
                         <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(parseFloat(o.platformFee || "0"))}</TableCell>
                         <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(o.totalQuikpikIncome)}</TableCell>
-                        <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>-{fmt(o.stripeProcessingFee ?? 0)}</TableCell>
+                        <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>
+                          -{fmt(o.stripeProcessingFee ?? 0)}{o.stripeFeIsEstimated && <span className="text-gray-400 font-normal ml-0.5">(est.)</span>}
+                        </TableCell>
                         <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(o.grossProfit ?? 0)}</TableCell>
                         <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
                         <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>

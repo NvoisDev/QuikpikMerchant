@@ -658,7 +658,8 @@ export const orders = pgTable("orders", {
   amountOutstanding: decimal("amount_outstanding", { precision: 10, scale: 2 }).default("0.00"), // Remaining balance
   paymentStatus: varchar("payment_status").default("unpaid"), // 'unpaid' | 'part_paid' | 'paid'
   paymentMethod: varchar("payment_method"), // 'cash' | 'bank_transfer' | 'payment_link' | 'pay_later' | 'card' | 'cheque' | 'other'
-  
+  stripeActualFee: decimal("stripe_actual_fee", { precision: 10, scale: 2 }), // Actual Stripe processing fee captured from balance_transaction at payment time
+
   // Refund tracking
   amountRefunded: decimal("amount_refunded", { precision: 10, scale: 2 }).default("0.00"), // Total amount refunded
   refundReason: text("refund_reason"), // Reason for refund/cancellation

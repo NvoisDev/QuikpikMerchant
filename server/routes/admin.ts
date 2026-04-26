@@ -249,6 +249,7 @@ export function registerAdminRoutes(app: Express): void {
           status: orders.status,
           paymentStatus: orders.paymentStatus,
           createdAt: orders.createdAt,
+          stripeActualFee: orders.stripeActualFee,
         })
         .from(orders)
         .innerJoin(users, eq(orders.wholesalerId, users.id))
@@ -267,8 +268,10 @@ export function registerAdminRoutes(app: Express): void {
         const platFee = parseFloat(o.platformFee || '0');
         const sub = parseFloat(o.subtotal || '0');
         const isCancelled = o.status === 'cancelled';
-        // Cancelled orders never completed — exclude from all financial calculations
-        const stripeFee = isCancelled ? 0 : parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2));
+        // Use actual Stripe fee if captured at payment time; fall back to formula estimate
+        const actualFee = o.stripeActualFee != null ? parseFloat(o.stripeActualFee) : null;
+        const stripeFeIsEstimated = actualFee === null && !isCancelled;
+        const stripeFee = isCancelled ? 0 : (actualFee ?? parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2)));
         const grossProfit = isCancelled ? 0 : parseFloat((custFee + platFee - stripeFee).toFixed(2));
         if (!isCancelled) {
           totalCustomerFees += custFee;
@@ -283,6 +286,7 @@ export function registerAdminRoutes(app: Express): void {
           subtotal: sub,
           totalQuikpikIncome: isCancelled ? 0 : custFee + platFee,
           stripeProcessingFee: stripeFee,
+          stripeFeIsEstimated,
           grossProfit,
         };
       });
