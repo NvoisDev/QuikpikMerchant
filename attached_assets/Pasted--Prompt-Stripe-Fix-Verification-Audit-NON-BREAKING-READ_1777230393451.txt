@@ -1,0 +1,131 @@
+🧾 Prompt: Stripe Fix Verification Audit (NON-BREAKING, READ-ONLY)
+🎯 Objective
+
+Verify that all Stripe integrations across the platform correctly use account-based Stripe client selection, and that no unsafe or inconsistent implementations remain.
+
+This is a read-only audit — do NOT modify any code.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT change any code
+DO NOT refactor anything
+DO NOT deploy changes
+
+👉 Only inspect, validate, and report
+
+🧱 PART 1: Global Stripe Usage Check (CRITICAL)
+Search entire codebase for:
+stripe.
+For EACH occurrence, confirm:
+
+✅ Uses:
+
+getStripeClient(wholesalerId)
+
+❌ Flag if using:
+
+import { stripe } from ...
+new Stripe(...)
+any global/static stripe instance
+Output:
+Total Stripe calls found
+Number using getStripeClient()
+Number NOT compliant
+List of non-compliant files + line references
+🧱 PART 2: shared.ts Safety Check
+
+Inspect:
+
+server/routes/shared.ts
+Confirm:
+❌ No active export of:
+export const stripe
+If still present:
+Flag as HIGH RISK
+Confirm whether it is still being imported anywhere
+🧱 PART 3: Route-Level Coverage
+
+Specifically verify these files:
+
+marketplace.ts
+orders.ts
+payments.ts
+admin.ts
+For EACH file:
+
+Confirm:
+
+All Stripe calls use getStripeClient()
+No fallback to static/global client
+No mixed usage within the same file
+🧱 PART 4: Test vs Live Behaviour Validation
+
+Simulate or review logic for:
+
+✅ Test Account (is_test_account = true)
+
+Confirm:
+
+Always uses TEST Stripe
+Works even if platform is in LIVE mode
+✅ Live Account
+
+Confirm:
+
+Always uses LIVE Stripe
+✅ Mixed Scenario
+
+Confirm:
+
+Platform = LIVE  
+Test account = TEST Stripe  
+🧱 PART 5: Logging Verification
+
+Confirm logging exists when Stripe client is selected:
+
+Stripe Mode: TEST | Wholesaler: X  
+Stripe Mode: LIVE | Wholesaler: X  
+Validate:
+Logs are present
+Logs are accurate
+No sensitive data exposed
+🧱 PART 6: Regression Check
+
+Confirm NO impact to:
+
+Customer checkout
+Quick Quotes
+Payment reminders
+Subscriptions
+Refunds
+
+👉 All flows should still function correctly
+
+🧪 PART 7: Final Output Required
+
+Provide:
+
+1. Compliance Summary
+✅ Fully compliant
+OR
+⚠️ Issues found
+2. Issues List (if any)
+File
+Line
+Problem
+3. Risk Level
+Low / Medium / High
+4. Final Verdict
+SAFE FOR PRODUCTION  
+OR  
+NOT SAFE — FIX REQUIRED
+🧠 What YOU are looking for in the answer
+✅ Perfect answer:
+“0 non-compliant Stripe calls”
+No static stripe usage
+Clear test/live separation
+🚫 Red flags:
+“Mostly fixed”
+“Only one or two routes left”
+“Still using shared stripe in some places”
+
+👉 That means it’s NOT done
