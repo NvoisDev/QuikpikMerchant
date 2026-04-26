@@ -400,7 +400,10 @@ export default function Settings() {
     logoUrl: user?.logoUrl || '',
     pickupAddress: user?.pickupAddress || '',
     orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
-    defaultCountryCode: user?.defaultCountryCode || '+44'
+    defaultCountryCode: user?.defaultCountryCode || '+44',
+    legalBusinessName: user?.legalBusinessName || '',
+    vatNumber: user?.vatNumber || '',
+    companyRegistrationNumber: user?.companyRegistrationNumber || '',
   });
 
   // Sync form state with user data when user loads
@@ -425,7 +428,10 @@ export default function Settings() {
         logoUrl: user.logoUrl || '',
         pickupAddress: user.pickupAddress || '',
         orderNumberPrefix: user.orderNumberPrefix || 'ORD',
-        defaultCountryCode: user.defaultCountryCode || '+44'
+        defaultCountryCode: user.defaultCountryCode || '+44',
+        legalBusinessName: user.legalBusinessName || '',
+        vatNumber: user.vatNumber || '',
+        companyRegistrationNumber: user.companyRegistrationNumber || '',
       });
       setUseCustomCollectionAddress(!!user.pickupAddress);
       setDeliveryEnabled((user as any).enableDelivery ?? true);
@@ -849,7 +855,10 @@ export default function Settings() {
                               logoUrl: user?.logoUrl || '',
                               pickupAddress: user?.pickupAddress || '',
                               orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
-                              defaultCountryCode: user?.defaultCountryCode || '+44'
+                              defaultCountryCode: user?.defaultCountryCode || '+44',
+                              legalBusinessName: user?.legalBusinessName || '',
+                              vatNumber: user?.vatNumber || '',
+                              companyRegistrationNumber: user?.companyRegistrationNumber || '',
                             });
                             setUseCustomCollectionAddress(!!user?.pickupAddress);
                           }}
@@ -931,6 +940,23 @@ export default function Settings() {
                               </div>
                             </div>
                           </dd>
+                        </div>
+                        <div className="sm:col-span-2 border-t pt-4">
+                          <dt className="text-sm font-semibold text-gray-700 mb-3">Legal Business Information</dt>
+                          <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 gap-x-4">
+                            <div>
+                              <dt className="text-sm font-medium text-gray-500">Legal Business Name</dt>
+                              <dd className="mt-1 text-sm text-gray-900">{user.legalBusinessName || <span className="text-gray-400 italic">Not set</span>}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm font-medium text-gray-500">VAT Number</dt>
+                              <dd className="mt-1 text-sm text-gray-900">{user.vatNumber || <span className="text-gray-400 italic">Not set</span>}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm font-medium text-gray-500">Company Registration Number</dt>
+                              <dd className="mt-1 text-sm text-gray-900">{user.companyRegistrationNumber || <span className="text-gray-400 italic">Not set</span>}</dd>
+                            </div>
+                          </div>
                         </div>
                       </dl>
                     ) : (
@@ -1177,6 +1203,44 @@ export default function Settings() {
                             </div>
                           </div>
                         </div>
+
+                        <div className="sm:col-span-2 border-t pt-4">
+                          <label className="text-sm font-semibold text-gray-700 block mb-3">Legal Business Information</label>
+                          <p className="text-xs text-gray-400 mb-3">These fields appear on invoices for legal compliance. All optional.</p>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                              <label className="text-sm font-medium text-gray-500">Legal Business Name</label>
+                              <input
+                                type="text"
+                                value={businessForm.legalBusinessName}
+                                onChange={(e) => setBusinessForm({...businessForm, legalBusinessName: e.target.value})}
+                                placeholder="e.g. Acme Trading Ltd"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">VAT Number</label>
+                              <input
+                                type="text"
+                                value={businessForm.vatNumber}
+                                onChange={(e) => setBusinessForm({...businessForm, vatNumber: e.target.value})}
+                                placeholder="e.g. GB123456789"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Company Registration Number</label>
+                              <input
+                                type="text"
+                                value={businessForm.companyRegistrationNumber}
+                                onChange={(e) => setBusinessForm({...businessForm, companyRegistrationNumber: e.target.value})}
+                                placeholder="e.g. 12345678"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
                     )}
                   </div>

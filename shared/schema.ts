@@ -259,6 +259,11 @@ export const users = pgTable("users", {
   // Multi-business profile feature (admin-enabled per wholesaler)
   enableMultiProfile: boolean("enable_multi_profile").default(false),
 
+  // Legal business information for invoice compliance
+  legalBusinessName: varchar("legal_business_name"),
+  vatNumber: varchar("vat_number"),
+  companyRegistrationNumber: varchar("company_registration_number"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -187,6 +187,10 @@ async function runStartupMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS bp_wholesaler_id_idx ON business_profiles(wholesaler_id)`,
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS business_profile_id INTEGER REFERENCES business_profiles(id) ON DELETE SET NULL`,
+    // Task #606: Legal business info fields for invoicing compliance
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS legal_business_name VARCHAR(255)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS vat_number VARCHAR(50)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS company_registration_number VARCHAR(50)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

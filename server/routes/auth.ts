@@ -25,6 +25,42 @@ export function registerAuthRoutes(app: Express): void {
         }
         updates.orderNumberPrefix = prefix;
       }
+
+      if (updates.legalBusinessName !== undefined) {
+        if (updates.legalBusinessName === null || updates.legalBusinessName === '') {
+          updates.legalBusinessName = null;
+        } else {
+          const trimmed = String(updates.legalBusinessName).trim();
+          if (trimmed.length > 255) {
+            return res.status(400).json({ success: false, message: "Legal business name must be 255 characters or fewer." });
+          }
+          updates.legalBusinessName = trimmed;
+        }
+      }
+
+      if (updates.vatNumber !== undefined) {
+        if (updates.vatNumber === null || updates.vatNumber === '') {
+          updates.vatNumber = null;
+        } else {
+          const trimmed = String(updates.vatNumber).trim();
+          if (trimmed.length > 50) {
+            return res.status(400).json({ success: false, message: "VAT number must be 50 characters or fewer." });
+          }
+          updates.vatNumber = trimmed;
+        }
+      }
+
+      if (updates.companyRegistrationNumber !== undefined) {
+        if (updates.companyRegistrationNumber === null || updates.companyRegistrationNumber === '') {
+          updates.companyRegistrationNumber = null;
+        } else {
+          const trimmed = String(updates.companyRegistrationNumber).trim();
+          if (trimmed.length > 50) {
+            return res.status(400).json({ success: false, message: "Company registration number must be 50 characters or fewer." });
+          }
+          updates.companyRegistrationNumber = trimmed;
+        }
+      }
       
       console.log('👤 Updating profile for user:', user.id, updates);
 

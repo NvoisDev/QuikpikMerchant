@@ -1,8 +1,10 @@
 import type { Express } from "express";
-import { storage, requireAuth, requireNotViewer, db, eq, users, z } from "./shared";
+import { storage, requireAuth, requireNotViewer, db, eq, users, z, ADMIN_EMAILS } from "./shared";
 import { insertBusinessProfileSchema, businessProfiles } from "@shared/schema";
 
-const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
+function getAdminEmail(req: any): string | undefined {
+  return req._adminEmail || req.user?.email;
+}
 
 export function registerBusinessProfileRoutes(app: Express): void {
   // GET /api/business-profiles — list profiles for the authenticated wholesaler
@@ -117,11 +119,48 @@ export function registerBusinessProfileRoutes(app: Express): void {
     }
   });
 
+  // PATCH /api/admin/users/:id/legal-info — admin update for legal business fields
+  app.patch("/api/admin/users/:id/legal-info", requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const userId = req.params.id;
+      const { legalBusinessName, vatNumber, companyRegistrationNumber } = req.body;
+
+      const lbnTrimmed = typeof legalBusinessName === "string" ? legalBusinessName.trim() : null;
+      const vatTrimmed = typeof vatNumber === "string" ? vatNumber.trim() : null;
+      const crnTrimmed = typeof companyRegistrationNumber === "string" ? companyRegistrationNumber.trim() : null;
+
+      if (lbnTrimmed && lbnTrimmed.length > 255) return res.status(400).json({ error: "Legal Business Name must be 255 characters or fewer" });
+      if (vatTrimmed && vatTrimmed.length > 50) return res.status(400).json({ error: "VAT Number must be 50 characters or fewer" });
+      if (crnTrimmed && crnTrimmed.length > 50) return res.status(400).json({ error: "Company Registration Number must be 50 characters or fewer" });
+
+      const [updated] = await db
+        .update(users)
+        .set({
+          legalBusinessName: lbnTrimmed || null,
+          vatNumber: vatTrimmed || null,
+          companyRegistrationNumber: crnTrimmed || null,
+        })
+        .where(eq(users.id, userId))
+        .returning({ id: users.id, legalBusinessName: users.legalBusinessName, vatNumber: users.vatNumber, companyRegistrationNumber: users.companyRegistrationNumber });
+
+      if (!updated) return res.status(404).json({ error: "User not found" });
+
+      console.log(`⚖️ Admin updated legal info for user ${userId}`);
+      res.json({ success: true, user: updated });
+    } catch (error) {
+      console.error("Error updating legal info:", error);
+      res.status(500).json({ error: "Failed to update legal info" });
+    }
+  });
+
   // PATCH /api/admin/users/:id/enable-multi-profile — admin toggle for enableMultiProfile
   app.patch("/api/admin/users/:id/enable-multi-profile", requireAuth, async (req: any, res) => {
     try {
-      const adminEmail = req.user?.email;
-      if (!ADMIN_EMAILS.includes(adminEmail || "")) {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) {
         return res.status(403).json({ error: "Forbidden" });
       }
 

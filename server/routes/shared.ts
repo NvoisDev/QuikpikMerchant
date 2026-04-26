@@ -757,6 +757,9 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
     if (wholesaler.email) fromLines.push(wholesaler.email);
     for (const line of fromLines) { doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(line, c3, fromY, { width: COL_W - 8 }); fromY += 12; }
+    if (wholesaler.legalBusinessName) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Trading as: ${wholesaler.legalBusinessName}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
+    if (wholesaler.vatNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`VAT Number: ${wholesaler.vatNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
+    if (wholesaler.companyRegistrationNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += 11; }
     const tableY = metaY + 120;
     const CW_PRODUCT = Math.round(CONTENT_W * 0.50), CW_QTY = Math.round(CONTENT_W * 0.11);
     const CW_PRICE = Math.round(CONTENT_W * 0.20), CW_TOTAL = CONTENT_W - CW_PRODUCT - CW_QTY - CW_PRICE;

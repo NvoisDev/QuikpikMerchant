@@ -23,7 +23,7 @@ import {
   ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
   Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
-  BadgeCheck, Percent,
+  BadgeCheck, Percent, FileText,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
@@ -89,6 +89,9 @@ interface WholesalerRow {
   customFeePercentage: number | null; isTestAccount?: boolean;
   lastLoginAt?: string | null;
   enableMultiProfile?: boolean;
+  legalBusinessName?: string | null;
+  vatNumber?: string | null;
+  companyRegistrationNumber?: string | null;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -658,6 +661,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [changePlanId, setChangePlanId] = useState("");
   const [changePlanConfirm, setChangePlanConfirm] = useState(false);
   const [customFeeInput, setCustomFeeInput] = useState("");
+  const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
 
   const { data: allPlansData } = useQuery<{ plans: AdminPlanRow[] }>({
     queryKey: ["/api/admin/plans"],
@@ -736,6 +740,20 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const legalInfoMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { legalBusinessName: string; vatNumber: string; companyRegistrationNumber: string } }) => {
+      const r = await apiRequest("PATCH", `/api/admin/users/${id}/legal-info`, data);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      setSelectedWholesaler(prev => prev ? { ...prev, legalBusinessName: variables.data.legalBusinessName || null, vatNumber: variables.data.vatNumber || null, companyRegistrationNumber: variables.data.companyRegistrationNumber || null } : prev);
+      toast({ title: "Legal info updated" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const { data: wholesalerOrders, isLoading: ordersLoading } = useQuery<{ orders: WholesalerOrderRow[] }>({
     queryKey: ["/api/admin/wholesalers", selectedWholesaler?.id, "orders"],
     queryFn: async () => {
@@ -753,6 +771,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const openDrawer = (w: WholesalerRow) => {
     setSelectedWholesaler(w);
     setCustomFeeInput(w.customFeePercentage !== null && w.customFeePercentage !== undefined ? String(w.customFeePercentage) : "");
+    setLegalInfoInput({ legalBusinessName: w.legalBusinessName || "", vatNumber: w.vatNumber || "", companyRegistrationNumber: w.companyRegistrationNumber || "" });
     setDrawerOpen(true);
   };
 
@@ -1072,6 +1091,56 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                       {selectedWholesaler.enableMultiProfile ? "Enabled" : "Disabled"}
                     </span>
                   </button>
+                </div>
+              </div>
+
+              {/* Legal Business Information */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-gray-500" />Legal Business Information
+                </p>
+                <p className="text-xs text-gray-400 mb-2">These fields appear on invoices. All optional.</p>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Legal Business Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Acme Trading Ltd"
+                      value={legalInfoInput.legalBusinessName}
+                      onChange={e => setLegalInfoInput(prev => ({ ...prev, legalBusinessName: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 block mb-0.5">VAT Number</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. GB123456789"
+                        value={legalInfoInput.vatNumber}
+                        onChange={e => setLegalInfoInput(prev => ({ ...prev, vatNumber: e.target.value }))}
+                        className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 block mb-0.5">Co. Reg No.</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 12345678"
+                        value={legalInfoInput.companyRegistrationNumber}
+                        onChange={e => setLegalInfoInput(prev => ({ ...prev, companyRegistrationNumber: e.target.value }))}
+                        className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white w-full"
+                    disabled={legalInfoMutation.isPending}
+                    onClick={() => legalInfoMutation.mutate({ id: selectedWholesaler.id, data: legalInfoInput })}
+                  >
+                    {legalInfoMutation.isPending ? "Saving…" : "Save Legal Info"}
+                  </Button>
                 </div>
               </div>
 

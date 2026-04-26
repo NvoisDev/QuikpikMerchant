@@ -208,6 +208,9 @@ export function registerAdminRoutes(app: Express): void {
           isTestAccount: w.isTestAccount ?? false,
           lastLoginAt: w.lastLoginAt ?? null,
           enableMultiProfile: w.enableMultiProfile ?? false,
+          legalBusinessName: w.legalBusinessName ?? null,
+          vatNumber: w.vatNumber ?? null,
+          companyRegistrationNumber: w.companyRegistrationNumber ?? null,
         };
       }).sort((a, b) => {
         // Test accounts always sort to the bottom
