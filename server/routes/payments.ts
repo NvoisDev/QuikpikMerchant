@@ -307,8 +307,11 @@ export function registerPaymentRoutes(app: Express): void {
           
           // Capture actual Stripe processing fee from balance_transaction (non-blocking)
           const piId = session.payment_intent as string | null;
+          // Idempotency: skip fee capture if this PI was already processed (webhook retry safety)
+          const alreadyProcessed = piId && (existingOrder.stripePaymentIntentId || '')
+            .split(',').map((s: string) => s.trim()).includes(piId);
           let actualStripeFee: number | null = null;
-          if (piId) {
+          if (piId && !alreadyProcessed) {
             try {
               const stripeForFee = getStripeClient(!event.livemode);
               const pi = await stripeForFee.paymentIntents.retrieve(piId, {
