@@ -63,7 +63,9 @@ type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products
 interface PlatformStats {
   activeWholesalers: number; totalWholesalers: number; suspendedWholesalers: number;
   wholesalersByPlan: { free: number; standard: number; premium: number };
-  totalOrders: number; ordersThisMonth: number; todayOrders: number; todayRevenue: number;
+  totalOrders: number; completedOrders: number; cancelledOrders: number;
+  ordersThisMonth: number; completedOrdersThisMonth: number; cancelledOrdersThisMonth: number;
+  todayOrders: number; todayRevenue: number;
   totalGMV: number; totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number;
   newWholesalersThisMonth: number; subscriptionRevenueMRR: number;
   subscriptionBreakdown: { standard: { count: number; mrr: number }; premium: { count: number; mrr: number } };
@@ -82,7 +84,8 @@ interface WholesalerRow {
   subscriptionTier: string | null; subscriptionStatus: string | null;
   currentPlan: string | null; stripeSubscriptionId: string | null;
   archived: boolean; createdAt: string;
-  orderCount: number; totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
+  orderCount: number; cancelledCount: number; totalOrderCount: number; cancellationRate: number;
+  totalGMV: number; totalFeesEarned: number; lastOrderAt: string | null;
   customFeePercentage: number | null; isTestAccount?: boolean;
   lastLoginAt?: string | null;
 }
@@ -567,7 +570,8 @@ function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isA
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard label="Active Wholesalers"   value={stats?.activeWholesalers ?? 0}  sub={`${stats?.totalWholesalers ?? 0} total`}                          icon={<Building2 className="h-4 w-4" />}    color={GREEN}  />
           <StatCard label="Orders Today"         value={stats?.todayOrders ?? 0}        sub={fmt(stats?.todayRevenue ?? 0) + " GMV"}                           icon={<ShoppingCart className="h-4 w-4" />}  color={AMBER}  />
-          <StatCard label="Orders this Month"    value={stats?.ordersThisMonth ?? 0}    sub={`${(stats?.totalOrders ?? 0).toLocaleString()} all-time`}          icon={<Package className="h-4 w-4" />}      color={BLUE}   />
+          <StatCard label="Orders this Month"    value={stats?.ordersThisMonth ?? 0}    sub={`${stats?.completedOrdersThisMonth ?? 0} completed · ${stats?.cancelledOrdersThisMonth ?? 0} cancelled`} icon={<Package className="h-4 w-4" />} color={BLUE} />
+          <StatCard label="Total Orders (All-time)" value={(stats?.totalOrders ?? 0).toLocaleString()} sub={`${stats?.completedOrders ?? 0} completed · ${stats?.cancelledOrders ?? 0} cancelled`} icon={<ShoppingCart className="h-4 w-4" />} color={BLUE} />
           <StatCard label="All-time GMV"         value={fmt(stats?.totalGMV ?? 0)}      sub="Gross Merchandise Value"                                           icon={<TrendingUp className="h-4 w-4" />}    color={PURPLE} />
           <StatCard label="Sub. MRR"             value={fmt(subMRR)}                    sub="Monthly recurring"                                                 icon={<DollarSign className="h-4 w-4" />}    color={GREEN}  />
           <StatCard label="Failed Payments (30d)" value={alerts?.failedPaymentsCount ?? 0} sub={alerts?.failedPaymentsCount ? "Needs follow-up" : "No failures"} icon={<AlertCircle className="h-4 w-4" />} color={alerts?.failedPaymentsCount ? RED : GREEN} />
@@ -834,7 +838,13 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400">Total Orders</p>
-                  <p className="text-sm font-bold text-gray-800 mt-1">{selectedWholesaler.orderCount}</p>
+                  <p className="text-sm font-bold text-gray-800 mt-1">{selectedWholesaler.totalOrderCount ?? selectedWholesaler.orderCount}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{selectedWholesaler.orderCount} completed</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400">Cancelled</p>
+                  <p className="text-sm font-bold mt-1" style={{ color: (selectedWholesaler.cancelledCount ?? 0) > 0 ? "#dc2626" : "#6b7280" }}>{selectedWholesaler.cancelledCount ?? 0}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{selectedWholesaler.cancellationRate ?? 0}% rate</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400">Total GMV</p>

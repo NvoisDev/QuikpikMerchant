@@ -32,24 +32,21 @@ export function registerAdminRoutes(app: Express): void {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      const [allWholesalers, allOrdersData, newWholesalers, ordersThisMonth, todayOrdersData, planRows] = await Promise.all([
+      const [allWholesalers, allOrdersData, newWholesalers, planRows] = await Promise.all([
         db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false))),
+        // Fetch ALL orders (all statuses) so we can derive both operational counts and financial totals
         db.select({
           subtotal: orders.subtotal,
           platformFee: orders.platformFee,
           customerTransactionFee: orders.customerTransactionFee,
+          status: orders.status,
+          createdAt: orders.createdAt,
         }).from(orders)
           .innerJoin(users, eq(orders.wholesalerId, users.id))
-          .where(and(sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
+          .where(eq(users.isTestAccount, false)),
         db.select({ count: count() }).from(users)
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false))),
-        db.select({ count: count() }).from(orders)
-          .innerJoin(users, eq(orders.wholesalerId, users.id))
-          .where(and(gte(orders.createdAt, monthStart), sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
-        db.select({ subtotal: orders.subtotal }).from(orders)
-          .innerJoin(users, eq(orders.wholesalerId, users.id))
-          .where(and(gte(orders.createdAt, todayStart), sql`${orders.status} != 'cancelled'`, eq(users.isTestAccount, false))),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
           .from(subscriptionPlans),
       ]);
@@ -78,25 +75,48 @@ export function registerAdminRoutes(app: Express): void {
         premium:  { count: activePremium,  mrr: activePremium  * PLAN_PRICES.premium  },
       };
 
+      // Derive operational counts (all statuses) and financial totals (non-cancelled only)
       let totalGMV = 0, totalCustomerFees = 0, totalPlatformFees = 0;
-      for (const o of allOrdersData) {
-        totalGMV += parseFloat(o.subtotal || '0');
-        totalCustomerFees += parseFloat(o.customerTransactionFee || '0');
-        totalPlatformFees += parseFloat(o.platformFee || '0');
-      }
+      let totalOrders = 0, cancelledOrders = 0, completedOrders = 0;
+      let ordersThisMonth = 0, cancelledOrdersThisMonth = 0, completedOrdersThisMonth = 0;
+      let todayOrders = 0, todayRevenue = 0;
 
-      const todayOrders = todayOrdersData.length;
-      const todayRevenue = todayOrdersData.reduce((sum, o) => sum + parseFloat(o.subtotal || '0'), 0);
+      for (const o of allOrdersData) {
+        const isCancelled = o.status === 'cancelled';
+        const createdAt = o.createdAt ? new Date(o.createdAt) : null;
+        const isThisMonth = createdAt && createdAt >= monthStart;
+        const isToday = createdAt && createdAt >= todayStart;
+
+        // Operational counts — every order counts
+        totalOrders++;
+        if (isCancelled) cancelledOrders++; else completedOrders++;
+        if (isThisMonth) { ordersThisMonth++; if (isCancelled) cancelledOrdersThisMonth++; else completedOrdersThisMonth++; }
+        if (isToday) { todayOrders++; }
+
+        // Financial totals — only non-cancelled
+        if (!isCancelled) {
+          totalGMV += parseFloat(o.subtotal || '0');
+          totalCustomerFees += parseFloat(o.customerTransactionFee || '0');
+          totalPlatformFees += parseFloat(o.platformFee || '0');
+          if (isToday) todayRevenue += parseFloat(o.subtotal || '0');
+        }
+      }
 
       res.json({
         totalWholesalers,
         activeWholesalers,
         suspendedWholesalers,
         wholesalersByPlan,
-        totalOrders: allOrdersData.length,
-        ordersThisMonth: Number(ordersThisMonth[0]?.count || 0),
+        // Operational order counts (all statuses)
+        totalOrders,
+        completedOrders,
+        cancelledOrders,
+        ordersThisMonth,
+        completedOrdersThisMonth,
+        cancelledOrdersThisMonth,
         todayOrders,
         todayRevenue,
+        // Financial totals (non-cancelled only)
         totalGMV,
         totalCustomerFees,
         totalPlatformFees,
@@ -119,7 +139,7 @@ export function registerAdminRoutes(app: Express): void {
       const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
 
       const wholesalerIds = wholesalersList.map(w => w.id);
-      let ordersByWholesaler: Record<string, { count: number; gmv: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
+      let ordersByWholesaler: Record<string, { count: number; cancelledCount: number; gmv: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
 
       if (wholesalerIds.length > 0) {
         const orderStats = await db.select({
@@ -133,13 +153,15 @@ export function registerAdminRoutes(app: Express): void {
 
         for (const o of orderStats) {
           const wid = o.wholesalerId;
-          if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+          if (!ordersByWholesaler[wid]) ordersByWholesaler[wid] = { count: 0, cancelledCount: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
           const oDate = o.createdAt ? new Date(o.createdAt) : null;
           if (oDate && (!ordersByWholesaler[wid].lastOrderAt || oDate > ordersByWholesaler[wid].lastOrderAt!)) {
             ordersByWholesaler[wid].lastOrderAt = oDate;
           }
-          // Cancelled orders don't count towards GMV, fees, or order count
-          if (o.status === 'cancelled') continue;
+          if (o.status === 'cancelled') {
+            ordersByWholesaler[wid].cancelledCount++;
+            continue;
+          }
           ordersByWholesaler[wid].count++;
           ordersByWholesaler[wid].gmv += parseFloat(o.subtotal || '0');
           ordersByWholesaler[wid].customerFees += parseFloat(o.customerTransactionFee || '0');
@@ -148,7 +170,9 @@ export function registerAdminRoutes(app: Express): void {
       }
 
       const result = wholesalersList.map(w => {
-        const stats = ordersByWholesaler[w.id] || { count: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+        const stats = ordersByWholesaler[w.id] || { count: 0, cancelledCount: 0, gmv: 0, customerFees: 0, platformFees: 0, lastOrderAt: null };
+        const totalOrderCount = stats.count + stats.cancelledCount;
+        const cancellationRate = totalOrderCount > 0 ? Math.round((stats.cancelledCount / totalOrderCount) * 100) : 0;
         return {
           id: w.id,
           email: w.email,
@@ -161,7 +185,10 @@ export function registerAdminRoutes(app: Express): void {
           stripeSubscriptionId: w.stripeSubscriptionId || null,
           createdAt: w.createdAt,
           archived: w.archived,
-          orderCount: stats.count,
+          orderCount: stats.count,           // completed (non-cancelled)
+          cancelledCount: stats.cancelledCount,
+          totalOrderCount,                   // all statuses
+          cancellationRate,                  // %
           totalGMV: stats.gmv,
           customerFeesEarned: stats.customerFees,
           platformFeesEarned: stats.platformFees,

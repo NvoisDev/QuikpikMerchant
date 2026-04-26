@@ -1,0 +1,100 @@
+🧾 Prompt: Read-Only System Architecture & Code Quality Audit (NON-BREAKING)
+🎯 Objective
+
+Provide a read-only overview of the platform architecture and key logic flows so it can be reviewed for:
+
+Code cleanliness
+Scalability
+Maintainability
+
+This is strictly for analysis purposes only — no changes should be made.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT modify any code
+DO NOT refactor anything
+DO NOT deploy changes
+DO NOT touch production logic
+
+👉 This is read-only documentation and inspection
+
+🧠 PART 1: High-Level Architecture
+
+Provide a clear overview of:
+
+Frontend (framework, structure)
+Backend (framework, structure)
+Database (type and key tables)
+Integrations (payments, messaging, etc.)
+🧱 PART 2: Core Modules Breakdown
+
+For each module, explain:
+
+Modules:
+Authentication (OTP login)
+Orders (quotes + checkout)
+Payments (Stripe)
+Products & stock (including batches)
+Pricing / fee logic
+Admin panel
+Team / roles
+For each module include:
+- Main files / folders
+- Key functions
+- How data flows through the system
+- Any dependencies on other modules
+🔁 PART 3: Key Flows (VERY IMPORTANT)
+
+Explain step-by-step:
+
+1. Order Flow
+Customer places order → payment → order confirmation → invoice
+2. Fee Calculation
+How customer fee + wholesaler fee are calculated and applied
+3. Refund Flow
+What happens when a refund is triggered
+4. Stock Flow
+How stock is deducted and restocked (especially with batches)
+🧠 PART 4: Configuration & Hardcoding Check
+
+List:
+
+Any hardcoded values (e.g. fees like 4.6%, 5.5%)
+Environment variables in use
+Areas where logic is duplicated
+🔐 PART 5: Permissions & Roles
+
+Explain:
+
+How roles are enforced (Owner, Admin, Member, Viewer)
+Where permission checks happen (frontend vs backend)
+⚠️ PART 6: Known Risks / Weak Points
+
+Identify:
+
+Areas that are tightly coupled
+Areas where a change could break multiple features
+Any performance concerns
+🧪 PART 7: Test vs Live Handling
+
+Explain:
+
+How test accounts are handled
+How test vs live Stripe modes are separated
+How test data is excluded from reports
+📦 Output Format
+Clear written explanation (no raw dumps of code)
+Diagrams optional but helpful
+Keep it structured and readable
+🧪 Acceptance Criteria
+No code changes made
+Full visibility of system structure
+Clear understanding of how core flows work
+Enough detail to assess scalability and cleanliness
+🧠 What you’ll do with this
+
+Once you get the output, bring it back here and I’ll:
+
+Spot weak architecture
+Highlight scalability risks
+Tell you what’s clean vs risky
+Suggest improvements without breaking anything
