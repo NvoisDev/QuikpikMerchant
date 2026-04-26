@@ -1485,8 +1485,10 @@ export function registerPaymentRoutes(app: Express): void {
         });
       }
 
+      const isTestAccount = Boolean(req.user.isTestAccount);
+
       // Get current subscription
-      const currentSubscription = await SubscriptionService.getCurrentSubscription(userId);
+      const currentSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
       
       if (!currentSubscription?.stripeSubscriptionId) {
         return res.status(400).json({ message: 'No active subscription found' });
@@ -1509,7 +1511,8 @@ export function registerPaymentRoutes(app: Express): void {
 
         const result = await SubscriptionService.proratedFreeDowngrade(
           currentSubscription.stripeSubscriptionId,
-          userId
+          userId,
+          isTestAccount,
         );
 
         // Enforce limits immediately (immediate downgrade path)
@@ -1556,7 +1559,8 @@ export function registerPaymentRoutes(app: Express): void {
       const result = await SubscriptionService.immediateDowngradeWithProration(
         currentSubscription.stripeSubscriptionId,
         targetPlanData.stripePriceId,
-        targetPlan
+        targetPlan,
+        isTestAccount,
       );
 
       // Enforce paid→paid downgrade limits (e.g. Premium→Standard: lock products >50)
