@@ -140,13 +140,15 @@ export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, Ref
 
 // ─── Singletons ───────────────────────────────────────────────────────────────
 /**
- * `stripe` is the active-environment Stripe client (live or test, per STRIPE_ENVIRONMENT).
- * Use `getStripeClient(true)` from stripeConfig.ts wherever you need to force test mode
- * (e.g. for is_test_account users).
+ * @deprecated Use `getStripeClient(Boolean(user.isTestAccount))` from stripeConfig instead.
+ * This singleton has no per-request account context and always uses the platform-default
+ * Stripe environment, which will be LIVE when STRIPE_ENVIRONMENT=live — causing test-account
+ * wholesalers to hit live Stripe. All Stripe call-sites must derive a client with
+ * getStripeClient(Boolean(user.isTestAccount)) and never import `stripe` from this file.
  */
 export { getStripeClient, stripeTest, stripeLive, isLiveMode } from "../stripeConfig";
 import { getStripeClient } from "../stripeConfig";
-export const stripe = (() => {
+export const DO_NOT_USE_stripe = (() => {
   try { return getStripeClient(); }
   catch { return null; }
 })();

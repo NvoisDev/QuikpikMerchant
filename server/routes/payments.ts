@@ -6,7 +6,7 @@ import {
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
-  sql, stockMovements, storage, stripe, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
+  sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
@@ -79,15 +79,9 @@ export function registerPaymentRoutes(app: Express): void {
     req.user = authenticatedUser;
     console.log('🔗 Stripe Connect proceeding with authenticated user:', authenticatedUser.email);
     try {
+      const stripe = getStripeClient(Boolean(authenticatedUser.isTestAccount));
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
-      console.log('📋 Stripe configured:', !!stripe);
-      console.log('🔑 Stripe key exists:', !!process.env.STRIPE_SECRET_KEY);
       console.log('👤 User role:', req.user?.role);
-      
-      if (!stripe) {
-        console.error('❌ Stripe not configured - missing STRIPE_SECRET_KEY');
-        return res.status(500).json({ message: "Stripe not configured - missing secret key" });
-      }
 
       const user = req.user;
       console.log('👤 Creating Stripe Connect account for user:', user.id);
@@ -206,12 +200,9 @@ export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/dashboard
   app.post('/api/stripe/dashboard', requireAuth, async (req: any, res) => {
     try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
-
       const user = req.user;
-      
+      const stripe = getStripeClient(Boolean(user.isTestAccount));
+
       if (!user.stripeAccountId) {
         return res.status(400).json({ message: "No Stripe Connect account found. Please set up payments first." });
       }
@@ -250,7 +241,7 @@ export function registerPaymentRoutes(app: Express): void {
     let event: Stripe.Event | undefined;
     for (const secret of secrets) {
       try {
-        event = stripe!.webhooks.constructEvent(req.body, sig, secret);
+        event = getStripeClient().webhooks.constructEvent(req.body, sig, secret);
         break; // verified — stop trying
       } catch {
         // try the next secret
@@ -360,6 +351,10 @@ export function registerPaymentRoutes(app: Express): void {
           let periodStart: Date = new Date();
           if (session.subscription) {
             try {
+              // Load user to determine which Stripe environment their subscription lives in
+              const [subUser] = await db.select({ isTestAccount: users.isTestAccount })
+                .from(users).where(eq(users.id, userId));
+              const stripe = getStripeClient(Boolean(subUser?.isTestAccount));
               const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
               if (subscription.current_period_end) {
                 subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
@@ -709,6 +704,7 @@ export function registerPaymentRoutes(app: Express): void {
           console.log(`⚠️ No user for Stripe customer ${invCustId}`);
           return res.json({ received: true, type: event.type });
         }
+        const stripe = getStripeClient(Boolean(invUser.isTestAccount));
 
         let invSub: Stripe.Subscription;
         try {
@@ -841,10 +837,6 @@ export function registerPaymentRoutes(app: Express): void {
 
   // POST /api/stripe/connect-onboarding
   app.post("/api/stripe/connect-onboarding", requireAuth, async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe not configured" });
-    }
-
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -857,6 +849,7 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(403).json({ message: "Only wholesalers can onboard to Stripe Connect" });
       }
 
+      const stripe = getStripeClient(Boolean(user.isTestAccount));
       let accountId = user.stripeAccountId;
 
       // Create Connect account if it doesn't exist
@@ -1052,8 +1045,7 @@ export function registerPaymentRoutes(app: Express): void {
   // GET /api/stripe/payouts
   app.get('/api/stripe/payouts', requireAuth, async (req: any, res) => {
     try {
-      if (!stripe) return res.status(500).json({ message: 'Stripe not configured' });
-
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const user = await storage.getUser(req.user.id);
       if (!user?.stripeAccountId) {
         return res.json({ pendingBalance: 0, payouts: [] });
@@ -1086,8 +1078,7 @@ export function registerPaymentRoutes(app: Express): void {
   // GET /api/stripe/payouts/:payoutId/transactions
   app.get('/api/stripe/payouts/:payoutId/transactions', requireAuth, async (req: any, res) => {
     try {
-      if (!stripe) return res.status(500).json({ message: 'Stripe not configured' });
-
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const user = await storage.getUser(req.user.id);
       if (!user?.stripeAccountId) return res.status(404).json({ message: 'No Stripe account' });
 
@@ -1251,6 +1242,7 @@ export function registerPaymentRoutes(app: Express): void {
   // POST /api/subscriptions/create-checkout-session
   app.post('/api/subscriptions/create-checkout-session', requireAuth, requireOwner, async (req: any, res) => {
     try {
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const userId = req.user.id;
       const { priceId, idempotencyKey } = req.body;
 
@@ -1691,6 +1683,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       // Get wholesaler details
       const wholesaler = await storage.getUser(wholesalerId);
+      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
       if (!wholesaler) {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
@@ -1893,7 +1886,7 @@ export function registerPaymentRoutes(app: Express): void {
       let paymentLinkUrl = '';
       let paymentLinkId = '';
       
-      if (stripe && validDepositPercentage > 0 && !isOffline) {
+      if (validDepositPercentage > 0 && !isOffline) {
         try {
           // Create line items for Stripe
           // Deposits: single line item for the deposit amount (% of total including transaction fee)

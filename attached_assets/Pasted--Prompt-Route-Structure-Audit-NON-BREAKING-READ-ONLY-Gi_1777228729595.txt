@@ -1,0 +1,96 @@
+🧾 Prompt: Route Structure Audit (NON-BREAKING, READ-ONLY)
+
+Give your dev this 👇
+
+🎯 Objective
+
+Verify that backend routes are properly modularised and organised by domain, and not consolidated into a single large file.
+
+This is a read-only audit — no changes required.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT refactor anything
+DO NOT move files
+DO NOT change logic
+
+👉 Only inspect and report
+
+🧱 PART 1: Route File Structure
+
+Provide a list of all route files in:
+
+server/routes/
+For each file include:
+- File name
+- Responsibility (what it handles)
+- Approx size (lines or rough size)
+🧠 PART 2: Domain Separation Check
+
+Confirm whether routes are grouped logically:
+
+Expected structure:
+
+auth.ts → authentication  
+customer-auth.ts → customer login  
+orders.ts → orders + quotes  
+payments.ts → Stripe + payments  
+admin.ts → admin functionality  
+Highlight:
+Any files handling multiple unrelated domains
+Any files that are too large (>500–800 lines)
+⚠️ PART 3: Identify “God Files”
+
+Flag any file that:
+
+Contains too many responsibilities
+Mixes:
+payments
+orders
+auth
+admin logic
+
+Example:
+
+routes.ts handling everything
+
+👉 This is a red flag
+
+🔁 PART 4: Stripe Usage Consistency
+
+For all files that interact with Stripe:
+
+Confirm they use:
+getStripeClient()
+Identify any file still using:
+globalStripeClient
+🧠 PART 5: Import Structure
+
+Check:
+
+Whether route files import shared utilities (good)
+OR duplicate logic locally (bad)
+📦 PART 6: Output Format
+
+Provide:
+
+Route file list
+Any structural issues
+Any oversized or mixed-responsibility files
+Recommendation (if restructuring is needed later)
+🧪 Acceptance Criteria
+Clear visibility of route structure
+Confirmation of modular design (or not)
+Identification of any risky files
+No changes made to system
+🧠 What YOU look for in the answer
+
+When they reply, check:
+
+✅ Good signs:
+Multiple focused route files
+Each file has a clear purpose
+No file doing “everything”
+🚫 Bad signs:
+One file = 1000+ lines
+Payments logic inside orders file
+Auth logic scattered everywhere

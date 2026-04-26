@@ -1,0 +1,108 @@
+🧾 Prompt: Stripe Consistency + Route Safety Audit (NON-BREAKING)
+🎯 Objective
+
+Ensure all Stripe interactions across the platform correctly use account-based Stripe client selection, and introduce safeguards to prevent future misuse — without refactoring or breaking existing functionality.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT refactor route structure
+DO NOT move files
+DO NOT change business logic
+DO NOT break payments, subscriptions, or refunds
+
+👉 This is a consistency + safety fix only
+
+🧱 PART 1: Centralise Stripe Usage (CRITICAL)
+Goal:
+
+Ensure ALL Stripe calls use:
+
+getStripeClient(wholesalerId)
+Action:
+
+Search entire codebase for:
+
+stripe.
+For EVERY occurrence:
+✅ Correct pattern:
+const stripe = getStripeClient(wholesalerId)
+❌ Replace:
+import { stripe } from shared
+Apply to ALL files including:
+marketplace.ts
+orders.ts
+payments.ts
+admin.ts
+any services/utilities
+🧱 PART 2: Remove Unsafe Stripe Access
+In shared.ts:
+🚫 Remove OR deprecate:
+export const stripe = ...
+Replace with:
+export function getStripeClient(wholesalerId)
+Optional safeguard:
+
+If removal is risky:
+
+Rename to:
+
+DO_NOT_USE_stripeClient
+🧱 PART 3: Validate Coverage (MANDATORY CHECK)
+After refactor, confirm:
+ZERO Stripe calls exist outside getStripeClient()
+Provide report:
+Files checked
+Total Stripe calls
+Confirmation all are compliant
+🧱 PART 4: Logging (DEBUG SAFETY)
+
+Add lightweight logging where Stripe client is created:
+
+Stripe Mode: TEST | Wholesaler: [id]
+Stripe Mode: LIVE | Wholesaler: [id]
+
+👉 This must NOT expose sensitive data
+
+🧱 PART 5: marketplace.ts Guardrail (NO REFACTOR)
+DO NOT split file
+
+Instead:
+
+👉 Add rule:
+
+All NEW payment-related logic must be implemented in payments.ts
+Confirm:
+No new Stripe logic added to marketplace.ts going forward
+Existing logic remains untouched
+🧱 PART 6: orders.ts & admin.ts Clean Usage
+
+Ensure:
+
+Refunds use getStripeClient()
+Payment links use getStripeClient()
+Stripe account lookups use getStripeClient()
+🧪 PART 7: Testing
+
+Test the following scenarios:
+
+✅ Test Account (is_test_account = true)
+Customer checkout → uses TEST Stripe
+Quick Quote → uses TEST Stripe
+Payment reminder → uses TEST Stripe
+Refund → uses TEST Stripe
+✅ Live Account
+All flows use LIVE Stripe
+✅ Mixed Environment
+Platform in LIVE mode
+Test account still uses TEST Stripe
+🧪 Acceptance Criteria
+All Stripe calls are account-aware
+No static/global Stripe client in use
+Test accounts are fully isolated
+No regression in working payment flows
+🧠 Final Sanity Check
+
+If implementation:
+
+“Fixes only a few routes”
+
+🚫 Incomplete

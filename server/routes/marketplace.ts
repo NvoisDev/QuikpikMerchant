@@ -6,7 +6,8 @@ import {
   getCurrencySymbol, getEmailLogoUrl, getUserPlanLimits, gte, inArray, like,
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
   parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
-  sendEmail, sendSMS, sendWelcomeMessages, sql, storage, stripe, sum, users, validatePhoneNumber,
+  sendEmail, sendSMS, sendWelcomeMessages, sql, storage, sum, users, validatePhoneNumber,
+  getStripeClient, isLiveMode,
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
   wholesalerCustomerRelationships,
@@ -140,6 +141,13 @@ async function resolveCustomerProductPrice(opts: {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Registers customer-facing marketplace routes (store browsing, cart, payment intents, orders).
+ *
+ * ⚠️  New payment logic belongs in `server/routes/payments.ts`, not here.
+ * Any Stripe call in this file MUST use `getStripeClient(Boolean(wholesaler.isTestAccount))`
+ * — never the module-level `stripe` singleton (which has no per-request account context).
+ */
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/customer-orders/:wholesalerId/:phoneNumber
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
@@ -1039,10 +1047,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         return res.status(400).json({ message: "Wholesaler not found" });
       }
 
-      // Create Stripe payment intent with idempotency to prevent duplicates
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
+      // Create Stripe payment intent — use account-aware client so test accounts always use test Stripe
+      const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
       
       // ENHANCED Connect account validation - check if account is fully functional
       let useConnect = false;
@@ -1320,11 +1326,22 @@ export function registerMarketplaceRoutes(app: Express): void {
         return res.status(400).json({ message: 'Payment intent ID required' });
       }
 
-      // Retrieve payment intent from Stripe to get metadata
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
+      // Retrieve payment intent — use environment-aware fallback so test-account PIs (created
+      // with the test client) are still found when the platform runs in live mode.
+      let paymentIntent: any;
+      {
+        const primaryClient = getStripeClient(!isLiveMode());   // test in test-mode, live in live-mode
+        const secondaryClient = getStripeClient(isLiveMode());  // opposite for fallback
+        try {
+          paymentIntent = await primaryClient.paymentIntents.retrieve(paymentIntentId);
+        } catch (e: any) {
+          if (e?.statusCode === 404 || e?.code === 'resource_missing') {
+            paymentIntent = await secondaryClient.paymentIntents.retrieve(paymentIntentId);
+          } else {
+            throw e;
+          }
+        }
       }
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       
       if (paymentIntent.status !== 'succeeded') {
         return res.status(400).json({ message: 'Payment not successful' });
@@ -1689,8 +1706,12 @@ export function registerMarketplaceRoutes(app: Express): void {
 
         // Capture Stripe Transfer ID for exact payout-to-order reconciliation.
         // This runs outside the transaction so a Stripe API failure never blocks the order.
-        if (stripe && paymentIntent?.id) {
+        if (paymentIntent?.id) {
           try {
+            // Re-derive the Stripe client from the wholesaler in the PI metadata
+            const piWholesalerId = paymentIntent.metadata?.wholesalerId as string | undefined;
+            const piWholesalerObj = piWholesalerId ? await storage.getUser(piWholesalerId) : null;
+            const stripe = getStripeClient(Boolean(piWholesalerObj?.isTestAccount));
             const expandedPi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
               expand: ['latest_charge'],
             });
@@ -3340,13 +3361,10 @@ Please contact the customer to confirm this order.
       // The original payment link was for the deposit and is now completed/expired
       console.log(`💳 Generating fresh balance payment link for order ${order.orderNumber}, amount: £${amountOutstanding.toFixed(2)}`);
 
-      // Generate a new payment link
-      if (!stripe) {
-        return res.status(500).json({ error: 'Payment service not available' });
-      }
-
+      // Generate a new payment link — derive Stripe client from wholesaler's test mode flag
       const wholesaler = await storage.getUser(order.wholesalerId);
       const customer = await storage.getUser(order.retailerId);
+      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
 
       // Validate wholesaler's Stripe Connect account for automatic transfer
       let customerBalanceUseConnect = false;
@@ -3578,9 +3596,9 @@ Please contact the customer to confirm this order.
         return res.status(400).json({ error: 'No items found in the original order' });
       }
 
-      if (!stripe) {
-        return res.status(500).json({ error: 'Payment service not available' });
-      }
+      // Derive Stripe client from the order's wholesaler test mode flag
+      const reorderWholesalerObj = await storage.getUser(order.wholesalerId);
+      const stripe = getStripeClient(Boolean(reorderWholesalerObj?.isTestAccount));
 
       // Fetch current product prices
       const reorderProductIds = originalItems.map(i => i.productId);

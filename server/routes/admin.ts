@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import {
-  ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, gte, inArray, isNull, lte, or, orders,
-  requireAuth, storage, stripe, subscriptionPlans, userSubscriptions, users, products, orderItems,
+  ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient, gte, inArray, isNull, lte, or, orders,
+  requireAuth, storage, subscriptionPlans, userSubscriptions, users, products, orderItems,
   sendCustomerInvoiceEmail, asc, sql, productBatches, subscriptionAuditLogs, refundAcrossPaymentIntents,
   adminAuditLogs, systemErrorLogs, stockMovements, customerProfileUpdateNotifications, SubscriptionService,
   smsVerificationCodes, stockUpdateNotifications,
@@ -551,10 +551,18 @@ export function registerAdminRoutes(app: Express): void {
         return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
       }
 
-      // Fetch subscription from Stripe
+      // Fetch subscription from Stripe — try live first, fall back to test (admin spans both envs)
       let stripeSub: Stripe.Subscription;
       try {
-        stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        try {
+          stripeSub = await getStripeClient(false).subscriptions.retrieve(stripeSubscriptionId);
+        } catch (primaryErr: any) {
+          if (primaryErr?.statusCode === 404 || primaryErr?.code === 'resource_missing') {
+            stripeSub = await getStripeClient(true).subscriptions.retrieve(stripeSubscriptionId);
+          } else {
+            throw primaryErr;
+          }
+        }
       } catch (e) {
         return res.status(400).json({ error: `Stripe subscription not found: ${stripeSubscriptionId}` });
       }
@@ -669,8 +677,9 @@ export function registerAdminRoutes(app: Express): void {
         return res.status(400).json({ error: `User ${syncUser.email} has no Stripe customer ID` });
       }
 
-      // Find their active subscription in Stripe
-      const syncSubs = await stripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 1 });
+      // Find their active subscription in Stripe (use user's mode so test accounts use test client)
+      const syncStripe = getStripeClient(Boolean(syncUser.isTestAccount));
+      const syncSubs = await syncStripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 1 });
       const syncSub = syncSubs.data[0];
       if (!syncSub) {
         return res.status(404).json({ error: `No active Stripe subscription found for customer ${syncCustId}` });
@@ -1056,11 +1065,12 @@ export function registerAdminRoutes(app: Express): void {
   app.get('/api/admin/payout-status', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      if (!stripe) return res.json({ available: 0, pending: 0, lastPayout: null, currency: 'gbp' });
+      // Platform-level balance — always uses the configured STRIPE_ENVIRONMENT (live or test)
+      const platformStripe = getStripeClient();
 
       const [balance, payouts] = await Promise.all([
-        stripe.balance.retrieve(),
-        stripe.payouts.list({ limit: 1 }),
+        platformStripe.balance.retrieve(),
+        platformStripe.payouts.list({ limit: 1 }),
       ]);
 
       const gbpAvailable = balance.available.find((b: any) => b.currency === 'gbp');
@@ -1084,13 +1094,17 @@ export function registerAdminRoutes(app: Express): void {
   app.post('/api/admin/orders/:id/issue-refund', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
       const refundOrderId = parseInt(req.params.id, 10);
       if (isNaN(refundOrderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const [order] = await db.select().from(orders).where(eq(orders.id, refundOrderId)).limit(1);
       if (!order) return res.status(404).json({ error: 'Order not found' });
       if (!order.stripePaymentIntentId) return res.status(400).json({ error: 'No payment intent on this order' });
+
+      // Derive Stripe client from the order's wholesaler so test accounts use the test environment
+      const [refundWholesaler] = await db.select({ isTestAccount: users.isTestAccount })
+        .from(users).where(eq(users.id, order.wholesalerId)).limit(1);
+      const stripe = getStripeClient(Boolean(refundWholesaler?.isTestAccount));
 
       const { amountPounds, reason = 'requested_by_customer' } = req.body;
       const refundAmount = amountPounds ? parseFloat(amountPounds) : parseFloat(order.subtotal || '0');
@@ -1484,10 +1498,11 @@ export function registerAdminRoutes(app: Express): void {
       let stripeProductId: string | null = null;
       let stripePriceId: string | null = null;
 
-      // For paid plans, create Stripe Product + Price
+      // For paid plans, create Stripe Product + Price (platform-level — always uses STRIPE_ENVIRONMENT)
       if (priceNum > 0) {
         try {
-          const product = await stripe.products.create({
+          const platformStripe = getStripeClient();
+          const product = await platformStripe.products.create({
             name,
             description: description || `Quikpik ${name} plan`,
             metadata: { planId, platform: 'quikpik' },
@@ -1495,7 +1510,7 @@ export function registerAdminRoutes(app: Express): void {
           stripeProductId = product.id;
 
           const stripeInterval = billingInterval === 'yearly' ? 'year' : 'month';
-          const stripePrice = await stripe.prices.create({
+          const stripePrice = await platformStripe.prices.create({
             product: product.id,
             unit_amount: Math.round(priceNum * 100),
             currency: 'gbp',

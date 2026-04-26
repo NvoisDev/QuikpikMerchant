@@ -5,8 +5,6 @@ import { sendPaymentReminderEmail } from './sendgrid-service';
 import { sendSMS } from './services/smsService';
 import { getStripeClient } from './stripeConfig';
 
-const stripe = (() => { try { return getStripeClient(); } catch { return null; } })();
-
 interface OrderWithPaymentTerms {
   id: number;
   orderNumber: string | null;
@@ -86,9 +84,13 @@ export async function checkAndSendPaymentReminders() {
 }
 
 async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: string): Promise<string> {
-  if (!stripe) return '';
-
   try {
+    const [wholesalerUser] = await db
+      .select({ isTestAccount: users.isTestAccount })
+      .from(users)
+      .where(eq(users.id, order.wholesalerId));
+    const stripe = getStripeClient(Boolean(wholesalerUser?.isTestAccount));
+
     const outstandingAmount = parseFloat(order.amountOutstanding || '0');
     const amountInPence = Math.round(outstandingAmount * 100);
     const appBase = process.env.APP_URL || 'https://quikpik.app';

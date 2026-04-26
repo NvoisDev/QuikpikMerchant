@@ -7,7 +7,8 @@ import {
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
   orderNotificationService, orderPhotoUpload, orders, products,
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
-  sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, stripe, sum,
+  sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, sum,
+  getStripeClient, isLiveMode,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate
 } from "./shared";
 import { productBatches, businessProfiles } from "@shared/schema";
@@ -426,6 +427,7 @@ export function registerOrderRoutes(app: Express): void {
   // POST /api/orders/:id/mark-as-paid
   app.post('/api/orders/:id/mark-as-paid', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
 
@@ -477,7 +479,6 @@ export function registerOrderRoutes(app: Express): void {
       if (paymentUpdate.newPaymentStatus === 'paid' && method !== 'payment_link' && order.stripePaymentLinkId) {
         updateData.stripePaymentLinkUrl = null;
         updateData.stripePaymentLinkId = null;
-        if (stripe) {
           try {
             await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
             console.log(`🔒 Stripe checkout session expired for order ${order.orderNumber} (offline full payment)`);
@@ -485,7 +486,6 @@ export function registerOrderRoutes(app: Express): void {
             // Best-effort — session may already be used or expired
             console.warn(`⚠️ Could not expire Stripe session for order ${order.orderNumber}:`, stripeErr);
           }
-        }
       }
 
       await db.update(orders).set(updateData).where(eq(orders.id, orderId));
@@ -730,9 +730,21 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(400).json({ error: 'Session ID required' });
       }
 
-      // Validate Stripe session ID
+      // Validate Stripe session ID — use environment-aware fallback (test-account sessions
+      // are created with the test client and are invisible to the live client)
       try {
-        const session = await stripe.checkout.sessions.retrieve(session_id);
+        const primaryClient = getStripeClient(!isLiveMode());
+        const secondaryClient = getStripeClient(isLiveMode());
+        let session: any;
+        try {
+          session = await primaryClient.checkout.sessions.retrieve(session_id as string);
+        } catch (e: any) {
+          if (e?.statusCode === 404 || e?.code === 'resource_missing') {
+            session = await secondaryClient.checkout.sessions.retrieve(session_id as string);
+          } else {
+            throw e;
+          }
+        }
         // Verify the session's order number matches
         if (session.metadata?.orderNumber !== orderNumber) {
           return res.status(403).json({ error: 'Session does not match order' });
@@ -1232,6 +1244,7 @@ export function registerOrderRoutes(app: Express): void {
       const { reason, reasonCategory, returnedItems, processRefund, refundType, refundDelivery } = req.body;
       // returnedItems: Array<{ productId: number, quantity: number, sellingType: 'units' | 'pallets' }>
       // refundType: 'card' | 'later' - determines if refund goes to original payment or processed separately
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -1612,7 +1625,7 @@ export function registerOrderRoutes(app: Express): void {
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ message: "Not authorized" });
       if (!order.stripePaymentIntentId) return res.status(400).json({ message: "No Stripe payment recorded for this order" });
-      if (!stripe) return res.status(400).json({ message: "Stripe not configured" });
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       if (order.refundedAt) return res.status(400).json({ message: "Refund already processed on " + new Date(order.refundedAt).toLocaleDateString() });
 
       const amountToRefund = parseFloat(order.amountRefunded || '0');
@@ -1782,6 +1795,7 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       const { approved, responseMessage, refundType } = req.body;
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       
       const [request] = await db.select()
         .from(orderCancellationRequests)
@@ -1859,7 +1873,7 @@ export function registerOrderRoutes(app: Express): void {
             console.log(`⚠️ Skipping Stripe refund for order ${order.orderNumber} (customer request) — amountRefunded already recorded (£${order.amountRefunded})`);
           }
           
-          if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && stripe && !custAlreadyRefunded) {
+          if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && !custAlreadyRefunded) {
             // Idempotency key tied to the specific cancellation request so a retry
             // of the same approval returns the existing Stripe refund, not a new one.
             const custRefundIdempotencyKey = `cancellation-request-${requestId}-refund`;
@@ -2015,6 +2029,7 @@ export function registerOrderRoutes(app: Express): void {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
       const { amount, reason } = req.body;
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -2045,7 +2060,7 @@ export function registerOrderRoutes(app: Express): void {
 
       // Create Stripe refund — distribute across all payment intents if needed
       let refundResult: { totalRefunded: number; remaining: number; lastError: string | null } | null = null;
-      if (stripe) {
+      {
         const amountPaid = parseFloat(order.amountPaid || '0');
         let amountToRefundPounds = amountPaid; // default: full refund
 
@@ -2975,10 +2990,7 @@ export function registerOrderRoutes(app: Express): void {
       // Get customer details
       const customer = await storage.getUser(order.retailerId);
       const wholesaler = await storage.getUser(wholesalerId);
-
-      if (!stripe) {
-        return res.status(500).json({ error: 'Payment service not available' });
-      }
+      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
 
       // Calculate the correct payment amount
       // For unpaid quotes with a deposit percentage, charge only the deposit amount

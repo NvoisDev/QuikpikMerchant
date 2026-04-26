@@ -51,6 +51,7 @@ if (isLiveMode() && !stripeLive) {
  */
 export function getStripeClient(forceTest = false): Stripe {
   const useLive = isLiveMode() && !forceTest;
+  console.log(`Stripe client: ${useLive ? '🔵 LIVE' : '🟢 TEST'}`);
 
   if (useLive) {
     if (stripeLive) return stripeLive;
