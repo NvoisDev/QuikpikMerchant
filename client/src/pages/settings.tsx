@@ -49,25 +49,23 @@ function BusinessProfilesSection() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { name: string; logoUrl: string; address: string }) => {
+    mutationFn: async (data: { id?: number; name: string; logoUrl: string; address: string }) => {
       const payload = {
         name: data.name,
         logoUrl: data.logoUrl || null,
         address: data.address || null,
       };
-      if (editing) {
-        const r = await apiRequest("PATCH", `/api/business-profiles/${editing.id}`, payload);
-        if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      if (data.id) {
+        const r = await apiRequest("PATCH", `/api/business-profiles/${data.id}`, payload);
         return r.json();
       } else {
         const r = await apiRequest("POST", "/api/business-profiles", payload);
-        if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
         return r.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-profiles"] });
-      toast({ title: editing ? "Profile updated" : "Profile created" });
+      toast({ title: variables.id ? "Profile updated" : "Profile created" });
       setShowDialog(false);
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
@@ -104,7 +102,7 @@ function BusinessProfilesSection() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Business Profiles</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Create multiple trading identities. Choose one when creating a quote or order.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Create multiple trading identities. Choose one when creating a quote or order. These are separate from your main business settings.</p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={openAdd}>
           <Plus className="h-4 w-4" />Add Profile
@@ -209,7 +207,7 @@ function BusinessProfilesSection() {
             <Button
               size="sm"
               disabled={!form.name.trim() || saveMutation.isPending}
-              onClick={() => saveMutation.mutate(form)}
+              onClick={() => saveMutation.mutate({ ...form, id: editing?.id })}
             >
               {saveMutation.isPending ? "Saving…" : "Save"}
             </Button>
