@@ -247,8 +247,7 @@ export default function ProductCard({
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 bg-white/85 backdrop-blur-sm hover:bg-white shadow-sm rounded-full"
-                    onPointerDown={(e) => e.preventDefault()}
-                    onClick={(e) => { e.stopPropagation(); setActionsMenuOpen(prev => !prev); }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
                   </Button>

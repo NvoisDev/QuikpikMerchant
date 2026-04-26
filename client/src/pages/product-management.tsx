@@ -3128,8 +3128,6 @@ export default function ProductManagement() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0"
-                                  onPointerDown={(e) => e.preventDefault()}
-                                  onClick={() => setOpenMenuProductId(prev => prev === product.id ? null : product.id)}
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
