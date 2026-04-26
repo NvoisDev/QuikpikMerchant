@@ -39,6 +39,23 @@ interface WholesalerInfo {
 type AuthStep = 'phone' | 'otp' | 'select' | 'no-account';
 
 const DEFAULT_COUNTRY_CODE = '+44';
+const COUNTRY_CODE_STORAGE_KEY = 'customerPreferredCountryCode';
+
+function getSavedCountryCode(): string {
+  try {
+    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || DEFAULT_COUNTRY_CODE;
+  } catch {
+    return DEFAULT_COUNTRY_CODE;
+  }
+}
+
+function saveCountryCode(code: string): void {
+  try {
+    localStorage.setItem(COUNTRY_CODE_STORAGE_KEY, code);
+  } catch {
+    // ignore storage errors
+  }
+}
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -52,7 +69,7 @@ function formatCountdown(secs: number) {
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
   const [step, setStep] = useState<AuthStep>('phone');
-  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE); // editable, default UK
+  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // editable, persisted in localStorage
   const [phoneLocal, setPhoneLocal] = useState('');          // digits after country code
   const [otpCode, setOtpCode] = useState('');
   const [wholesalerOptions, setWholesalerOptions] = useState<WholesalerOption[]>([]);
@@ -157,6 +174,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       setError('Please enter a valid mobile number with country code (e.g. +44 7700 900000 or +353 87 123 4567)');
       return;
     }
+
+    saveCountryCode(countryCode);
 
     if (resend) setIsResending(true);
     else setIsLoading(true);

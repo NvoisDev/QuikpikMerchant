@@ -21,6 +21,23 @@ interface WholesalerOption {
 type LoginStep = 'phone' | 'otp' | 'select' | 'no-account' | 'enquiry';
 
 const DEFAULT_COUNTRY_CODE = '+44';
+const COUNTRY_CODE_STORAGE_KEY = 'customerPreferredCountryCode';
+
+function getSavedCountryCode(): string {
+  try {
+    return localStorage.getItem(COUNTRY_CODE_STORAGE_KEY) || DEFAULT_COUNTRY_CODE;
+  } catch {
+    return DEFAULT_COUNTRY_CODE;
+  }
+}
+
+function saveCountryCode(code: string): void {
+  try {
+    localStorage.setItem(COUNTRY_CODE_STORAGE_KEY, code);
+  } catch {
+    // ignore storage errors
+  }
+}
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -63,7 +80,7 @@ export default function CustomerLogin() {
   const { backToHome } = useAuth();
 
   const [step, setStep] = useState<LoginStep>('phone');
-  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE); // editable, default UK
+  const [countryCode, setCountryCode] = useState(getSavedCountryCode); // editable, persisted in localStorage
   const [phoneLocal, setPhoneLocal] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -123,6 +140,8 @@ export default function CustomerLogin() {
       setError('Please enter a valid phone number');
       return;
     }
+
+    saveCountryCode(countryCode);
 
     if (resend) setIsResending(true);
     else setIsLoading(true);
