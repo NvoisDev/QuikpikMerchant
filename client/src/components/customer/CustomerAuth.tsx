@@ -33,6 +33,7 @@ interface WholesalerInfo {
   businessName: string;
   logoType?: string;
   logoUrl?: string;
+  defaultCountryCode?: string;
 }
 
 type AuthStep = 'phone' | 'otp' | 'select' | 'no-account';
@@ -80,7 +81,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
     if (!wholesalerId) return;
     fetch(`/api/marketplace/wholesaler/${wholesalerId}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => data && setWholesalerInfo(data))
+      .then(data => {
+        if (!data) return;
+        setWholesalerInfo(data);
+        if (data.defaultCountryCode) {
+          setCountryCode(data.defaultCountryCode);
+        }
+      })
       .catch(() => {});
   }, [wholesalerId]);
 

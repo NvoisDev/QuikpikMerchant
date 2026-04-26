@@ -1399,6 +1399,7 @@ export class CustomerStorage extends OrderStorage {
         googleId: wholesaler.google_id,
         isFirstLogin: wholesaler.is_first_login,
         storeTagline: wholesaler.store_tagline,
+        defaultCountryCode: wholesaler.default_country_code || '+44',
         showPricesToWholesalers: wholesaler.show_prices_to_wholesalers,
         defaultLowStockThreshold: wholesaler.default_low_stock_threshold,
         businessDescription: wholesaler.business_description,

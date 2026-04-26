@@ -177,6 +177,7 @@ export const users = pgTable("users", {
   }),
   
   storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
+  defaultCountryCode: varchar("default_country_code").default("+44"), // Default phone country code shown on the customer login screen
   orderNumberPrefix: varchar("order_number_prefix").default("ORD"), // Prefix for order numbers (e.g., "SF", "QP")
   orderNumberCounter: integer("order_number_counter").default(0), // Persistent counter — never resets when prefix changes
   

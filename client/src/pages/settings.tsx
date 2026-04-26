@@ -168,7 +168,8 @@ export default function Settings() {
     logoType: user?.logoType || 'business',
     logoUrl: user?.logoUrl || '',
     pickupAddress: user?.pickupAddress || '',
-    orderNumberPrefix: user?.orderNumberPrefix || 'ORD'
+    orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
+    defaultCountryCode: user?.defaultCountryCode || '+44'
   });
 
   // Sync form state with user data when user loads
@@ -192,7 +193,8 @@ export default function Settings() {
         logoType: user.logoType || 'business',
         logoUrl: user.logoUrl || '',
         pickupAddress: user.pickupAddress || '',
-        orderNumberPrefix: user.orderNumberPrefix || 'ORD'
+        orderNumberPrefix: user.orderNumberPrefix || 'ORD',
+        defaultCountryCode: user.defaultCountryCode || '+44'
       });
       setUseCustomCollectionAddress(!!user.pickupAddress);
       setDeliveryEnabled((user as any).enableDelivery ?? true);
@@ -599,7 +601,8 @@ export default function Settings() {
                               logoType: user?.logoType || 'business',
                               logoUrl: user?.logoUrl || '',
                               pickupAddress: user?.pickupAddress || '',
-                              orderNumberPrefix: user?.orderNumberPrefix || 'ORD'
+                              orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
+                              defaultCountryCode: user?.defaultCountryCode || '+44'
                             });
                             setUseCustomCollectionAddress(!!user?.pickupAddress);
                           }}
@@ -660,6 +663,10 @@ export default function Settings() {
                             {user.orderNumberPrefix || 'ORD'}
                             <span className="ml-2 text-gray-400 text-xs">(e.g. {(user.orderNumberPrefix || 'ORD').toUpperCase()}-{String((user.orderNumberCounter ?? 0) + 1).padStart(3, '0')})</span>
                           </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Default Country Code</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.defaultCountryCode || '+44'}</dd>
                         </div>
                         <div className="sm:col-span-2">
                           <dt className="text-sm font-medium text-gray-500">Company Logo / Business Initials</dt>
@@ -775,6 +782,31 @@ export default function Settings() {
                               </span>
                             )}
                           </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Default Country Code</label>
+                          <select
+                            value={businessForm.defaultCountryCode}
+                            onChange={(e) => setBusinessForm({...businessForm, defaultCountryCode: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="+44">+44 (United Kingdom)</option>
+                            <option value="+353">+353 (Ireland)</option>
+                            <option value="+1">+1 (United States / Canada)</option>
+                            <option value="+61">+61 (Australia)</option>
+                            <option value="+64">+64 (New Zealand)</option>
+                            <option value="+33">+33 (France)</option>
+                            <option value="+49">+49 (Germany)</option>
+                            <option value="+34">+34 (Spain)</option>
+                            <option value="+39">+39 (Italy)</option>
+                            <option value="+31">+31 (Netherlands)</option>
+                            <option value="+32">+32 (Belgium)</option>
+                            <option value="+27">+27 (South Africa)</option>
+                            <option value="+91">+91 (India)</option>
+                            <option value="+971">+971 (UAE)</option>
+                            <option value="+966">+966 (Saudi Arabia)</option>
+                          </select>
+                          <p className="mt-1 text-xs text-gray-400">Pre-selected country code on your customer login screen</p>
                         </div>
 
                         <div className="sm:col-span-2 border-t pt-4">
