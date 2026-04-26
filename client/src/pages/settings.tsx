@@ -13,7 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 interface BusinessProfile {
   id: number;
@@ -31,6 +31,7 @@ function BusinessProfilesSection() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<BusinessProfile | null>(null);
   const [form, setForm] = useState({ name: '', logoUrl: '', address: '' });
+  const [profileToDelete, setProfileToDelete] = useState<BusinessProfile | null>(null);
 
   const { data: profiles = [], isLoading } = useQuery<BusinessProfile[]>({
     queryKey: ["/api/business-profiles"],
@@ -80,6 +81,7 @@ function BusinessProfilesSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/business-profiles"] });
       toast({ title: "Profile deleted" });
+      setProfileToDelete(null);
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -153,7 +155,7 @@ function BusinessProfilesSection() {
                     size="sm"
                     variant="outline"
                     className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200"
-                    onClick={() => deleteMutation.mutate(p.id)}
+                    onClick={() => setProfileToDelete(p)}
                     disabled={deleteMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -210,6 +212,31 @@ function BusinessProfilesSection() {
               onClick={() => saveMutation.mutate({ ...form, id: editing?.id })}
             >
               {saveMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!profileToDelete} onOpenChange={(open) => { if (!open) setProfileToDelete(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-red-500" />
+              Delete profile
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 pt-1">
+              Are you sure you want to delete <span className="font-medium text-gray-900">{profileToDelete?.name}</span>? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={() => setProfileToDelete(null)} disabled={deleteMutation.isPending}>Cancel</Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => profileToDelete && deleteMutation.mutate(profileToDelete.id)}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
