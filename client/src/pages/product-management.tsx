@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -177,6 +177,7 @@ export default function ProductManagement() {
   // Tracks the last value we auto-filled into unitWeight so we can allow subsequent
   // auto-fills without trampling over a value the user manually typed
   const lastAutoFilledUnitWeight = useRef('');
+  const editTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [topUpBatchId, setTopUpBatchId] = useState<number | null>(null);
   const [topUpQuantity, setTopUpQuantity] = useState("");
@@ -298,18 +299,27 @@ export default function ProductManagement() {
 
   // Load product data into form when editing (prevents stack overflow)
   useEffect(() => {
+    if (!isDialogOpen) {
+      // Dialog closing — cancel any pending form reset to prevent stale work
+      if (editTimerRef.current) {
+        clearTimeout(editTimerRef.current);
+        editTimerRef.current = null;
+      }
+      return;
+    }
+
     if (isDialogOpen && !editingProduct) {
       // New product — reset the ref so auto-calculation is not blocked by a previous edit
       lastAutoFilledUnitWeight.current = '';
     }
 
     if (isDialogOpen && editingProduct) {
-      console.log('🔄 Loading product data into form safely', editingProduct);
       // Reset the auto-fill ref before the timeout so stale values from a previous
       // product edit do not block auto-calculation on the newly-opened product.
       lastAutoFilledUnitWeight.current = '';
-      // Use setTimeout to avoid race conditions
-      setTimeout(() => {
+      if (editTimerRef.current) clearTimeout(editTimerRef.current);
+      editTimerRef.current = setTimeout(() => {
+        editTimerRef.current = null;
         try {
           const safeData = {
             name: editingProduct.name || "",
@@ -351,9 +361,7 @@ export default function ProductManagement() {
             costPrice: String(editingProduct.costPrice || ""),
           };
           
-          console.log('📝 Safe data being set:', safeData);
           form.reset(safeData);
-          console.log('✅ Form safely populated with complete data');
 
           // Auto-fill unit weight on load if it's blank
           // Priority 1: derive from totalPackageWeight ÷ packQuantity (works for any unit)
@@ -411,7 +419,6 @@ export default function ProductManagement() {
             
             // Only update if the value actually changed
             if (currentWeight !== newWeight) {
-              console.log('⚖️ Auto-calculating package weight:', { packQuantity, unitOfMeasure, unitSize, calculatedWeight });
               form.setValue('totalPackageWeight', newWeight, { shouldValidate: false });
 
               // Also immediately calculate unit weight here, because programmatic setValue
@@ -424,7 +431,6 @@ export default function ProductManagement() {
                   const newUnitWeight = calculatedUnitWeight.toString();
                   const canOverwrite = !currentUnitWeight || currentUnitWeight === lastAutoFilledUnitWeight.current;
                   if (canOverwrite && currentUnitWeight !== newUnitWeight) {
-                    console.log('⚖️ Auto-calculating unit weight (from package weight effect):', { calculatedWeight, qty, calculatedUnitWeight });
                     form.setValue('unitWeight', newUnitWeight, { shouldValidate: false });
                     lastAutoFilledUnitWeight.current = newUnitWeight;
                   }
@@ -466,7 +472,6 @@ export default function ProductManagement() {
             
             // Only update if the value actually changed
             if (currentPalletWeight !== newPalletWeight) {
-              console.log('🔢 Auto-calculating pallet weight:', { packageWeight, units, calculatedPalletWeight });
               form.setValue('palletWeight', newPalletWeight, { shouldValidate: false });
               
               // Show calculation info
@@ -1981,15 +1986,16 @@ export default function ProductManagement() {
               <Dialog 
                 open={isDialogOpen} 
                 onOpenChange={(open) => {
-                  console.log('🔄 Dialog onOpenChange called:', { open, currentState: isDialogOpen });
-                  setIsDialogOpen(open);
-                  if (!open && navigateBackTo) {
-                    const dest = navigateBackTo;
-                    setNavigateBackTo(null);
-                    navigate(dest);
-                  } else if (!open) {
-                    setNavigateBackTo(null);
-                  }
+                  startTransition(() => {
+                    setIsDialogOpen(open);
+                    if (!open && navigateBackTo) {
+                      const dest = navigateBackTo;
+                      setNavigateBackTo(null);
+                      navigate(dest);
+                    } else if (!open) {
+                      setNavigateBackTo(null);
+                    }
+                  });
                 }}
               >
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
