@@ -755,7 +755,10 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
       btY += doc.font('Helvetica-Bold').fontSize(10).heightOfString(String(cPhone), { width: COL_W - 8 }) + 3;
     }
     const cEmail = order.customerEmail || order.retailer?.email;
-    if (cEmail) doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(String(cEmail), c2, btY, { width: COL_W - 8 });
+    if (cEmail) {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(String(cEmail), c2, btY, { width: COL_W - 8 });
+      btY += doc.font('Helvetica').fontSize(9).heightOfString(String(cEmail), { width: COL_W - 8 }) + 3;
+    }
     doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('FROM', c3, metaY, { width: COL_W - 8 });
     doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(businessName, c3, metaY + 12, { width: COL_W - 8 });
     let fromY = metaY + 12 + doc.font('Helvetica-Bold').fontSize(10).heightOfString(businessName, { width: COL_W - 8 }) + 4;
@@ -776,7 +779,8 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (wholesaler.legalBusinessName) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Trading as: ${wholesaler.legalBusinessName}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`Trading as: ${wholesaler.legalBusinessName}`, { width: COL_W - 8 }) + 2; }
     if (wholesaler.vatNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`VAT Number: ${wholesaler.vatNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`VAT Number: ${wholesaler.vatNumber}`, { width: COL_W - 8 }) + 2; }
     if (wholesaler.companyRegistrationNumber) { doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, c3, fromY, { width: COL_W - 8 }); fromY += doc.font('Helvetica').fontSize(8).heightOfString(`Company Reg No: ${wholesaler.companyRegistrationNumber}`, { width: COL_W - 8 }) + 2; }
-    const tableY = metaY + 120;
+    const col1Bottom = badgeY + 15;
+    const tableY = Math.max(col1Bottom, btY, fromY) + 16;
     const CW_PRODUCT = Math.round(CONTENT_W * 0.50), CW_QTY = Math.round(CONTENT_W * 0.11);
     const CW_PRICE = Math.round(CONTENT_W * 0.20), CW_TOTAL = CONTENT_W - CW_PRODUCT - CW_QTY - CW_PRICE;
     const xProduct = MARGIN, xQty = xProduct + CW_PRODUCT, xPrice = xQty + CW_QTY, xTotal = xPrice + CW_PRICE;
