@@ -186,13 +186,13 @@ function BusinessProfilesSection() {
               />
             </div>
             <div>
-              <Label className="text-xs text-gray-600">Logo URL (optional)</Label>
-              <Input
-                value={form.logoUrl}
-                onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))}
-                placeholder="https://..."
-                className="mt-1"
-              />
+              <Label className="text-xs text-gray-600">Logo (optional)</Label>
+              <div className="mt-1">
+                <LogoUploader
+                  currentLogoUrl={form.logoUrl}
+                  onUploadComplete={(url) => setForm(f => ({ ...f, logoUrl: url }))}
+                />
+              </div>
             </div>
             <div>
               <Label className="text-xs text-gray-600">Address (optional)</Label>
