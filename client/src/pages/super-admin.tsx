@@ -617,7 +617,7 @@ function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isA
             <Row label="Stripe fees (est. 1.4% + £0.20)" value={revenueLoading ? "—" : `-${fmt(revenueTotals.totalStripeProcessingFees || 0)}`} color={RED} />
             <Row label="Subscription MRR"            value={fmt(subMRR)} color={PURPLE} />
             <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
-              <Row label="Gross profit (order fees)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)} color={GREEN} bold />
+              <Row label="Gross profit (after Stripe fees)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)} color={GREEN} bold />
               <Row label="Total earned (profit + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossProfit || 0) + subMRR)} color={GREEN} bold />
             </div>
           </CardContent>

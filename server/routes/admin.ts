@@ -266,11 +266,11 @@ export function registerAdminRoutes(app: Express): void {
         const custFee = parseFloat(o.customerTransactionFee || '0');
         const platFee = parseFloat(o.platformFee || '0');
         const sub = parseFloat(o.subtotal || '0');
-        // Stripe processes the full customer-facing amount (subtotal + buyer fee)
-        const stripeFee = parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2));
-        const grossProfit = parseFloat((custFee + platFee - stripeFee).toFixed(2));
-        // Cancelled orders are excluded from platform totals — they never completed
-        if (o.status !== 'cancelled') {
+        const isCancelled = o.status === 'cancelled';
+        // Cancelled orders never completed — exclude from all financial calculations
+        const stripeFee = isCancelled ? 0 : parseFloat(((sub + custFee) * 0.014 + 0.20).toFixed(2));
+        const grossProfit = isCancelled ? 0 : parseFloat((custFee + platFee - stripeFee).toFixed(2));
+        if (!isCancelled) {
           totalCustomerFees += custFee;
           totalPlatformFees += platFee;
           totalGMV += sub;
@@ -281,7 +281,7 @@ export function registerAdminRoutes(app: Express): void {
           customerTransactionFee: custFee,
           platformFee: platFee,
           subtotal: sub,
-          totalQuikpikIncome: custFee + platFee,
+          totalQuikpikIncome: isCancelled ? 0 : custFee + platFee,
           stripeProcessingFee: stripeFee,
           grossProfit,
         };
