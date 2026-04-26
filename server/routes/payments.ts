@@ -2177,7 +2177,7 @@ export function registerPaymentRoutes(app: Express): void {
               : parseFloat(product?.unitWeight || product?.unit_weight || '0');
             if (unitWeightKg > 0) totalWeightKg += unitWeightKg * item.quantity;
             customerItemsHtml.push(`<li style="margin: 6px 0;"><strong>${displayName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
-            pdfItems.push({ productName, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), lineTotal: itemTotal, appliedOfferLabel: null });
+            pdfItems.push({ productName, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), lineTotal: itemTotal, appliedOfferLabel: null, product: { name: productName, quantityInPack: product?.quantityInPack, unitSize: product?.unitSize, unitOfMeasure: product?.unitOfMeasure } });
           }
           const custDeliveryRowHtml = quoteDeliveryCharge > 0 ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>` : '';
           // Resolve delivery address text for customer email

@@ -1018,6 +1018,33 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // GET /api/admin/orders/:id/items — line items with pack descriptor info for admin order detail
+  app.get('/api/admin/orders/:id/items', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const orderId = parseInt(req.params.id, 10);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+      const items = await db.select({
+        id: orderItems.id,
+        productName: products.name,
+        quantity: orderItems.quantity,
+        unitPrice: orderItems.unitPrice,
+        total: orderItems.total,
+        sellingType: orderItems.sellingType,
+        quantityInPack: products.quantityInPack,
+        unitSize: products.unitSize,
+        unitOfMeasure: products.unitOfMeasure,
+        appliedOfferLabel: orderItems.appliedOfferLabel,
+      }).from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, orderId));
+      res.json({ items });
+    } catch (error) {
+      console.error('Admin order items error:', error);
+      res.status(500).json({ error: 'Failed to fetch order items' });
+    }
+  });
+
   // POST /api/admin/orders/:id/resend-invoice — resend invoice email
   app.post('/api/admin/orders/:id/resend-invoice', requireAuth, async (req: any, res) => {
     try {

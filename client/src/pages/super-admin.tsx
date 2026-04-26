@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import { useImpersonation } from "@/contexts/impersonation-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import {
   Users, ShoppingCart, TrendingUp, Search, LogOut, LayoutDashboard, Shield,
   Calendar, MapPin, AlertTriangle, RefreshCw, Package, DollarSign, Settings,
-  ChevronRight, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
+  ChevronRight, ChevronDown, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
   Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
   BadgeCheck, Percent, FileText, UserPlus,
@@ -1548,6 +1548,58 @@ function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highli
   );
 }
 
+// ── Admin order items panel ────────────────────────────────────────────────────
+interface AdminOrderItem {
+  id: number; productName: string | null; quantity: string; unitPrice: string | null;
+  total: string | null; sellingType: string | null;
+  quantityInPack: string | null; unitSize: string | null; unitOfMeasure: string | null;
+  appliedOfferLabel: string | null;
+}
+
+function fmtPackAdmin(quantityInPack: string | null | undefined, unitSize: string | null | undefined, unitOfMeasure: string | null | undefined): string {
+  const qty = quantityInPack ? parseInt(quantityInPack) : null;
+  if (!qty || qty <= 1) return '';
+  const size = unitSize || '';
+  const uom = unitOfMeasure || '';
+  return size ? `${qty} × ${size}${uom}` : `${qty} units`;
+}
+
+function OrderItemsPanel({ orderId }: { orderId: number }) {
+  const { data, isLoading } = useQuery<{ items: AdminOrderItem[] }>({
+    queryKey: ["/api/admin/orders", orderId, "items"],
+    queryFn: async () => {
+      const r = await fetch(`/api/admin/orders/${orderId}/items`, { credentials: "include" });
+      return r.json() as Promise<{ items: AdminOrderItem[] }>;
+    },
+  });
+  if (isLoading) return <div className="px-4 py-3 text-xs text-gray-400">Loading items…</div>;
+  const items = data?.items ?? [];
+  if (!items.length) return <div className="px-4 py-3 text-xs text-gray-400">No items found.</div>;
+  return (
+    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 space-y-1.5">
+      {items.map((item, i) => {
+        const packDesc = fmtPackAdmin(item.quantityInPack, item.unitSize, item.unitOfMeasure);
+        const sellingType = item.sellingType || 'units';
+        const unitPrice = parseFloat(item.unitPrice || '0');
+        const total = parseFloat(item.total || '0');
+        return (
+          <div key={item.id ?? i} className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-gray-700 font-medium">{item.productName || 'Product'}</span>
+              {packDesc && <span className="ml-1.5 text-xs text-gray-400">({packDesc})</span>}
+              {item.appliedOfferLabel && (
+                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-100">{item.appliedOfferLabel}</span>
+              )}
+              <span className="ml-2 text-xs text-gray-400">{item.quantity} {sellingType} × £{unitPrice.toFixed(2)}</span>
+            </div>
+            <span className="text-xs font-medium text-gray-700 flex-shrink-0">£{total.toFixed(2)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Orders Section ────────────────────────────────────────────────────────────
 function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin, highlightedId }: {
   revenueData: RevenueData | undefined; revenueLoading: boolean;
@@ -1561,6 +1613,7 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin, high
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const PAGE_SIZE = 25;
 
   const dateRange = useMemo(() => {
@@ -1693,31 +1746,50 @@ function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmin, high
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paged.map(o => (
-                      <TableRow id={`record-order-${o.id}`} key={o.id} className={`hover:bg-amber-50/30 ${highlightedId === o.id ? "ring-2 ring-inset ring-amber-400 bg-amber-50/40" : ""}`}>
-                        <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
-                        <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
-                        <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
-                        <TableCell className="text-xs text-right font-medium text-gray-700">{o.status === "cancelled" ? <span className="text-gray-400">£0.00</span> : fmt(parseFloat(o.subtotal || "0"))}</TableCell>
-                        <TableCell className="text-xs text-right font-medium text-indigo-600">{o.status === "cancelled" ? <span className="text-gray-400">—</span> : pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
-                        <TableCell>
-                          <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">{(o.status || "pending").replace(/_/g, " ")}</span>
-                        </TableCell>
-                        <TableCell>
-                          {o.paymentStatus === "paid"
-                            ? <span className="text-xs px-1.5 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>paid</span>
-                            : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
-                          }
-                        </TableCell>
-                        <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400 hover:text-blue-600" title="Resend invoice"
-                            onClick={() => resendInvoice.mutate(String(o.id))} disabled={resendInvoice.isPending}>
-                            <Mail className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {paged.map(o => {
+                      const isExpanded = expandedOrderId === o.id;
+                      return (
+                        <Fragment key={o.id}>
+                          <TableRow id={`record-order-${o.id}`}
+                            className={`hover:bg-amber-50/30 cursor-pointer ${highlightedId === o.id ? "ring-2 ring-inset ring-amber-400 bg-amber-50/40" : ""}`}
+                            onClick={() => setExpandedOrderId(isExpanded ? null : o.id)}>
+                            <TableCell className="font-mono text-xs text-gray-500">
+                              <span className="inline-flex items-center gap-1">
+                                {isExpanded ? <ChevronDown className="h-3 w-3 text-gray-400" /> : <ChevronRight className="h-3 w-3 text-gray-300" />}
+                                {o.orderNumber}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
+                            <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
+                            <TableCell className="text-xs text-right font-medium text-gray-700">{o.status === "cancelled" ? <span className="text-gray-400">£0.00</span> : fmt(parseFloat(o.subtotal || "0"))}</TableCell>
+                            <TableCell className="text-xs text-right font-medium text-indigo-600">{o.status === "cancelled" ? <span className="text-gray-400">—</span> : pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
+                            <TableCell>
+                              <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">{(o.status || "pending").replace(/_/g, " ")}</span>
+                            </TableCell>
+                            <TableCell>
+                              {o.paymentStatus === "paid"
+                                ? <span className="text-xs px-1.5 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>paid</span>
+                                : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
+                              }
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
+                            <TableCell onClick={e => e.stopPropagation()}>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400 hover:text-blue-600" title="Resend invoice"
+                                onClick={() => resendInvoice.mutate(String(o.id))} disabled={resendInvoice.isPending}>
+                                <Mail className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <tr key={`items-${o.id}`}>
+                              <td colSpan={9} className="p-0">
+                                <OrderItemsPanel orderId={o.id} />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
