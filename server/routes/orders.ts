@@ -84,6 +84,18 @@ async function restockUnitsToOrigin(
   });
 }
 
+async function resolveInvoiceWholesaler(order: any, wholesaler: any): Promise<any> {
+  if (!order.businessProfileId) return wholesaler;
+  const profile = await storage.getBusinessProfile(order.businessProfileId);
+  if (!profile || profile.wholesalerId !== order.wholesalerId) return wholesaler;
+  return {
+    ...wholesaler,
+    businessName: profile.name,
+    ...(profile.address ? { businessAddress: profile.address, city: null, postalCode: null, country: null } : {}),
+    ...(profile.logoUrl ? { logoUrl: profile.logoUrl, logoType: null } : {}),
+  };
+}
+
 export function registerOrderRoutes(app: Express): void {
   // PUT /api/orders/:orderId/change-delivery-address
   app.put('/api/orders/:orderId/change-delivery-address', async (req, res) => {
@@ -2520,7 +2532,9 @@ export function registerOrderRoutes(app: Express): void {
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod));
+      const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod));
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -2545,7 +2559,9 @@ export function registerOrderRoutes(app: Express): void {
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
+      const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -2570,18 +2586,20 @@ export function registerOrderRoutes(app: Express): void {
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
 
+      const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+
       const customerEmail = order.customerEmail || order.retailer?.email;
       if (!customerEmail) {
         return res.status(400).json({ message: 'No customer email on record for this order' });
       }
 
       const customerName = order.customerName || order.retailer?.businessName || 'Customer';
-      const businessName = wholesaler.businessName || 'Your Supplier';
+      const businessName = effectiveWholesaler.businessName || 'Your Supplier';
       const orderRef = order.orderNumber || `#${order.id}`;
       const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
 
       // Show transaction fee only for Stripe-processed payments, not manual (cash/bank transfer) payments
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
       const pdfAttachment: SendGridAttachment = {
         content: pdfBuffer.toString('base64'),
         filename: invoiceFilename,
@@ -2589,7 +2607,7 @@ export function registerOrderRoutes(app: Express): void {
         disposition: 'attachment',
       };
 
-      const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
+      const logoUrl = getEmailLogoUrl(effectiveWholesaler.id, effectiveWholesaler.logoType, effectiveWholesaler.logoUrl);
       const branding = { businessName, logoUrl };
 
       const body = emailCard(
