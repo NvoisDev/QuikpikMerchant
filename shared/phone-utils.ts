@@ -36,7 +36,12 @@ export function formatPhoneToInternational(phoneNumber: string, defaultCountryCo
     }
   }
   
-  // For other country codes, just prepend the default country code
+  // For all other country codes: strip the national trunk prefix (leading 0)
+  // before prepending the international code, as most countries use a leading 0
+  // in national format that is dropped in E.164 (e.g. Irish 087… → +35387…).
+  if (cleaned.startsWith('0')) {
+    return defaultCountryCode + cleaned.substring(1);
+  }
   return defaultCountryCode + cleaned;
 }
 
@@ -69,6 +74,19 @@ export function isValidUKMobile(phoneNumber: string): boolean {
   const formatted = formatPhoneToInternational(phoneNumber);
   // UK mobile numbers start with +44 7
   return formatted.startsWith('+447') && formatted.length === 13;
+}
+
+/**
+ * Validates any phone number by structural E.164 shape only.
+ * Accepts numbers that normalise to + followed by 7–15 digits, which covers
+ * virtually all ITU-T E.164 country codes. Does not distinguish mobile from
+ * landline, nor verify per-country length rules.
+ */
+export function isValidMobile(phoneNumber: string): boolean {
+  if (!phoneNumber) return false;
+  const formatted = formatPhoneToInternational(phoneNumber);
+  // Must be in E.164 format: + followed by 7–15 digits
+  return /^\+\d{7,15}$/.test(formatted);
 }
 
 export function isValidUKLandline(phoneNumber: string): boolean {

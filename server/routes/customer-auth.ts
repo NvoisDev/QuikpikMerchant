@@ -6,7 +6,7 @@ import {
   smsVerificationCodes, sql, storage, users, verifyEmailCode, wholesalerCustomerRelationships,
   wrapCustomerEmail
 } from "./shared";
-import { formatPhoneToInternational, isValidUKMobile } from "../../shared/phone-utils";
+import { formatPhoneToInternational, isValidMobile } from "../../shared/phone-utils";
 
 // ─── Shared session helper ───────────────────────────────────────────────────
 async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
@@ -67,8 +67,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       const normalised = formatPhoneToInternational(phoneNumber.trim());
-      if (!isValidUKMobile(normalised)) {
-        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      if (!isValidMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid mobile number including the country code (e.g. +44 7700 900000 or +353 87 123 4567)' });
       }
 
       // Rate limit: 1 OTP per 2 minutes per number
@@ -109,8 +109,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       const normalised = formatPhoneToInternational(phoneNumber.trim());
-      if (!isValidUKMobile(normalised)) {
-        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      if (!isValidMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid mobile number including the country code (e.g. +44 7700 900000 or +353 87 123 4567)' });
       }
       const trimmedCode = code.trim();
 
@@ -194,8 +194,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       const normalised = formatPhoneToInternational(phoneNumber.trim());
-      if (!isValidUKMobile(normalised)) {
-        return res.status(400).json({ error: 'Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)' });
+      if (!isValidMobile(normalised)) {
+        return res.status(400).json({ error: 'Please enter a valid mobile number including the country code (e.g. +44 7700 900000 or +353 87 123 4567)' });
       }
       const trimmedCode = String(code).trim();
 

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Building2, User, ArrowLeft, UserPlus, Phone, ShieldCheck, Store, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/ui/footer";
-import { formatPhoneToInternational, isValidUKMobile } from "@shared/phone-utils";
+import { formatPhoneToInternational, isValidMobile } from "@shared/phone-utils";
 
 interface CustomerAuthProps {
   wholesalerId?: string;
@@ -144,8 +144,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       return;
     }
 
-    if (!isValidUKMobile(fullPhone)) {
-      setError('Please enter a valid UK mobile number (e.g. 07700 900000 or +44 7700 900000)');
+    if (!isValidMobile(fullPhone)) {
+      setError('Please enter a valid mobile number with country code (e.g. +44 7700 900000 or +353 87 123 4567)');
       return;
     }
 
@@ -372,7 +372,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                     id="phone"
                     type="tel"
                     inputMode="numeric"
-                    placeholder="7700 900000"
+                    placeholder="7700 900000 / 87 123 4567"
                     value={phoneLocal}
                     onChange={e => {
                       const v = e.target.value.replace(/[^\d\s]/g, '');
@@ -384,7 +384,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-gray-500">Enter your mobile number. We'll send you a verification code.</p>
+                <p className="text-xs text-gray-500">Select your country code and enter your mobile number. We'll send you a verification code.</p>
               </div>
 
               {error && (
