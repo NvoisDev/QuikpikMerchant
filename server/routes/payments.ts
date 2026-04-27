@@ -6,7 +6,7 @@ import {
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
-  getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
+  getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, inArray, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
@@ -2714,80 +2714,101 @@ export function registerPaymentRoutes(app: Express): void {
       });
 
       // ── Log quote edit activity (non-blocking, after successful transaction) ─
-      (() => {
-        // Overall total update
-        logQuoteActivity({
-          quoteId: quoteId,
-          actionType: 'total_updated',
-          entityType: 'quote',
-          oldValue: { total: existingOrder.total, subtotal: existingOrder.subtotal },
-          newValue: { total: total.toFixed(2), subtotal: productSubtotal.toFixed(2) },
-          description: `Quote edited — total updated from £${parseFloat(existingOrder.total || '0').toFixed(2)} to £${total.toFixed(2)}`,
-          performedBy: req.user.id,
-        });
-        // Stock restore log
-        logQuoteActivity({
-          quoteId: quoteId,
-          actionType: 'stock_restored',
-          entityType: 'system',
-          description: `Stock restored for ${existingItems.length} item${existingItems.length !== 1 ? 's' : ''} during quote edit`,
-          performedBy: 'system',
-        });
-        // Per-item diff logs
-        for (const oldItem of existingItems) {
-          const sellingTypeOld = oldItem.sellingType || 'units';
-          const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
-          if (!inNew) {
+      (async () => {
+        try {
+          // Resolve product names for human-readable log entries
+          const allProductIds = [...new Set([
+            ...existingItems.map(i => i.productId),
+            ...items.map(i => i.productId),
+          ])];
+          const productRows = allProductIds.length > 0
+            ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, allProductIds))
+            : [];
+          const productNameMap = new Map<number, string>(productRows.map(p => [p.id, p.name]));
+          const pName = (id: number) => productNameMap.get(id) ?? `Product #${id}`;
+
+          // No-op check: only write total/stock entries when values actually changed
+          const oldTotal = parseFloat(existingOrder.total || '0');
+          const oldSubtotal = parseFloat(existingOrder.subtotal || '0');
+          const totalChanged = Math.abs(oldTotal - total) > 0.001 || Math.abs(oldSubtotal - productSubtotal) > 0.001;
+
+          if (totalChanged) {
             logQuoteActivity({
               quoteId: quoteId,
-              actionType: 'product_removed',
-              entityType: 'product',
-              entityId: String(oldItem.productId),
-              oldValue: { quantity: oldItem.quantity, unitPrice: oldItem.unitPrice, sellingType: sellingTypeOld },
-              description: `Product #${oldItem.productId} removed (${oldItem.quantity} ${sellingTypeOld})`,
+              actionType: 'total_updated',
+              entityType: 'quote',
+              oldValue: { total: existingOrder.total, subtotal: existingOrder.subtotal },
+              newValue: { total: total.toFixed(2), subtotal: productSubtotal.toFixed(2) },
+              description: `Quote edited — total updated from £${oldTotal.toFixed(2)} to £${total.toFixed(2)}`,
               performedBy: req.user.id,
+            });
+            logQuoteActivity({
+              quoteId: quoteId,
+              actionType: 'stock_restored',
+              entityType: 'system',
+              description: `Stock restored for ${existingItems.length} item${existingItems.length !== 1 ? 's' : ''} during quote edit`,
+              performedBy: 'system',
             });
           }
-        }
-        for (const newItem of items) {
-          const sellingTypeNew = newItem.sellingType || 'units';
-          const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
-          if (!inOld) {
-            logQuoteActivity({
-              quoteId: quoteId,
-              actionType: 'product_added',
-              entityType: 'product',
-              entityId: String(newItem.productId),
-              newValue: { quantity: newItem.quantity, unitPrice: newItem.customPrice, sellingType: sellingTypeNew },
-              description: `Product #${newItem.productId} added — ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`,
-              performedBy: req.user.id,
-            });
-          } else {
-            if (inOld.quantity !== newItem.quantity) {
+
+          // Per-item diff logs
+          for (const oldItem of existingItems) {
+            const sellingTypeOld = oldItem.sellingType || 'units';
+            const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
+            if (!inNew) {
               logQuoteActivity({
                 quoteId: quoteId,
-                actionType: 'quantity_changed',
+                actionType: 'product_removed',
                 entityType: 'product',
-                entityId: String(newItem.productId),
-                oldValue: { quantity: inOld.quantity },
-                newValue: { quantity: newItem.quantity },
-                description: `Product #${newItem.productId} quantity changed: ${inOld.quantity} → ${newItem.quantity} ${sellingTypeNew}`,
-                performedBy: req.user.id,
-              });
-            }
-            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) {
-              logQuoteActivity({
-                quoteId: quoteId,
-                actionType: 'price_changed',
-                entityType: 'product',
-                entityId: String(newItem.productId),
-                oldValue: { unitPrice: inOld.unitPrice },
-                newValue: { unitPrice: newItem.customPrice },
-                description: `Product #${newItem.productId} price changed: £${parseFloat(inOld.unitPrice || '0').toFixed(2)} → £${newItem.customPrice.toFixed(2)}`,
+                entityId: String(oldItem.productId),
+                oldValue: { quantity: oldItem.quantity, unitPrice: oldItem.unitPrice, sellingType: sellingTypeOld },
+                description: `${pName(oldItem.productId)} removed (${oldItem.quantity} ${sellingTypeOld})`,
                 performedBy: req.user.id,
               });
             }
           }
+          for (const newItem of items) {
+            const sellingTypeNew = newItem.sellingType || 'units';
+            const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
+            if (!inOld) {
+              logQuoteActivity({
+                quoteId: quoteId,
+                actionType: 'product_added',
+                entityType: 'product',
+                entityId: String(newItem.productId),
+                newValue: { quantity: newItem.quantity, unitPrice: newItem.customPrice, sellingType: sellingTypeNew },
+                description: `${pName(newItem.productId)} added — ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`,
+                performedBy: req.user.id,
+              });
+            } else {
+              if (inOld.quantity !== newItem.quantity) {
+                logQuoteActivity({
+                  quoteId: quoteId,
+                  actionType: 'quantity_changed',
+                  entityType: 'product',
+                  entityId: String(newItem.productId),
+                  oldValue: { quantity: inOld.quantity },
+                  newValue: { quantity: newItem.quantity },
+                  description: `${pName(newItem.productId)} quantity changed: ${inOld.quantity} → ${newItem.quantity} ${sellingTypeNew}`,
+                  performedBy: req.user.id,
+                });
+              }
+              if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) {
+                logQuoteActivity({
+                  quoteId: quoteId,
+                  actionType: 'price_changed',
+                  entityType: 'product',
+                  entityId: String(newItem.productId),
+                  oldValue: { unitPrice: inOld.unitPrice },
+                  newValue: { unitPrice: newItem.customPrice },
+                  description: `${pName(newItem.productId)} price changed: £${parseFloat(inOld.unitPrice || '0').toFixed(2)} → £${newItem.customPrice.toFixed(2)}`,
+                  performedBy: req.user.id,
+                });
+              }
+            }
+          }
+        } catch (activityErr: any) {
+          console.warn('[quote-activity] Error building activity log entries (non-fatal):', activityErr?.message);
         }
       })();
 
