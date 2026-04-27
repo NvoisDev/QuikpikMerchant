@@ -1,0 +1,121 @@
+🧾 Prompt: Frontend Boundary Enforcement + Safe Structure (NON-BREAKING)
+🎯 Objective
+
+Introduce clear separation between Admin, Wholesaler, and Customer (Marketplace) areas, and ensure shared logic is centralised — without refactoring or breaking existing functionality.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT move large files
+DO NOT rename routes or pages
+DO NOT break navigation
+DO NOT change business logic
+DO NOT refactor entire folders
+
+👉 This is structure enforcement, not restructuring
+
+🧱 PART 1 — Define Frontend Boundaries
+
+Document and enforce:
+
+Admin → platform management only
+Wholesaler → products, orders, customers
+Customer (Marketplace) → browsing, checkout, payments
+✅ Task:
+
+Audit all frontend files and confirm:
+
+No Admin logic inside marketplace/customer files
+No Customer checkout logic inside wholesaler views
+No cross-imports between these domains
+🚫 Flag if:
+marketplace imports wholesaler-only logic
+admin imports customer components
+shared logic duplicated across areas
+🧱 PART 2 — Introduce Shared Utilities (SAFE)
+
+Move ONLY duplicated logic into shared:
+
+Examples:
+Fee calculation
+Price comparison
+Formatting (currency, quantity display)
+Rule:
+If logic is used in 2+ places → move to shared
+DO NOT:
+Change logic
+Optimise logic
+Rewrite logic
+
+👉 Just extract and reuse
+
+🧱 PART 3 — marketplace.ts Guardrail (NO SPLIT)
+
+DO NOT refactor the whole file
+
+Instead:
+
+Add rule:
+
+All NEW logic must NOT be added directly to marketplace.ts
+New logic must go into:
+marketplace-payments.ts
+marketplace-orders.ts
+marketplace-utils.ts
+
+👉 marketplace.ts becomes:
+
+Orchestrator, not dumping ground
+🧱 PART 4 — Prevent Logic Drift
+
+Identify duplicated logic:
+
+Fees
+Pricing
+Quantity handling
+Replace ONLY if safe:
+Use shared utility
+Keep same inputs/outputs
+🧱 PART 5 — Naming & Structure Consistency
+
+Ensure:
+
+Files clearly indicate domain:
+admin-*
+wholesaler-*
+marketplace-*
+
+👉 This reduces confusion instantly
+
+🧪 PART 6 — Validation
+
+Confirm:
+
+Customer portal
+Checkout works
+Payments work
+No UI break
+Wholesaler
+Orders + products unchanged
+Admin
+No impact
+🧾 PART 7 — Output
+
+Agent must return:
+
+Frontend areas identified: Admin / Wholesaler / Customer ✅
+
+Shared logic extracted: X items
+Cross-domain issues found: X
+Issues resolved: X
+
+Marketplace.ts status:
+- No new logic added ✅
+- Guardrail applied ✅
+
+Validation:
+- Customer portal working ✅
+- Wholesaler working ✅
+- Admin working ✅
+
+Final status:
+🟢 SAFE — STRUCTURE IMPROVED, NO BREAKAGE
+🧠 Real talk
