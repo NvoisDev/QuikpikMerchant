@@ -244,7 +244,7 @@ export default function OrderDetail() {
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [processRefund, setProcessRefund] = useState(true);
-  const [refundType, setRefundType] = useState<'card' | 'later'>('card');
+  const [refundType, setRefundType] = useState<'card'>('card');
   const [restockInventory, setRestockInventory] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
   const [staffNote, setStaffNote] = useState('');
@@ -438,8 +438,8 @@ export default function OrderDetail() {
         body: JSON.stringify({
           reason: fullReason,
           reasonCategory: cancelReasonCategory,
-          processRefund: processRefund && refundType !== 'later',
-          refundType: processRefund && refundType !== 'later' ? refundType : undefined,
+          processRefund: processRefund,
+          refundType: processRefund ? refundType : undefined,
           returnedItems: itemsToReturn.length > 0 ? itemsToReturn : undefined,
           refundDelivery: refundDelivery && itemsToReturn.length > 0,
           restockInventory,
@@ -481,9 +481,7 @@ export default function OrderDetail() {
             variant: "destructive",
           });
         } else {
-          const refundMessage = processRefund && refundType !== 'later'
-            ? ' A refund has been initiated.'
-            : refundType === 'later' ? ' Refund will be processed separately.' : '';
+          const refundMessage = processRefund ? ' A refund has been initiated.' : '';
           toast({
             title: "Order Cancelled",
             description: `The order has been successfully cancelled.${refundMessage}`,
