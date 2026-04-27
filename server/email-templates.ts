@@ -163,6 +163,7 @@ export interface OrderEmailData {
     unitPrice: string;
     total: string;
     sellingType?: string;
+    packDescriptor?: string;
   }>;
   wholesaler: {
     id?: string | null;
@@ -200,8 +201,11 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
   const itemRows = data.items.map(item => {
     const promoNote = (item as any).appliedOfferLabel ? ' 🎁 ' + (item as any).appliedOfferLabel : '';
     const freeNote = (item as any).freeItems > 0 ? ' (+' + (item as any).freeItems + ' free)' : '';
+    const packBadge = item.packDescriptor
+      ? '<br><span style="color:#6b7280;font-size:11px;">' + item.packDescriptor + '</span>'
+      : '';
     return [
-      item.productName + promoNote + freeNote,
+      item.productName + packBadge + promoNote + freeNote,
       item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'units'),
       '\u00A3' + item.unitPrice,
       '\u00A3' + item.total
@@ -243,7 +247,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     'Fulfillment: ' + (data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery') + '\n\n' +
     'Customer: ' + data.customerName + '\nEmail: ' + data.customerEmail + '\nPhone: ' + data.customerPhone + '\n' +
     (data.shippingAddress ? 'Address: ' + data.shippingAddress + '\n' : '') + '\n' +
-    'Items:\n' + data.items.map(item => '- ' + item.productName + ' x ' + item.quantity + ' @ \u00A3' + item.unitPrice + ' = \u00A3' + item.total).join('\n') + '\n\n' +
+    'Items:\n' + data.items.map(item => '- ' + item.productName + (item.packDescriptor ? ' (' + item.packDescriptor + ')' : '') + ' x ' + item.quantity + ' @ \u00A3' + item.unitPrice + ' = \u00A3' + item.total).join('\n') + '\n\n' +
     'Subtotal: \u00A3' + data.subtotal + '\n' +
     (data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? 'Shipping: \u00A3' + data.shippingTotal + '\n' : '') +
     'Platform Fee: -\u00A3' + (data.wholesalerPlatformFee || data.platformFee || '0.00') + '\n' +

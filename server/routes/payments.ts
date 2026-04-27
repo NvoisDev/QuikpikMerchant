@@ -382,12 +382,12 @@ export function registerPaymentRoutes(app: Express): void {
                       ...item,
                       productName: product?.name || `Product #${item.productId}`,
                       packDescriptor: formatPackDescriptor(
-                        product?.quantityInPack,
-                        product?.unitSize,
+                        product?.packQuantity || product?.quantityInPack,
+                        product?.sizePerUnit || product?.unitSize,
                         product?.unitOfMeasure,
                       ),
                       product: product
-                        ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
+                        ? { name: product.name, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
                         : null,
                     };
                   }));
@@ -427,12 +427,12 @@ export function registerPaymentRoutes(app: Express): void {
                       ...item,
                       productName: product?.name || `Product #${item.productId}`,
                       packDescriptor: formatPackDescriptor(
-                        product?.quantityInPack,
-                        product?.unitSize,
+                        product?.packQuantity || product?.quantityInPack,
+                        product?.sizePerUnit || product?.unitSize,
                         product?.unitOfMeasure,
                       ),
                       product: product
-                        ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
+                        ? { name: product.name, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
                         : null,
                     };
                   }));

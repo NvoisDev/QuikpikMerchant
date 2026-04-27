@@ -1808,7 +1808,8 @@ export function registerMarketplaceRoutes(app: Express): void {
                 unitPrice: item.unitPrice,
                 total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
                 appliedOfferLabel: item.appliedOfferLabel || null,
-                freeItems: item.freeItems || 0
+                freeItems: item.freeItems || 0,
+                packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
               };
             }));
 
@@ -2246,6 +2247,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               total: item.total,
               appliedOfferLabel: item.appliedOfferLabel,
               freeItems: item.freeItems,
+              packDescriptor: formatPackDescriptor(prod?.packQuantity || prod?.quantityInPack, prod?.sizePerUnit || prod?.unitSize, prod?.unitOfMeasure),
             };
           }));
           // Resolve collection address for pickup notification
