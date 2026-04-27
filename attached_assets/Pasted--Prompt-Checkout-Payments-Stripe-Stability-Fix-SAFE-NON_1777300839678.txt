@@ -1,0 +1,201 @@
+🧾 Prompt: Checkout, Payments & Stripe Stability Fix (SAFE, NON-BREAKING)
+
+🎯 Objective
+
+Fix identified bugs and risks in checkout, payments, and Stripe handling without breaking any existing payment, order, or refund flows ahead of go-live.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT change Stripe integration logic or API structure
+Do NOT change payment flow sequence (intent → confirm → order → webhook)
+Do NOT modify database schema
+Do NOT break:
+Checkout
+Quick Quotes
+Refunds
+Webhooks
+All fixes must be minimal, targeted, and backward-compatible
+🔴 PART 1 — CRITICAL BUG FIXES (MUST FIX)
+1. Fix “Pay Button Locked” Issue
+
+📁 File: StripeCheckoutForm.tsx
+
+Problem:
+
+paymentSubmitted is not reset on unexpected errors → user gets stuck
+
+✅ Fix:
+
+catch (error: any) {
+  setPaymentSubmitted(false); // ✅ ADD THIS
+  // existing error handling
+} finally {
+  setIsProcessing(false);
+}
+
+👉 Do NOT change any other payment logic
+
+2. Fix Quantity Key Mismatch
+
+📁 File: CheckoutDialog.tsx
+
+Problem:
+
+onChange uses wrong key → breaks multi-selling-type scenarios
+
+✅ Fix:
+
+Replace:
+
+[item.product.id]
+
+With:
+
+[eqKey]
+
+👉 Must match:
+
+const eqKey = `${item.product.id}_${item.sellingType}`;
+3. Fix Floating Point Price Validation
+
+📁 File: marketplace.ts
+
+Problem:
+
+=== comparison on floats → false rejections
+
+✅ Fix:
+
+Math.abs(parseFloat(item.unitPrice) - basePrice) < 0.001
+
+👉 Do NOT change pricing logic, only comparison method
+
+🔴 PART 2 — SECURITY FIX (HIGH PRIORITY)
+Protect Payment Intent Endpoint
+
+📁 Route: /api/customer/create-payment
+
+Problem:
+
+No authentication → public abuse risk
+
+✅ Fix:
+
+Add middleware:
+
+requireAuth
+
+OR (if customer-specific):
+
+requireCustomerAuth
+
+👉 Ensure:
+
+Existing checkout flow still works
+No breaking changes to frontend calls
+🟠 PART 3 — DOUBLE CHARGE PROTECTION (SAFE ADD)
+Add Stripe Idempotency Key
+
+📁 Server (payment intent creation)
+
+Problem:
+
+Refresh = possible duplicate charge
+
+✅ Fix:
+
+When creating payment intent:
+
+idempotencyKey: `order-${cartId}-${customerId}`
+
+👉 Rules:
+
+Deterministic per cart/session
+Do NOT randomise
+Do NOT affect existing successful flows
+🟠 PART 4 — ORDER FAILURE SAFETY
+Prevent “Paid but No Order” Scenario
+
+📁 StripeCheckoutForm.tsx
+
+Problem:
+
+Payment succeeds but order creation fails silently
+
+✅ Fix:
+
+If order API fails:
+
+Show clear error:
+“Payment received but order not confirmed”
+Do NOT call onSuccess()
+
+👉 Optional (safe fallback):
+
+Store payment reference locally
+Prompt user to contact wholesaler
+
+👉 Do NOT interfere with webhook logic (webhook still source of truth)
+
+🟡 PART 5 — CLEANUP (NON-BREAKING)
+1. Remove Debug Logs
+Remove excessive console.log (🚚 💳 🔥 etc.)
+Keep ONLY:
+Errors
+Critical events
+2. Remove “Payment Ready” Toast
+
+📁 customer-portal.tsx
+
+👉 Delete toast:
+
+Adds no value
+Distracts user during payment
+3. Centralise Fee Calculation (LIGHT TOUCH)
+
+Problem:
+
+Fee logic duplicated multiple times
+
+✅ Fix:
+
+Create shared utility:
+calculateCustomerFee(subtotal, delivery)
+Replace duplicates ONLY where safe
+Do NOT refactor entire system
+4. Remove Dead Code
+
+📁 marketplace.ts
+
+Remove globalPaymentLock references
+🧪 PART 6 — VALIDATION (MANDATORY)
+
+After changes, confirm:
+
+Checkout Flow
+Customer can:
+Enter card
+Retry after failure
+Complete payment successfully
+Edge Cases
+Refresh during payment → no duplicate charge
+Invalid price → still validated correctly
+Multi-item (units + pallets) → quantities correct
+Security
+/api/customer/create-payment rejects unauthenticated requests
+✅ FINAL OUTPUT FORMAT
+
+Agent must return:
+
+✅ Bugs fixed: X/3
+✅ Security fixes applied: Yes/No
+✅ Idempotency added: Yes
+✅ Cleanup completed: Yes
+
+Regression check:
+- Checkout works ✅
+- Payments succeed ✅
+- No double charge risk ✅
+- No broken flows ✅
+
+Final status:
+🟢 SAFE FOR GO-LIVE
