@@ -1,0 +1,142 @@
+🧾 Prompt: Safe Refactor + Checkpoint Creation (NON-BREAKING)
+
+🎯 Objective
+
+Stabilise and slightly improve code structure (reduce risk areas like duplication and large files) without changing behaviour, while creating a full checkpoint for rollback before any changes.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT change any business logic
+Do NOT change Stripe behaviour or payment flow
+Do NOT change API request/response shapes
+Do NOT modify database schema
+Do NOT refactor large areas in one go
+All changes must be small, isolated, and reversible
+
+👉 This is a stability + structure task, NOT a rewrite
+
+🧱 PART 1 — CREATE CHECKPOINT (MANDATORY FIRST STEP)
+
+Before making ANY changes:
+
+1. Create Git checkpoint
+git add .
+git commit -m "🛑 Pre-refactor checkpoint (stable pre-go-live)"
+git tag pre-refactor-stable
+2. Create backup branch
+git checkout -b backup/pre-refactor
+git push origin backup/pre-refactor
+
+👉 This ensures:
+
+Instant rollback
+Safe experimentation
+🧱 PART 2 — SAFETY BASELINE (READ-ONLY)
+
+Before changes, document:
+
+Total Stripe flows working:
+Checkout
+Quick Quotes
+Refunds
+Key routes:
+/api/create-payment-intent
+/api/customer/create-payment
+/api/quotes
+
+👉 Output a short “baseline working state” summary
+
+🧱 PART 3 — LOW-RISK IMPROVEMENTS ONLY
+✅ 1. Centralise Fee Calculation (SAFE EXTRACTION)
+
+Create a shared utility:
+
+calculateCustomerFee(subtotal: number, delivery: number): number
+
+Rules:
+
+Copy EXACT existing logic (5.5% + £0.50)
+Do NOT change values
+Replace ONLY duplicated frontend usage first
+Backend replacement only if 100% identical
+✅ 2. Extract ONE Small Area from marketplace.ts
+
+⚠️ Do NOT split entire file
+
+Only extract:
+
+Payment-related logic into:
+
+marketplace-payments.ts
+
+Rules:
+
+Move code without changing logic
+Keep same imports
+Keep same routes
+No renaming of endpoints
+✅ 3. Remove Dead Code ONLY
+
+Safe to remove:
+
+globalPaymentLock
+Clearly unused variables/functions
+
+👉 Must confirm:
+
+No references exist before deletion
+✅ 4. Standardise Utility Usage (LIGHT TOUCH)
+
+Where safe:
+
+Replace duplicate logic with shared utilities
+Do NOT refactor deeply nested flows
+🧱 PART 4 — DO NOT TOUCH (CRITICAL)
+
+🚫 Do NOT modify:
+
+Stripe logic (getStripeClient)
+Webhooks
+Order creation flow
+Stock system (FEFO logic)
+Authentication
+Session handling
+🧪 PART 5 — VALIDATION (MANDATORY)
+
+After changes, verify:
+
+Payments
+Card payment works
+Retry after failure works
+No duplicate charge
+Orders
+Order creates successfully
+Appears in dashboard
+Quotes
+Quote creation still works
+General
+No UI regressions
+No console errors
+🧾 PART 6 — OUTPUT REPORT
+
+Agent must return:
+
+Checkpoint created: ✅
+Files modified: X
+Lines changed: X
+
+Changes made:
+- Fee utility created ✅
+- marketplace-payments extracted ✅
+- Dead code removed ✅
+
+Validation:
+- Payments working ✅
+- Orders working ✅
+- No regressions ✅
+
+Rollback available:
+- Git tag: pre-refactor-stable
+- Branch: backup/pre-refactor
+
+Final status:
+🟢 SAFE — NO BREAKING CHANGES
