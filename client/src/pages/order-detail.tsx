@@ -1147,7 +1147,7 @@ export default function OrderDetail() {
 
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4 text-sm">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4 text-sm pb-20 md:pb-0">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/orders')} className="p-2">
@@ -1158,6 +1158,82 @@ export default function OrderDetail() {
             <p className="text-xs text-gray-500">Order ID: {order.id}</p>
           </div>
         </div>
+
+        {/* Action Buttons — top bar */}
+        {order.status !== 'cancelled' && (
+          <div className="flex items-center gap-2 border-b pb-3 flex-wrap">
+            {/* Secondary actions — always visible on all screen sizes */}
+            <div className="flex gap-2 flex-wrap">
+              {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
+                <Button
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50 min-h-[44px]"
+                  onClick={() => {
+                    const items: EditItem[] = (order.items || []).map(item => ({
+                      productId: item.productId,
+                      productName: item.product?.name || `Product #${item.productId}`,
+                      quantity: item.quantity,
+                      customPrice: parseFloat(item.unitPrice || '0'),
+                      sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
+                      imageUrl: item.product?.imageUrl,
+                    }));
+                    setEditItems(items);
+                    setShowEditMode(true);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit Quote
+                </Button>
+              )}
+              {order.status !== 'fulfilled' && !isViewer && (
+                <Button
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
+                  onClick={() => {
+                    if (order.items) {
+                      setReturnItems(order.items.map(item => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
+                        maxQty: item.quantity
+                      })));
+                    }
+                    setShowCancelForm(true);
+                  }}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+              )}
+            </div>
+            {/* Primary actions — hidden on mobile (shown in sticky bar below), visible on desktop */}
+            <div className="hidden md:flex gap-2 ml-auto">
+              {order.fulfillmentType === 'pickup' &&
+               order.status !== 'ready_for_collection' &&
+               order.status !== 'fulfilled' &&
+               !isViewer && (
+                <Button
+                  onClick={markReadyForCollection}
+                  disabled={updatingOrderId === order.id}
+                  className="bg-orange-500 hover:bg-orange-600 text-white min-h-[44px] disabled:opacity-50"
+                >
+                  <Clock className="h-4 w-4 mr-1" />
+                  {updatingOrderId === order.id ? 'Updating...' : 'Ready for Collection'}
+                </Button>
+              )}
+              {order.status !== 'fulfilled' && !isViewer && (
+                <Button
+                  onClick={markAsFulfilled}
+                  disabled={updatingOrderId === order.id}
+                  className="bg-green-600 hover:bg-green-700 text-white min-h-[44px] disabled:opacity-50"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {updatingOrderId === order.id ? 'Updating...' : 'Fulfilled'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Status & Fulfillment */}
         <div>
@@ -1870,92 +1946,6 @@ export default function OrderDetail() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        {order.status === 'cancelled' ? (
-          <div className="flex items-center justify-center py-3 border-t bg-red-50 rounded-b-lg">
-            <div className="flex items-center gap-2 text-red-700">
-              <X className="w-5 h-5" />
-              <span className="font-semibold">Order Cancelled</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap pt-2 border-t gap-2">
-            {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={() => {
-                  const items: EditItem[] = (order.items || []).map(item => ({
-                    productId: item.productId,
-                    productName: item.product?.name || `Product #${item.productId}`,
-                    quantity: item.quantity,
-                    customPrice: parseFloat(item.unitPrice || '0'),
-                    sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
-                    imageUrl: item.product?.imageUrl,
-                  }));
-                  setEditItems(items);
-                  setShowEditMode(true);
-                }}
-              >
-                <Pencil className="w-4 h-4 mr-1" />
-                Edit Quote
-              </Button>
-            )}
-
-            {order.status !== 'fulfilled' && !isViewer && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  if (order.items) {
-                    setReturnItems(order.items.map(item => ({
-                      productId: item.productId,
-                      quantity: item.quantity,
-                      sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
-                      maxQty: item.quantity
-                    })));
-                  }
-                  setShowCancelForm(true);
-                }}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Cancel
-              </Button>
-            )}
-
-            <div className="flex gap-2 ml-auto flex-wrap">
-              {order.fulfillmentType === 'pickup' &&
-               order.status !== 'ready_for_collection' &&
-               order.status !== 'fulfilled' &&
-               !isViewer && (
-                <Button
-                  size="sm"
-                  onClick={markReadyForCollection}
-                  disabled={updatingOrderId === order.id}
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">{updatingOrderId === order.id ? '...' : 'Ready for Collection'}</span>
-                  <span className="sm:hidden">{updatingOrderId === order.id ? '...' : 'Ready to Collect'}</span>
-                </Button>
-              )}
-
-              {order.status !== 'fulfilled' && !isViewer && (
-                <Button
-                  size="sm"
-                  onClick={markAsFulfilled}
-                  disabled={updatingOrderId === order.id}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  {updatingOrderId === order.id ? '...' : 'Fulfilled'}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Quote Activity Log — lazy-loaded, visible only for quotes */}
         {order.isQuote && (
           <div className="px-4 pb-4">
@@ -1963,6 +1953,42 @@ export default function OrderDetail() {
           </div>
         )}
       </div>
+
+      {/* Mobile sticky bottom bar — primary actions only, hidden on desktop */}
+      {order.status !== 'cancelled' && !isViewer && (
+        (() => {
+          const showReadyForCollection =
+            order.fulfillmentType === 'pickup' &&
+            order.status !== 'ready_for_collection' &&
+            order.status !== 'fulfilled';
+          const showFulfilled = order.status !== 'fulfilled';
+          if (!showReadyForCollection && !showFulfilled) return null;
+          return (
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 flex gap-3 z-50">
+              {showReadyForCollection && (
+                <Button
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl min-h-[44px] disabled:opacity-50"
+                  onClick={markReadyForCollection}
+                  disabled={updatingOrderId === order.id}
+                >
+                  <Clock className="h-4 w-4 mr-1" />
+                  {updatingOrderId === order.id ? 'Updating...' : 'Ready for Collection'}
+                </Button>
+              )}
+              {showFulfilled && (
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-2xl min-h-[44px] disabled:opacity-50"
+                  onClick={markAsFulfilled}
+                  disabled={updatingOrderId === order.id}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {updatingOrderId === order.id ? 'Updating...' : 'Fulfilled'}
+                </Button>
+              )}
+            </div>
+          );
+        })()
+      )}
 
       {/* Mark as Paid Dialog */}
       <Dialog open={isMarkAsPaidOpen} onOpenChange={setIsMarkAsPaidOpen}>
