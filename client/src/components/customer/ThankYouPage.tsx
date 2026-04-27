@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@shared/utils/currency";
+import { getPackQuantity } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 // Image removed for production - using icon instead
@@ -277,7 +278,7 @@ export const ThankYouPage = ({
                         <div>
                           <h4 className="font-medium text-gray-900">{item.product.name}</h4>
                           {(() => {
-                            const pq = item.product.packQuantity || item.product.quantityInPack;
+                            const pq = getPackQuantity(item.product);
                             if (item.product.unitSize && item.product.unitOfMeasure) {
                               const label = pq && pq > 1
                                 ? `${pq} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`

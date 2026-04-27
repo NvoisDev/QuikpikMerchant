@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import { calculateCustomerFee } from "@shared/utils/fees";
+import { getPackQuantity } from "@shared/utils/product";
 import type { CartItem } from "@/components/customer/portal-types";
 
 interface CheckoutDialogProps {
@@ -185,7 +186,7 @@ export function CheckoutDialog({
                             <div className="min-w-0">
                               <p className="font-semibold text-sm leading-snug">{item.product.name}</p>
                               {(() => {
-                                const pq = (item.product as any).packQuantity || (item.product as any).quantityInPack;
+                                const pq = getPackQuantity(item.product as any);
                                 const us = (item.product as any).unitSize;
                                 const um = (item.product as any).unitOfMeasure;
                                 if (pq && pq > 1 && us && um) return <p className="text-xs text-gray-400 leading-tight">{pq} × {parseFloat(String(us))}{um}</p>;

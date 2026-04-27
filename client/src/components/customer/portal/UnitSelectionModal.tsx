@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
+import { getPackQuantity } from "@shared/utils/product";
 import type { ExtendedProduct, CartItem } from "@/components/customer/portal-types";
 
 interface UnitSelectionModalProps {
@@ -103,7 +104,7 @@ export function UnitSelectionModal({
                           Minimum: {moq} units
                         </p>
                         {(() => {
-                          const pq = (selectedProductForModal as any).packQuantity || selectedProductForModal.quantityInPack;
+                          const pq = getPackQuantity(selectedProductForModal);
                           const us = selectedProductForModal.unitSize;
                           const um = selectedProductForModal.unitOfMeasure;
                           if (pq && pq > 1 && us && um) return <p className="text-xs text-gray-400">{pq} × {parseFloat(String(us))}{um}</p>;
