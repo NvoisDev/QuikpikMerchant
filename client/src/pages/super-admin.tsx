@@ -123,6 +123,7 @@ interface ProductRow {
   price: number | null; baseUnitStock: number | null;
   margin: number | null; stockAlert: boolean | null; status: string;
   hasMissingCost: boolean; hasLowMargin: boolean; hasZeroStock: boolean;
+  quantityInPack: number | null; unitSize: string | null; unitOfMeasure: string | null;
 }
 interface WholesalerRevenueSummary {
   name: string; tier: string; orders: number; gmv: number;
@@ -1922,6 +1923,9 @@ function ProductsSection({ isAdmin, highlightedId }: { isAdmin: boolean; highlig
                     <TableRow id={`record-product-${p.id}`} key={p.id} className={`${p.hasMissingCost || p.hasLowMargin ? "bg-red-50/20" : ""} hover:bg-slate-50/50 ${highlightedId === p.id ? "ring-2 ring-inset ring-purple-400 bg-purple-50/30" : ""}`}>
                       <TableCell>
                         <p className="text-xs font-medium text-gray-800 max-w-[180px] truncate">{p.name}</p>
+                        {fmtPackAdmin(String(p.quantityInPack ?? ''), p.unitSize, p.unitOfMeasure) && (
+                          <p className="text-xs text-gray-400">{fmtPackAdmin(String(p.quantityInPack ?? ''), p.unitSize, p.unitOfMeasure)}</p>
+                        )}
                         {p.category && <p className="text-xs text-gray-400">{p.category}</p>}
                       </TableCell>
                       <TableCell className="text-xs text-gray-600">{p.wholesalerName || "—"}</TableCell>

@@ -950,6 +950,9 @@ export function registerAdminRoutes(app: Express): void {
             AND (${productBatches.expiryDate} IS NULL OR ${productBatches.expiryDate} >= CURRENT_DATE)
         ), 0)`,
         category: products.category,
+        quantityInPack: products.quantityInPack,
+        unitSize: products.unitSize,
+        unitOfMeasure: products.unitOfMeasure,
       }).from(products)
         .leftJoin(users, eq(products.wholesalerId, users.id))
         .where(and(inArray(products.status, ['active', 'inactive', 'locked']), eq(users.isTestAccount, false)))
