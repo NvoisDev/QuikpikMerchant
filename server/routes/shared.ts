@@ -236,11 +236,7 @@ export async function generateOrderNumber(wholesalerId: string, trx?: any): Prom
   }
 }
 
-export function formatNumber(value: number | string): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return '0';
-  return num.toLocaleString('en-US');
-}
+export { formatNumber } from '../../shared/utils/currency';
 
 export function parseCustomerName(fullName: string): { firstName: string; lastName: string } {
   if (!fullName || typeof fullName !== 'string') return { firstName: 'Unknown', lastName: 'Customer' };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatNumber } from "@/lib/utils";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -213,7 +214,7 @@ export default function PublicProductPage() {
                 <Badge variant="secondary">{product.category}</Badge>
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Eye className="w-4 h-4" />
-                  {product.views.toLocaleString()} views
+                  {formatNumber(product.views)} views
                 </div>
               </div>
               

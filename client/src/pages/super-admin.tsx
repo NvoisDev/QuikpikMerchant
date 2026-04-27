@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
+import { formatNumber, formatCurrency } from "@shared/utils/currency";
 import { useToast } from "@/hooks/use-toast";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -41,8 +42,7 @@ const AMBER  = "#b45309";
 const PURPLE = "#7c3aed";
 const RED    = "#dc2626";
 
-const fmt = (n: number) =>
-  `£${(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (n: number) => formatCurrency(n || 0, 'GBP');
 
 const pct = (num: number, denom: number) =>
   denom > 0 ? `${((num / denom) * 100).toFixed(1)}%` : "—";
@@ -578,7 +578,7 @@ function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isA
           <StatCard label="Active Wholesalers"   value={stats?.activeWholesalers ?? 0}  sub={`${stats?.totalWholesalers ?? 0} total`}                          icon={<Building2 className="h-4 w-4" />}    color={GREEN}  />
           <StatCard label="Orders Today"         value={stats?.todayOrders ?? 0}        sub={fmt(stats?.todayRevenue ?? 0) + " GMV"}                           icon={<ShoppingCart className="h-4 w-4" />}  color={AMBER}  />
           <StatCard label="Orders this Month"    value={stats?.ordersThisMonth ?? 0}    sub={`${stats?.completedOrdersThisMonth ?? 0} completed · ${stats?.cancelledOrdersThisMonth ?? 0} cancelled`} icon={<Package className="h-4 w-4" />} color={BLUE} />
-          <StatCard label="Total Orders (All-time)" value={(stats?.totalOrders ?? 0).toLocaleString()} sub={`${stats?.completedOrders ?? 0} completed · ${stats?.cancelledOrders ?? 0} cancelled`} icon={<ShoppingCart className="h-4 w-4" />} color={BLUE} />
+          <StatCard label="Total Orders (All-time)" value={formatNumber(stats?.totalOrders ?? 0)} sub={`${stats?.completedOrders ?? 0} completed · ${stats?.cancelledOrders ?? 0} cancelled`} icon={<ShoppingCart className="h-4 w-4" />} color={BLUE} />
           <StatCard label="All-time GMV"         value={fmt(stats?.totalGMV ?? 0)}      sub="Gross Merchandise Value"                                           icon={<TrendingUp className="h-4 w-4" />}    color={PURPLE} />
           <StatCard label="Sub. MRR"             value={fmt(subMRR)}                    sub="Monthly recurring"                                                 icon={<DollarSign className="h-4 w-4" />}    color={GREEN}  />
           <StatCard label="Failed Payments (30d)" value={alerts?.failedPaymentsCount ?? 0} sub={alerts?.failedPaymentsCount ? "Needs follow-up" : "No failures"} icon={<AlertCircle className="h-4 w-4" />} color={alerts?.failedPaymentsCount ? RED : GREEN} />
@@ -2121,7 +2121,7 @@ function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRo
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardContent className="px-4 py-3 flex flex-wrap gap-6">
           <div><p className="text-xs text-gray-400">Overall Take Rate</p><p className="text-sm font-bold text-indigo-600">{pct(revenueTotals.totalGrossRevenue || 0, revenueTotals.totalGMV || 0)}</p></div>
-          <div><p className="text-xs text-gray-400">Orders in period</p><p className="text-sm font-bold text-gray-800">{revenueOrders.length.toLocaleString()}</p></div>
+          <div><p className="text-xs text-gray-400">Orders in period</p><p className="text-sm font-bold text-gray-800">{formatNumber(revenueOrders.length)}</p></div>
           <div><p className="text-xs text-gray-400">Avg. order value</p><p className="text-sm font-bold text-gray-800">{revenueOrders.length > 0 ? fmt((revenueTotals.totalGMV || 0) / revenueOrders.length) : "—"}</p></div>
         </CardContent>
       </Card>
@@ -2487,13 +2487,13 @@ function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
                       .map(([k, v]) => (
                         <div key={k} className="flex justify-between items-center bg-white border border-red-100 rounded px-2 py-1">
                           <span className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          <span className="text-xs font-bold text-red-700">{v.toLocaleString()}</span>
+                          <span className="text-xs font-bold text-red-700">{formatNumber(v)}</span>
                         </div>
                       ))}
                   </div>
                   <div className="flex justify-between items-center border-t border-red-200 pt-2 mt-1">
                     <span className="text-xs font-semibold text-red-800">Total rows</span>
-                    <span className="text-sm font-bold text-red-700">{previewQuery.data.totalRows.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-red-700">{formatNumber(previewQuery.data.totalRows)}</span>
                   </div>
                 </>
               ) : (

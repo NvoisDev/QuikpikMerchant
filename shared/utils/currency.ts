@@ -92,11 +92,12 @@ export const getCurrencySymbol = (currency: string = 'GBP'): string => {
 /**
  * Format number with comma separators (no currency symbol).
  * Uses a locale-independent regex approach for consistent output across
- * environments.
+ * environments. Decimals are truncated (integer display only).
  * @param num - The number to format
- * @returns Formatted number string with commas
+ * @returns Formatted number string with commas, or '0' for invalid input
  */
 export const formatNumber = (num: number | string): string => {
-  const number = typeof num === 'string' ? parseInt(num, 10) : num;
-  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const parsed = typeof num === 'string' ? parseFloat(num) : num;
+  if (isNaN(parsed)) return '0';
+  return Math.floor(parsed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };

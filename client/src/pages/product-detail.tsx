@@ -21,6 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import type { PromotionalOffer } from "@shared/schema";
+import { formatNumber } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -516,7 +517,7 @@ export default function ProductDetail() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-gray-900">{totalStock.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatNumber(totalStock)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Total stock</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
@@ -583,7 +584,7 @@ export default function ProductDetail() {
                               <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[90px]">
                                 {batch.batchNumber || `#${batch.id}`}
                               </td>
-                              <td className="px-3 py-2 text-right text-gray-700">{batch.quantity.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right text-gray-700">{formatNumber(batch.quantity)}</td>
                               <td className="px-3 py-2 text-right text-gray-700">
                                 {isViewer ? (
                                   batch.costPrice != null && batch.costPrice !== ""

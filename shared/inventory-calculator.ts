@@ -6,6 +6,7 @@
  * - All other quantities are derived calculations
  * - Conversion factors: quantityInPack, unitsPerPallet
  */
+import { formatNumber } from './utils/currency';
 
 export interface ProductInventoryData {
   stock: number;                 // Individual units stock
@@ -169,10 +170,10 @@ export class InventoryCalculator {
     const derived = this.calculateDerivedInventory(data);
     
     return {
-      baseUnits: `${derived.totalBaseUnits.toLocaleString()} units`,
-      packs: `${derived.availablePacks.toLocaleString()} packs (${data.quantityInPack} units each)`,
-      pallets: `${derived.availablePallets.toLocaleString()} pallets (${derived.baseUnitsPerPallet} units each)`,
-      details: `${derived.totalBaseUnits.toLocaleString()} base units = ${derived.availablePacks} packs = ${derived.availablePallets} pallets`
+      baseUnits: `${formatNumber(derived.totalBaseUnits)} units`,
+      packs: `${formatNumber(derived.availablePacks)} packs (${data.quantityInPack} units each)`,
+      pallets: `${formatNumber(derived.availablePallets)} pallets (${derived.baseUnitsPerPallet} units each)`,
+      details: `${formatNumber(derived.totalBaseUnits)} base units = ${derived.availablePacks} packs = ${derived.availablePallets} pallets`
     };
   }
 }

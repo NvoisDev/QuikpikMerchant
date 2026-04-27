@@ -840,19 +840,19 @@ export default function WholesalerDashboard() {
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            £{(topProducts as any)[0].revenue?.toLocaleString() || '0'}
+                            {formatCurrency((topProducts as any)[0].revenue || 0)}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-xs text-blue-600 font-medium">Units Sold</p>
                           <p className="text-lg font-bold text-blue-700">
-                            {(topProducts as any)[0].totalQuantitySold?.toLocaleString() || '0'}
+                            {formatNumber((topProducts as any)[0].totalQuantitySold || 0)}
                           </p>
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-xs text-purple-600 font-medium">Orders</p>
                           <p className="text-lg font-bold text-purple-700">
-                            {(topProducts as any)[0].orderCount?.toLocaleString() || '0'}
+                            {formatNumber((topProducts as any)[0].orderCount || 0)}
                           </p>
                         </div>
                         <div className="bg-orange-50 p-3 rounded-lg">
@@ -1047,8 +1047,8 @@ export default function WholesalerDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-600">£{customer.totalSpent?.toLocaleString() || 0}</p>
-                          <p className="text-xs text-gray-500">avg £{customer.avgOrderValue?.toLocaleString() || 0}</p>
+                          <p className="font-bold text-emerald-600">{formatCurrency(customer.totalSpent || 0)}</p>
+                          <p className="text-xs text-gray-500">avg {formatCurrency(customer.avgOrderValue || 0)}</p>
                         </div>
                       </div>
                     ))}

@@ -40,12 +40,7 @@ import PageHeader from "@/components/PageHeader";
 import { FloatingHelp } from "@/components/ui/floating-help";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { useSidebarContext } from "@/contexts/sidebar-context";
-
-// Utility function to format numbers with commas
-const formatNumber = (num: number | string): string => {
-  const number = typeof num === 'string' ? parseInt(num) : num;
-  return number.toLocaleString();
-};
+import { formatNumber } from "@shared/utils/currency";
 
 const productCategories = [
   "Groceries & Food",

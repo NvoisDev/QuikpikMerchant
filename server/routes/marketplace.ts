@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
 import {
   InventoryCalculator, PreciseShippingCalculator, and, buildInvoicePdf, count, db, desc,
-  emailButton, emailCard, emailHeading, eq, formatPhoneToInternational,
+  emailButton, emailCard, emailHeading, eq, formatNumber, formatPhoneToInternational,
   generateOrderNotificationMessage, generateOrderNumber, generateWholesalerOrderNotificationEmail,
   getCurrencySymbol, getEmailLogoUrl, getUserPlanLimits, gte, inArray, like,
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
@@ -2995,7 +2995,7 @@ export function registerMarketplaceRoutes(app: Express): void {
 Customer: ${customerName}
 Phone: ${formattedPhoneNumber}
 Product: ${product.name}
-Quantity: ${quantity.toLocaleString()} units
+Quantity: ${formatNumber(quantity)} units
 Total: ${getCurrencySymbol(wholesaler.preferredCurrency || 'GBP')}${totalAmount}
 
 Order ID: ${order.id}

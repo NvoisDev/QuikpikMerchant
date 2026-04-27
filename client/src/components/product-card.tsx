@@ -7,11 +7,7 @@ import { cleanAIDescription } from "@shared/utils";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatCurrency } from "@/lib/currencies";
-
-const formatNumber = (num: number | string): string => {
-  const number = typeof num === 'string' ? parseInt(num) : num;
-  return number.toLocaleString();
-};
+import { formatNumber } from "@/lib/utils";
 
 import {
   Edit,

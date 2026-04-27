@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Package, Phone, ShoppingCart, MapPin, Clock } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatNumber } from "@/lib/utils";
 
 interface Product {
   id: number;
@@ -236,11 +237,11 @@ export default function ProductOrderPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Min Order Quantity:</span>
-                  <span className="font-medium">{product.moq.toLocaleString()} units</span>
+                  <span className="font-medium">{formatNumber(product.moq)} units</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Available Stock:</span>
-                  <span className="font-medium">{product.stock.toLocaleString()} units</span>
+                  <span className="font-medium">{formatNumber(product.stock)} units</span>
                 </div>
               </div>
 
@@ -327,7 +328,7 @@ export default function ProductOrderPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-gray-600 mt-1">
-                  Min: {minQuantity.toLocaleString()}, Max: {maxQuantity.toLocaleString()} units
+                  Min: {formatNumber(minQuantity)}, Max: {formatNumber(maxQuantity)} units
                 </p>
               </div>
 
@@ -340,7 +341,7 @@ export default function ProductOrderPage() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {quantity.toLocaleString()} units × {currencySymbol}{parseFloat(product.price).toFixed(2)}
+                  {formatNumber(quantity)} units × {currencySymbol}{parseFloat(product.price).toFixed(2)}
                 </p>
               </div>
 
