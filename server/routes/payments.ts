@@ -93,12 +93,12 @@ export function registerPaymentRoutes(app: Express): void {
         console.log('🔄 User already has Stripe account:', user.stripeAccountId);
         
         try {
-          // Get proper base URL with protocol
-          const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-            ? (process.env.REPLIT_DEV_DOMAIN.startsWith('http') 
-              ? process.env.REPLIT_DEV_DOMAIN 
-              : `https://${process.env.REPLIT_DEV_DOMAIN}`)
-            : 'https://quikpik.app';
+          // Get proper base URL — use production domain when deployed, dev domain otherwise
+          const baseUrl = process.env.NODE_ENV === 'production'
+            ? 'https://quikpik.app'
+            : (process.env.REPLIT_DEV_DOMAIN
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : 'http://localhost:5000');
             
           const refreshUrl = `${baseUrl}/settings?tab=integrations`;
           const returnUrl = `${baseUrl}/stripe-success`;
@@ -148,12 +148,12 @@ export function registerPaymentRoutes(app: Express): void {
       
       console.log('✅ User updated with Stripe account ID');
 
-      // Get proper base URL with protocol
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? (process.env.REPLIT_DEV_DOMAIN.startsWith('http') 
-          ? process.env.REPLIT_DEV_DOMAIN 
-          : `https://${process.env.REPLIT_DEV_DOMAIN}`)
-        : 'https://quikpik.app';
+      // Get proper base URL — use production domain when deployed, dev domain otherwise
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://quikpik.app'
+        : (process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'http://localhost:5000');
         
       const refreshUrl = `${baseUrl}/settings?tab=integrations`;
       const returnUrl = `${baseUrl}/stripe-success`;

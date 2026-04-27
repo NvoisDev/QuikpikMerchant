@@ -1240,10 +1240,11 @@ export function registerAuthRoutes(app: Express): void {
         wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
       }
 
-      // Record last login time
+      // Record last login time on both the teamMembers row and the users row
       if (teamMember?.id) {
         await storage.updateTeamMemberLastLogin(teamMember.id);
       }
+      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, authenticatedUser.id));
 
       // Create session for team member with wholesaler context
       req.session.user = {
@@ -1337,6 +1338,9 @@ export function registerAuthRoutes(app: Express): void {
       if (!authenticatedUser) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
+
+      // Stamp last login time for business owner
+      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, authenticatedUser.id));
 
       // Create session for business owner
       req.session.user = {
