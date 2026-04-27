@@ -608,7 +608,7 @@ export interface SendGridAttachment {
 }
 
 // ─── Invoice PDF builder ──────────────────────────────────────────────────────
-export async function buildInvoicePdf(order: any, wholesaler: any, showTransactionFee = false): Promise<Buffer> {
+export async function buildInvoicePdf(order: any, wholesaler: any, showTransactionFee = false, amountPaid?: number, amountOutstanding?: number): Promise<Buffer> {
   const PDFDocument = (await import('pdfkit')).default;
   const currency = wholesaler.preferredCurrency || 'GBP';
   const currencySymbol = getCurrencySymbol(currency);
@@ -818,6 +818,20 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4).strokeColor(GREEN).lineWidth(1.5).stroke();
     tY += 4;
     drawTotRow('Total', fmt(grandTotal), true);
+    const isPartPaid = (order.paymentStatus === 'part_paid') && amountPaid !== undefined && amountOutstanding !== undefined;
+    if (isPartPaid) {
+      tY += 6;
+      doc.moveTo(tX, tY).lineTo(tX + TOTALS_W, tY).strokeColor(BORDER).lineWidth(0.5).stroke();
+      tY += 8;
+      const AMBER = '#b45309', AMBER_BG = '#fef3c7';
+      doc.roundedRect(tX, tY, TOTALS_W, 46, 4).fill(AMBER_BG);
+      const depLabelX = tX + 8, depValX = tX + TOTALS_W / 2, depW = TOTALS_W / 2 - 8;
+      doc.font('Helvetica').fontSize(9).fillColor(AMBER).text('Deposit Paid:', depLabelX, tY + 7, { width: depW });
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#15803d').text(fmt(amountPaid!), depValX, tY + 7, { width: depW, align: 'right' });
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(AMBER).text('Outstanding Balance:', depLabelX, tY + 26, { width: depW });
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(AMBER).text(fmt(amountOutstanding!), depValX, tY + 26, { width: depW, align: 'right' });
+      tY += 52;
+    }
     if (order.totalWeight && parseFloat(order.totalWeight) > 0) {
       tY += 4;
       drawTotRow('Total Weight', `${parseFloat(order.totalWeight).toFixed(2)} kg`);
@@ -912,7 +926,9 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
     let pdfAttachment: SendGridAttachment | null = null;
     try {
       const orderForPdf = { ...order, items: items?.length > 0 ? items : (order.items || []), retailer: order.retailer || customer };
-      const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod));
+      const pdfAmountPaid = amountPaid !== null ? amountPaid! : undefined;
+      const pdfAmountOutstanding = amountOutstanding !== null ? amountOutstanding! : undefined;
+      const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
       pdfAttachment = { content: pdfBuffer.toString('base64'), filename: `invoice-${order.orderNumber || order.id}.pdf`, type: 'application/pdf', disposition: 'attachment' };
     } catch (pdfError) { console.error('⚠️ Could not generate PDF for email (email still sends without it):', pdfError); }
     await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `${emailTitle} ${orderRef} - ${businessName}`, html: emailHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
