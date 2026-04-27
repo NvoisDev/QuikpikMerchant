@@ -1789,7 +1789,7 @@ export function registerPaymentRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null } = req.body;
       
       console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage, fulfillmentType, deliveryAddressId, hasDeliveryAddress: !!deliveryAddress, hasCustomAddressFields: !!customAddressFields });
       
@@ -1935,6 +1935,7 @@ export function registerPaymentRoutes(app: Express): void {
         fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
         ...(fulfillmentType === 'delivery' && resolvedDeliveryAddressId ? { deliveryAddressId: resolvedDeliveryAddressId } : {}),
         ...(fulfillmentType === 'delivery' && resolvedDeliveryAddress ? { deliveryAddress: resolvedDeliveryAddress } : {}),
+        ...(fulfillmentType === 'pickup' && collectionAddressId ? { collectionAddressId: parseInt(String(collectionAddressId), 10) } : {}),
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',

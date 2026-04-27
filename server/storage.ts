@@ -427,6 +427,15 @@ export interface IStorage {
   deleteDeliveryAddress(id: number): Promise<void>;
   setDefaultDeliveryAddress(customerId: string, addressId: number): Promise<void>;
   getDefaultDeliveryAddress(customerId: string): Promise<DeliveryAddress | undefined>;
+
+  // Collection address operations (wholesaler-owned pickup locations)
+  getCollectionAddresses(wholesalerId: string): Promise<import('@shared/schema').CollectionAddress[]>;
+  getCollectionAddress(id: number): Promise<import('@shared/schema').CollectionAddress | undefined>;
+  getDefaultCollectionAddress(wholesalerId: string): Promise<import('@shared/schema').CollectionAddress | undefined>;
+  createCollectionAddress(data: import('@shared/schema').InsertCollectionAddress): Promise<import('@shared/schema').CollectionAddress>;
+  updateCollectionAddress(id: number, wholesalerId: string, updates: Partial<import('@shared/schema').InsertCollectionAddress>): Promise<import('@shared/schema').CollectionAddress>;
+  deleteCollectionAddress(id: number, wholesalerId: string): Promise<void>;
+  setDefaultCollectionAddress(wholesalerId: string, id: number): Promise<import('@shared/schema').CollectionAddress>;
 }
 
 function resolveLivePromo(offers: any[], basePrice: string): { promoActive: boolean; promoPrice: string | null } {

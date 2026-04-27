@@ -300,10 +300,23 @@ export function registerOrderRoutes(app: Express): void {
         
         if (customer && wholesaler && customer.phoneNumber) {
           const actionType = updated.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
-          const collectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress || 
-            (wholesaler.streetAddress && wholesaler.city 
-              ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
-              : '');
+          // Resolve collection address: prefer linked collection address, then legacy pickupAddress, then businessAddress
+          let collectionAddress = '';
+          if ((updated as any).collectionAddressId) {
+            try {
+              const caRow = await storage.getCollectionAddress((updated as any).collectionAddressId);
+              if (caRow) {
+                const parts = [caRow.name, caRow.addressLine1, caRow.addressLine2, caRow.city, caRow.postcode].filter(Boolean);
+                collectionAddress = parts.join(', ');
+              }
+            } catch (_) {}
+          }
+          if (!collectionAddress) {
+            collectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress ||
+              (wholesaler.streetAddress && wholesaler.city
+                ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
+                : '');
+          }
           
           // Build order items list for SMS (getOrderItems already includes product data)
           let itemsList = '';
@@ -1077,7 +1090,7 @@ export function registerOrderRoutes(app: Express): void {
   app.post('/api/orders', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { items, deliveryAddress, notes } = req.body;
+      const { items, deliveryAddress, notes, collectionAddressId } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
@@ -1135,7 +1148,8 @@ export function registerOrderRoutes(app: Express): void {
         total: total.toFixed(2),
         deliveryAddress,
         notes,
-        status: 'confirmed' // Auto-confirm orders immediately
+        status: 'confirmed', // Auto-confirm orders immediately
+        ...(collectionAddressId ? { collectionAddressId: parseInt(String(collectionAddressId), 10) } : {}),
       });
 
       // CRITICAL FIX: Use transaction-based order creation for reliable stock processing

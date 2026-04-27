@@ -48,6 +48,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Session Storage**: PostgreSQL-based.
 - **Additional Tables**: `customerRegistrationRequests` for managing access requests. `priceLists`, `priceListItems`, `priceListAssignments` for customer price list system. `products.cost_price` (decimal, optional) for wholesaler margin calculations — never exposed to customers.
 - **Storage Architecture**: Split into 7 domain files under `server/storage/` using inheritance chain: `UserStorageBase → ProductStorage → OrderStorage → CustomerStorage → BroadcastStorage → CustomerMgmtStorage → DeliveryStorage → DatabaseStorage`. `server/storage.ts` holds IStorage interface + final class (1,197 lines, down from 5,372).
+- **Multi-Collection Address Support**: Wholesalers can create and manage multiple named pickup locations via `collectionAddresses` table. Orders and quotes store an optional `collectionAddressId` (soft reference). Full fallback chain: linked `collectionAddressId` → legacy `users.pickupAddress` → `businessAddress` → `streetAddress/city`. CRUD API at `/api/collection-addresses` (auth'd wholesaler) and public read at `/api/wholesalers/:id/collection-addresses` (customer portal). UI: Settings page "Collection Addresses" manager (add/edit/delete/set-default), Quick-Quote pickup location selector, CheckoutDialog pickup display, Order-Detail linked address display.
 
 ## External Dependencies
 - **Payment Processing**: Stripe Connect (marketplace payments with Express accounts, application fees).

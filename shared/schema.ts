@@ -673,6 +673,9 @@ export const orders = pgTable("orders", {
   // Multi-business profile: which profile was used for this order
   businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }),
 
+  // Collection address override — which pickup location was used for this order
+  collectionAddressId: integer("collection_address_id"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -1700,6 +1703,32 @@ export const insertDeliveryAddressSchema = createInsertSchema(deliveryAddresses)
 });
 export type InsertDeliveryAddress = z.infer<typeof insertDeliveryAddressSchema>;
 export type DeliveryAddress = typeof deliveryAddresses.$inferSelect;
+
+// Collection Addresses — wholesaler-owned pickup locations
+export const collectionAddresses = pgTable("collection_addresses", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  addressLine1: varchar("address_line1").notNull(),
+  addressLine2: varchar("address_line2"),
+  city: varchar("city").notNull(),
+  postcode: varchar("postcode").notNull(),
+  country: varchar("country").notNull().default("United Kingdom"),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  wholesalerIdIdx: index("collection_addresses_wholesaler_id_idx").on(table.wholesalerId),
+}));
+
+export const insertCollectionAddressSchema = createInsertSchema(collectionAddresses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCollectionAddress = z.infer<typeof insertCollectionAddressSchema>;
+export type CollectionAddress = typeof collectionAddresses.$inferSelect;
 
 // Customer-Wholesaler Relationships types
 export const insertCustomerWholesalerRelationshipSchema = createInsertSchema(customerWholesalerRelationships).omit({

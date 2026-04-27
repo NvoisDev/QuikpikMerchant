@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -236,6 +236,201 @@ function BusinessProfilesSection() {
               disabled={deleteMutation.isPending}
               onClick={() => profileToDelete && deleteMutation.mutate(profileToDelete.id)}
             >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+interface CollectionAddress {
+  id: number;
+  wholesalerId: string;
+  name: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  postcode: string;
+  country: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+function CollectionAddressesSection() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editing, setEditing] = useState<CollectionAddress | null>(null);
+  const [toDelete, setToDelete] = useState<CollectionAddress | null>(null);
+  const emptyForm = { name: '', addressLine1: '', addressLine2: '', city: '', postcode: '', country: 'United Kingdom' };
+  const [form, setForm] = useState(emptyForm);
+
+  const { data: addresses = [], isLoading } = useQuery<CollectionAddress[]>({
+    queryKey: ["/api/collection-addresses"],
+  });
+
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setShowDialog(true); };
+  const openEdit = (a: CollectionAddress) => {
+    setEditing(a);
+    setForm({ name: a.name, addressLine1: a.addressLine1, addressLine2: a.addressLine2 || '', city: a.city, postcode: a.postcode, country: a.country || 'United Kingdom' });
+    setShowDialog(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof form & { id?: number }) => {
+      const payload = { name: data.name, addressLine1: data.addressLine1, addressLine2: data.addressLine2 || null, city: data.city, postcode: data.postcode, country: data.country };
+      const r = data.id != null
+        ? await apiRequest("PATCH", `/api/collection-addresses/${data.id}`, payload)
+        : await apiRequest("POST", "/api/collection-addresses", payload);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: (_, v) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection-addresses"] });
+      toast({ title: v.id != null ? "Address updated" : "Address added" });
+      setShowDialog(false);
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("DELETE", `/api/collection-addresses/${id}`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to delete"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection-addresses"] });
+      toast({ title: "Address deleted" });
+      setToDelete(null);
+    },
+    onError: (e: Error) => { toast({ title: e.message, variant: "destructive" }); setToDelete(null); },
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("POST", `/api/collection-addresses/${id}/set-default`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection-addresses"] });
+      toast({ title: "Default collection address updated" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const valid = form.name.trim() && form.addressLine1.trim() && form.city.trim() && form.postcode.trim();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">Collection Addresses</h3>
+          <p className="text-sm text-gray-500 mt-0.5">Add multiple pickup locations. Customers and quotes will show the selected address. Orders without a specific address fall back to your registered business address.</p>
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={openAdd}>
+          <Plus className="h-4 w-4" />Add Address
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-gray-400">Loading addresses…</div>
+      ) : addresses.length === 0 ? (
+        <div className="text-sm text-gray-400 italic">No collection addresses yet. Add one to let customers know where to collect orders.</div>
+      ) : (
+        <div className="space-y-3">
+          {addresses.map(a => (
+            <div key={a.id} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3">
+              <div className="h-9 w-9 rounded bg-green-50 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+                  {a.isDefault && (
+                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded">
+                      <Star className="h-2.5 w-2.5" />Default
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {[a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', ')}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {!a.isDefault && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
+                    Set default
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(a)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-green-600" />
+              {editing ? "Edit Collection Address" : "Add Collection Address"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs text-gray-600">Location name *</Label>
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Warehouse, City Centre Store" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600">Address line 1 *</Label>
+              <Input value={form.addressLine1} onChange={e => setForm(f => ({ ...f, addressLine1: e.target.value }))} placeholder="Unit 4, Trade Estate" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600">Address line 2 (optional)</Label>
+              <Input value={form.addressLine2} onChange={e => setForm(f => ({ ...f, addressLine2: e.target.value }))} placeholder="Building / Floor" className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-600">City *</Label>
+                <Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="London" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Postcode *</Label>
+                <Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="E1 2AB" className="mt-1" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button size="sm" disabled={!valid || saveMutation.isPending} onClick={() => saveMutation.mutate({ ...form, id: editing?.id })}>
+              {saveMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!toDelete} onOpenChange={(open) => { if (!open) setToDelete(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-red-500" />Delete address
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 pt-1">
+              Delete <span className="font-medium text-gray-900">{toDelete?.name}</span>? This cannot be undone. Addresses linked to active orders cannot be deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={() => setToDelete(null)} disabled={deleteMutation.isPending}>Cancel</Button>
+            <Button size="sm" variant="destructive" disabled={deleteMutation.isPending} onClick={() => toDelete && deleteMutation.mutate(toDelete.id)}>
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
@@ -900,14 +1095,8 @@ export default function Settings() {
                           <dd className="mt-1 text-sm text-gray-900">{user.country || 'United Kingdom'}</dd>
                         </div>
                         <div className="sm:col-span-2">
-                          <dt className="text-sm font-medium text-gray-500">Collection Address</dt>
-                          <dd className="mt-1 text-sm text-gray-900">
-                            {user.pickupAddress ? (
-                              user.pickupAddress
-                            ) : (
-                              <span className="text-gray-400 italic">Same as registered address</span>
-                            )}
-                          </dd>
+                          <dt className="text-sm font-medium text-gray-500">Collection Addresses</dt>
+                          <dd className="mt-1 text-sm text-gray-500 italic">Manage multiple pickup locations in the Collection Addresses section below.</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Timezone</dt>
@@ -1084,40 +1273,8 @@ export default function Settings() {
                         </div>
 
                         <div className="sm:col-span-2 border-t pt-4">
-                          <label className="text-sm font-medium text-gray-700 block mb-2">Collection Address</label>
-                          <label className="flex items-start gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 rounded border-gray-300 text-green-600"
-                              checked={useCustomCollectionAddress}
-                              onChange={(e) => {
-                                setUseCustomCollectionAddress(e.target.checked);
-                                if (!e.target.checked) {
-                                  setBusinessForm({ ...businessForm, pickupAddress: '' });
-                                }
-                              }}
-                            />
-                            <span className="text-sm text-gray-600">Use a different address for customer collections</span>
-                          </label>
-                          {useCustomCollectionAddress ? (
-                            <textarea
-                              value={businessForm.pickupAddress}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setBusinessForm({ ...businessForm, pickupAddress: val });
-                                if (val.trim().length === 0) {
-                                  setUseCustomCollectionAddress(false);
-                                }
-                              }}
-                              className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                              rows={3}
-                              placeholder="e.g. Unit 4, Trade Estate, London, E1 2AB"
-                            />
-                          ) : (
-                            <p className="mt-2 text-xs text-gray-400">
-                              Customers collecting orders will be directed to your registered business address.
-                            </p>
-                          )}
+                          <label className="text-sm font-medium text-gray-700 block mb-1">Collection Addresses</label>
+                          <p className="text-xs text-gray-400">Manage multiple pickup locations from the <span className="font-medium text-green-700">Collection Addresses</span> section below — no need to save this form first.</p>
                         </div>
                         
                         <div className="sm:col-span-2">
@@ -1247,6 +1404,11 @@ export default function Settings() {
                     )}
                   </div>
                   
+
+                  {/* Collection Addresses Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <CollectionAddressesSection />
+                  </div>
 
                   {/* Delivery Settings Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">

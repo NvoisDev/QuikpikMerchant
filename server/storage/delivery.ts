@@ -231,4 +231,84 @@ export class DeliveryStorage extends CustomerMgmtStorage {
     return address;
   }
 
+  // ── Collection address methods ──────────────────────────────────────────────
+
+  async getCollectionAddresses(wholesalerId: string) {
+    const { collectionAddresses } = await import('@shared/schema');
+    return db
+      .select()
+      .from(collectionAddresses)
+      .where(eq(collectionAddresses.wholesalerId, wholesalerId))
+      .orderBy(desc(collectionAddresses.isDefault), desc(collectionAddresses.createdAt));
+  }
+
+  async getCollectionAddress(id: number) {
+    const { collectionAddresses } = await import('@shared/schema');
+    const [row] = await db.select().from(collectionAddresses).where(eq(collectionAddresses.id, id));
+    return row;
+  }
+
+  async getDefaultCollectionAddress(wholesalerId: string) {
+    const { collectionAddresses } = await import('@shared/schema');
+    const [row] = await db
+      .select()
+      .from(collectionAddresses)
+      .where(and(eq(collectionAddresses.wholesalerId, wholesalerId), eq(collectionAddresses.isDefault, true)));
+    return row;
+  }
+
+  async createCollectionAddress(data: import('@shared/schema').InsertCollectionAddress) {
+    const { collectionAddresses } = await import('@shared/schema');
+    if (data.isDefault) {
+      await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, data.wholesalerId));
+    }
+    const [row] = await db.insert(collectionAddresses).values(data).returning();
+    return row;
+  }
+
+  async updateCollectionAddress(id: number, wholesalerId: string, updates: Partial<import('@shared/schema').InsertCollectionAddress>) {
+    const { collectionAddresses } = await import('@shared/schema');
+    if (updates.isDefault) {
+      await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
+    }
+    const [row] = await db
+      .update(collectionAddresses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
+      .returning();
+    if (!row) throw new Error('Collection address not found');
+    return row;
+  }
+
+  async deleteCollectionAddress(id: number, wholesalerId: string) {
+    const { collectionAddresses } = await import('@shared/schema');
+    // Check if address is used in any active/pending orders
+    const activeOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(
+        eq(orders.collectionAddressId as any, id),
+        inArray(orders.status, ['pending', 'confirmed', 'processing'])
+      ))
+      .limit(1);
+    if (activeOrders.length > 0) {
+      throw new Error('COLLECTION_ADDRESS_IN_USE');
+    }
+    await db
+      .delete(collectionAddresses)
+      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)));
+  }
+
+  async setDefaultCollectionAddress(wholesalerId: string, id: number) {
+    const { collectionAddresses } = await import('@shared/schema');
+    await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
+    const [row] = await db
+      .update(collectionAddresses)
+      .set({ isDefault: true, updatedAt: new Date() })
+      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
+      .returning();
+    if (!row) throw new Error('Collection address not found');
+    return row;
+  }
+
 }

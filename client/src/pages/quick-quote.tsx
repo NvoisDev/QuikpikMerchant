@@ -131,6 +131,7 @@ export default function QuickQuote() {
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('payment_link');
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
+  const [collectionAddressId, setCollectionAddressId] = useState<number | null>(null);
   const [deliveryCharge, setDeliveryCharge] = useState<string>('');
   const [deliveryAddressId, setDeliveryAddressId] = useState<number | null>(null);
   const [deliveryAddressText, setDeliveryAddressText] = useState('');
@@ -164,6 +165,10 @@ export default function QuickQuote() {
   const { data: businessProfiles = [] } = useQuery<{ id: number; name: string; logoUrl: string | null; address: string | null; isDefault: boolean }[]>({
     queryKey: ['/api/business-profiles'],
     enabled: !!user?.enableMultiProfile,
+  });
+
+  const { data: collectionAddresses = [] } = useQuery<any[]>({
+    queryKey: ['/api/collection-addresses'],
   });
 
   useEffect(() => {
@@ -395,6 +400,13 @@ export default function QuickQuote() {
     }
   }, [fulfillmentType]);
 
+  useEffect(() => {
+    if (collectionAddresses.length > 0 && collectionAddressId === null) {
+      const def = (collectionAddresses as any[]).find((a) => a.isDefault) || (collectionAddresses as any[])[0];
+      if (def) setCollectionAddressId(def.id);
+    }
+  }, [collectionAddresses]);
+
   const calculateDepositAmount = () => {
     return calculateTotal() * (depositPercentage / 100);
   };
@@ -468,6 +480,7 @@ export default function QuickQuote() {
         deliveryAddress: isUsingCustomAddress ? `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}` : undefined,
         ...(isUsingCustomAddress ? { customAddressFields } : {}),
       }),
+      ...(fulfillmentType === 'pickup' && collectionAddressId ? { collectionAddressId } : {}),
       ...(user?.enableMultiProfile && businessProfiles.length > 1 && selectedProfileId ? { businessProfileId: selectedProfileId } : {}),
     });
   };
@@ -1296,6 +1309,25 @@ export default function QuickQuote() {
                   </Button>
                 </div>
               </div>
+
+              {fulfillmentType === 'pickup' && collectionAddresses.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium mb-1 block">Pickup Location</Label>
+                  <select
+                    className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
+                    value={collectionAddressId ?? ''}
+                    onChange={(e) => setCollectionAddressId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                  >
+                    <option value="">-- Select pickup location --</option>
+                    {collectionAddresses.map((a: any) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
+                        {a.isDefault ? ' (Default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {fulfillmentType === 'delivery' && (
                 <div>

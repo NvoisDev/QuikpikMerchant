@@ -247,6 +247,11 @@ export default function OrderDetail() {
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
 
+  const { data: collectionAddresses = [] } = useQuery<any[]>({
+    queryKey: ['/api/collection-addresses'],
+    staleTime: 60000,
+  });
+
   useEffect(() => {
     if (!id) return;
     const orderId = parseInt(id, 10);
@@ -971,6 +976,21 @@ export default function OrderDetail() {
                     {order.wholesalerBusinessName || 'Business Location'}
                   </div>
                   {(() => {
+                    // Prefer order.collectionAddressId lookup, then legacy pickupAddress, then businessAddress
+                    const linkedCA = (order as any)?.collectionAddressId
+                      ? collectionAddresses.find((a: any) => a.id === (order as any).collectionAddressId)
+                      : null;
+                    if (linkedCA) {
+                      return (
+                        <div className="flex items-start mt-2 gap-1">
+                          <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="text-orange-800 text-xs font-medium">{linkedCA.name}</span>
+                            <span className="text-orange-700 text-xs ml-1">— {[linkedCA.addressLine1, linkedCA.addressLine2, linkedCA.city, linkedCA.postcode].filter(Boolean).join(', ')}</span>
+                          </div>
+                        </div>
+                      );
+                    }
                     const pickupAddr = (user as AuthUser)?.pickupAddress?.trim();
                     const bizAddr = (user as AuthUser)?.businessAddress?.trim();
                     const resolvedAddr = pickupAddr || bizAddr;

@@ -9,6 +9,7 @@ import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { AddressSelector } from "@/components/customer/AddressSelector";
 import { StripeCheckoutForm } from "@/components/customer/StripeCheckoutForm";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import type { CartItem } from "@/components/customer/portal-types";
@@ -77,6 +78,19 @@ export function CheckoutDialog({
   setShowThankYou,
 }: CheckoutDialogProps) {
   const { toast } = useToast();
+
+  const { data: collectionAddresses = [] } = useQuery<any[]>({
+    queryKey: ["/api/wholesalers", wholesalerId, "collection-addresses"],
+    queryFn: async () => {
+      const r = await fetch(`/api/wholesalers/${wholesalerId}/collection-addresses`);
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: !!wholesalerId,
+    staleTime: 60000,
+  });
+
+  const defaultCollectionAddress = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
 
   return (
     <Dialog open={showCheckout} onOpenChange={(open) => { setShowCheckout(open); if (!open) setPayLaterMode(false); }}>
@@ -436,12 +450,24 @@ export function CheckoutDialog({
                       <span>Pickup from store</span>
                       <span className="text-green-600 font-medium">FREE</span>
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {wholesaler?.pickupAddress || wholesaler?.businessAddress ||
-                       (wholesaler?.streetAddress && wholesaler?.city
-                         ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
-                         : 'Collect your order from our location')}
-                    </p>
+                    {defaultCollectionAddress ? (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">{defaultCollectionAddress.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {[defaultCollectionAddress.addressLine1, defaultCollectionAddress.addressLine2, defaultCollectionAddress.city, defaultCollectionAddress.postcode].filter(Boolean).join(', ')}
+                        </p>
+                        {collectionAddresses.length > 1 && (
+                          <p className="text-xs text-gray-400 mt-0.5">{collectionAddresses.length} pickup locations available</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        {wholesaler?.pickupAddress || wholesaler?.businessAddress ||
+                         (wholesaler?.streetAddress && wholesaler?.city
+                           ? `${wholesaler.streetAddress}, ${wholesaler.city}${wholesaler.postalCode ? `, ${wholesaler.postalCode}` : ''}`
+                           : 'Collect your order from our location')}
+                      </p>
+                    )}
                     {wholesaler?.pickupInstructions && (
                       <p className="text-xs text-gray-500 mt-1">{wholesaler.pickupInstructions}</p>
                     )}

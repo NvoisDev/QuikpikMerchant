@@ -28,6 +28,7 @@ import {
   adminAuditLogs, systemErrorLogs,
   customerProfileUpdateNotifications,
   stockUpdateNotifications,
+  collectionAddresses, insertCollectionAddressSchema,
 } from "@shared/schema";
 import type { CancellationRefundType, EmailRefundStatus } from "@shared/schema";
 import { InventoryCalculator } from "@shared/inventory-calculator";
@@ -94,6 +95,7 @@ export {
   adminAuditLogs, systemErrorLogs,
   customerProfileUpdateNotifications,
   stockUpdateNotifications,
+  collectionAddresses, insertCollectionAddressSchema,
   InventoryCalculator,
   generateProductDescription, generateProductImage,
   generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming,
