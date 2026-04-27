@@ -25,6 +25,7 @@ import {
   wholesalerCustomerRelationships,
   productBatches,
   businessProfiles,
+  collectionAddresses,
   type BusinessProfile,
   type User,
   type UpsertUser,
@@ -307,12 +308,20 @@ export class OrderStorage extends ProductStorage {
       const [profile] = await db.select().from(businessProfiles).where(eq(businessProfiles.id, order.businessProfileId));
       businessProfileName = profile?.name ?? null;
     }
+
+    // Enrich with resolved collection address object
+    let collectionAddress: (typeof collectionAddresses.$inferSelect) | null = null;
+    if (order.collectionAddressId) {
+      const [ca] = await db.select().from(collectionAddresses).where(eq(collectionAddresses.id, order.collectionAddressId));
+      collectionAddress = ca ?? null;
+    }
     
     return {
       ...order,
       retailer: retailer!,
       wholesaler: wholesaler!,
       businessProfileName,
+      collectionAddress,
       items: items.map(item => ({
         ...item.order_items,
         product: item.products!

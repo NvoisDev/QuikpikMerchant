@@ -170,6 +170,7 @@ export default function QuickQuote() {
   const { data: collectionAddresses = [] } = useQuery<any[]>({
     queryKey: ['/api/collection-addresses'],
   });
+  const activeCollectionAddresses = collectionAddresses.filter((a: any) => a.isActive !== false);
 
   useEffect(() => {
     if (businessProfiles.length > 0 && selectedProfileId === null) {
@@ -401,11 +402,11 @@ export default function QuickQuote() {
   }, [fulfillmentType]);
 
   useEffect(() => {
-    if (collectionAddresses.length > 0 && collectionAddressId === null) {
-      const def = (collectionAddresses as any[]).find((a) => a.isDefault) || (collectionAddresses as any[])[0];
+    if (activeCollectionAddresses.length > 0 && collectionAddressId === null) {
+      const def = activeCollectionAddresses.find((a: any) => a.isDefault) || activeCollectionAddresses[0];
       if (def) setCollectionAddressId(def.id);
     }
-  }, [collectionAddresses]);
+  }, [activeCollectionAddresses]);
 
   const calculateDepositAmount = () => {
     return calculateTotal() * (depositPercentage / 100);
@@ -1310,7 +1311,7 @@ export default function QuickQuote() {
                 </div>
               </div>
 
-              {fulfillmentType === 'pickup' && collectionAddresses.length > 0 && (
+              {fulfillmentType === 'pickup' && activeCollectionAddresses.length > 0 && (
                 <div>
                   <Label className="text-sm font-medium mb-1 block">Pickup Location</Label>
                   <select
@@ -1319,7 +1320,7 @@ export default function QuickQuote() {
                     onChange={(e) => setCollectionAddressId(e.target.value ? parseInt(e.target.value, 10) : null)}
                   >
                     <option value="">-- Select pickup location --</option>
-                    {collectionAddresses.map((a: any) => (
+                    {activeCollectionAddresses.map((a: any) => (
                       <option key={a.id} value={a.id}>
                         {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
                         {a.isDefault ? ' (Default)' : ''}

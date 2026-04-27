@@ -435,6 +435,10 @@ function CollectionAddressesSection() {
                 <Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="E1 2AB" className="mt-1" />
               </div>
             </div>
+            <div>
+              <Label className="text-xs text-gray-600">Country</Label>
+              <Input value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} placeholder="United Kingdom" className="mt-1" />
+            </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowDialog(false)}>Cancel</Button>
@@ -798,8 +802,8 @@ export default function Settings() {
                   <span className="font-medium text-sm sm:text-base">Account</span>
                 </div>
 
-                {/* Business Settings - hidden for team members */}
-                {user.role !== 'team_member' && (
+                {/* Business Settings - visible to owners and team admins */}
+                {(user.role !== 'team_member' || user.teamMemberRole === 'admin') && (
                   <div 
                     className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                       activeTab === "business" 

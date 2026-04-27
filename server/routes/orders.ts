@@ -300,13 +300,25 @@ export function registerOrderRoutes(app: Express): void {
         
         if (customer && wholesaler && customer.phoneNumber) {
           const actionType = updated.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
-          // Resolve collection address: prefer linked collection address, then legacy pickupAddress, then businessAddress
+          // Resolve collection address: prefer linked address → wholesaler default → pickupAddress → businessAddress
           let collectionAddress = '';
           if ((updated as any).collectionAddressId) {
             try {
               const caRow = await storage.getCollectionAddress((updated as any).collectionAddressId);
               if (caRow) {
                 const parts = [caRow.name, caRow.addressLine1, caRow.addressLine2, caRow.city, caRow.postcode].filter(Boolean);
+                collectionAddress = parts.join(', ');
+              }
+            } catch (_) {}
+          }
+          if (!collectionAddress) {
+            // No explicit selection — try wholesaler's default collection address
+            try {
+              const wholesalerAddrs = await storage.getCollectionAddresses(updated.wholesalerId);
+              const defaultAddr = wholesalerAddrs.find((a: any) => a.isDefault && a.isActive !== false)
+                ?? wholesalerAddrs.find((a: any) => a.isActive !== false);
+              if (defaultAddr) {
+                const parts = [defaultAddr.name, defaultAddr.addressLine1, defaultAddr.addressLine2, defaultAddr.city, defaultAddr.postcode].filter(Boolean);
                 collectionAddress = parts.join(', ');
               }
             } catch (_) {}
