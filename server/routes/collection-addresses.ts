@@ -1,5 +1,21 @@
 import type { Express } from "express";
-import { storage, requireAuth, requireMemberPermission, insertCollectionAddressSchema } from "./shared";
+import { storage, requireAuth, insertCollectionAddressSchema } from "./shared";
+
+// Resolves the effective wholesaler ID regardless of whether the caller is an owner or team member
+function getEffectiveWholesalerId(user: any): string {
+  return user.role === "team_member" && user.wholesalerId ? user.wholesalerId : user.id;
+}
+
+// Only owner (non-team-member) or team admin may manage collection addresses.
+// Team members with member/viewer role are blocked even if they have "settings" tab access.
+function requireOwnerOrTeamAdmin(req: any, res: any, next: any) {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: "Unauthorised" });
+  if (user.role === "team_member" && user.teamMemberRole !== "admin") {
+    return res.status(403).json({ error: "Collection address management requires Owner or Admin access." });
+  }
+  next();
+}
 
 export function registerCollectionAddressRoutes(app: Express) {
   // GET /api/wholesalers/:wholesalerId/collection-addresses — public, for customer portal
@@ -21,16 +37,17 @@ export function registerCollectionAddressRoutes(app: Express) {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
-      let addresses = await storage.getCollectionAddresses(user.id);
+      const effectiveWholesalerId = getEffectiveWholesalerId(user);
+      let addresses = await storage.getCollectionAddresses(effectiveWholesalerId);
 
       // Lazy migration: auto-create first collection address from pickupAddress if none exist
       if (addresses.length === 0) {
-        const wholesaler = await storage.getUser(user.id);
+        const wholesaler = await storage.getUser(effectiveWholesalerId);
         const pickupAddr = wholesaler?.pickupAddress?.trim();
         if (pickupAddr) {
           try {
             const created = await storage.createCollectionAddress({
-              wholesalerId: user.id,
+              wholesalerId: effectiveWholesalerId,
               name: "Main Collection Point",
               addressLine1: pickupAddr,
               addressLine2: null,
@@ -41,7 +58,7 @@ export function registerCollectionAddressRoutes(app: Express) {
               isActive: true,
             });
             addresses = [created];
-            console.log(`✅ Lazy-migrated pickupAddress → collection_addresses for wholesaler ${user.id}`);
+            console.log(`✅ Lazy-migrated pickupAddress → collection_addresses for wholesaler ${effectiveWholesalerId}`);
           } catch (migrateErr) {
             console.error("Lazy migration of pickupAddress failed (non-fatal):", migrateErr);
           }
@@ -55,12 +72,13 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // POST /api/collection-addresses — create new (owner + team admin; blocks member/viewer)
-  app.post("/api/collection-addresses", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
+  // POST /api/collection-addresses — create new (owner + team admin only)
+  app.post("/api/collection-addresses", requireAuth, requireOwnerOrTeamAdmin, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
-      const body = insertCollectionAddressSchema.parse({ ...req.body, wholesalerId: user.id });
+      const effectiveWholesalerId = getEffectiveWholesalerId(user);
+      const body = insertCollectionAddressSchema.parse({ ...req.body, wholesalerId: effectiveWholesalerId });
       const address = await storage.createCollectionAddress(body);
       res.status(201).json(address);
     } catch (err: any) {
@@ -70,15 +88,16 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // PATCH /api/collection-addresses/:id — update (owner + team admin; blocks member/viewer)
-  app.patch("/api/collection-addresses/:id", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id — update (owner + team admin only)
+  app.patch("/api/collection-addresses/:id", requireAuth, requireOwnerOrTeamAdmin, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
+      const effectiveWholesalerId = getEffectiveWholesalerId(user);
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
       const updates = insertCollectionAddressSchema.partial().parse(req.body);
-      const address = await storage.updateCollectionAddress(id, user.id, updates);
+      const address = await storage.updateCollectionAddress(id, effectiveWholesalerId, updates);
       res.json(address);
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ error: "Invalid data", details: err.errors });
@@ -88,14 +107,15 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // DELETE /api/collection-addresses/:id — delete (owner + team admin; blocks member/viewer)
-  app.delete("/api/collection-addresses/:id", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
+  // DELETE /api/collection-addresses/:id — delete (owner + team admin only)
+  app.delete("/api/collection-addresses/:id", requireAuth, requireOwnerOrTeamAdmin, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
+      const effectiveWholesalerId = getEffectiveWholesalerId(user);
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-      await storage.deleteCollectionAddress(id, user.id);
+      await storage.deleteCollectionAddress(id, effectiveWholesalerId);
       res.json({ success: true });
     } catch (err: any) {
       if (err?.message === "COLLECTION_ADDRESS_IN_USE") {
@@ -106,14 +126,15 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // PATCH /api/collection-addresses/:id/set-default — set as default (owner + team admin)
-  app.patch("/api/collection-addresses/:id/set-default", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id/set-default — set as default (owner + team admin only)
+  app.patch("/api/collection-addresses/:id/set-default", requireAuth, requireOwnerOrTeamAdmin, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
+      const effectiveWholesalerId = getEffectiveWholesalerId(user);
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-      const address = await storage.setDefaultCollectionAddress(user.id, id);
+      const address = await storage.setDefaultCollectionAddress(effectiveWholesalerId, id);
       res.json(address);
     } catch (err: any) {
       if (err?.message === "Collection address not found") return res.status(404).json({ error: "Not found" });

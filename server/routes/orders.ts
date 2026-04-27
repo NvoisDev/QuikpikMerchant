@@ -1138,6 +1138,20 @@ export function registerOrderRoutes(app: Express): void {
       const feeRate = await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee (wholesaler cost)
 
+      // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
+      let validatedCollectionAddressId: number | null = null;
+      if (collectionAddressId) {
+        const parsedId = parseInt(String(collectionAddressId), 10);
+        if (!isNaN(parsedId)) {
+          const collAddr = await storage.getCollectionAddress(parsedId);
+          if (collAddr && collAddr.wholesalerId === wholesalerId) {
+            validatedCollectionAddressId = parsedId;
+          } else {
+            console.warn(`POST /api/orders: collectionAddressId ${parsedId} invalid for wholesaler ${wholesalerId} — ignoring`);
+          }
+        }
+      }
+
       const orderData = insertOrderSchema.parse({
         orderNumber: await generateOrderNumber(wholesalerId),
         wholesalerId,
@@ -1149,7 +1163,7 @@ export function registerOrderRoutes(app: Express): void {
         deliveryAddress,
         notes,
         status: 'confirmed', // Auto-confirm orders immediately
-        ...(collectionAddressId ? { collectionAddressId: parseInt(String(collectionAddressId), 10) } : {}),
+        ...(validatedCollectionAddressId ? { collectionAddressId: validatedCollectionAddressId } : {}),
       });
 
       // CRITICAL FIX: Use transaction-based order creation for reliable stock processing

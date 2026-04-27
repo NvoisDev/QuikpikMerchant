@@ -1832,6 +1832,20 @@ export function registerPaymentRoutes(app: Express): void {
         }
       }
 
+      // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
+      let validatedQuoteCollectionAddressId: number | null = null;
+      if (collectionAddressId) {
+        const parsedId = parseInt(String(collectionAddressId), 10);
+        if (!isNaN(parsedId)) {
+          const collAddr = await storage.getCollectionAddress(parsedId);
+          if (collAddr && collAddr.wholesalerId === wholesalerId) {
+            validatedQuoteCollectionAddressId = parsedId;
+          } else {
+            console.warn(`POST /api/quotes: collectionAddressId ${parsedId} invalid for wholesaler ${wholesalerId} — ignoring`);
+          }
+        }
+      }
+
       // PRE-VALIDATE STOCK for all items before creating any DB records
       // This prevents orphaned order rows when stock is insufficient
       for (const item of items) {
@@ -1935,7 +1949,7 @@ export function registerPaymentRoutes(app: Express): void {
         fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
         ...(fulfillmentType === 'delivery' && resolvedDeliveryAddressId ? { deliveryAddressId: resolvedDeliveryAddressId } : {}),
         ...(fulfillmentType === 'delivery' && resolvedDeliveryAddress ? { deliveryAddress: resolvedDeliveryAddress } : {}),
-        ...(fulfillmentType === 'pickup' && collectionAddressId ? { collectionAddressId: parseInt(String(collectionAddressId), 10) } : {}),
+        ...(fulfillmentType === 'pickup' && validatedQuoteCollectionAddressId ? { collectionAddressId: validatedQuoteCollectionAddressId } : {}),
         isQuote: true,
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',

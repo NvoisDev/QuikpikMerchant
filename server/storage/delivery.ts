@@ -287,7 +287,7 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       .select({ id: orders.id })
       .from(orders)
       .where(and(
-        eq(orders.collectionAddressId as any, id),
+        eq(orders.collectionAddressId!, id),
         inArray(orders.status, ['pending', 'confirmed', 'processing'])
       ))
       .limit(1);
