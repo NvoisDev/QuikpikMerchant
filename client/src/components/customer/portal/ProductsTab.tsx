@@ -12,6 +12,7 @@ import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency } from "@shared/utils/currency";
+import { getPackQuantity } from "@shared/utils/product";
 
 interface ProductsTabProps {
   setActiveTab: (tab: string) => void;
@@ -400,7 +401,7 @@ export function ProductsTab({
                       <div className="space-y-2 mb-3">
                         <div className="flex flex-wrap gap-1 text-xs text-gray-600">
                           {(() => {
-                            const packQuantity = (product as any).packQuantity || 1;
+                            const packQuantity = getPackQuantity(product as any) ?? 1;
                             const unitSize = (product as any).unitSize;
                             const unitOfMeasure = (product as any).unitOfMeasure;
                             if (unitSize && unitOfMeasure) {
@@ -799,7 +800,7 @@ export function ProductsTab({
                         <div className="mb-2">
                           <div className="flex flex-wrap gap-1 text-xs text-gray-600">
                             {(() => {
-                              const packQuantity = (product as any).packQuantity || 1;
+                              const packQuantity = getPackQuantity(product as any) ?? 1;
                               const unitSize = (product as any).unitSize;
                               const unitOfMeasure = (product as any).unitOfMeasure;
                               if (unitSize && unitOfMeasure) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
+import { getPackQuantity } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -335,7 +336,7 @@ export default function QuickQuote() {
         promotionalOffers: product.promotionalOffers || [],
         costPrice: baseCost,
         weightKg,
-        packQuantity: (product.packQuantity || (product.quantityInPack && product.quantityInPack > 1 ? product.quantityInPack : undefined)) ?? undefined,
+        packQuantity: getPackQuantity(product) > 1 ? getPackQuantity(product) : undefined,
         unitSize: (product.sizePerUnit || product.unitSize) ?? undefined,
         unitOfMeasure: product.unitOfMeasure ?? undefined,
       }]);
