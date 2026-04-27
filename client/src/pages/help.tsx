@@ -1570,7 +1570,7 @@ Raise Invoice lets you create orders on behalf of a customer directly from the O
 3. Add products by searching and clicking — set the quantity for each item
 4. Adjust the unit price per item if you're offering custom pricing
 5. Choose the payment structure (see below)
-6. Click **"Create Quote"**
+6. Click **"Create Invoice"**
 
 #### Payment / Deposit Options
 
@@ -1703,7 +1703,7 @@ Not every sale goes through Stripe. For customers who pay by cash or bank transf
 1. Go to **Orders** and click **"Raise Invoice"**
 2. Select the customer and add the products with quantities and prices
 3. Under the payment method, choose **Pay Later (0%)** — this is the offline option
-4. Click **"Create Quote"**
+4. Click **"Create Invoice"**
 
 The order is created immediately. No Stripe payment link is generated. The customer receives an **SMS confirmation** that their order has been placed, including the order number and total amount.
 
