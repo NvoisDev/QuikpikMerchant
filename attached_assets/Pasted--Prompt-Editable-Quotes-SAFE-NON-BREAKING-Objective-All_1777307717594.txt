@@ -1,0 +1,162 @@
+🧾 Prompt: Editable Quotes (SAFE, NON-BREAKING)
+
+🎯 Objective
+
+Allow wholesalers to edit an existing quote (change quantities, remove products, or add products) before payment is completed, without breaking stock logic, pricing, or order integrity.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT allow edits after payment is completed
+Do NOT create duplicate orders
+Do NOT break stock (FEFO batch logic must remain intact)
+Do NOT overwrite original quote silently (must track changes)
+Do NOT affect Stripe or payment intent logic incorrectly
+
+👉 This is an update flow, not a new order flow
+
+🧱 PART 1 — WHEN EDITING IS ALLOWED
+
+A quote can ONLY be edited if:
+
+status = pending
+AND payment_status != paid
+🚫 Block editing if:
+Order is paid
+Order is cancelled
+Order is fulfilled
+🧱 PART 2 — EDIT CAPABILITIES
+
+Wholesaler can:
+
+✅ Increase quantity
+✅ Decrease quantity
+✅ Remove product
+✅ Add new product
+🧱 PART 3 — STOCK HANDLING (CRITICAL)
+
+Because stock is deducted on quote creation:
+
+✅ BEFORE applying changes:
+Restore original stock fully
+
+Use existing:
+
+restockUnitsToOrigin(orderId)
+✅ THEN:
+
+Re-run stock allocation using:
+
+InventoryCalculator.processOrder(updatedItems)
+
+👉 This ensures:
+
+FEFO still works
+No stock duplication
+No negative inventory
+🧱 PART 4 — PRICING & FEES
+
+After edit:
+
+Recalculate:
+Subtotal
+Delivery
+Customer transaction fee
+Wholesaler platform fee
+
+👉 MUST use existing logic (do not duplicate)
+
+🧱 PART 5 — PAYMENT HANDLING
+If payment intent EXISTS but NOT paid:
+Invalidate old payment intent
+Create a new payment intent with updated amount
+Rules:
+Do NOT reuse old payment intent
+Do NOT partially update Stripe amounts
+Ensure frontend reflects new total
+🧱 PART 6 — AUDIT TRAIL (IMPORTANT)
+
+Do NOT overwrite silently
+
+Add:
+order_edits log OR
+Append to order notes:
+Quote edited:
+- Product A: 10 → 6
+- Product B: removed
+- Product C: added (5 units)
+Timestamp: [time]
+Edited by: [user]
+
+👉 This protects:
+
+Disputes
+Refund logic
+Operational clarity
+🧱 PART 7 — UI / UX
+On Quote Page:
+
+Add:
+
+“Edit Quote” button (only if editable)
+Edit Mode:
+Same UI as quote creation
+Pre-filled values
+Clear “Save Changes” CTA
+After save:
+
+Show confirmation:
+
+Quote updated successfully
+🧱 PART 8 — EDGE CASES
+1. Product no longer in stock
+
+👉 Block save:
+
+"Insufficient stock for [product]"
+2. Product deleted from system
+
+👉 Remove automatically OR show warning
+
+3. Price changed since original quote
+
+👉 Use:
+
+Current price (recommended)
+OR
+Lock original price (if your system supports it)
+
+👉 Must be consistent across platform
+
+🧪 PART 9 — VALIDATION
+
+Confirm:
+
+Stock before edit = correct
+Stock after edit = correct
+No double deduction
+Payment still works
+Updated totals are correct
+Order remains a single record (no duplicates)
+🧾 PART 10 — OUTPUT FORMAT
+
+Agent must return:
+
+Quote editing enabled: ✅
+
+Stock handling:
+- Original stock restored ✅
+- Reallocation applied ✅
+
+Payments:
+- Old payment intent invalidated ✅
+- New intent created ✅
+
+Audit trail:
+- Edit log added ✅
+
+Validation:
+- No stock issues ✅
+- No duplicate orders ✅
+- Payment flow intact ✅
+
+Final status:
+🟢 SAFE — EDITABLE QUOTES WORKING
