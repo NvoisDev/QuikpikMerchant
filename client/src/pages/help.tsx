@@ -544,7 +544,7 @@ Problems caused by duplicates:
 
 **Step 1: Access Merge Tool**
 1. Go to **Customer Groups** in the sidebar
-2. Click the **"Merge Duplicates"** button in the toolbar
+2. Click the **"Merge Customers"** button in the toolbar
 3. System automatically scans for potential duplicates
 
 **Step 2: Review Duplicate Detection**
@@ -591,7 +591,7 @@ After merging:
 
 #### Manual vs Automatic Detection
 **Automatic Detection** (Recommended):
-- Click "Merge Duplicates" for system detection
+- Click "Merge Customers" for system detection
 - Finds customers with matching phone numbers
 - Suggests best primary account automatically
 
@@ -1286,7 +1286,7 @@ The **Margin Overview** panel in your Analytics dashboard shows a clear picture 
 | **Cost** | Total cost of goods sold (based on cost prices set on your products or batches) |
 | **Gross Margin %** | (Revenue − Cost) ÷ Revenue × 100 — the percentage of revenue that is gross profit |
 
-The panel breaks these figures down separately for **online orders** (customer portal card payments) and **quote/offline sales** (Raise Invoice orders including Pay Later and cash orders), so you can compare the profitability of each channel.
+The panel breaks these figures down separately for **online orders** (customer portal card payments) and **invoice/offline sales** (Raise Invoice orders including Pay Later and cash orders), so you can compare the profitability of each channel.
 
 #### How Cost Is Calculated
 
@@ -1584,7 +1584,7 @@ Raise Invoice lets you create orders on behalf of a customer directly from the O
 
 #### How Deposits Work — Step by Step
 
-1. **You create the quote** — choose the deposit percentage and the balance due date (7, 14, or 30 days from now)
+1. **You create the invoice** — choose the deposit percentage and the balance due date (7, 14, or 30 days from now)
 2. **Customer receives an SMS** (and email if provided) with a Stripe link to pay the deposit amount only
 3. **Deposit is paid** — the order status updates to "Deposit Paid" and both you and the customer receive a payment confirmation email showing: amount paid, remaining balance, and the due date
 4. **Balance is tracked** — visible in the order detail panel under "Payment Summary" with the exact amount outstanding and the due date
@@ -1593,8 +1593,8 @@ Raise Invoice lets you create orders on behalf of a customer directly from the O
 
 #### Balance Due Dates
 
-- Choose **7, 14, or 30 days** at quote creation — the customer sees this date in all reminders
-- The balance due date **cannot be changed** after the quote is sent; create a new quote if needed
+- Choose **7, 14, or 30 days** at invoice creation — the customer sees this date in all reminders
+- The balance due date **cannot be changed** after the invoice is created; create a new invoice if needed
 - The due date is displayed on the order card and in the order detail panel
 
 #### Pay Later (0% Deposit)
@@ -1604,7 +1604,7 @@ Raise Invoice lets you create orders on behalf of a customer directly from the O
 - When payment is received, open the order and manually update the payment status
 - No automatic reminders are sent for Pay Later orders
 
-#### Tracking Quote Orders
+#### Tracking Invoice Orders
 - Outstanding balances and due dates are visible in each order's payment summary
 - The order detail panel shows deposit %, amount paid, remaining balance, and balance due date
         `
@@ -1642,7 +1642,7 @@ Each reminder includes a personalised SMS (and email if the customer's email is 
 
 #### Payment Links Always Work
 
-Each reminder generates a **brand new Stripe payment link** valid for 7 days — even if the original quote link has long since expired. Customers will always receive a working link regardless of when the quote was created.
+Each reminder generates a **brand new Stripe payment link** valid for 7 days — even if the original invoice link has long since expired. Customers will always receive a working link regardless of when the invoice was created.
 
 #### What Happens When the Customer Pays
 
@@ -1653,7 +1653,7 @@ Each reminder generates a **brand new Stripe payment link** valid for 7 days —
 
 #### If a Customer Reports a Broken Link
 
-The previous link may have expired before the next reminder ran. The **next scheduled reminder** (tomorrow at 9 AM at the latest) will include a fresh working link automatically. You can also open the order and resend a quote notification manually from the order detail panel.
+The previous link may have expired before the next reminder ran. The **next scheduled reminder** (tomorrow at 9 AM at the latest) will include a fresh working link automatically. You can also open the order and resend an invoice notification manually from the order detail panel.
 
 #### Pay Later Orders
 
