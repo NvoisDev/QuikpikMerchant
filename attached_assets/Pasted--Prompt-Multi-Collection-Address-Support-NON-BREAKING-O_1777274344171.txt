@@ -1,0 +1,150 @@
+🧾 Prompt: Multi-Collection Address Support (NON-BREAKING)
+🎯 Objective
+
+Allow wholesalers to create and manage multiple collection addresses, and select one per order/quote — while preserving the existing single-address setup for backward compatibility.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT break existing orders, invoices, or quotes
+DO NOT remove the current collection_address field
+DO NOT change existing flows unless necessary
+DO NOT impact delivery address logic
+
+👉 This is an additive feature only
+
+🧱 PART 1: Database Design
+Create new table:
+collection_addresses
+Fields:
+id (UUID / PK)
+wholesaler_id (FK → users.id)
+name (e.g. “Main Warehouse”, “London Depot”)
+address_line_1
+address_line_2
+city
+postcode
+country
+is_default (boolean)
+is_active (boolean, default true)
+created_at
+updated_at
+IMPORTANT:
+A wholesaler can have multiple addresses
+Only ONE can be is_default = true
+🧱 PART 2: Backward Compatibility (CRITICAL)
+Existing field:
+users.collection_address
+Rules:
+KEEP this field
+Treat it as fallback/default
+Migration logic:
+When wholesaler first accesses new feature:
+Auto-create a collection_addresses record from existing address
+Mark as is_default = true
+
+👉 No data loss, no disruption
+
+🧱 PART 3: Order & Quote Integration
+Add to:
+orders table
+quotes (if separate)
+New field:
+collection_address_id (nullable)
+Logic:
+
+When creating an order/quote:
+
+If user selects an address → store collection_address_id
+If not selected → use default address
+If no records exist → fallback to legacy users.collection_address
+
+👉 This ensures nothing breaks
+
+🧱 PART 4: UI/UX — Wholesaler Settings
+In Business Settings:
+
+Replace single address with:
+
+👉 “Collection Addresses”
+
+Features:
+Add new address
+Edit address
+Delete (only if not used in active orders)
+Set as default
+Display:
+Main Warehouse (Default)
+London Depot
+Manchester Pickup Point
+🧱 PART 5: Order / Quote Flow UI
+In:
+Quick Quote
+Order creation
+Add:
+
+Dropdown:
+
+Collection Address:
+[ Main Warehouse ▼ ]
+Behaviour:
+Pre-select default
+Allow override per order
+Optional (if skipped → default used)
+🧱 PART 6: Invoice & Customer View
+On:
+Invoice
+Quote
+Customer portal
+Show:
+
+Selected collection address (not just default)
+
+👉 This is key:
+
+Orders must reflect the actual pickup location used
+
+🧱 PART 7: Permissions
+Owner → full control
+Admin → can manage addresses
+Member → can select but not edit
+Viewer → view only
+🧱 PART 8: Safety Rules
+Prevent:
+Deleting address used in:
+active orders
+pending quotes
+Instead:
+Allow marking as inactive
+🧪 PART 9: Testing
+
+Test:
+
+✅ Existing wholesalers
+No addresses created yet → fallback works
+Migration creates default correctly
+✅ New wholesalers
+Can create multiple addresses
+Default selection works
+✅ Orders
+With selected address → stored correctly
+Without selection → default used
+✅ Invoices
+Show correct collection address
+🧪 Acceptance Criteria
+Multiple addresses supported
+Default address logic works
+Existing data unaffected
+Orders store correct pickup location
+No regression in checkout, quotes, invoices
+🧠 Final Sanity Check
+
+If implementation:
+
+“Replaces old address system”
+
+🚫 WRONG
+
+If implementation:
+
+“Adds new system with fallback”
+
+✅ Correct
