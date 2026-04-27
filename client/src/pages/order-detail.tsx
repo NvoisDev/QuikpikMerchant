@@ -280,6 +280,7 @@ export default function OrderDetail() {
   const [pendingCancellationRequestId, setPendingCancellationRequestId] = useState<number | null>(null);
 
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
+  const [isFulfillConfirmOpen, setIsFulfillConfirmOpen] = useState(false);
   const [markAsPaidAmount, setMarkAsPaidAmount] = useState('');
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
@@ -1223,7 +1224,7 @@ export default function OrderDetail() {
               )}
               {order.status !== 'fulfilled' && !isViewer && (
                 <Button
-                  onClick={markAsFulfilled}
+                  onClick={() => setIsFulfillConfirmOpen(true)}
                   disabled={updatingOrderId === order.id}
                   className="bg-green-600 hover:bg-green-700 text-white min-h-[44px] disabled:opacity-50"
                 >
@@ -1978,7 +1979,7 @@ export default function OrderDetail() {
               {showFulfilled && (
                 <Button
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-2xl min-h-[44px] disabled:opacity-50"
-                  onClick={markAsFulfilled}
+                  onClick={() => setIsFulfillConfirmOpen(true)}
                   disabled={updatingOrderId === order.id}
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
@@ -1989,6 +1990,39 @@ export default function OrderDetail() {
           );
         })()
       )}
+
+      {/* Fulfill Confirmation Dialog */}
+      <Dialog open={isFulfillConfirmOpen} onOpenChange={setIsFulfillConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Mark as Fulfilled
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 pt-1">
+            Mark this order as fulfilled? This cannot be undone.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setIsFulfillConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                setIsFulfillConfirmOpen(false);
+                markAsFulfilled();
+              }}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Mark as Paid Dialog */}
       <Dialog open={isMarkAsPaidOpen} onOpenChange={setIsMarkAsPaidOpen}>
