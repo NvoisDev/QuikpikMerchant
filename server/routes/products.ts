@@ -751,7 +751,7 @@ export function registerProductRoutes(app: Express): void {
   // POST /api/ai/generate-description
   app.post('/api/ai/generate-description', requireAuth, async (req: any, res) => {
     try {
-      const { productName, category, features } = req.body;
+      const { productName, category } = req.body;
       
       if (!process.env.OPENAI_API_KEY) {
         return res.status(400).json({ message: "AI description generation is not available. Please add your OPENAI_API_KEY to use this feature." });
@@ -780,7 +780,7 @@ export function registerProductRoutes(app: Express): void {
       if (generatedDescription.length > 100) {
         const truncated = generatedDescription.slice(0, 100);
         const lastSpace = truncated.lastIndexOf(" ");
-        generatedDescription = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
+        generatedDescription = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated.slice(0, 97) + "...";
       }
 
       res.json({ description: generatedDescription });
