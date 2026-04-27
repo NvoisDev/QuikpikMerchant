@@ -1248,7 +1248,7 @@ export function registerOrderRoutes(app: Express): void {
           // Send confirmation email to customer
           await sendCustomerInvoiceEmail(customer, order, await Promise.all(orderItems.map(async item => {
             const prod = await storage.getProduct(item.productId);
-            return { ...item, productName: prod?.name || 'Product', packDescriptor: formatPackDescriptor(prod?.quantityInPack, prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, quantityInPack: prod.quantityInPack, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
+            return { ...item, productName: prod?.name || 'Product', packDescriptor: formatPackDescriptor(prod?.packQuantity || prod?.quantityInPack, prod?.sizePerUnit || prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, packQuantity: prod.packQuantity, quantityInPack: prod.quantityInPack, sizePerUnit: prod.sizePerUnit, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           })), wholesaler);
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
@@ -1582,7 +1582,7 @@ export function registerOrderRoutes(app: Express): void {
                   quantity: returnQty,
                   unitPrice: parseFloat(oi.unitPrice),
                   sellingType: ri.sellingType || oi.sellingType || 'units',
-                  packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
+                  packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
                 });
                 const keptQty = oi.quantity - returnQty;
                 if (keptQty > 0) {
@@ -1591,7 +1591,7 @@ export function registerOrderRoutes(app: Express): void {
                     quantity: keptQty,
                     unitPrice: parseFloat(oi.unitPrice),
                     sellingType: ri.sellingType || oi.sellingType || 'units',
-                    packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
+                    packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
                   });
                 }
               }
@@ -1605,7 +1605,7 @@ export function registerOrderRoutes(app: Express): void {
                   quantity: oi.quantity,
                   unitPrice: parseFloat(oi.unitPrice),
                   sellingType: oi.sellingType || 'units',
-                  packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
+                  packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
                 });
               }
             }
@@ -1617,7 +1617,7 @@ export function registerOrderRoutes(app: Express): void {
                 quantity: oi.quantity,
                 unitPrice: parseFloat(oi.unitPrice),
                 sellingType: oi.sellingType || 'units',
-                packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
+                packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
               });
             }
           }
@@ -2040,7 +2040,7 @@ export function registerOrderRoutes(app: Express): void {
               quantity: oi.quantity,
               unitPrice: parseFloat(oi.unitPrice),
               sellingType: oi.sellingType || 'units',
-              packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
+              packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
             });
           }
         }
@@ -2488,8 +2488,8 @@ export function registerOrderRoutes(app: Express): void {
           return {
             ...item,
             productName: product?.name || `Product #${item.productId}`,
-            packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
-            product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
+            packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
+            product: product ? { name: product.name, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
           };
         }));
         
@@ -2851,8 +2851,8 @@ export function registerOrderRoutes(app: Express): void {
         return {
           ...item,
           productName: product?.name || `Product #${item.productId}`,
-          packDescriptor: formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure),
-          product: product ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
+          packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
+          product: product ? { name: product.name, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
         };
       }));
 
