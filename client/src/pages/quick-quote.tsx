@@ -97,7 +97,9 @@ interface Product {
   unitWeight?: string | null;
   palletWeight?: string | null;
   totalPackageWeight?: string | null;
+  packQuantity?: number | null;
   quantityInPack?: number;
+  sizePerUnit?: string | null;
   unitSize?: string | null;
   unitOfMeasure?: string | null;
   promotionalOffers?: any[];
@@ -333,8 +335,8 @@ export default function QuickQuote() {
         promotionalOffers: product.promotionalOffers || [],
         costPrice: baseCost,
         weightKg,
-        packQuantity: product.quantityInPack && product.quantityInPack > 1 ? product.quantityInPack : undefined,
-        unitSize: product.unitSize ?? undefined,
+        packQuantity: (product.packQuantity || (product.quantityInPack && product.quantityInPack > 1 ? product.quantityInPack : undefined)) ?? undefined,
+        unitSize: (product.sizePerUnit || product.unitSize) ?? undefined,
         unitOfMeasure: product.unitOfMeasure ?? undefined,
       }]);
       setInputValues(prev => ({
