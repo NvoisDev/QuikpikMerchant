@@ -37,6 +37,7 @@ const PaymentFormContent = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [isElementReady, setIsElementReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
@@ -52,6 +53,11 @@ const PaymentFormContent = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isElementReady) {
+      toast({ title: "Payment form is still loading", description: "Payment form is still loading, please wait a moment.", variant: "destructive" });
+      return;
+    }
 
     if (!stripe || !elements || isProcessing || paymentSubmitted) {
       console.error('💳 Payment Error: Stripe/Elements not loaded or payment already in progress');
@@ -234,7 +240,7 @@ const PaymentFormContent = ({
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          <PaymentElement />
+          <PaymentElement onReady={() => setIsElementReady(true)} />
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -248,10 +254,10 @@ const PaymentFormContent = ({
 
         <Button
           type="submit"
-          disabled={!stripe || isProcessing || paymentSubmitted}
+          disabled={!isElementReady || !stripe || isProcessing || paymentSubmitted}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          {isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
+          {!isElementReady ? "Loading payment form…" : isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
         </Button>
       </form>
 
