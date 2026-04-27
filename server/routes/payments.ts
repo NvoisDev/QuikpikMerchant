@@ -2399,6 +2399,15 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
+  // Local types for the quote-edit handler — avoids `any` casts in diff logic.
+  interface QuoteEditItem {
+    productId: number;
+    quantity: number;
+    customPrice: number;
+    sellingType?: string;
+  }
+  type ExistingOrderItem = Awaited<ReturnType<typeof storage.getOrderItems>>[number] & { sellingType?: string };
+
   // PATCH /api/quotes/:id — edit an existing quote before payment is completed
   app.patch('/api/quotes/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
@@ -2411,7 +2420,7 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(400).json({ error: 'Invalid quote ID' });
       }
 
-      const { items } = req.body;
+      const items = req.body.items as QuoteEditItem[];
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'At least one item is required' });
       }
@@ -2456,7 +2465,7 @@ export function registerPaymentRoutes(app: Express): void {
       const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // ── Step 2: Snapshot existing items (read-only, for audit trail) ──────
-      const existingItems = await storage.getOrderItems(quoteId);
+      const existingItems = (await storage.getOrderItems(quoteId)) as ExistingOrderItem[];
 
       // ── Step 3: Recalculate totals (read-only) ────────────────────────────
       const productSubtotal = items.reduce((sum: number, item: any) => sum + (item.customPrice * item.quantity), 0);
@@ -2484,7 +2493,7 @@ export function registerPaymentRoutes(app: Express): void {
       for (const item of existingItems) {
         const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
         if (!product) continue; // product removed — skip; stock restore will also skip it
-        const sellingType = (item as any).sellingType || 'units';
+        const sellingType = item.sellingType || 'units';
         if (!restoredStockMap[item.productId]) {
           restoredStockMap[item.productId] = { units: product.stock || 0, pallets: product.palletStock || 0 };
         }
@@ -2618,13 +2627,13 @@ export function registerPaymentRoutes(app: Express): void {
       const changeList: string[] = [];
       const restoredProductWarnings: string[] = [];
       for (const oldItem of existingItems) {
-        const sellingTypeOld = (oldItem as any).sellingType || 'units';
-        const inNew = items.find((ni: any) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
+        const sellingTypeOld = oldItem.sellingType || 'units';
+        const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
         if (!inNew) changeList.push(`Removed product #${oldItem.productId} (${sellingTypeOld})`);
       }
       for (const newItem of items) {
         const sellingTypeNew = newItem.sellingType || 'units';
-        const inOld = existingItems.find((oi: any) => oi.productId === newItem.productId && ((oi as any).sellingType || 'units') === sellingTypeNew);
+        const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
         if (!inOld) {
           changeList.push(`Added product #${newItem.productId}: ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`);
         } else {
@@ -2648,7 +2657,7 @@ export function registerPaymentRoutes(app: Express): void {
             restoredProductWarnings.push(`Product #${item.productId} no longer exists — its stock could not be restored.`);
             continue;
           }
-          const sellingType = (item as any).sellingType || 'units';
+          const sellingType = item.sellingType || 'units';
           if (sellingType === 'pallets') {
             const newPalletStock = (product.palletStock || 0) + item.quantity;
             await trx.update(products).set({ palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
@@ -2726,8 +2735,8 @@ export function registerPaymentRoutes(app: Express): void {
         });
         // Per-item diff logs
         for (const oldItem of existingItems) {
-          const sellingTypeOld = (oldItem as any).sellingType || 'units';
-          const inNew = items.find((ni: any) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
+          const sellingTypeOld = oldItem.sellingType || 'units';
+          const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
           if (!inNew) {
             logQuoteActivity({
               quoteId: quoteId,
@@ -2742,7 +2751,7 @@ export function registerPaymentRoutes(app: Express): void {
         }
         for (const newItem of items) {
           const sellingTypeNew = newItem.sellingType || 'units';
-          const inOld = existingItems.find((oi: any) => oi.productId === newItem.productId && ((oi as any).sellingType || 'units') === sellingTypeNew);
+          const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
           if (!inOld) {
             logQuoteActivity({
               quoteId: quoteId,
