@@ -653,6 +653,7 @@ export const orders = pgTable("orders", {
   quoteExpiresAt: timestamp("quote_expires_at"), // When the quote payment link expires
   quoteSentAt: timestamp("quote_sent_at"), // When the quote was sent to customer
   quoteSentVia: varchar("quote_sent_via"), // 'sms' | 'email' | 'whatsapp'
+  lastEditedAt: timestamp("last_edited_at"), // When a wholesaler last edited this quote (null = never edited)
   
   // Deposit payment feature
   depositPercentage: integer("deposit_percentage").default(100), // 25, 50, 75, or 100 for full payment

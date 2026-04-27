@@ -91,6 +91,8 @@ export interface Order {
   updatedAt: string;
   readyToCollectAt?: string;
   isQuote?: boolean;
+  notes?: string;
+  lastEditedAt?: string | null;
   orderImages?: Array<{
     id: string;
     url: string;
@@ -240,10 +242,21 @@ export const isOnlinePayment = (order: Order): boolean =>
   order.paymentMethod === 'card' ||
   (!order.paymentMethod && !!order.stripePaymentIntentId);
 
+export const isQuoteEdited = (order: Order): boolean =>
+  !!order.isQuote && !!order.lastEditedAt;
+
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const { toast } = useToast();
 
-  const handleGenerateLink = async () => {
+  const storedLink = order.isQuote ? order.stripePaymentLinkUrl : undefined;
+
+  const handlePayNow = async () => {
+    if (storedLink) {
+      window.location.href = storedLink;
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/payment-link/${encodeURIComponent(customerPhone)}`, {
@@ -270,21 +283,47 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
     }
   };
 
+  const handleCopyLink = () => {
+    if (!storedLink) return;
+    navigator.clipboard.writeText(storedLink).then(() => {
+      setCopiedLink(true);
+      toast({ title: 'Link copied!' });
+      setTimeout(() => setCopiedLink(false), 2000);
+    }).catch(() => {
+      toast({ title: 'Could not copy link', variant: 'destructive' });
+    });
+  };
+
   return (
-    <button
-      onClick={handleGenerateLink}
-      disabled={isLoading}
-      className="mt-2 inline-flex items-center justify-center btn-theme-primary disabled:opacity-50 font-medium py-1.5 px-3 rounded-lg text-xs transition-colors self-start"
-    >
-      {isLoading ? (
-        <>
-          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          Generating Link...
-        </>
-      ) : (
-        <>💳 Pay Now</>
+    <div className="mt-2 space-y-2">
+      <button
+        onClick={handlePayNow}
+        disabled={isLoading}
+        className="inline-flex items-center justify-center btn-theme-primary disabled:opacity-50 font-medium py-1.5 px-3 rounded-lg text-xs transition-colors self-start"
+      >
+        {isLoading ? (
+          <>
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            Generating Link...
+          </>
+        ) : (
+          <>💳 Pay Now</>
+        )}
+      </button>
+      {storedLink && (
+        <div className="bg-white border border-gray-200 rounded p-2">
+          <p className="text-xs text-gray-500 mb-1">Payment link{isQuoteEdited(order) ? ' (updated)' : ''}:</p>
+          <div
+            className="text-xs text-blue-600 break-all cursor-pointer hover:bg-blue-50 p-1 rounded flex items-start gap-1"
+            onClick={handleCopyLink}
+            title="Tap to copy"
+          >
+            <span className="flex-1 break-all">{storedLink}</span>
+            <span className="flex-shrink-0 text-gray-400">{copiedLink ? '✓' : '⎘'}</span>
+          </div>
+        </div>
       )}
-    </button>
+    </div>
   );
 };
 
@@ -868,6 +907,11 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
             <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
               {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
             </Badge>
+            {isQuoteEdited(order) && (
+              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -883,6 +927,12 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                 <p className="text-orange-800 text-xs mt-1">
                   You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
                 </p>
+                {isQuoteEdited(order) && (
+                  <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 flex-shrink-0" />
+                    This quote was updated by the seller. The payment link below reflects the latest total.
+                  </p>
+                )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Order Total:</span>
@@ -1425,6 +1475,11 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
               {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
             </Badge>
+            {isQuoteEdited(order) && (
+              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -1440,6 +1495,12 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 <p className="text-orange-800 text-xs mt-1">
                   You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
                 </p>
+                {isQuoteEdited(order) && (
+                  <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 flex-shrink-0" />
+                    This quote was updated by the seller. The payment link below reflects the latest total.
+                  </p>
+                )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Order Total:</span>
@@ -2175,6 +2236,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
                       {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
                     </Badge>
+                    {isQuoteEdited(order) && (
+                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                        <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Wholesaler info */}

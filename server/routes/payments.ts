@@ -2665,6 +2665,7 @@ export function registerPaymentRoutes(app: Express): void {
           stripePaymentLinkId: newPaymentLinkId || null,
           stripePaymentLinkUrl: newPaymentLinkUrl || null,
           notes: updatedNotes,
+          lastEditedAt: new Date(),
           updatedAt: new Date(),
         }).where(eq(orders.id, quoteId));
       });

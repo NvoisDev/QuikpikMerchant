@@ -198,6 +198,8 @@ async function runStartupMigrations() {
     // Task #659: Presence / online indicator — last seen timestamp
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`,
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`,
+    // Task #704: Track when a quote was last edited so the customer portal can show a "Quote updated" badge
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMP`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
