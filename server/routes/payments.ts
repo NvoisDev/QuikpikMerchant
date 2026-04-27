@@ -2838,7 +2838,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       console.log(`✅ Quote ${existingOrder.orderNumber} updated by ${editorName}`);
 
-      const updatedOrder = await storage.getOrderById(quoteId);
+      const updatedOrder = await storage.getOrder(quoteId);
       res.json({
         success: true,
         orderId: quoteId,

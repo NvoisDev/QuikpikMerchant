@@ -138,7 +138,7 @@ export function registerOrderRoutes(app: Express): void {
       }
       
       // Verify order exists and belongs to customer
-      const order = await storage.getOrderById(parseInt(orderId));
+      const order = await storage.getOrder(parseInt(orderId));
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
@@ -423,7 +423,7 @@ export function registerOrderRoutes(app: Express): void {
       console.log(`🔄 Resending ready for collection notification for order ${orderId}`);
 
       // Get order details
-      const order = await storage.getOrderById(orderId);
+      const order = await storage.getOrder(orderId);
       if (!order) {
         return res.status(404).json({ error: 'Order not found' });
       }
@@ -702,7 +702,7 @@ export function registerOrderRoutes(app: Express): void {
       console.log(`📦 Marking order ${orderId} items as prepared`);
 
       // Get order details
-      const order = await storage.getOrderById(orderId);
+      const order = await storage.getOrder(orderId);
       if (!order) {
         return res.status(404).json({ error: 'Order not found' });
       }
