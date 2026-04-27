@@ -1719,7 +1719,7 @@ export default function ProductManagement() {
       const cmp = nameA.localeCompare(nameB);
       return marginSort === "name_asc" ? cmp : -cmp;
     }
-    if (marginSort !== "none") {
+    if (marginSort === "asc" || marginSort === "desc") {
       const getMargin = (p: any): number | null => {
         const price = parseFloat(String(p.price));
         const cost = parseFloat(String(p.costPrice));
