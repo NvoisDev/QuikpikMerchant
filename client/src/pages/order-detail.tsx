@@ -774,7 +774,7 @@ export default function OrderDetail() {
           const warningText = data.warnings?.length ? ` Note: ${data.warnings.join('; ')}` : '';
           toast({
             title: data.warnings?.length ? 'Invoice updated (with warnings)' : 'Invoice updated successfully',
-            description: `New total: ${formatMoney(parseFloat(data.total))}.${warningText}`,
+            description: `Products total: ${formatMoney(parseFloat(data.order?.subtotal ?? data.total))} (fees may apply).${warningText}`,
             variant: data.warnings?.length ? 'default' : 'default',
           });
         } else {
