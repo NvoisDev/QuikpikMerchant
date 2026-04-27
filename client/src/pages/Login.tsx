@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogIn, Loader2, Users } from "lucide-react";
+import { LogIn, Loader2, Users, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,15 +15,18 @@ export default function Login() {
   const [teamMemberLogin, setTeamMemberLogin] = useState({ email: '', password: '' });
   const [businessOwnerLogin, setBusinessOwnerLogin] = useState({ email: '', password: '' });
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
+  const [teamMemberNotice, setTeamMemberNotice] = useState(false);
+  const [defaultTab, setDefaultTab] = useState<'business' | 'team'>('business');
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { backToHome } = useAuth();
 
-  // Check for session expiry and show helpful message
+  // Check for URL error params and show helpful messages
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const expired = urlParams.get('expired');
+    const error = urlParams.get('error');
     
     if (expired === 'true') {
       toast({
@@ -31,7 +34,13 @@ export default function Login() {
         description: "Your session has expired. Please sign in again to continue.",
         variant: "default",
       });
-      // Clean up the URL
+    }
+    if (error === 'team_member_use_tab') {
+      setTeamMemberNotice(true);
+      setDefaultTab('team');
+    }
+    // Clean up the URL
+    if (expired || error) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [toast]);
@@ -205,6 +214,17 @@ export default function Login() {
             </p>
           </div>
 
+        {/* Team member notice banner */}
+        {teamMemberNotice && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+            <span>
+              <strong>You're a team member.</strong> Google sign-in is for business owners only.
+              Please use the <strong>Team Member</strong> tab below to sign in with your email and password.
+            </span>
+          </div>
+        )}
+
         {/* Login Card */}
         <Card className="border border-slate-200 shadow-sm">
           <CardHeader className="space-y-1 pb-4">
@@ -214,7 +234,7 @@ export default function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="business" className="w-full">
+            <Tabs value={defaultTab} onValueChange={(v) => setDefaultTab(v as 'business' | 'team')} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="business">Business Owner</TabsTrigger>
                 <TabsTrigger value="team">Team Member</TabsTrigger>

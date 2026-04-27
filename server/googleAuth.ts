@@ -93,18 +93,27 @@ export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
   }
 }
 
+export class GoogleAuthBlockedError extends Error {
+  constructor(public readonly code: 'pending_team_invitation' | 'team_member_use_tab') {
+    super(code);
+    this.name = 'GoogleAuthBlockedError';
+  }
+}
+
 export async function createOrUpdateUser(googleUser: GoogleUser) {
   try {
     // Step 1: Look up by Google ID first — most precise match, handles returning users
     let user = await storage.getUserByGoogleId(googleUser.id);
 
     if (user) {
-      // SECURITY: If the matched record is a team_member or non-wholesaler, do NOT sign
-      // them in as that role — create a fresh wholesaler account instead. A team_member's
-      // googleId can end up set on their record from a previous sign-in attempt, but they
-      // should always get their own separate business account via Google OAuth.
+      // SECURITY: If the matched record is a team_member, block Google sign-in and
+      // direct them to use the Team Member tab (email + password).
       const SIGNABLE_ROLES = ['wholesaler', 'admin'];
       if (!SIGNABLE_ROLES.includes(user.role)) {
+        if (user.role === 'team_member') {
+          console.log(`🚫 Google sign-in blocked: googleId matched a team_member record (id: ${user.id}) — redirecting to Team Member tab`);
+          throw new GoogleAuthBlockedError('team_member_use_tab');
+        }
         console.log(`⚠️  googleId match found a ${user.role} record (id: ${user.id}) — creating fresh wholesaler account to prevent data collision`);
         const newUser = await storage.createUser({
           id: googleUser.id,
@@ -159,7 +168,15 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         return user;
       }
 
-      // SECURITY: All email matches are non-wholesaler records (e.g. team_member, retailer,
+      // If ALL email matches are team_member records, block Google sign-in and
+      // direct them to use the Team Member tab (email + password).
+      const allAreTeamMembers = emailUsers.every(u => u.role === 'team_member');
+      if (allAreTeamMembers) {
+        console.log(`🚫 Google sign-in blocked: email ${googleUser.email} matched only team_member records — redirecting to Team Member tab`);
+        throw new GoogleAuthBlockedError('team_member_use_tab');
+      }
+
+      // SECURITY: All email matches are non-wholesaler, non-team-member records (e.g. retailer,
       // customer) that have never been Google-linked. Do NOT bind this sign-in to any of
       // those records — create a fresh wholesaler account instead.
       const roles = emailUsers.map(u => u.role).join(', ');

@@ -11,7 +11,7 @@ import { storage } from "../storage";
 import { performanceMiddleware } from "../middleware/performance";
 import { queryOptimizer, queryCache } from "../utils/connectionPool";
 import { setupAuth, isAuthenticated } from "../replitAuth";
-import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "../googleAuth";
+import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth, GoogleAuthBlockedError } from "../googleAuth";
 import { validatePassword, hashPassword, verifyPassword } from "../passwordUtils";
 import {
   insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
@@ -79,7 +79,7 @@ import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
 export {
   storage, db, performanceMiddleware, queryOptimizer, queryCache,
   setupAuth, isAuthenticated, requireAuth,
-  getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser,
+  getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, GoogleAuthBlockedError,
   validatePassword, hashPassword, verifyPassword,
   insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema,
   insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema,

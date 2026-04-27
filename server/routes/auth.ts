@@ -5,7 +5,7 @@ import {
   getPlanLimits, hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
   requireAuth, requireNotViewer, requireOwner, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
   sgMail, sql, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
-  wrapCustomerEmail
+  wrapCustomerEmail, GoogleAuthBlockedError
 } from "./shared";
 
 export function registerAuthRoutes(app: Express): void {
@@ -124,7 +124,16 @@ export function registerAuthRoutes(app: Express): void {
       const googleUser = await verifyGoogleToken(code);
       
       // Create or update user in database
-      const user = await createOrUpdateUser(googleUser);
+      let user;
+      try {
+        user = await createOrUpdateUser(googleUser);
+      } catch (authErr) {
+        if (authErr instanceof GoogleAuthBlockedError) {
+          console.log(`🚫 Google sign-in blocked (${authErr.code}) for ${googleUser.email}`);
+          return res.redirect(`/login?error=${authErr.code}`);
+        }
+        throw authErr;
+      }
 
       // Stamp last login time for wholesalers and admins
       if (user.role === 'wholesaler' || user.role === 'admin') {
