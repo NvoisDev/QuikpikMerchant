@@ -966,7 +966,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400">Last Active</p>
-                  <p className="text-sm font-medium text-gray-800 mt-1">{selectedWholesaler.lastOrderAt ? format(new Date(selectedWholesaler.lastOrderAt), "dd MMM yyyy") : "No orders yet"}</p>
+                  <p className="text-sm font-medium text-gray-800 mt-1">{selectedWholesaler.lastLoginAt ? format(new Date(selectedWholesaler.lastLoginAt), "dd MMM yyyy") : "Never"}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 col-span-2">
                   <p className="text-xs text-gray-400">Last Login</p>
