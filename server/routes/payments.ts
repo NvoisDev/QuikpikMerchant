@@ -2512,6 +2512,7 @@ export function registerPaymentRoutes(app: Express): void {
       const needsNewStripeSession = !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0;
       const packDescLinesForStripe: string[] = [];
 
+      let customerForEmail: Awaited<ReturnType<typeof storage.getUser>> | null = null;
       if (needsNewStripeSession) {
         for (const item of items) {
           const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
@@ -2522,6 +2523,7 @@ export function registerPaymentRoutes(app: Express): void {
         }
         try {
           const customer = await storage.getUser(existingOrder.retailerId);
+          customerForEmail = customer;
           const packSummary = packDescLinesForStripe.join(', ');
           // For part_paid quotes: session is for the remaining outstanding amount.
           // For unpaid quotes: session is for the deposit (or full total if no deposit).
@@ -2676,6 +2678,39 @@ export function registerPaymentRoutes(app: Express): void {
           console.log(`✅ Expired old Stripe session: ${oldStripeSessionId}`);
         } catch (expireErr: any) {
           console.warn(`⚠️ Could not expire old Stripe session ${oldStripeSessionId}: ${expireErr.message}`);
+        }
+      }
+
+      // ── Step 9: Notify customer by email if a new Stripe session was created ─
+      if (needsNewStripeSession && customerForEmail?.email && newPaymentLinkUrl) {
+        try {
+          const changeSummary = changeList.length > 0
+            ? changeList.map(c => `<li style="margin:4px 0">${c}</li>`).join('')
+            : '<li style="margin:4px 0">Quote items reviewed — no line-item changes</li>';
+          const branding = { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) };
+          const emailBody = [
+            emailHeading('Your Quote Has Been Updated', { size: '22px', color: '#10b981' }),
+            `<p style="margin:0 0 4px">Order <b>${existingOrder.orderNumber}</b></p>`,
+            `<p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>`,
+            emailCard(
+              `<p style="margin:0 0 8px"><b>${wholesaler.businessName || wholesaler.name || 'Your wholesaler'}</b> has updated your quote.</p>` +
+              `<p style="margin:0 0 4px"><b>Changes:</b></p><ul style="margin:4px 0 8px;padding-left:20px">${changeSummary}</ul>` +
+              `<p style="margin:8px 0 0"><b>New total: £${total.toFixed(2)}</b></p>`,
+              { borderColor: '#dbeafe', bgColor: '#eff6ff' }
+            ),
+            `<p style="margin:16px 0 8px">A new payment link has been created for you. Please use the link below to complete your payment — your previous link is no longer valid.</p>`,
+            emailButton('Pay Now', newPaymentLinkUrl, '#059669'),
+          ].join('');
+          const html = wrapCustomerEmail(emailBody, branding, { preheader: `Your quote ${existingOrder.orderNumber} has been updated — new total: £${total.toFixed(2)}` });
+          await sendEmail({
+            to: customerForEmail.email,
+            from: 'hello@quikpik.co',
+            subject: `Your quote ${existingOrder.orderNumber} has been updated`,
+            html,
+          });
+          console.log(`📧 Quote update email sent to customer ${customerForEmail.email}`);
+        } catch (emailErr: any) {
+          console.warn(`⚠️ Failed to send quote update email to customer: ${emailErr.message}`);
         }
       }
 
