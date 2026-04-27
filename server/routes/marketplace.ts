@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import type { Express } from "express";
 import {
   InventoryCalculator, PreciseShippingCalculator, and, buildInvoicePdf, count, db, desc,
@@ -842,13 +843,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Additional validation for unit price calculation
         const parsedUnitPrice = parseFloat(unitPrice);
         if (isNaN(parsedUnitPrice) || parsedUnitPrice <= 0) {
-          console.error(`❌ Invalid unit price for ${product.name}:`, {
-            unitPrice,
-            parsedUnitPrice,
-            effectivePrice: pricing.effectivePrice,
-            totalCost: pricing.totalCost,
-            quantity: item.quantity
-          });
+          console.error(`Invalid unit price for ${product.name}: effective=${pricing.effectivePrice} total=${pricing.totalCost} qty=${item.quantity}`);
           return res.status(400).json({ 
             message: `Invalid pricing for ${product.name}. Please contact support.` 
           });
@@ -866,28 +861,18 @@ export function registerMarketplaceRoutes(app: Express): void {
         });
       }
 
-      // Include delivery cost in fee calculation
-      console.log('🚚 Shipping cost debug:', {
-        hasShippingInfo: !!shippingInfo,
-        hasService: !!shippingInfo?.service,
-        servicePriceRaw: shippingInfo?.service?.price,
-        servicePriceType: typeof shippingInfo?.service?.price
-      });
+      // Guard: all items must belong to a single wholesaler
+      const wholesalerIds = [...new Set(validatedItems.map(i => i.product.wholesalerId))];
+      if (wholesalerIds.length > 1) {
+        return res.status(400).json({ message: "All items must belong to the same wholesaler" });
+      }
 
+      // Include delivery cost in fee calculation
       const deliveryCost = shippingInfo?.option === 'delivery' && shippingInfo?.flatDeliveryRate
         ? parseFloat(shippingInfo.flatDeliveryRate) || 0
         : parseFloat(shippingInfo?.service?.price || '0') || 0;
-      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
       
       const amountBeforeFees = productSubtotal + deliveryCost;
-      console.log('💰 Subtotal calculation:', {
-        productSubtotal,
-        deliveryCost,
-        amountBeforeFees,
-        isNaN_productSubtotal: isNaN(productSubtotal),
-        isNaN_deliveryCost: isNaN(deliveryCost),
-        isNaN_amountBeforeFees: isNaN(amountBeforeFees)
-      });
       
       // NEW FEE STRUCTURE:
       // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
@@ -909,22 +894,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0 ||
           !Number.isInteger(stripeWholesalerAmount) || stripeWholesalerAmount < 0 ||
           !Number.isInteger(stripeApplicationFee) || stripeApplicationFee < 0) {
-        console.error('❌ Invalid calculation values:', {
-          productSubtotal,
-          deliveryCost,
-          amountBeforeFees,
-          customerTransactionFee,
-          totalCustomerPays,
-          wholesalerPlatformFee,
-          wholesalerReceives,
-          stripeAmount,
-          stripeWholesalerAmount,
-          stripeApplicationFee,
-          stripeAmountIsInteger: Number.isInteger(stripeAmount),
-          stripeWholesalerAmountIsInteger: Number.isInteger(stripeWholesalerAmount),
-          stripeApplicationFeeIsInteger: Number.isInteger(stripeApplicationFee),
-          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0
-        });
+        console.error('Invalid payment calculation values:', { productSubtotal, deliveryCost, totalCustomerPays, stripeAmount, stripeWholesalerAmount });
         return res.status(400).json({ 
           message: "Invalid payment calculation. Please check your cart and try again.",
           debugInfo: {
@@ -937,15 +907,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           }
         });
       }
-
-      console.log('💰 Payment calculation:', {
-        productSubtotal: productSubtotal.toFixed(2),
-        deliveryCost: deliveryCost.toFixed(2),
-        amountBeforeFees: amountBeforeFees.toFixed(2),
-        customerTransactionFee: customerTransactionFee.toFixed(2),
-        totalCustomerPays: totalCustomerPays.toFixed(2),
-        stripeAmount: Math.round(totalCustomerPays * 100)
-      });
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
@@ -971,36 +932,28 @@ export function registerMarketplaceRoutes(app: Express): void {
           if (account.charges_enabled && account.details_submitted) {
             useConnect = true;
             connectAccountStatus = 'active';
-            console.log(`✅ Connect account ${wholesaler.stripeAccountId} is fully active`);
           } else {
             connectAccountStatus = 'incomplete';
-            console.log(`⚠️ Connect account ${wholesaler.stripeAccountId} exists but not ready:`, {
-              charges_enabled: account.charges_enabled,
-              details_submitted: account.details_submitted,
-              requirements: account.requirements?.currently_due
-            });
           }
         } catch (connectError: any) {
           connectAccountStatus = 'error';
-          console.error(`❌ Connect account validation failed for ${wholesaler.stripeAccountId}:`, connectError.message);
+          console.error(`Connect account validation failed for ${wholesaler.stripeAccountId}:`, connectError.message);
           // Don't use Connect if account verification fails
         }
       }
       
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      // Create stable idempotency key to prevent duplicate payment intents on simultaneous requests.
-      // A 5-minute time window is included so that switching shipping options (pickup ↔ delivery)
-      // always generates a fresh key rather than colliding with a previous intent that had
-      // different metadata (which Stripe rejects as an idempotency violation).
-      const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
-      const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
-      const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
-      const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
-      const shippingFlag = shippingInfo?.option === 'delivery' ? 'd' : 'p'; // Include shipping option for different payment intents
-      const timeWindow = Math.floor(Date.now() / 300000); // Rotates every 5 min — allows fresh retry after switching options
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}_${timeWindow}`.replace(/[^a-zA-Z0-9_-]/g, '');
-      const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
+      // Deterministic idempotency key: SHA-256 of wholesalerId + normalised phone + sorted items.
+      // Using the wholesaler's wholesalerId (from first validated item) ensures keys are scoped
+      // per-wholesaler and stable across retries for the same cart/customer combination.
+      const normalizedPhone = (customerPhone || 'guest').replace(/[^0-9]/g, '');
+      const sortedItemsStr = validatedItems
+        .map(i => `${i.product.id}:${i.quantity}:${i.unitPrice}`)
+        .sort()
+        .join('|');
+      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${sortedItemsStr}`;
+      const idempotencyKey = `pay_${createHash('sha256').update(idempotencyInput).digest('hex').slice(0, 32)}`;
 
       // Additional validation specifically for Stripe amount
       if (!Number.isInteger(stripeAmount) || stripeAmount <= 0 || isNaN(stripeAmount)) {
@@ -1024,7 +977,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         if (useConnect) {
           // Additional validation for transfer amounts
           if (stripeWholesalerAmount <= 0) {
-            console.error(`❌ Invalid transfer amount for Connect account: ${stripeWholesalerAmount}`);
+            console.error(`Invalid transfer amount for Connect account: ${stripeWholesalerAmount}`);
             useConnect = false; // Fallback to direct payment
           } else {
             paymentConfig.transfer_data = {
@@ -1144,9 +1097,6 @@ export function registerMarketplaceRoutes(app: Express): void {
 
     } catch (error) {
       console.error("Error creating payment intent:", error);
-      
-      console.log('❌ Payment processing error handled');
-      
       res.status(500).json({ message: "Failed to create payment intent" });
     }
   });
