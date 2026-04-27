@@ -1911,7 +1911,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         wholesalerId,
         notes,
         selectedDeliveryAddress,
-        selectedDeliveryAddressId
+        selectedDeliveryAddressId,
+        collectionAddressId,
       } = req.body;
 
       if (!Array.isArray(cart) || cart.length === 0 || !customerData || !wholesalerId || !shippingOption) {
@@ -2140,6 +2141,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         notes: notes || null,
         deliveryAddress,
         deliveryAddressId,
+        collectionAddressId: shippingOption === 'pickup' && collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
         fulfillmentType: shippingOption === 'delivery' ? 'delivery' : 'pickup',
         deliveryCarrier: shippingOption === 'delivery' ? 'Supplier Arranged' : null,
         deliveryCost: shippingCost.toFixed(2),
@@ -2940,7 +2942,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   // POST /api/marketplace/orders
   app.post('/api/marketplace/orders', async (req, res) => {
     try {
-      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes, sellingType } = req.body;
+      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes, sellingType, collectionAddressId } = req.body;
       
       if (!productId || !customerName || !customerPhone || !quantity || !totalAmount) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -3050,7 +3052,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         platformFee,
         total,
         status: 'confirmed',
-        notes: notes || `Order placed via marketplace for ${product.name}`
+        notes: notes || `Order placed via marketplace for ${product.name}`,
+        collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
       };
       
       const itemQty = parseInt(quantity);
@@ -3137,7 +3140,7 @@ Please contact the customer to confirm this order.
   // POST /api/customer/orders
   app.post("/api/customer/orders", async (req, res) => {
     try {
-      const { customerName, customerEmail, customerPhone, customerAddress, items, totalAmount, notes } = req.body;
+      const { customerName, customerEmail, customerPhone, customerAddress, items, totalAmount, notes, collectionAddressId } = req.body;
 
       if (!customerName || !customerEmail || !customerPhone || !customerAddress || !items || items.length === 0) {
         return res.status(400).json({ message: "Missing required customer or order information" });
@@ -3217,7 +3220,8 @@ Please contact the customer to confirm this order.
         total: finalTotal.toFixed(2),
         status: 'confirmed',
         deliveryAddress: customerAddress,
-        notes: notes || ''
+        notes: notes || '',
+        collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
       };
 
       const orderItems = items.map((item: any) => {

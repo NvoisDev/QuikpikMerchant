@@ -689,6 +689,11 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
       }
     } catch (_) {}
   }
+  // Resolve collection address BEFORE entering the sync Promise callback
+  let linkedCollAddr: any = null;
+  if (order.collectionAddressId) {
+    try { linkedCollAddr = await storage.getCollectionAddress(order.collectionAddressId); } catch (_) {}
+  }
   const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -756,10 +761,18 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
       fromY += doc.font('Helvetica-Bold').fontSize(10).heightOfString(wholesaler.businessPhone, { width: COL_W - 8 }) + 3;
     }
     const fromLines: string[] = [];
-    if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
-    const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
-    if (cityPostal) fromLines.push(cityPostal);
-    if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
+    // Prefer the linked collection address if the order specifies one (resolved before this callback)
+    if (linkedCollAddr) {
+      if (linkedCollAddr.addressLine1) fromLines.push(linkedCollAddr.addressLine1);
+      if (linkedCollAddr.addressLine2) fromLines.push(linkedCollAddr.addressLine2);
+      const collCityPostal = [linkedCollAddr.city, linkedCollAddr.postcode].filter(Boolean).join(' ');
+      if (collCityPostal) fromLines.push(collCityPostal);
+    } else {
+      if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
+      const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
+      if (cityPostal) fromLines.push(cityPostal);
+      if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
+    }
     if (wholesaler.email) fromLines.push(wholesaler.email);
     for (const line of fromLines) {
       doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(line, c3, fromY, { width: COL_W - 8 });

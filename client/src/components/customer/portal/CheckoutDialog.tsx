@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Minus, Plus, Trash2, Share2, Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { AddressSelector } from "@/components/customer/AddressSelector";
 import { StripeCheckoutForm } from "@/components/customer/StripeCheckoutForm";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import type { CartItem } from "@/components/customer/portal-types";
@@ -78,6 +80,7 @@ export function CheckoutDialog({
   setShowThankYou,
 }: CheckoutDialogProps) {
   const { toast } = useToast();
+  const [selectedCollectionAddressId, setSelectedCollectionAddressId] = useState<number | null>(null);
 
   const { data: collectionAddresses = [] } = useQuery<any[]>({
     queryKey: ["/api/wholesalers", wholesalerId, "collection-addresses"],
@@ -91,6 +94,17 @@ export function CheckoutDialog({
   });
 
   const defaultCollectionAddress = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
+
+  useEffect(() => {
+    if (collectionAddresses.length > 0 && selectedCollectionAddressId === null) {
+      const def = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
+      if (def) setSelectedCollectionAddressId(def.id);
+    }
+  }, [collectionAddresses, selectedCollectionAddressId]);
+
+  const selectedCollectionAddress = selectedCollectionAddressId
+    ? collectionAddresses.find((a: any) => a.id === selectedCollectionAddressId) || defaultCollectionAddress
+    : defaultCollectionAddress;
 
   return (
     <Dialog open={showCheckout} onOpenChange={(open) => { setShowCheckout(open); if (!open) setPayLaterMode(false); }}>
@@ -450,15 +464,35 @@ export function CheckoutDialog({
                       <span>Pickup from store</span>
                       <span className="text-green-600 font-medium">FREE</span>
                     </div>
-                    {defaultCollectionAddress ? (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">{defaultCollectionAddress.name}</p>
-                        <p className="text-sm text-gray-600">
-                          {[defaultCollectionAddress.addressLine1, defaultCollectionAddress.addressLine2, defaultCollectionAddress.city, defaultCollectionAddress.postcode].filter(Boolean).join(', ')}
-                        </p>
-                        {collectionAddresses.length > 1 && (
-                          <p className="text-xs text-gray-400 mt-0.5">{collectionAddresses.length} pickup locations available</p>
+                    {collectionAddresses.length > 1 ? (
+                      <div className="mt-1.5" onClick={e => e.stopPropagation()}>
+                        <Select
+                          value={selectedCollectionAddressId ? String(selectedCollectionAddressId) : undefined}
+                          onValueChange={(val) => setSelectedCollectionAddressId(parseInt(val, 10))}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Choose pickup location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {collectionAddresses.map((a: any) => (
+                              <SelectItem key={a.id} value={String(a.id)}>
+                                {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedCollectionAddress && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {[selectedCollectionAddress.addressLine1, selectedCollectionAddress.addressLine2, selectedCollectionAddress.city, selectedCollectionAddress.postcode].filter(Boolean).join(', ')}
+                          </p>
                         )}
+                      </div>
+                    ) : selectedCollectionAddress ? (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">{selectedCollectionAddress.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {[selectedCollectionAddress.addressLine1, selectedCollectionAddress.addressLine2, selectedCollectionAddress.city, selectedCollectionAddress.postcode].filter(Boolean).join(', ')}
+                        </p>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600">
@@ -696,6 +730,7 @@ export function CheckoutDialog({
                             notes: customerData.notes || null,
                             selectedDeliveryAddress: customerData.selectedDeliveryAddress || null,
                             selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id || null,
+                            collectionAddressId: customerData.shippingOption === 'pickup' ? (selectedCollectionAddressId || null) : null,
                           }),
                         });
                         if (!response.ok) {

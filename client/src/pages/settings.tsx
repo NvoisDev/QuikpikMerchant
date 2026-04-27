@@ -263,6 +263,7 @@ function CollectionAddressesSection() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<CollectionAddress | null>(null);
   const [toDelete, setToDelete] = useState<CollectionAddress | null>(null);
+  const [deleteBlockedFor, setDeleteBlockedFor] = useState<CollectionAddress | null>(null);
   const emptyForm = { name: '', addressLine1: '', addressLine2: '', city: '', postcode: '', country: 'United Kingdom' };
   const [form, setForm] = useState(emptyForm);
 
@@ -297,6 +298,10 @@ function CollectionAddressesSection() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const r = await apiRequest("DELETE", `/api/collection-addresses/${id}`);
+      if (r.status === 409) {
+        const e = await r.json();
+        throw new Error("IN_USE:" + (e.error || "Address is in use"));
+      }
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to delete"); }
       return r.json();
     },
@@ -305,12 +310,34 @@ function CollectionAddressesSection() {
       toast({ title: "Address deleted" });
       setToDelete(null);
     },
-    onError: (e: Error) => { toast({ title: e.message, variant: "destructive" }); setToDelete(null); },
+    onError: (e: Error) => {
+      if (e.message.startsWith("IN_USE:")) {
+        setDeleteBlockedFor(toDelete);
+        setToDelete(null);
+      } else {
+        toast({ title: e.message, variant: "destructive" });
+        setToDelete(null);
+      }
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await apiRequest("PATCH", `/api/collection-addresses/${id}`, { isActive: false });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection-addresses"] });
+      toast({ title: "Address deactivated — hidden from customers" });
+      setDeleteBlockedFor(null);
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
   const setDefaultMutation = useMutation({
     mutationFn: async (id: number) => {
-      const r = await apiRequest("POST", `/api/collection-addresses/${id}/set-default`);
+      const r = await apiRequest("PATCH", `/api/collection-addresses/${id}/set-default`);
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
       return r.json();
     },
@@ -432,6 +459,27 @@ function CollectionAddressesSection() {
             <Button variant="outline" size="sm" onClick={() => setToDelete(null)} disabled={deleteMutation.isPending}>Cancel</Button>
             <Button size="sm" variant="destructive" disabled={deleteMutation.isPending} onClick={() => toDelete && deleteMutation.mutate(toDelete.id)}>
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteBlockedFor} onOpenChange={(open) => { if (!open) setDeleteBlockedFor(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-amber-500" />Cannot delete address
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 pt-1">
+              <span className="font-medium text-gray-900">{deleteBlockedFor?.name}</span> is linked to active or pending orders and cannot be deleted right now.
+              <br /><br />
+              You can <strong>deactivate</strong> it instead — it will be hidden from customers and quotes but kept for historical records.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={() => setDeleteBlockedFor(null)} disabled={deactivateMutation.isPending}>Cancel</Button>
+            <Button size="sm" disabled={deactivateMutation.isPending} onClick={() => deleteBlockedFor && deactivateMutation.mutate(deleteBlockedFor.id)}>
+              {deactivateMutation.isPending ? "Deactivating…" : "Deactivate instead"}
             </Button>
           </DialogFooter>
         </DialogContent>

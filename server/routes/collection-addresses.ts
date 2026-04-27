@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storage, requireAuth, insertCollectionAddressSchema } from "./shared";
+import { storage, requireAuth, requireOwner, insertCollectionAddressSchema } from "./shared";
 
 export function registerCollectionAddressRoutes(app: Express) {
   // GET /api/wholesalers/:wholesalerId/collection-addresses — public, for customer portal
@@ -28,8 +28,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // POST /api/collection-addresses — create new
-  app.post("/api/collection-addresses", requireAuth, async (req: any, res) => {
+  // POST /api/collection-addresses — create new (owner only)
+  app.post("/api/collection-addresses", requireAuth, requireOwner, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -43,8 +43,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // PATCH /api/collection-addresses/:id — update
-  app.patch("/api/collection-addresses/:id", requireAuth, async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id — update (owner only)
+  app.patch("/api/collection-addresses/:id", requireAuth, requireOwner, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -61,8 +61,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // DELETE /api/collection-addresses/:id — delete
-  app.delete("/api/collection-addresses/:id", requireAuth, async (req: any, res) => {
+  // DELETE /api/collection-addresses/:id — delete (owner only)
+  app.delete("/api/collection-addresses/:id", requireAuth, requireOwner, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -72,15 +72,15 @@ export function registerCollectionAddressRoutes(app: Express) {
       res.json({ success: true });
     } catch (err: any) {
       if (err?.message === "COLLECTION_ADDRESS_IN_USE") {
-        return res.status(409).json({ error: "Cannot delete an address linked to active or pending orders." });
+        return res.status(409).json({ error: "Cannot delete an address linked to active or pending orders. Deactivate it instead." });
       }
       console.error("deleteCollectionAddress error:", err);
       res.status(500).json({ error: "Failed to delete collection address" });
     }
   });
 
-  // POST /api/collection-addresses/:id/set-default — set as default
-  app.post("/api/collection-addresses/:id/set-default", requireAuth, async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id/set-default — set as default (owner only)
+  app.patch("/api/collection-addresses/:id/set-default", requireAuth, requireOwner, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
