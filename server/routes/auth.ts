@@ -61,6 +61,18 @@ export function registerAuthRoutes(app: Express): void {
           updates.companyRegistrationNumber = trimmed;
         }
       }
+
+      if (updates.storeTagline !== undefined) {
+        const trimmedTagline = updates.storeTagline == null ? '' : String(updates.storeTagline).trim();
+        if (!trimmedTagline) {
+          updates.storeTagline = null;
+        } else {
+          if (trimmedTagline.length > 120) {
+            return res.status(400).json({ success: false, message: "Store tagline must be 120 characters or fewer." });
+          }
+          updates.storeTagline = trimmedTagline;
+        }
+      }
       
       console.log('👤 Updating profile for user:', user.id, updates);
 

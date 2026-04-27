@@ -1717,9 +1717,11 @@ export default function CustomerPortal() {
                     wholesaler?.businessName || "Wholesale Store"
                   )}
                 </h1>
-                <p className="text-xs text-gray-500 truncate leading-tight hidden sm:block">
-                  {wholesaler?.storeTagline || "Premium wholesale products"}
-                </p>
+                {wholesaler?.storeTagline && (
+                  <p className="text-xs text-gray-500 truncate leading-tight hidden sm:block">
+                    {wholesaler.storeTagline}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1898,7 +1900,7 @@ export default function CustomerPortal() {
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900 text-sm">{wholesalerItem.businessName || "Business"}</h4>
-                    <p className="text-xs text-gray-500 truncate">{wholesalerItem.storeTagline || "Wholesale products"}</p>
+                    {wholesalerItem.storeTagline && <p className="text-xs text-gray-500 truncate">{wholesalerItem.storeTagline}</p>}
                     {wholesalerItem.location && (
                       <p className="text-xs text-gray-400 flex items-center mt-0.5">
                         <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
@@ -2028,9 +2030,11 @@ export default function CustomerPortal() {
                   <p className="text-sm font-semibold text-green-700 mb-1">
                     {timeGreeting} — browse {wholesaler?.businessName || 'this wholesale store'}
                   </p>
-                  <p className="text-gray-500 mt-1 max-w-2xl">
-                    {wholesaler?.storeTagline || 'Browse available wholesale products. Sign in or request access to unlock prices and place orders.'}
-                  </p>
+                  {wholesaler?.storeTagline && (
+                    <p className="text-gray-500 mt-1 max-w-2xl">
+                      {wholesaler.storeTagline}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

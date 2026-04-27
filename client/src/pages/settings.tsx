@@ -644,6 +644,7 @@ export default function Settings() {
   });
   const [businessForm, setBusinessForm] = useState({
     businessName: user?.businessName || '',
+    storeTagline: user?.storeTagline ?? '',
     businessPhone: user?.businessPhone || '',
     businessAddress: user?.businessAddress || '',
     city: user?.city || '',
@@ -672,6 +673,7 @@ export default function Settings() {
       });
       setBusinessForm({
         businessName: user.businessName || '',
+        storeTagline: user.storeTagline ?? '',
         businessPhone: user.businessPhone || '',
         businessAddress: user.businessAddress || '',
         city: user.city || '',
@@ -1099,6 +1101,7 @@ export default function Settings() {
                             setIsEditingBusiness(false);
                             setBusinessForm({
                               businessName: user?.businessName || '',
+                              storeTagline: user?.storeTagline ?? '',
                               businessPhone: user?.businessPhone || '',
                               businessAddress: user?.businessAddress || '',
                               city: user?.city || '',
@@ -1130,6 +1133,10 @@ export default function Settings() {
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Trading Name</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.businessName || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Store Tagline</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.storeTagline || <span className="text-gray-400 italic">None (hidden on portal)</span>}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Business Phone</dt>
@@ -1216,6 +1223,18 @@ export default function Settings() {
                             type="text"
                             value={businessForm.businessName}
                             onChange={(e) => setBusinessForm({...businessForm, businessName: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Store Tagline</label>
+                          <p className="text-xs text-gray-400 mb-1">Shown beneath your business name on the customer portal. Leave blank to hide it.</p>
+                          <input
+                            type="text"
+                            value={businessForm.storeTagline}
+                            onChange={(e) => setBusinessForm({...businessForm, storeTagline: e.target.value})}
+                            maxLength={120}
+                            placeholder="e.g. Premium wholesale products"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
