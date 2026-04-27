@@ -370,6 +370,8 @@ export function registerAnalyticsRoutes(app: Express): void {
           batchId: orderItems.batchId,
           batchCostPrice: productBatches.costPrice,
           productCostPrice: products.costPrice,
+          sellingType: orderItems.sellingType,
+          unitsPerPallet: products.unitsPerPallet,
         })
         .from(orderItems)
         .leftJoin(productBatches, eq(orderItems.batchId, productBatches.id))
@@ -401,7 +403,8 @@ export function registerAnalyticsRoutes(app: Express): void {
           continue;
         }
 
-        const cost = parseFloat(resolvedCostPrice!) * item.quantity;
+        const unitMultiplier = item.sellingType === 'pallets' ? (item.unitsPerPallet || 1) : 1;
+        const cost = parseFloat(resolvedCostPrice!) * item.quantity * unitMultiplier;
 
         if (isQuote) {
           quotesCoveredRevenue += revenue;
