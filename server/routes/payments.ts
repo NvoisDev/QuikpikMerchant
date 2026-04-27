@@ -2294,6 +2294,7 @@ export function registerPaymentRoutes(app: Express): void {
       console.log(`✅ Quote ${orderNumber} created successfully`);
 
       // Send confirmation email to wholesaler
+
       try {
         if (wholesaler.email) {
           const isDeposit = validDepositPercentage > 0 && validDepositPercentage < 100;
@@ -2361,6 +2362,342 @@ export function registerPaymentRoutes(app: Express): void {
     } catch (error) {
       console.error('❌ Error creating quote:', error);
       res.status(500).json({ error: 'Failed to create quote' });
+    }
+  });
+
+  // PATCH /api/quotes/:id — edit an existing quote before payment is completed
+  app.patch('/api/quotes/:id', requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ error: 'Invalid quote ID' });
+      }
+
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'At least one item is required' });
+      }
+
+      // Server-side input validation for each item
+      for (const item of items) {
+        if (!Number.isInteger(item.productId) || item.productId <= 0) {
+          return res.status(400).json({ error: 'Each item must have a valid productId', errorType: 'VALIDATION_ERROR' });
+        }
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          return res.status(400).json({ error: 'Item quantity must be a positive integer', errorType: 'VALIDATION_ERROR' });
+        }
+        if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice < 0) {
+          return res.status(400).json({ error: 'Item price must be a non-negative number', errorType: 'VALIDATION_ERROR' });
+        }
+        const normalizedType = item.sellingType || 'units';
+        if (!['units', 'pallets'].includes(normalizedType)) {
+          return res.status(400).json({ error: 'Invalid sellingType — must be "units" or "pallets"', errorType: 'VALIDATION_ERROR' });
+        }
+      }
+
+      // ── Step 1: Validate editability (read-only) ──────────────────────────
+      const [existingOrder] = await db.select().from(orders).where(eq(orders.id, quoteId)).limit(1);
+      if (!existingOrder) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+      if (existingOrder.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      if (!existingOrder.isQuote) {
+        return res.status(400).json({ error: 'Only quotes can be edited' });
+      }
+      if (existingOrder.status !== 'pending') {
+        return res.status(400).json({ error: `Quote cannot be edited — current status is "${existingOrder.status}". Only pending quotes can be edited.` });
+      }
+      if (existingOrder.paymentStatus === 'paid') {
+        return res.status(400).json({ error: 'Quote cannot be edited after payment is completed' });
+      }
+
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) return res.status(404).json({ error: 'Wholesaler not found' });
+      const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
+
+      // ── Step 2: Snapshot existing items (read-only, for audit trail) ──────
+      const existingItems = await storage.getOrderItems(quoteId);
+
+      // ── Step 3: Recalculate totals (read-only) ────────────────────────────
+      const productSubtotal = items.reduce((sum: number, item: any) => sum + (item.customPrice * item.quantity), 0);
+      const quoteDeliveryCharge = parseFloat(existingOrder.deliveryCost || '0');
+      const subtotal = productSubtotal + quoteDeliveryCharge;
+      const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
+      const isOfflinePayment = existingOrder.paymentMethod ? OFFLINE_METHODS.includes(existingOrder.paymentMethod) : false;
+      const depositPercentage = existingOrder.depositPercentage || 100;
+      const isPayLaterEdit = depositPercentage === 0;
+      const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
+      const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0);
+      const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
+      const platformFee = subtotal * feeRate;
+      const total = subtotal + customerTransactionFee;
+      const depositAmount = total * (depositPercentage / 100);
+      // Correctly account for any prior partial payments when computing outstanding
+      const alreadyPaid = parseFloat(existingOrder.amountPaid || '0');
+      const baseOutstanding = isPayLaterEdit ? subtotal : total;
+      const newAmountOutstanding = Math.max(baseOutstanding - alreadyPaid, 0);
+
+      // ── Step 4: Pre-validate new items stock BEFORE any mutations ─────────
+      // We compute the restored stock in memory to validate against the correct post-restore levels
+      // (avoids needing to actually restore stock before validation).
+      const restoredStockMap: Record<number, { units: number; pallets: number }> = {};
+      for (const item of existingItems) {
+        const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+        if (!product) continue; // product removed — skip; stock restore will also skip it
+        const sellingType = (item as any).sellingType || 'units';
+        if (!restoredStockMap[item.productId]) {
+          restoredStockMap[item.productId] = { units: product.stock || 0, pallets: product.palletStock || 0 };
+        }
+        if (sellingType === 'pallets') {
+          restoredStockMap[item.productId].pallets += item.quantity;
+        } else {
+          restoredStockMap[item.productId].units += item.quantity;
+        }
+      }
+
+      // Count quantities by productId+sellingType for new items (consolidate duplicates)
+      const newItemMap: Record<string, { productId: number; quantity: number; sellingType: string; customPrice: number }> = {};
+      for (const item of items) {
+        const key = `${item.productId}:${item.sellingType || 'units'}`;
+        if (newItemMap[key]) {
+          newItemMap[key].quantity += item.quantity;
+        } else {
+          newItemMap[key] = { productId: item.productId, quantity: item.quantity, sellingType: item.sellingType || 'units', customPrice: item.customPrice };
+        }
+      }
+
+      for (const key of Object.keys(newItemMap)) {
+        const newItem = newItemMap[key];
+        const [productForCheck] = await db.select().from(products)
+          .where(and(eq(products.id, newItem.productId), eq(products.wholesalerId, wholesalerId)));
+        if (!productForCheck) {
+          return res.status(400).json({ error: 'One or more products not found', errorType: 'PRODUCT_NOT_FOUND' });
+        }
+        // Use post-restore stock level for validation
+        const postRestoreStock = restoredStockMap[newItem.productId] || { units: productForCheck.stock || 0, pallets: productForCheck.palletStock || 0 };
+        if (newItem.sellingType === 'units') {
+          const available = postRestoreStock.units;
+          if (available < newItem.quantity) {
+            return res.status(400).json({
+              error: `"${productForCheck.name}" has insufficient stock. ${available} units available, ${newItem.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem.quantity,
+            });
+          }
+        } else if (newItem.sellingType === 'pallets') {
+          const available = postRestoreStock.pallets;
+          if (available < newItem.quantity) {
+            return res.status(400).json({
+              error: `"${productForCheck.name}" has insufficient pallet stock. ${available} pallets available, ${newItem.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem.quantity,
+            });
+          }
+        }
+      }
+
+      // ── Step 5: Create new Stripe session BEFORE mutating DB ──────────────
+      // If Stripe creation fails for online-payable quotes, we abort before changing anything.
+      // Start with empty link values — they will be set only if a new session is created.
+      // This ensures that if no new session is needed (e.g., outstanding = 0), the old stale
+      // link is cleared rather than preserved.
+      let newPaymentLinkUrl = '';
+      let newPaymentLinkId = '';
+      // Need a new session whenever the quote is online, not offline, and hasn't been fully paid.
+      // This covers both 'unpaid' (standard deposit or full) and 'part_paid' (remaining balance).
+      const needsNewStripeSession = !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0;
+      const packDescLinesForStripe: string[] = [];
+
+      if (needsNewStripeSession) {
+        for (const item of items) {
+          const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+          if (product) {
+            const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
+            packDescLinesForStripe.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
+          }
+        }
+        try {
+          const customer = await storage.getUser(existingOrder.retailerId);
+          const packSummary = packDescLinesForStripe.join(', ');
+          // For part_paid quotes: session is for the remaining outstanding amount.
+          // For unpaid quotes: session is for the deposit (or full total if no deposit).
+          const isPartPaid = existingOrder.paymentStatus === 'part_paid';
+          const sessionAmountPence = Math.round((isPartPaid ? newAmountOutstanding : depositAmount) * 100);
+          const sessionLabel = isPartPaid
+            ? `Remaining Balance - Order ${existingOrder.orderNumber}`
+            : depositPercentage < 100
+              ? `Deposit (${depositPercentage}%) - Order ${existingOrder.orderNumber}`
+              : `Order ${existingOrder.orderNumber}`;
+          const sessionDescription = isPartPaid
+            ? `Remaining balance after partial payment. Total: £${total.toFixed(2)}. Already paid: £${alreadyPaid.toFixed(2)}.${packSummary ? ` | ${packSummary}` : ''}`
+            : depositPercentage < 100
+              ? `Deposit for quote. Full order: £${total.toFixed(2)}. Remaining: £${newAmountOutstanding.toFixed(2)}${packSummary ? ` | ${packSummary}` : ''}`
+              : `Full payment incl. service fee${packSummary ? ` | ${packSummary}` : ''}`;
+          const lineItems = [{ price_data: { currency: 'gbp', product_data: { name: sessionLabel, description: sessionDescription }, unit_amount: sessionAmountPence }, quantity: 1 }];
+
+          let quoteUseConnect = false;
+          if (wholesaler.stripeAccountId) {
+            try {
+              const acct = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+              if (acct.charges_enabled && acct.details_submitted) quoteUseConnect = true;
+            } catch {}
+          }
+          const wholesalerTotal = subtotal - platformFee;
+          // Session charge amount (in pence): for part_paid it's the remaining outstanding, otherwise the deposit
+          const sessionChargeForConnect = isPartPaid ? newAmountOutstanding : depositAmount;
+          const wholesalerSessionAmount = Math.round(sessionChargeForConnect * (wholesalerTotal / (total || 1)) * 100);
+          const baseUrl = process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
+          const baseSessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+            payment_method_types: ['card'], line_items: lineItems, mode: 'payment',
+            success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/store/${wholesalerId}`,
+            metadata: { orderId: quoteId.toString(), orderNumber: existingOrder.orderNumber, wholesalerId, customerId: existingOrder.retailerId, isQuote: 'true', depositPercentage: depositPercentage.toString(), depositAmount: depositAmount.toFixed(2), totalAmount: total.toFixed(2), alreadyPaid: alreadyPaid.toFixed(2) },
+            customer_email: customer?.email || undefined,
+            expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+          };
+          let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>> | null = null;
+          if (quoteUseConnect && wholesalerSessionAmount > 0) {
+            try {
+              session = await stripe.checkout.sessions.create({ ...baseSessionParams, payment_intent_data: { transfer_data: { destination: wholesaler.stripeAccountId!, amount: wholesalerSessionAmount } } });
+            } catch {}
+          }
+          if (!session) session = await stripe.checkout.sessions.create(baseSessionParams);
+          newPaymentLinkUrl = session.url || '';
+          newPaymentLinkId = session.id;
+        } catch (stripeError: any) {
+          console.error(`❌ Stripe session creation failed on quote edit:`, stripeError.message);
+          return res.status(500).json({ error: 'Failed to create payment link — quote not changed. Please try again.' });
+        }
+      }
+
+      // ── Step 6: Build audit trail (read-only, uses existingItems snapshot) ─
+      const editorName = req.user.role === 'team_member'
+        ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member'
+        : `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Wholesaler';
+      const timestamp = new Date().toISOString();
+      const changeList: string[] = [];
+      const restoredProductWarnings: string[] = [];
+      for (const oldItem of existingItems) {
+        const sellingTypeOld = (oldItem as any).sellingType || 'units';
+        const inNew = items.find((ni: any) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
+        if (!inNew) changeList.push(`Removed product #${oldItem.productId} (${sellingTypeOld})`);
+      }
+      for (const newItem of items) {
+        const sellingTypeNew = newItem.sellingType || 'units';
+        const inOld = existingItems.find((oi: any) => oi.productId === newItem.productId && ((oi as any).sellingType || 'units') === sellingTypeNew);
+        if (!inOld) {
+          changeList.push(`Added product #${newItem.productId}: ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`);
+        } else {
+          const parts: string[] = [];
+          if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
+          if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${parseFloat(inOld.unitPrice || '0').toFixed(2)}→£${newItem.customPrice.toFixed(2)}`);
+          if (parts.length > 0) changeList.push(`Product #${newItem.productId}: ${parts.join(', ')}`);
+        }
+      }
+      const auditEntry = `[Quote edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${total.toFixed(2)}.`;
+      const updatedNotes = existingOrder.notes ? `${existingOrder.notes}\n${auditEntry}` : auditEntry;
+
+      // ── Step 7: Atomic DB transaction — stock restore → item swap → allocate ─
+      const oldStripeSessionId = existingOrder.stripePaymentLinkId;
+      await db.transaction(async (trx) => {
+        // 7a. Restore stock from old items
+        for (const item of existingItems) {
+          const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
+          if (!product) {
+            console.warn(`Quote edit: product ${item.productId} no longer exists, skipping stock restore`);
+            restoredProductWarnings.push(`Product #${item.productId} no longer exists — its stock could not be restored.`);
+            continue;
+          }
+          const sellingType = (item as any).sellingType || 'units';
+          if (sellingType === 'pallets') {
+            const newPalletStock = (product.palletStock || 0) + item.quantity;
+            await trx.update(products).set({ palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
+            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Quote edit — restoring ${item.quantity} pallets`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+          } else {
+            const newUnitStock = (product.stock || 0) + item.quantity;
+            await trx.update(products).set({ stock: newUnitStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
+            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Quote edit — restoring ${item.quantity} units`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+          }
+        }
+
+        // 7b. Delete old order items and insert new ones
+        await trx.delete(orderItems).where(eq(orderItems.orderId, quoteId));
+        for (const item of items) {
+          const sellingType = item.sellingType || 'units';
+          await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
+        }
+
+        // 7c. Allocate stock for new items
+        for (const item of items) {
+          const sellingType = item.sellingType || 'units';
+          const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
+          if (!product) continue;
+          // Re-verify stock inside the transaction to catch concurrent modifications
+          if (sellingType === 'pallets' && (product.palletStock || 0) < item.quantity) {
+            const err: any = new Error(`Insufficient pallet stock for "${product.name}" after concurrent update. ${product.palletStock || 0} available, ${item.quantity} requested.`);
+            err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = product.palletStock || 0; err.requested = item.quantity;
+            throw err;
+          }
+          if (sellingType === 'units' && (product.stock || 0) < item.quantity) {
+            const err: any = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${product.stock || 0} available, ${item.quantity} requested.`);
+            err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = product.stock || 0; err.requested = item.quantity;
+            throw err;
+          }
+          const orderResult = InventoryCalculator.processOrder(item.quantity, sellingType as 'units' | 'pallets', { stock: product.stock, palletStock: product.palletStock, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
+          const { newUnitStock, newPalletStock } = orderResult;
+          await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
+          await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: sellingType === 'pallets' ? 'pallets' : 'units', stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0), stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock, reason: `Quote edit — allocating ${item.quantity} ${sellingType}`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+        }
+
+        // 7d. Update order totals and payment link
+        await trx.update(orders).set({
+          subtotal: productSubtotal.toFixed(2),
+          platformFee: platformFee.toFixed(2),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
+          total: total.toFixed(2),
+          amountOutstanding: newAmountOutstanding.toFixed(2),
+          stripePaymentLinkId: newPaymentLinkId || null,
+          stripePaymentLinkUrl: newPaymentLinkUrl || null,
+          notes: updatedNotes,
+          updatedAt: new Date(),
+        }).where(eq(orders.id, quoteId));
+      });
+
+      // ── Step 8: Expire old Stripe session AFTER successful DB commit ───────
+      // Non-critical: failure here doesn't affect data integrity.
+      // Always expire old session if it differs from new one (or if no new one created — meaning no payment needed).
+      if (oldStripeSessionId && oldStripeSessionId !== newPaymentLinkId) {
+        try {
+          await stripe.checkout.sessions.expire(oldStripeSessionId);
+          console.log(`✅ Expired old Stripe session: ${oldStripeSessionId}`);
+        } catch (expireErr: any) {
+          console.warn(`⚠️ Could not expire old Stripe session ${oldStripeSessionId}: ${expireErr.message}`);
+        }
+      }
+
+      console.log(`✅ Quote ${existingOrder.orderNumber} updated by ${editorName}`);
+
+      const updatedOrder = await storage.getOrderById(quoteId);
+      res.json({
+        success: true,
+        orderId: quoteId,
+        orderNumber: existingOrder.orderNumber,
+        total: total.toFixed(2),
+        paymentLink: newPaymentLinkUrl,
+        order: updatedOrder,
+        ...(restoredProductWarnings.length > 0 ? { warnings: restoredProductWarnings } : {}),
+      });
+    } catch (error: any) {
+      if (error?.code === 'OUT_OF_STOCK') {
+        console.warn(`⚠️ Quote edit stock race: ${error.message}`);
+        return res.status(400).json({ error: error.message, errorType: 'OUT_OF_STOCK', productName: error.productName, available: error.available, requested: error.requested });
+      }
+      console.error('❌ Error updating quote:', error);
+      res.status(500).json({ error: 'Failed to update quote' });
     }
   });
 

@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
-  RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2
+  RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
+  Pencil, Plus, Minus, Search
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,29 @@ interface OrderItem {
   };
   appliedOfferLabel?: string | null;
   freeItems?: number;
+}
+
+interface EditItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  customPrice: number;
+  sellingType: 'units' | 'pallets';
+  imageUrl?: string;
+  stock?: number;
+  palletStock?: number;
+}
+
+interface SimpleProduct {
+  id: number;
+  name: string;
+  price: string;
+  palletPrice?: string;
+  stock: number;
+  palletStock?: number;
+  imageUrl?: string;
+  sellingFormat?: string;
+  unitsPerPallet?: number;
 }
 
 interface Order {
@@ -259,6 +283,18 @@ export default function OrderDetail() {
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+
+  const [showEditMode, setShowEditMode] = useState(false);
+  const [editItems, setEditItems] = useState<EditItem[]>([]);
+  const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
+  const [editProductSearch, setEditProductSearch] = useState('');
+  const [isSavingQuote, setIsSavingQuote] = useState(false);
+  const [editSaveError, setEditSaveError] = useState<string | null>(null);
+
+  const { data: editProducts = [] } = useQuery<SimpleProduct[]>({
+    queryKey: ['/api/products'],
+    enabled: showEditMode,
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -699,6 +735,250 @@ export default function OrderDetail() {
         <Button variant="outline" onClick={() => navigate('/orders')}>
           <ChevronLeft className="h-4 w-4 mr-1" /> Back to Orders
         </Button>
+      </div>
+    );
+  }
+
+  if (showEditMode && order) {
+    const editSubtotal = editItems.reduce((sum, item) => sum + item.customPrice * item.quantity, 0);
+    const deliveryCostVal = parseFloat(order.deliveryCost || '0');
+    const filteredEditProducts = editProducts.filter(p =>
+      p.name.toLowerCase().includes(editProductSearch.toLowerCase())
+    );
+
+    const handleSaveQuote = async () => {
+      setIsSavingQuote(true);
+      setEditSaveError(null);
+      try {
+        const response = await fetch(`/api/quotes/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            items: editItems.map(item => ({
+              productId: item.productId,
+              customPrice: item.customPrice,
+              quantity: item.quantity,
+              sellingType: item.sellingType,
+            })),
+          }),
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+          if (data.order) setOrder(data.order);
+          setShowEditMode(false);
+          setEditSaveError(null);
+          const warningText = data.warnings?.length ? ` Note: ${data.warnings.join('; ')}` : '';
+          toast({
+            title: data.warnings?.length ? 'Quote updated (with warnings)' : 'Quote updated successfully',
+            description: `New total: ${formatMoney(parseFloat(data.total))}.${warningText}`,
+            variant: data.warnings?.length ? 'default' : 'default',
+          });
+        } else {
+          const errorMsg = data.error || 'Failed to update quote';
+          setEditSaveError(errorMsg);
+          toast({ title: data.errorType === 'OUT_OF_STOCK' ? 'Stock Unavailable' : 'Error', description: errorMsg, variant: 'destructive' });
+        }
+      } catch {
+        const msg = 'Network error — please try again';
+        setEditSaveError(msg);
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
+      } finally {
+        setIsSavingQuote(false);
+      }
+    };
+
+    return (
+      <div className="bg-white min-h-screen">
+        <div className="max-w-lg mx-auto px-4 py-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" size="sm" onClick={() => setShowEditMode(false)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">Edit Quote {order.orderNumber || `#${order.id}`}</h1>
+              <p className="text-xs text-gray-500">Adjust items, quantities, and prices</p>
+            </div>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div>
+              <h3 className="font-medium mb-2">Items</h3>
+              {editItems.length === 0 ? (
+                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed text-gray-500 text-sm">
+                  No items — add a product below
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {editItems.map((item, index) => (
+                    <div key={`${item.productId}-${item.sellingType}`} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="font-medium text-sm">{item.productName}</span>
+                        <button onClick={() => setEditItems(editItems.filter((_, i) => i !== index))} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                            if (item.quantity <= 1) return;
+                            const updated = [...editItems];
+                            updated[index] = { ...updated[index], quantity: updated[index].quantity - 1 };
+                            setEditItems(updated);
+                          }}>
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                            const updated = [...editItems];
+                            updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
+                            setEditItems(updated);
+                          }}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500 text-xs">£</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.customPrice}
+                            onChange={(e) => {
+                              const updated = [...editItems];
+                              updated[index] = { ...updated[index], customPrice: parseFloat(e.target.value) || 0 };
+                              setEditItems(updated);
+                            }}
+                            className="w-20 p-1 border rounded text-sm text-right"
+                          />
+                          <span className="text-xs text-gray-500">/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}</span>
+                        </div>
+                        <span className="text-sm font-medium text-green-700 ml-auto">{formatMoney(item.customPrice * item.quantity)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button variant="outline" className="w-full border-dashed" onClick={() => setEditProductDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+
+            <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Products subtotal:</span>
+                <span className="font-medium">{formatMoney(editSubtotal)}</span>
+              </div>
+              {deliveryCostVal > 0 && (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Delivery (unchanged):</span>
+                  <span>{formatMoney(deliveryCostVal)}</span>
+                </div>
+              )}
+              <div className="border-t pt-2 mt-1 flex justify-between font-semibold">
+                <span>Estimated subtotal:</span>
+                <span className="text-green-700">{formatMoney(editSubtotal + deliveryCostVal)}</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Final total recalculated on save (fees may apply).</p>
+            </div>
+
+            {editSaveError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                <X className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">{editSaveError}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleSaveQuote}
+                disabled={isSavingQuote || editItems.length === 0}
+              >
+                {isSavingQuote ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
+              </Button>
+              <Button variant="ghost" className="w-full text-gray-500" onClick={() => setShowEditMode(false)}>
+                ← Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <Dialog open={editProductDialogOpen} onOpenChange={setEditProductDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Add Product to Quote</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={editProductSearch}
+                  onChange={(e) => setEditProductSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {filteredEditProducts.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No products found</p>
+                ) : filteredEditProducts.map(product => {
+                  const hasUnits = !product.sellingFormat || product.sellingFormat === 'units' || product.sellingFormat === 'both';
+                  const hasPallets = (product.sellingFormat === 'pallets' || product.sellingFormat === 'both') && !!product.palletPrice;
+                  return (
+                    <div key={product.id} className="border rounded-lg p-3">
+                      <div className="font-medium text-sm mb-2">{product.name}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {hasUnits && parseFloat(product.price) > 0 && (
+                          <button
+                            onClick={() => {
+                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
+                              if (existing >= 0) {
+                                const updated = [...editItems];
+                                updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
+                                setEditItems(updated);
+                              } else {
+                                setEditItems(prev => [...prev, { productId: product.id, productName: product.name, quantity: 1, customPrice: parseFloat(product.price), sellingType: 'units', imageUrl: product.imageUrl, stock: product.stock }]);
+                              }
+                              setEditProductDialogOpen(false);
+                              setEditProductSearch('');
+                            }}
+                            className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded hover:bg-green-100"
+                          >
+                            + Units — £{parseFloat(product.price).toFixed(2)} ({product.stock} in stock)
+                          </button>
+                        )}
+                        {hasPallets && product.palletPrice && (
+                          <button
+                            onClick={() => {
+                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
+                              if (existing >= 0) {
+                                const updated = [...editItems];
+                                updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
+                                setEditItems(updated);
+                              } else {
+                                setEditItems(prev => [...prev, { productId: product.id, productName: `${product.name} (Pallet)`, quantity: 1, customPrice: parseFloat(product.palletPrice!), sellingType: 'pallets', imageUrl: product.imageUrl, palletStock: product.palletStock }]);
+                              }
+                              setEditProductDialogOpen(false);
+                              setEditProductSearch('');
+                            }}
+                            className="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2 py-1 rounded hover:bg-blue-100"
+                          >
+                            + Pallet — £{parseFloat(product.palletPrice).toFixed(2)} ({product.palletStock || 0} in stock)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -1581,6 +1861,29 @@ export default function OrderDetail() {
           </div>
         ) : (
           <div className="flex flex-wrap pt-2 border-t gap-2">
+            {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => {
+                  const items: EditItem[] = (order.items || []).map(item => ({
+                    productId: item.productId,
+                    productName: item.product?.name || `Product #${item.productId}`,
+                    quantity: item.quantity,
+                    customPrice: parseFloat(item.unitPrice || '0'),
+                    sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
+                    imageUrl: item.product?.imageUrl,
+                  }));
+                  setEditItems(items);
+                  setShowEditMode(true);
+                }}
+              >
+                <Pencil className="w-4 h-4 mr-1" />
+                Edit Quote
+              </Button>
+            )}
+
             {order.status !== 'fulfilled' && !isViewer && (
               <Button
                 variant="destructive"
