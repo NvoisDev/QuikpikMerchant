@@ -269,10 +269,10 @@ export default function QuickQuote() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
-        title: "Quote Created",
+        title: "Invoice Created",
         description: sendMethod === 'link' 
           ? "Payment link generated. Copy and share it with your customer."
-          : `Quote sent to customer via ${sendMethod.toUpperCase()}.`,
+          : `Invoice sent to customer via ${sendMethod.toUpperCase()}.`,
       });
     },
     onError: (error: Error) => {
@@ -552,7 +552,7 @@ export default function QuickQuote() {
             <div className="mx-auto w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3 md:mb-4">
               <Check className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
             </div>
-            <CardTitle className="text-xl md:text-2xl">Quote Created!</CardTitle>
+            <CardTitle className="text-xl md:text-2xl">Invoice Created!</CardTitle>
             <CardDescription className="text-sm">
               {createdQuote.paymentLink 
                 ? `Order #${createdQuote.orderNumber} is awaiting payment.`
@@ -1620,11 +1620,11 @@ export default function QuickQuote() {
                 onClick={handleCreateQuote}
               >
                 {createQuoteMutation.isPending ? (
-                  "Creating Quote..."
+                  "Creating Invoice..."
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Create & Send Quote
+                    Create Invoice
                   </>
                 )}
               </Button>
