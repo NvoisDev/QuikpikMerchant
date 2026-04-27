@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, FileText, Plus, Minus, RefreshCw, Tag, Calculator, Truck, CreditCard, AlertCircle, RotateCcw, X, Banknote, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,12 @@ interface ActivityLog {
   description: string;
   performedBy: string | null;
   createdAt: string;
+}
+
+interface ActivityPage {
+  logs: ActivityLog[];
+  page: number;
+  hasMore: boolean;
 }
 
 interface QuoteActivityLogProps {
@@ -40,31 +46,33 @@ function getActionIcon(actionType: string) {
   }
 }
 
-function getActionColors(actionType: string): { bg: string; icon: string; dot: string } {
+function getActionColors(actionType: string): { bg: string; icon: string } {
   switch (actionType) {
     case 'quote_created':
-      return { bg: 'bg-blue-50', icon: 'text-blue-600', dot: 'bg-blue-400' };
+      return { bg: 'bg-blue-50', icon: 'text-blue-600' };
     case 'product_added':
     case 'payment_successful':
     case 'payment_initiated':
     case 'offline_payment_recorded':
-      return { bg: 'bg-green-50', icon: 'text-green-600', dot: 'bg-green-400' };
+      return { bg: 'bg-green-50', icon: 'text-green-600' };
     case 'product_removed':
     case 'payment_failed':
     case 'quote_cancelled':
-      return { bg: 'bg-red-50', icon: 'text-red-600', dot: 'bg-red-400' };
+      return { bg: 'bg-red-50', icon: 'text-red-600' };
     case 'quantity_changed':
     case 'price_changed':
-      return { bg: 'bg-amber-50', icon: 'text-amber-600', dot: 'bg-amber-400' };
+      return { bg: 'bg-amber-50', icon: 'text-amber-600' };
     default:
-      return { bg: 'bg-gray-50', icon: 'text-gray-500', dot: 'bg-gray-300' };
+      return { bg: 'bg-gray-50', icon: 'text-gray-500' };
   }
 }
 
 function formatActor(performedBy: string | null, userId: string | undefined): string {
   if (!performedBy || performedBy === 'system') return 'System';
+  // 'checkout' is set by the Stripe webhook — the customer triggered this action
+  if (performedBy === 'checkout') return 'Customer';
   if (userId && performedBy === userId) return 'You';
-  return performedBy.substring(0, 8) + '…';
+  return 'Team member';
 }
 
 function formatTime(dateStr: string): string {
@@ -80,29 +88,43 @@ function formatDate(dateStr: string): string {
 
   if (d.toDateString() === today.toDateString()) return 'Today';
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+  });
 }
 
 export function QuoteActivityLog({ orderId }: QuoteActivityLogProps) {
   const [expanded, setExpanded] = useState(false);
   const { user } = useAuth();
 
-  const { data, isLoading } = useQuery<{ logs: ActivityLog[]; page: number; hasMore: boolean }>({
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery<ActivityPage>({
     queryKey: ['/api/quotes', orderId, 'activity'],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${orderId}/activity`);
+    queryFn: async ({ pageParam }) => {
+      const p = typeof pageParam === 'number' ? pageParam : 1;
+      const res = await fetch(`/api/quotes/${orderId}/activity?page=${p}`);
       if (!res.ok) throw new Error('Failed to load activity');
-      return res.json();
+      return res.json() as Promise<ActivityPage>;
     },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.page + 1 : undefined,
     enabled: expanded,
     staleTime: 30_000,
   });
 
-  const logs = data?.logs ?? [];
+  // Flatten all pages into a single list
+  const allLogs: ActivityLog[] = data?.pages.flatMap(p => p.logs) ?? [];
 
   // Group logs by date for visual separators
   const grouped: { date: string; entries: ActivityLog[] }[] = [];
-  for (const log of logs) {
+  for (const log of allLogs) {
     const dateLabel = formatDate(log.createdAt);
     const last = grouped[grouped.length - 1];
     if (!last || last.date !== dateLabel) {
@@ -134,19 +156,18 @@ export function QuoteActivityLog({ orderId }: QuoteActivityLogProps) {
             </div>
           )}
 
-          {!isLoading && logs.length === 0 && (
+          {!isLoading && allLogs.length === 0 && (
             <p className="text-sm text-gray-400 py-3">No activity recorded yet.</p>
           )}
 
-          {!isLoading && logs.length > 0 && (
+          {allLogs.length > 0 && (
             <div className="relative">
-              {/* Vertical line */}
+              {/* Vertical timeline line */}
               <div className="absolute left-[18px] top-0 bottom-0 w-px bg-gray-100" aria-hidden />
 
               <div className="space-y-1">
                 {grouped.map(group => (
                   <div key={group.date}>
-                    {/* Date separator */}
                     <div className="flex items-center gap-2 py-2 pl-10">
                       <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
                         {group.date}
@@ -157,14 +178,12 @@ export function QuoteActivityLog({ orderId }: QuoteActivityLogProps) {
                       const colors = getActionColors(log.actionType);
                       return (
                         <div key={log.id} className="flex items-start gap-3 py-2">
-                          {/* Icon bubble */}
                           <div className={`flex-shrink-0 w-9 h-9 rounded-full ${colors.bg} flex items-center justify-center z-10 ring-2 ring-white`}>
                             <span className={colors.icon}>
                               {getActionIcon(log.actionType)}
                             </span>
                           </div>
 
-                          {/* Content */}
                           <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -185,10 +204,18 @@ export function QuoteActivityLog({ orderId }: QuoteActivityLogProps) {
                 ))}
               </div>
 
-              {data?.hasMore && (
+              {hasNextPage && (
                 <div className="pl-12 pt-2">
-                  <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                    Load more
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-gray-500"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage
+                      ? <><RefreshCw className="h-3 w-3 animate-spin mr-1" />Loading…</>
+                      : 'Load more'}
                   </Button>
                 </div>
               )}
