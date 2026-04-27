@@ -6,8 +6,9 @@ export function formatPackDescriptor(
   unitSize: number | string | null | undefined,
   unitOfMeasure: string | null | undefined
 ): string {
-  if (packQuantity && packQuantity > 1 && unitSize && unitOfMeasure) {
-    return `${packQuantity} × ${parseFloat(String(unitSize))}${unitOfMeasure}`;
+  if (unitSize && unitOfMeasure) {
+    const size = `${parseFloat(String(unitSize))}${unitOfMeasure}`;
+    return packQuantity && packQuantity > 1 ? `${packQuantity} × ${size}` : size;
   }
   return '';
 }
