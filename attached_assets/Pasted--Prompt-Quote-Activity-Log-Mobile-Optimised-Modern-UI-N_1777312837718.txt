@@ -1,0 +1,166 @@
+🧾 Prompt: Quote Activity Log (Mobile-Optimised, Modern UI, NON-BREAKING)
+🎯 Objective
+
+Add a Quote Activity / History log to Quick Quotes that tracks all key actions (edits, payments, status changes) with a clean, modern, mobile-first UI, without affecting existing logic or performance.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT modify existing order/quote logic
+Do NOT interfere with stock, payments, or Stripe
+Do NOT slow down quote loading
+Do NOT store logs as plain text only
+Do NOT break mobile layout
+
+👉 This is an additive feature only
+
+🧱 PART 1 — DATA STRUCTURE (SAFE & SCALABLE)
+
+Create a new table:
+
+quote_activity_logs
+Fields:
+id (uuid)
+quote_id (fk)
+action_type (string) 
+entity_type (string)  // product, payment, quote, system
+entity_id (nullable)
+old_value (jsonb)
+new_value (jsonb)
+description (string) // fallback display
+performed_by (user_id or 'system')
+created_at (timestamp)
+✅ Rule:
+Use structured data (json) for flexibility
+description is just for quick UI rendering
+🧱 PART 2 — TRACKED EVENTS
+
+Log ONLY key actions:
+
+🧾 Creation
+Quote created
+✏️ Edits
+Product added
+Product removed
+Quantity changed
+Price changed (if applicable)
+Delivery cost changed
+Total updated
+💳 Payments
+Payment initiated
+Payment successful
+Payment failed
+❌ Status
+Quote cancelled
+Quote expired (future-proof)
+⚙️ System
+Stock restored
+Auto updates
+🧱 PART 3 — BACKEND LOGGING (NON-INTRUSIVE)
+
+At key points in existing logic:
+
+👉 ADD logging
+👉 DO NOT modify logic
+
+Example:
+await createQuoteActivityLog({
+  quoteId,
+  actionType: 'quantity_changed',
+  entityType: 'product',
+  entityId: productId,
+  oldValue: { quantity: 10 },
+  newValue: { quantity: 6 },
+  performedBy: req.user.id
+});
+⚠️ Rule:
+
+If logging fails:
+
+DO NOT break the main flow
+
+Logging must be non-blocking
+
+🧱 PART 4 — API ENDPOINT
+
+Create:
+
+GET /api/quotes/:id/activity
+Requirements:
+Sorted by created_at DESC
+Paginated (default 20)
+Lightweight response
+🧱 PART 5 — UI (MODERN + MOBILE FIRST)
+Location:
+Quote Detail Page
+Section: “Activity” or “History”
+Desktop:
+Clean vertical timeline
+Left: time
+Right: action
+Mobile (CRITICAL):
+Single column
+Card-based or stacked timeline
+No tables
+Example UI:
+[10:16 AM]
+John (Admin)
+Changed Cassava Flour: 10 → 6 units
+[10:17 AM]
+System
+Quote total updated: £120 → £95
+[10:18 AM]
+Customer
+Payment completed (£95)
+🧱 PART 6 — UI DESIGN RULES
+Use icons per action:
+✏️ edit
+💳 payment
+❌ cancel
+⚙️ system
+Use subtle colors:
+Neutral (default)
+Green (success)
+Red (cancel/error)
+Keep spacing breathable
+Avoid clutter
+🧱 PART 7 — PERFORMANCE
+Lazy load activity logs
+Do NOT load with main quote payload
+Fetch only when section is visible
+🧱 PART 8 — PERMISSIONS
+Wholesaler → full access
+Team members → follow existing permissions
+Customers → optional (read-only, limited view)
+🧪 PART 9 — VALIDATION
+
+Confirm:
+
+Logs appear correctly
+Mobile UI clean and readable
+No slowdown in quote loading
+No errors if logs fail
+All key actions tracked
+🧾 PART 10 — OUTPUT FORMAT
+
+Agent must return:
+
+Activity log table created: ✅
+
+Events tracked:
+- Creation ✅
+- Edits ✅
+- Payments ✅
+- Status changes ✅
+
+API:
+- /api/quotes/:id/activity working ✅
+
+UI:
+- Desktop timeline ✅
+- Mobile optimised ✅
+
+Performance:
+- Lazy loaded ✅
+- No impact on quote load ✅
+
+Final status:
+🟢 SAFE — MODERN ACTIVITY LOG IMPLEMENTED
