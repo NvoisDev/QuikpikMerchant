@@ -278,8 +278,11 @@ export const ThankYouPage = ({
                           <h4 className="font-medium text-gray-900">{item.product.name}</h4>
                           {(() => {
                             const pq = item.product.packQuantity || item.product.quantityInPack;
-                            if (pq && pq > 1 && item.product.unitSize && item.product.unitOfMeasure) {
-                              return <p className="text-xs text-gray-400 leading-tight">{pq} × {parseFloat(item.product.unitSize)}{item.product.unitOfMeasure}</p>;
+                            if (item.product.unitSize && item.product.unitOfMeasure) {
+                              const label = pq && pq > 1
+                                ? `${pq} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
+                                : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`;
+                              return <p className="text-xs text-gray-400 leading-tight">{label}</p>;
                             }
                             return null;
                           })()}

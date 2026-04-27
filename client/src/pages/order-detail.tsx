@@ -1032,8 +1032,12 @@ export default function OrderDetail() {
               <div key={index} className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
-                  {item.product?.quantityInPack && item.product.quantityInPack > 1 && item.product.unitSize && item.product.unitOfMeasure && (
-                    <div className="text-xs text-gray-400">{item.product.quantityInPack} × {parseFloat(item.product.unitSize)}{item.product.unitOfMeasure}</div>
+                  {item.product?.unitSize && item.product.unitOfMeasure && (
+                    <div className="text-xs text-gray-400">
+                      {item.product.quantityInPack && item.product.quantityInPack > 1
+                        ? `${item.product.quantityInPack} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
+                        : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`}
+                    </div>
                   )}
                   <div className="text-xs text-gray-500">
                     Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {formatMoney(parseFloat(item.unitPrice))}
