@@ -641,10 +641,20 @@ export function registerMarketplaceRoutes(app: Express): void {
       let customerIdForPriceList: string | null = null;
       let priceListCustomerResolved = false;
 
+      // Track expected wholesaler from first item — reject mixed-wholesaler carts immediately
+      let expectedWholesalerId: string | null = null;
+
       for (const item of items) {
         const product = await storage.getProduct(item.productId);
         if (!product) {
           return res.status(400).json({ message: `Product ${item.productId} not found` });
+        }
+
+        // Fast single-wholesaler guard (first fetch wins; subsequent items must match)
+        if (expectedWholesalerId === null) {
+          expectedWholesalerId = product.wholesalerId;
+        } else if (product.wholesalerId !== expectedWholesalerId) {
+          return res.status(400).json({ message: "All items must belong to the same wholesaler" });
         }
 
         // Resolve customer ID for price list lookup (once, using first product's wholesalerId)
@@ -859,12 +869,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           appliedOfferLabel: pricing.appliedOffers.length > 0 ? pricing.appliedOffers[0] : (item.appliedOfferLabel || null),
           freeItems: pricing.freeItems || item.freeItems || 0
         });
-      }
-
-      // Guard: all items must belong to a single wholesaler
-      const wholesalerIds = [...new Set(validatedItems.map(i => i.product.wholesalerId))];
-      if (wholesalerIds.length > 1) {
-        return res.status(400).json({ message: "All items must belong to the same wholesaler" });
       }
 
       // Include delivery cost in fee calculation

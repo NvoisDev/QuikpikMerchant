@@ -193,7 +193,7 @@ const PaymentFormContent = ({
         } catch (orderError) {
           // Network error — order creation request never reached the server.
           // The webhook will still save the order.
-          console.error('Order confirmation pending (network error):', orderError);
+          console.error('Order confirmation pending (network error):', paymentIntent.id, orderError);
           onSuccess({
             orderNumber: "Confirming…",
             cart: [],
