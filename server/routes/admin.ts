@@ -141,7 +141,20 @@ export function registerAdminRoutes(app: Express): void {
       const wholesalerIds = wholesalersList.map(w => w.id);
       let ordersByWholesaler: Record<string, { count: number; cancelledCount: number; gmv: number; gmvWithFees: number; gmvWithoutFees: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
 
+      let teamMemberLastLoginByWholesaler: Record<string, Date | null> = {};
+
       if (wholesalerIds.length > 0) {
+        const teamMemberLogins = await db.select({
+          wholesalerId: teamMembers.wholesalerId,
+          maxLastLoginAt: sql<string | null>`max(${teamMembers.lastLoginAt})`,
+        }).from(teamMembers)
+          .where(inArray(teamMembers.wholesalerId, wholesalerIds))
+          .groupBy(teamMembers.wholesalerId);
+
+        for (const row of teamMemberLogins) {
+          teamMemberLastLoginByWholesaler[row.wholesalerId] = row.maxLastLoginAt ? new Date(row.maxLastLoginAt) : null;
+        }
+
         const orderStats = await db.select({
           wholesalerId: orders.wholesalerId,
           subtotal: orders.subtotal,
@@ -206,7 +219,14 @@ export function registerAdminRoutes(app: Express): void {
             ? parseFloat(w.customFeePercentage)
             : null,
           isTestAccount: w.isTestAccount ?? false,
-          lastLoginAt: w.lastLoginAt ?? null,
+          lastLoginAt: (() => {
+            const ownerLogin = w.lastLoginAt ? new Date(w.lastLoginAt) : null;
+            const teamLogin = teamMemberLastLoginByWholesaler[w.id] ?? null;
+            if (!ownerLogin && !teamLogin) return null;
+            if (!ownerLogin) return teamLogin;
+            if (!teamLogin) return ownerLogin;
+            return ownerLogin > teamLogin ? ownerLogin : teamLogin;
+          })(),
           enableMultiProfile: w.enableMultiProfile ?? false,
           legalBusinessName: w.legalBusinessName ?? null,
           vatNumber: w.vatNumber ?? null,
