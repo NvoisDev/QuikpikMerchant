@@ -1994,16 +1994,23 @@ export default function ProductManagement() {
                         <FormField
                           control={form.control}
                           name="category"
-                          render={({ field }) => (
+                          render={({ field }) => {
+                            const isDiscontinued = field.value && !productCategories.includes(field.value);
+                            return (
                             <FormItem>
                               <FormLabel>Category</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value || undefined}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className={isDiscontinued ? "border-amber-400" : undefined}>
                                     <SelectValue placeholder="Select category" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
+                                  {isDiscontinued && (
+                                    <SelectItem key={field.value} value={field.value} className="text-amber-600">
+                                      {field.value} (discontinued)
+                                    </SelectItem>
+                                  )}
                                   {productCategories.map((category) => (
                                     <SelectItem key={category} value={category}>
                                       {category}
@@ -2011,9 +2018,16 @@ export default function ProductManagement() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {isDiscontinued && (
+                                <FormDescription className="text-amber-600 flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  This category is no longer available. Please select a current category.
+                                </FormDescription>
+                              )}
                               <FormMessage />
                             </FormItem>
-                          )}
+                            );
+                          }}
                         />
                       </div>
 
