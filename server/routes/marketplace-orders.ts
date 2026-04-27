@@ -14,4 +14,4 @@
  */
 
 // placeholder — remove when the first real export is added
-export const _marketplaceOrdersReady = true;
+export function _marketplaceOrdersPlaceholder(): void {}
