@@ -200,6 +200,21 @@ async function runStartupMigrations() {
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`,
     // Task #704: Track when a quote was last edited so the customer portal can show a "Quote updated" badge
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMP`,
+    // Task #715: Quote Activity Log — structured append-only audit trail for quote events
+    `CREATE TABLE IF NOT EXISTS quote_activity_logs (
+      id SERIAL PRIMARY KEY,
+      quote_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      action_type VARCHAR(50) NOT NULL,
+      entity_type VARCHAR(30),
+      entity_id VARCHAR(255),
+      old_value JSONB,
+      new_value JSONB,
+      description TEXT NOT NULL,
+      performed_by VARCHAR(255),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS qal_quote_id_idx ON quote_activity_logs(quote_id)`,
+    `CREATE INDEX IF NOT EXISTS qal_created_at_idx ON quote_activity_logs(quote_id, created_at DESC)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

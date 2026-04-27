@@ -15,6 +15,7 @@ import {
 } from "./shared";
 import { productBatches, businessProfiles } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
+import { logQuoteActivity } from "../utils/quote-activity";
 
 /**
  * Batch-aware unit stock restock helper.
@@ -1555,6 +1556,18 @@ export function registerOrderRoutes(app: Express): void {
             : `[${new Date().toISOString()}] ${isFullCancellation ? 'Order cancelled' : 'Partial return processed'} (${reasonCategory || 'unspecified'}): ${reason || 'N/A'}. Stock restored: ${stockRestoredCount} items. ${refundNote}`
         })
         .where(eq(orders.id, id));
+
+      // Log cancellation for quotes (non-blocking)
+      if (order.isQuote && isFullCancellation) {
+        logQuoteActivity({
+          quoteId: id,
+          actionType: 'quote_cancelled',
+          entityType: 'quote',
+          newValue: { reason: reason || 'unspecified', reasonCategory: reasonCategory || 'unspecified', stockRestored: stockRestoredCount },
+          description: `Quote cancelled — ${reason || 'no reason given'}. Stock restored: ${stockRestoredCount} item${stockRestoredCount !== 1 ? 's' : ''}.`,
+          performedBy: req.user?.id ?? 'system',
+        });
+      }
 
       // Send cancellation notification to customer (SMS and Email)
       try {

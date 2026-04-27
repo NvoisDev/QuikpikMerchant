@@ -9,10 +9,11 @@ import {
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
   or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
-  users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
+  users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
 import { businessProfiles } from "@shared/schema";
+import { logQuoteActivity } from "../utils/quote-activity";
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -373,6 +374,20 @@ export function registerPaymentRoutes(app: Express): void {
             .where(eq(orders.id, parseInt(orderId)));
           
           console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}, old payment link cleared`);
+
+          // Log payment event for quotes (non-blocking)
+          if (existingOrder.isQuote) {
+            logQuoteActivity({
+              quoteId: parseInt(orderId),
+              actionType: paymentStatus === 'paid' ? 'payment_successful' : 'payment_initiated',
+              entityType: 'payment',
+              newValue: { amountPaid: thisPayment, cumulativePaid, stripeSessionId: session.id },
+              description: paymentStatus === 'paid'
+                ? `Payment completed — £${thisPayment.toFixed(2)} via Stripe`
+                : `Deposit received — £${thisPayment.toFixed(2)} via Stripe (£${newOutstanding.toFixed(2)} outstanding)`,
+              performedBy: 'system',
+            });
+          }
 
           // Send order confirmation email on the first payment for this order (checkout confirmation).
           // previouslyPaid === 0 guards against duplicate emails on deposit follow-ups and
@@ -2360,6 +2375,16 @@ export function registerPaymentRoutes(app: Express): void {
       // Customer email is sent by the Stripe webhook handler (sendCustomerInvoiceEmail)
       // after payment is confirmed — no separate quote email is sent here to avoid duplicates.
 
+      // Log quote creation — non-blocking, failure must not affect the response
+      logQuoteActivity({
+        quoteId: quoteOrder.id,
+        actionType: 'quote_created',
+        entityType: 'quote',
+        newValue: { total: total.toFixed(2), itemCount: items.length, fulfillmentType },
+        description: `Quote created — ${items.length} item${items.length !== 1 ? 's' : ''}, total £${total.toFixed(2)}`,
+        performedBy: req.user.id,
+      });
+
       res.json({
         success: true,
         orderId: quoteOrder.id,
@@ -2679,6 +2704,84 @@ export function registerPaymentRoutes(app: Express): void {
         }).where(eq(orders.id, quoteId));
       });
 
+      // ── Log quote edit activity (non-blocking, after successful transaction) ─
+      (() => {
+        // Overall total update
+        logQuoteActivity({
+          quoteId: quoteId,
+          actionType: 'total_updated',
+          entityType: 'quote',
+          oldValue: { total: existingOrder.total, subtotal: existingOrder.subtotal },
+          newValue: { total: total.toFixed(2), subtotal: productSubtotal.toFixed(2) },
+          description: `Quote edited — total updated from £${parseFloat(existingOrder.total || '0').toFixed(2)} to £${total.toFixed(2)}`,
+          performedBy: req.user.id,
+        });
+        // Stock restore log
+        logQuoteActivity({
+          quoteId: quoteId,
+          actionType: 'stock_restored',
+          entityType: 'system',
+          description: `Stock restored for ${existingItems.length} item${existingItems.length !== 1 ? 's' : ''} during quote edit`,
+          performedBy: 'system',
+        });
+        // Per-item diff logs
+        for (const oldItem of existingItems) {
+          const sellingTypeOld = (oldItem as any).sellingType || 'units';
+          const inNew = items.find((ni: any) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
+          if (!inNew) {
+            logQuoteActivity({
+              quoteId: quoteId,
+              actionType: 'product_removed',
+              entityType: 'product',
+              entityId: String(oldItem.productId),
+              oldValue: { quantity: oldItem.quantity, unitPrice: oldItem.unitPrice, sellingType: sellingTypeOld },
+              description: `Product #${oldItem.productId} removed (${oldItem.quantity} ${sellingTypeOld})`,
+              performedBy: req.user.id,
+            });
+          }
+        }
+        for (const newItem of items) {
+          const sellingTypeNew = newItem.sellingType || 'units';
+          const inOld = existingItems.find((oi: any) => oi.productId === newItem.productId && ((oi as any).sellingType || 'units') === sellingTypeNew);
+          if (!inOld) {
+            logQuoteActivity({
+              quoteId: quoteId,
+              actionType: 'product_added',
+              entityType: 'product',
+              entityId: String(newItem.productId),
+              newValue: { quantity: newItem.quantity, unitPrice: newItem.customPrice, sellingType: sellingTypeNew },
+              description: `Product #${newItem.productId} added — ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`,
+              performedBy: req.user.id,
+            });
+          } else {
+            if (inOld.quantity !== newItem.quantity) {
+              logQuoteActivity({
+                quoteId: quoteId,
+                actionType: 'quantity_changed',
+                entityType: 'product',
+                entityId: String(newItem.productId),
+                oldValue: { quantity: inOld.quantity },
+                newValue: { quantity: newItem.quantity },
+                description: `Product #${newItem.productId} quantity changed: ${inOld.quantity} → ${newItem.quantity} ${sellingTypeNew}`,
+                performedBy: req.user.id,
+              });
+            }
+            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) {
+              logQuoteActivity({
+                quoteId: quoteId,
+                actionType: 'price_changed',
+                entityType: 'product',
+                entityId: String(newItem.productId),
+                oldValue: { unitPrice: inOld.unitPrice },
+                newValue: { unitPrice: newItem.customPrice },
+                description: `Product #${newItem.productId} price changed: £${parseFloat(inOld.unitPrice || '0').toFixed(2)} → £${newItem.customPrice.toFixed(2)}`,
+                performedBy: req.user.id,
+              });
+            }
+          }
+        }
+      })();
+
       // ── Step 8: Expire old Stripe session AFTER successful DB commit ───────
       // Non-critical: failure here doesn't affect data integrity.
       // Always expire old session if it differs from new one (or if no new one created — meaning no payment needed).
@@ -2743,6 +2846,42 @@ export function registerPaymentRoutes(app: Express): void {
       }
       console.error('❌ Error updating quote:', error);
       res.status(500).json({ error: 'Failed to update quote' });
+    }
+  });
+
+  // GET /api/quotes/:id/activity — paginated activity log for a quote (wholesaler only)
+  app.get('/api/quotes/:id/activity', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ error: 'Invalid quote ID' });
+
+      const [quote] = await db.select({ id: orders.id, wholesalerId: orders.wholesalerId })
+        .from(orders)
+        .where(eq(orders.id, quoteId))
+        .limit(1);
+
+      if (!quote) return res.status(404).json({ error: 'Quote not found' });
+      if (quote.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = 20;
+
+      const logs = await db
+        .select()
+        .from(quoteActivityLogs)
+        .where(eq(quoteActivityLogs.quoteId, quoteId))
+        .orderBy(desc(quoteActivityLogs.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit);
+
+      res.json({ logs, page, hasMore: logs.length === limit });
+    } catch (error) {
+      console.error('❌ Error fetching quote activity:', error);
+      res.status(500).json({ error: 'Failed to fetch quote activity' });
     }
   });
 

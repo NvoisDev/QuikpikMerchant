@@ -688,6 +688,30 @@ export const orders = pgTable("orders", {
   index("orders_payment_status_idx").on(table.paymentStatus),
 ]);
 
+// ── Quote Activity Log ───────────────────────────────────────────────────────
+// Append-only, structured audit trail for every meaningful event on a quote.
+// Additive only — no existing logic was modified to add this table.
+export const quoteActivityLogs = pgTable("quote_activity_logs", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  // 'quote_created' | 'product_added' | 'product_removed' | 'quantity_changed'
+  // | 'price_changed' | 'total_updated' | 'delivery_cost_changed'
+  // | 'payment_initiated' | 'payment_successful' | 'payment_failed'
+  // | 'quote_cancelled' | 'stock_restored' | 'offline_payment_recorded'
+  actionType: varchar("action_type", { length: 50 }).notNull(),
+  entityType: varchar("entity_type", { length: 30 }),  // 'product' | 'payment' | 'quote' | 'system'
+  entityId: varchar("entity_id", { length: 255 }),     // productId, orderId, etc. (nullable)
+  oldValue: jsonb("old_value"),                         // structured before-state
+  newValue: jsonb("new_value"),                         // structured after-state
+  description: text("description").notNull(),           // human-readable fallback for UI display
+  performedBy: varchar("performed_by", { length: 255 }), // userId or 'system'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertQuoteActivityLogSchema = createInsertSchema(quoteActivityLogs).omit({ id: true, createdAt: true });
+export type InsertQuoteActivityLog = z.infer<typeof insertQuoteActivityLogSchema>;
+export type QuoteActivityLog = typeof quoteActivityLogs.$inferSelect;
+
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").notNull().references(() => orders.id),

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
+import { QuoteActivityLog } from "@/components/orders/QuoteActivityLog";
 
 interface OrderItem {
   id: number;
@@ -1952,6 +1953,13 @@ export default function OrderDetail() {
                 </Button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Quote Activity Log — lazy-loaded, visible only for quotes */}
+        {order.isQuote && (
+          <div className="px-4 pb-4">
+            <QuoteActivityLog orderId={order.id} />
           </div>
         )}
       </div>
