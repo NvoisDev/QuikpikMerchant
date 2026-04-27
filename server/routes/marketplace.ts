@@ -16,6 +16,24 @@ import {
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
 
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  marketplace.ts — ORCHESTRATOR ONLY                                         ║
+// ║                                                                              ║
+// ║  This file registers customer-facing marketplace routes. It should           ║
+// ║  remain an orchestrator: wiring routes, calling helpers, returning           ║
+// ║  responses. Business logic does NOT belong here.                             ║
+// ║                                                                              ║
+// ║  Where to put NEW code:                                                      ║
+// ║    Payment logic   → server/routes/marketplace-payments.ts                  ║
+// ║    Order logic     → server/routes/marketplace-orders.ts                    ║
+// ║    Utilities/misc  → server/routes/marketplace-utils.ts                     ║
+// ║    Shared fees     → shared/utils/fees.ts                                   ║
+// ║    Shared currency → shared/utils/currency.ts                               ║
+// ║                                                                              ║
+// ║  DO NOT add inline business logic, fee formulas, or data-shaping            ║
+// ║  functions directly to this file.                                            ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 /** Compute effective price from a price list item row (lowest price wins). */
