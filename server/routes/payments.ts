@@ -1870,6 +1870,15 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(400).json({ error: 'Customer and items are required' });
       }
 
+      for (const item of items) {
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          return res.status(400).json({ error: 'Item quantity must be a positive integer', errorType: 'VALIDATION_ERROR' });
+        }
+        if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice <= 0) {
+          return res.status(400).json({ error: 'Item price must be greater than zero', errorType: 'VALIDATION_ERROR' });
+        }
+      }
+
       if (fulfillmentType === 'delivery' && !deliveryAddressId && !deliveryAddress && !customAddressFields?.addressLine1) {
         return res.status(400).json({ error: 'Delivery address is required for delivery orders' });
       }

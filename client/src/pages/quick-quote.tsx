@@ -452,6 +452,16 @@ export default function QuickQuote() {
       return;
     }
 
+    const invalidItem = quoteItems.find(item => item.customPrice <= 0 || item.quantity < 1);
+    if (invalidItem) {
+      toast({
+        title: "Invalid Line Item",
+        description: "All items must have a price greater than £0 and a quantity of at least 1",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const isUsingCustomAddress = useCustomAddress || customerAddresses.length === 0;
 
     if (fulfillmentType === 'delivery' && !deliveryAddressId && !isUsingCustomAddress) {
@@ -1119,8 +1129,11 @@ export default function QuickQuote() {
                                 }));
                               }
                             }}
-                            className="h-8"
+                            className={`h-8 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                           />
+                          {item.customPrice <= 0 && (
+                            <p className="text-xs text-red-500 mt-0.5">Price must be &gt; £0</p>
+                          )}
                         </div>
                         <div className="w-16">
                           <Label className="text-xs text-gray-500">Qty</Label>
@@ -1156,8 +1169,11 @@ export default function QuickQuote() {
                                 }));
                               }
                             }}
-                            className="h-8"
+                            className={`h-8 ${item.quantity < 1 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                           />
+                          {item.quantity < 1 && (
+                            <p className="text-xs text-red-500 mt-0.5">Min qty 1</p>
+                          )}
                         </div>
                         <div className="w-20 text-right">
                           <Label className="text-xs text-gray-500">Total</Label>
@@ -1600,7 +1616,7 @@ export default function QuickQuote() {
               <Button
                 className="w-full bg-green-600 hover:bg-green-700"
                 size="lg"
-                disabled={!selectedCustomer || quoteItems.length === 0 || createQuoteMutation.isPending}
+                disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1) || createQuoteMutation.isPending}
                 onClick={handleCreateQuote}
               >
                 {createQuoteMutation.isPending ? (
