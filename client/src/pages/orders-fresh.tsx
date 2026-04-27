@@ -808,8 +808,8 @@ export default function OrdersFresh() {
         <Link href="/quick-quote">
           <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
             <FileText className="w-4 h-4 mr-1.5" />
-            <span className="hidden sm:inline">Quick Quote</span>
-            <span className="sm:hidden">Quote</span>
+            <span className="hidden sm:inline">Raise Invoice</span>
+            <span className="sm:hidden">Invoice</span>
           </Button>
         </Link>
       )}
@@ -841,7 +841,7 @@ export default function OrdersFresh() {
         <Link href="/quick-quote">
           <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1.5">
             <FileText className="w-4 h-4" />
-            Quick Quote
+            Raise Invoice
           </Button>
         </Link>
       )}

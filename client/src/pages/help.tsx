@@ -1286,7 +1286,7 @@ The **Margin Overview** panel in your Analytics dashboard shows a clear picture 
 | **Cost** | Total cost of goods sold (based on cost prices set on your products or batches) |
 | **Gross Margin %** | (Revenue − Cost) ÷ Revenue × 100 — the percentage of revenue that is gross profit |
 
-The panel breaks these figures down separately for **online orders** (customer portal card payments) and **quote/offline sales** (Quick Quote orders including Pay Later and cash orders), so you can compare the profitability of each channel.
+The panel breaks these figures down separately for **online orders** (customer portal card payments) and **quote/offline sales** (Raise Invoice orders including Pay Later and cash orders), so you can compare the profitability of each channel.
 
 #### How Cost Is Calculated
 
@@ -1558,14 +1558,14 @@ The payment summary in each order shows:
         `
       },
       {
-        title: "Quick Quote & Pay Later",
+        title: "Raise Invoice & Pay Later",
         content: `
-### Quick Quote
+### Raise Invoice
 
-Quick Quote lets you create orders on behalf of a customer directly from the Orders page — ideal for phone/in-person sales or custom pricing agreements.
+Raise Invoice lets you create orders on behalf of a customer directly from the Orders page — ideal for phone/in-person sales or custom pricing agreements.
 
-#### Creating a Quick Quote
-1. Go to **Orders** and click **"Quick Quote"**
+#### Creating a Raise Invoice
+1. Go to **Orders** and click **"Raise Invoice"**
 2. Select the customer from your registered customer list
 3. Add products by searching and clicking — set the quantity for each item
 4. Adjust the unit price per item if you're offering custom pricing
@@ -1688,7 +1688,7 @@ On a mobile device, tapping Share Invoice opens the native share sheet, letting 
 - **Pay Later / cash / bank transfer orders**: no payment link is included, but all order details and the outstanding balance are still shown so you can follow up manually
 
 #### Tips
-- Use Share Invoice straight after creating a Quick Quote to get the payment link to your customer immediately
+- Use Share Invoice straight after creating a Raise Invoice to get the payment link to your customer immediately
 - For cash or bank transfer orders, the share message is a clear, professional way to confirm the order and tell the customer the amount they owe
         `
       },
@@ -1697,10 +1697,10 @@ On a mobile device, tapping Share Invoice opens the native share sheet, letting 
         content: `
 ### Creating Offline (Cash or Bank Transfer) Orders
 
-Not every sale goes through Stripe. For customers who pay by cash or bank transfer, Quikpik's Quick Quote flow lets you record and manage offline orders without generating any payment link.
+Not every sale goes through Stripe. For customers who pay by cash or bank transfer, Quikpik's Raise Invoice flow lets you record and manage offline orders without generating any payment link.
 
 #### How to Create an Offline Order
-1. Go to **Orders** and click **"Quick Quote"**
+1. Go to **Orders** and click **"Raise Invoice"**
 2. Select the customer and add the products with quantities and prices
 3. Under the payment method, choose **Pay Later (0%)** — this is the offline option
 4. Click **"Create Quote"**

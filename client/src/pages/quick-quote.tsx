@@ -621,7 +621,7 @@ export default function QuickQuote() {
           </Button>
         </Link>
         <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold">Quick Quote</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Raise Invoice</h1>
           <p className="text-sm md:text-base text-gray-600 truncate">Create quotes with custom prices</p>
         </div>
       </div>
