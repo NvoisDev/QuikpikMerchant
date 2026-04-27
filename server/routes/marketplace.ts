@@ -2107,6 +2107,20 @@ export function registerMarketplaceRoutes(app: Express): void {
       const total = beforeFees.toFixed(2);
       const platformFee = '0.00';
 
+      // --- Validate collectionAddressId belongs to this wholesaler (multi-tenant safety) ---
+      let validatedCollectionAddressId: number | null = null;
+      if (shippingOption === 'pickup' && collectionAddressId) {
+        const parsedId = parseInt(String(collectionAddressId), 10);
+        if (!isNaN(parsedId)) {
+          const addr = await storage.getCollectionAddress(parsedId);
+          if (addr && addr.wholesalerId === wholesalerId) {
+            validatedCollectionAddressId = parsedId;
+          } else {
+            console.warn(`collectionAddressId ${parsedId} not found or does not belong to wholesaler ${wholesalerId} — ignoring`);
+          }
+        }
+      }
+
       // --- Build delivery address ---
       let deliveryAddress: string | null = null;
       let deliveryAddressId: number | null = null;
@@ -2141,7 +2155,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         notes: notes || null,
         deliveryAddress,
         deliveryAddressId,
-        collectionAddressId: shippingOption === 'pickup' && collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
+        collectionAddressId: validatedCollectionAddressId,
         fulfillmentType: shippingOption === 'delivery' ? 'delivery' : 'pickup',
         deliveryCarrier: shippingOption === 'delivery' ? 'Supplier Arranged' : null,
         deliveryCost: shippingCost.toFixed(2),
@@ -3040,6 +3054,20 @@ export function registerMarketplaceRoutes(app: Express): void {
       const platformFee = (parseFloat(totalAmount) * 0.046).toFixed(2);
       const total = totalAmount.toString();
       
+      // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
+      let validatedCollectionAddressId: number | null = null;
+      if (collectionAddressId) {
+        const parsedId = parseInt(String(collectionAddressId), 10);
+        if (!isNaN(parsedId)) {
+          const collAddr = await storage.getCollectionAddress(parsedId);
+          if (collAddr && collAddr.wholesalerId === product.wholesalerId) {
+            validatedCollectionAddressId = parsedId;
+          } else {
+            console.warn(`marketplace order: collectionAddressId ${parsedId} invalid for wholesaler ${product.wholesalerId} — ignoring`);
+          }
+        }
+      }
+
       // Create order with customer details  
       const orderData = {
         orderNumber: await generateOrderNumber(product.wholesalerId),
@@ -3053,7 +3081,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         total,
         status: 'confirmed',
         notes: notes || `Order placed via marketplace for ${product.name}`,
-        collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
+        collectionAddressId: validatedCollectionAddressId,
       };
       
       const itemQty = parseInt(quantity);
@@ -3207,6 +3235,20 @@ Please contact the customer to confirm this order.
       const platformFee = subtotal * 0.046;
       const finalTotal = subtotal;
 
+      // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
+      let validatedCollAddrId: number | null = null;
+      if (collectionAddressId) {
+        const parsedId = parseInt(String(collectionAddressId), 10);
+        if (!isNaN(parsedId)) {
+          const collAddr = await storage.getCollectionAddress(parsedId);
+          if (collAddr && collAddr.wholesalerId === firstProduct.wholesalerId) {
+            validatedCollAddrId = parsedId;
+          } else {
+            console.warn(`customer order: collectionAddressId ${parsedId} invalid for wholesaler ${firstProduct.wholesalerId} — ignoring`);
+          }
+        }
+      }
+
       // Create the order with customer details using transaction-based approach
       const orderData = {
         orderNumber: await generateOrderNumber(firstProduct.wholesalerId),
@@ -3221,7 +3263,7 @@ Please contact the customer to confirm this order.
         status: 'confirmed',
         deliveryAddress: customerAddress,
         notes: notes || '',
-        collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId), 10) : null,
+        collectionAddressId: validatedCollAddrId,
       };
 
       const orderItems = items.map((item: any) => {

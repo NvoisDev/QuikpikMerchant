@@ -674,7 +674,7 @@ export const orders = pgTable("orders", {
   businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }),
 
   // Collection address override — which pickup location was used for this order
-  collectionAddressId: integer("collection_address_id"),
+  collectionAddressId: integer("collection_address_id").references(() => collectionAddresses.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

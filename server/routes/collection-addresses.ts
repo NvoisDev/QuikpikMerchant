@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storage, requireAuth, requireOwner, insertCollectionAddressSchema } from "./shared";
+import { storage, requireAuth, requireMemberPermission, insertCollectionAddressSchema } from "./shared";
 
 export function registerCollectionAddressRoutes(app: Express) {
   // GET /api/wholesalers/:wholesalerId/collection-addresses — public, for customer portal
@@ -16,11 +16,38 @@ export function registerCollectionAddressRoutes(app: Express) {
   });
 
   // GET /api/collection-addresses — list all for authenticated wholesaler
+  // Lazy migration: if no rows exist and user has pickupAddress, create a default row from it.
   app.get("/api/collection-addresses", requireAuth, async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
-      const addresses = await storage.getCollectionAddresses(user.id);
+      let addresses = await storage.getCollectionAddresses(user.id);
+
+      // Lazy migration: auto-create first collection address from pickupAddress if none exist
+      if (addresses.length === 0) {
+        const wholesaler = await storage.getUser(user.id);
+        const pickupAddr = wholesaler?.pickupAddress?.trim();
+        if (pickupAddr) {
+          try {
+            const created = await storage.createCollectionAddress({
+              wholesalerId: user.id,
+              name: "Main Collection Point",
+              addressLine1: pickupAddr,
+              addressLine2: null,
+              city: wholesaler?.city || "",
+              postcode: wholesaler?.postalCode || "",
+              country: wholesaler?.country || "United Kingdom",
+              isDefault: true,
+              isActive: true,
+            });
+            addresses = [created];
+            console.log(`✅ Lazy-migrated pickupAddress → collection_addresses for wholesaler ${user.id}`);
+          } catch (migrateErr) {
+            console.error("Lazy migration of pickupAddress failed (non-fatal):", migrateErr);
+          }
+        }
+      }
+
       res.json(addresses);
     } catch (err: any) {
       console.error("getCollectionAddresses error:", err);
@@ -28,8 +55,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // POST /api/collection-addresses — create new (owner only)
-  app.post("/api/collection-addresses", requireAuth, requireOwner, async (req: any, res) => {
+  // POST /api/collection-addresses — create new (owner + team admin; blocks member/viewer)
+  app.post("/api/collection-addresses", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -43,8 +70,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // PATCH /api/collection-addresses/:id — update (owner only)
-  app.patch("/api/collection-addresses/:id", requireAuth, requireOwner, async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id — update (owner + team admin; blocks member/viewer)
+  app.patch("/api/collection-addresses/:id", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -61,8 +88,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // DELETE /api/collection-addresses/:id — delete (owner only)
-  app.delete("/api/collection-addresses/:id", requireAuth, requireOwner, async (req: any, res) => {
+  // DELETE /api/collection-addresses/:id — delete (owner + team admin; blocks member/viewer)
+  app.delete("/api/collection-addresses/:id", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });
@@ -79,8 +106,8 @@ export function registerCollectionAddressRoutes(app: Express) {
     }
   });
 
-  // PATCH /api/collection-addresses/:id/set-default — set as default (owner only)
-  app.patch("/api/collection-addresses/:id/set-default", requireAuth, requireOwner, async (req: any, res) => {
+  // PATCH /api/collection-addresses/:id/set-default — set as default (owner + team admin)
+  app.patch("/api/collection-addresses/:id/set-default", requireAuth, requireMemberPermission("settings"), async (req: any, res) => {
     try {
       const user = req.user;
       if (!user?.id) return res.status(401).json({ error: "Unauthorised" });

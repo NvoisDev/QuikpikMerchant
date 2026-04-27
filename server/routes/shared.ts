@@ -767,7 +767,14 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
       if (linkedCollAddr.addressLine2) fromLines.push(linkedCollAddr.addressLine2);
       const collCityPostal = [linkedCollAddr.city, linkedCollAddr.postcode].filter(Boolean).join(' ');
       if (collCityPostal) fromLines.push(collCityPostal);
+    } else if (wholesaler.pickupAddress) {
+      // Fallback 1: wholesaler's legacy pickup address field
+      fromLines.push(wholesaler.pickupAddress);
+      const puCityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
+      if (puCityPostal) fromLines.push(puCityPostal);
+      if (wholesaler.country && wholesaler.country !== 'United Kingdom') fromLines.push(wholesaler.country);
     } else {
+      // Fallback 2: wholesaler's general business address
       if (wholesaler.businessAddress) fromLines.push(wholesaler.businessAddress);
       const cityPostal = [wholesaler.city, wholesaler.postalCode].filter(Boolean).join(' ');
       if (cityPostal) fromLines.push(cityPostal);
