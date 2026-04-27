@@ -1,0 +1,134 @@
+🧾 Prompt: Fee Calculation Enforcement Audit (NON-BREAKING)
+🎯 Objective
+
+Ensure the customer transaction fee and gross total are calculated consistently across the entire platform, using a single enforced source of truth, without breaking any existing flows.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT change fee logic (5.5% + £0.50)
+Do NOT change pricing outputs
+Do NOT break Stripe, orders, or reporting
+Do NOT modify stored historical data
+
+👉 This is consistency enforcement only
+
+🧱 PART 1 — SINGLE SOURCE OF TRUTH
+
+Confirm ONLY this function is used:
+
+calculateCustomerFee(subtotal)
+🚫 Disallow:
+subtotal * 0.055 + 0.50
+
+ANYWHERE in the codebase
+
+🧱 PART 2 — GLOBAL SEARCH & REPLACE AUDIT
+
+Scan entire codebase for:
+
+0.055
++ 0.50
+customerTransactionFee =
+total = subtotal +
+For each occurrence:
+Replace with calculateCustomerFee()
+OR confirm it already uses it
+🧱 PART 3 — STANDARD RESPONSE STRUCTURE
+
+Ensure ALL flows return:
+
+{
+  subtotal,
+  customerTransactionFee,
+  totalCustomerPays
+}
+
+👉 No custom naming like:
+
+total
+gross
+finalAmount
+🧱 PART 4 — ENFORCE AT ORDER CREATION ONLY
+Rule:
+Fee is calculated ONCE at order creation
+After that:
+ALWAYS read from DB
+NEVER recalculate on frontend or read
+🧱 PART 5 — FRONTEND LOCKDOWN
+
+Ensure frontend:
+
+NEVER calculates fees
+ONLY displays:
+order.customerTransactionFee
+order.total
+🧱 PART 6 — OFFLINE ORDER HANDLING
+
+Standardise:
+
+IF payment_method = offline
+  customerTransactionFee = 0
+
+👉 Must still use same structure
+
+🧱 PART 7 — ADMIN & REPORTING
+
+Ensure:
+
+Admin totals = sum of stored values
+NOT recalculated values
+🧱 PART 8 — EMAIL CONSISTENCY
+
+Ensure email templates:
+
+Use stored values
+NOT recalculated values
+🧱 PART 9 — EDGE CASE VALIDATION
+
+Test:
+
+Online order
+Offline order
+Edited order
+Refunded order
+
+Confirm:
+
+Fee always matches total
+No mismatch across UI / Stripe / DB
+🧾 PART 10 — OUTPUT FORMAT
+Single source of truth enforced: ✅
+
+Hardcoded fee logic removed: ✅
+
+Frontend calculation removed: ✅
+
+Order creation standardised: ✅
+
+Admin/reporting consistent: ✅
+
+Validation:
+- No mismatches found ✅
+
+Final status:
+🟢 SAFE — FEE SYSTEM FULLY CONSISTENT
+💬 My honest take
+
+You’re actually in a very strong position right now.
+
+Most people:
+
+Scatter fee logic everywhere
+Then try to fix it later (painful)
+
+You:
+👉 Already centralised it early
+
+🔥 One extra (worth doing soon)
+
+Add a debug check (temporary):
+
+if (Math.abs(order.total - (order.subtotal + order.customerTransactionFee)) > 0.01) {
+  logError("Fee mismatch detected", order.id);
+}
+
+👉 This catches silent bugs before users do
