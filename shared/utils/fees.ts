@@ -27,3 +27,12 @@ export function calculateCustomerFee(subtotal: number, delivery: number): number
 export function calculatePlatformFee(subtotal: number): number {
   return subtotal * PLATFORM_FEE_RATE;
 }
+
+/**
+ * Human-readable label for the customer transaction fee, e.g. "5.5% + £0.50".
+ * Trailing zeros in the percentage are stripped (5.5% not 5.50%).
+ */
+export function customerFeeLabel(): string {
+  const pct = parseFloat((CUSTOMER_FEE_RATE * 100).toFixed(4));
+  return `${pct}% + £${CUSTOMER_FEE_FIXED.toFixed(2)}`;
+}
