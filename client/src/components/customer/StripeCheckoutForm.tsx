@@ -82,14 +82,6 @@ const PaymentFormContent = ({
         redirect: "if_required",
       });
 
-      console.log('💳 Payment confirmation result:', {
-        hasError: !!error,
-        errorType: error?.type,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        paymentIntentId: paymentIntent?.id,
-        paymentIntentStatus: paymentIntent?.status,
-      });
 
       if (error) {
         let errorMessage = "Payment failed. Please try again.";
@@ -152,9 +144,6 @@ const PaymentFormContent = ({
         setPaymentSubmitted(false);
 
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
-        console.log('💾 Creating order immediately to ensure it saves to database');
-
         try {
           const response = await fetch("/api/marketplace/create-order", {
             method: "POST",
@@ -164,7 +153,6 @@ const PaymentFormContent = ({
 
           if (response.ok) {
             const orderData = await response.json();
-            console.log('✅ Order created successfully:', orderData);
             // Use server-returned financial values — paymentIntent.metadata is not
             // populated by Stripe.js on the client side.  The create-order endpoint
             // retrieves the PaymentIntent server-side and returns the correct amounts.
@@ -184,45 +172,45 @@ const PaymentFormContent = ({
               description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
             });
           } else {
-            console.error('❌ Order creation failed:', response.status);
-            // Order DB write failed after successful Stripe payment — use the
-            // pre-computed cart values passed as props (always non-zero).
+            // Order DB write failed after successful Stripe payment.
+            // The webhook will still save the order — advance to success so
+            // the customer isn't left on the payment screen.
+            console.error('Order confirmation pending (payment succeeded):', paymentIntent.id);
             onSuccess({
-              orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+              orderNumber: "Confirming…",
               cart: [],
               customerData: {},
-              totalAmount: totalAmount,
-              subtotal: subtotal,
-              transactionFee: transactionFee,
-              shippingCost: shippingCost,
+              totalAmount,
+              subtotal,
+              transactionFee,
+              shippingCost,
             });
             toast({
-              title: "Payment Successful!",
-              description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+              title: "Payment Received",
+              description: "Your payment was successful. Your order is being confirmed — you'll receive a confirmation email shortly.",
             });
           }
         } catch (orderError) {
-          console.error('❌ Error creating order:', orderError);
           // Network error — order creation request never reached the server.
-          // Use the pre-computed cart values passed as props (always non-zero).
+          // The webhook will still save the order.
+          console.error('Order confirmation pending (network error):', orderError);
           onSuccess({
-            orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+            orderNumber: "Confirming…",
             cart: [],
             customerData: {},
-            totalAmount: totalAmount,
-            subtotal: subtotal,
-            transactionFee: transactionFee,
-            shippingCost: shippingCost,
+            totalAmount,
+            subtotal,
+            transactionFee,
+            shippingCost,
           });
           toast({
-            title: "Payment Successful!",
-            description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+            title: "Payment Received",
+            description: "Your payment was successful. Your order is being confirmed — you'll receive a confirmation email shortly.",
           });
         }
-      } else {
-        console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
     } catch (error: any) {
+      setPaymentSubmitted(false);
       console.error('Unexpected payment error:', error);
 
       let errorMessage = "An unexpected error occurred during payment. Please try again.";
@@ -301,7 +289,6 @@ export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount
   useEffect(() => {
     const wholesalerId = wholesaler?.id ? String(wholesaler.id) : undefined;
     setStripePromise(fetchStripePromise(publishableKey, wholesalerId));
-    console.log('🚚 STRIPE FORM: Client secret provided:', !!clientSecret, 'publishableKey provided:', !!publishableKey, 'wholesalerId:', wholesalerId);
   }, [clientSecret, publishableKey, wholesaler?.id]);
 
   if (!clientSecret || !stripePromise) {

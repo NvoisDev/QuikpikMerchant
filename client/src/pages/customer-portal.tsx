@@ -947,15 +947,8 @@ export default function CustomerPortal() {
     // CRITICAL FIX: Use explicit shipping option only - no auto-detection
     let shippingOption = explicitShippingOption || customerData.shippingOption;
     
-    console.log('🚚 PAYMENT INTENT: Input values:', {
-      explicitShippingOption,
-      customerDataShippingOption: customerData.shippingOption,
-      finalShippingOption: shippingOption
-    });
-    
-    // CRITICAL FIX: Don't allow undefined shipping option
     if (!shippingOption) {
-      console.error('🚚 ERROR: No shipping option provided - this should not happen');
+      console.error('No shipping option provided');
       toast({
         title: "Please select delivery option",
         description: "You must choose pickup or delivery before checkout",
@@ -968,7 +961,6 @@ export default function CustomerPortal() {
     // CRITICAL VALIDATION: Ensure delivery orders have a selected address with complete data
     if (shippingOption === 'delivery') {
       if (!customerData.selectedDeliveryAddress) {
-        console.log('🚚 ERROR: Delivery selected but no delivery address provided');
         toast({
           title: "Delivery address required",
           description: "Please select a delivery address to continue with delivery option",
@@ -981,11 +973,6 @@ export default function CustomerPortal() {
       // Additional validation: Ensure address has required fields
       const addr = customerData.selectedDeliveryAddress;
       if (!addr.addressLine1 || !addr.city || !addr.postalCode) {
-        console.log('🚚 ERROR: Selected delivery address is missing required fields:', {
-          hasAddressLine1: !!addr.addressLine1,
-          hasCity: !!addr.city,
-          hasPostalCode: !!addr.postalCode
-        });
         toast({
           title: "Address incomplete",
           description: "Please select a complete delivery address",
@@ -995,38 +982,22 @@ export default function CustomerPortal() {
         return;
       }
       
-      console.log('✅ VALIDATION PASSED: Complete delivery address available:', addr.addressLine1);
     }
-    
-    console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
-    console.log('🚚 CRITICAL FIX: Using explicit shipping option:', explicitShippingOption, 'or current state:', customerData.shippingOption);
-    console.log('🚚 AUTO-DETECT: Final shipping option after detection:', shippingOption);
-    console.log('🚚 DEBUG: Full customerData at payment creation:', JSON.stringify({
-      name: customerData.name,
-      phone: customerData.phone,
-      shippingOption: shippingOption,
-      selectedDeliveryAddress: customerData.selectedDeliveryAddress,
-      hasSelectedDeliveryAddress: !!customerData.selectedDeliveryAddress,
-      addressKeys: customerData.selectedDeliveryAddress ? Object.keys(customerData.selectedDeliveryAddress) : 'none'
-    }, null, 2));
     
     // CRITICAL FIX: Check if shipping option changed - if so, create new payment intent
     const shippingOptionChanged = clientSecret && lastUsedShippingOption && lastUsedShippingOption !== shippingOption;
     
     if (shippingOptionChanged) {
-      console.log('🚚 SHIPPING CHANGED: Creating new payment intent because shipping option changed from', lastUsedShippingOption, 'to', shippingOption);
       setClientSecret(''); // Clear existing payment intent
       setPublishableKey(''); // Clear stale publishable key — new intent will supply a fresh one
       setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Update tracking
     }
     
     if ((isCreatingIntent || clientSecret) && !shippingOptionChanged) {
-      console.log('🚚 Payment intent already exists or is being created - SKIPPING (no shipping change)');
       return;
     }
     
     if (!wholesaler) {
-      console.log('🚚 No wholesaler data - SKIPPING');
       return;
     }
 
@@ -1044,14 +1015,6 @@ export default function CustomerPortal() {
         }
       }, 0);
 
-      // CRITICAL: Validate address data before payment intent creation
-      console.log('🏰 PAYMENT VALIDATION: Address data check:', {
-        shippingOption,
-        hasSelectedAddress: !!customerData.selectedDeliveryAddress,
-        addressLine1: customerData.selectedDeliveryAddress?.addressLine1,
-        addressCity: customerData.selectedDeliveryAddress?.city
-      });
-      
       const requestPayload = {
         customerData: {
           name: customerData.name,
@@ -1097,12 +1060,6 @@ export default function CustomerPortal() {
         }
       };
       
-      // CRITICAL: Log detailed address data being sent to backend
-      console.log('🚚 PAYMENT REQUEST: Creating payment intent with validated data:');
-      console.log('🚚 SHIPPING OPTION:', shippingOption);
-      console.log('🚚 ADDRESS DATA:', requestPayload.customerData.selectedDeliveryAddress);
-      console.log('🚚 FULL PAYLOAD:', JSON.stringify(requestPayload, null, 2));
-      
       const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
       
       if (response.ok) {
@@ -1110,22 +1067,14 @@ export default function CustomerPortal() {
         
         // Validate client secret format before using it
         if (!data.clientSecret || !data.clientSecret.startsWith('pi_')) {
-          console.error('💳 Invalid client secret format received:', data.clientSecret);
           throw new Error('Invalid payment setup received from server');
         }
         
-        console.log('✅ Valid client secret received:', data.clientSecret?.substring(0, 10) + '...');
         setClientSecret(data.clientSecret);
         if (data.publishableKey) setPublishableKey(data.publishableKey);
-        setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Track the shipping option for this payment intent
-        console.log('🚚 SIMPLIFIED: Payment intent created successfully with shipping option:', shippingOption);
-        toast({
-          title: "Payment Ready",
-          description: "You can now complete your payment",
-        });
+        setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery');
       } else {
         const errorText = await response.text();
-        console.error('🚚 API request failed:', response.status, errorText);
         
         // Handle specific payment configuration errors
         let userMessage = "Unable to set up payment. Please try again.";
@@ -1143,7 +1092,7 @@ export default function CustomerPortal() {
         throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('🚚 Error creating payment intent:', error);
+      console.error('Error creating payment intent:', error);
       toast({
         title: "Payment Setup Failed",
         description: "Unable to set up payment. Please try again.",
@@ -1157,12 +1106,10 @@ export default function CustomerPortal() {
   // Helper function to create payment intent with custom customer data (fixes race condition)
   const createPaymentIntentWithCustomData = useCallback(async (customData: typeof customerData, shippingOption: 'pickup' | 'delivery') => {
     if (isCreatingIntent || clientSecret) {
-      console.log('🚚 Payment intent already exists or is being created - SKIPPING');
       return;
     }
     
     if (!wholesaler) {
-      console.log('🚚 No wholesaler data - SKIPPING');
       return;
     }
 
@@ -1223,9 +1170,6 @@ export default function CustomerPortal() {
         }
       };
       
-      console.log('🚚 CUSTOM DATA PAYMENT: Creating with fresh address data');
-      console.log('🚚 FRESH ADDRESS:', requestPayload.customerData.selectedDeliveryAddress);
-      
       const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
       
       if (response.ok) {
@@ -1233,18 +1177,12 @@ export default function CustomerPortal() {
         setClientSecret(data.clientSecret);
         if (data.publishableKey) setPublishableKey(data.publishableKey);
         setLastUsedShippingOption(shippingOption);
-        console.log('✅ Payment intent created with fresh address data');
-        toast({
-          title: "Payment Ready",
-          description: "Your delivery address has been confirmed",
-        });
       } else {
         const errorText = await response.text();
-        console.error('🚚 API request failed:', response.status, errorText);
         throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('🚚 Error creating payment intent with custom data:', error);
+      console.error('Error creating payment intent with custom data:', error);
       toast({
         title: "Payment Setup Failed",
         description: "Unable to set up payment. Please try again.",

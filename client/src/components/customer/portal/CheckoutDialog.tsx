@@ -16,6 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import type { CartItem } from "@/components/customer/portal-types";
 
+function calculatePlatformFee(subtotal: number, shippingCost: number): number {
+  return (subtotal + shippingCost) * 0.055 + 0.50;
+}
+
 interface CheckoutDialogProps {
   showCheckout: boolean;
   setShowCheckout: (v: boolean) => void;
@@ -262,7 +266,7 @@ export function CheckoutDialog({
                           <input
                             type="number"
                             value={currentEditVal}
-                            onChange={e => setEditableQuantities(prev => ({ ...prev, [item.product.id]: e.target.value }))}
+                            onChange={e => setEditableQuantities(prev => ({ ...prev, [eqKey]: e.target.value }))}
                             onBlur={e => commitQty(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') commitQty((e.target as HTMLInputElement).value); }}
                             className="w-14 text-center border border-gray-300 rounded px-1 py-0.5 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -332,12 +336,10 @@ export function CheckoutDialog({
                   <div className="flex justify-between text-gray-600">
                     <span>Service Fee (5.5% + £0.50)</span>
                     <PriceDisplay
-                      price={(() => {
-                        const subtotal = cartStats.subtotal;
-                        const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                        const beforeFees = subtotal + shipping;
-                        return (beforeFees * 0.055) + 0.50;
-                      })()}
+                      price={calculatePlatformFee(
+                        cartStats.subtotal,
+                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0
+                      )}
                       currency={wholesaler?.defaultCurrency || 'GBP'}
                       isGuestMode={false}
                       size="small"
@@ -350,11 +352,8 @@ export function CheckoutDialog({
                   <span>Total to Pay</span>
                   <PriceDisplay
                     price={(() => {
-                      const subtotal = cartStats.subtotal;
                       const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                      const beforeFees = subtotal + shipping;
-                      const transactionFee = (beforeFees * 0.055) + 0.50;
-                      return beforeFees + transactionFee;
+                      return cartStats.subtotal + shipping + calculatePlatformFee(cartStats.subtotal, shipping);
                     })()}
                     currency={wholesaler?.defaultCurrency || 'GBP'}
                     isGuestMode={false}
@@ -694,12 +693,9 @@ export function CheckoutDialog({
                       Your order total of{' '}
                       <strong>
                         {(() => {
-                          const subtotal = cartStats.subtotal;
                           const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                             ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                          const beforeFees = subtotal + shipping;
-                          const transactionFee = (beforeFees * 0.055) + 0.50;
-                          return formatCurrency(beforeFees + transactionFee);
+                          return formatCurrency(cartStats.subtotal + shipping + calculatePlatformFee(cartStats.subtotal, shipping));
                         })()}
                       </strong>{' '}
                       will be due on invoice. The supplier will be notified of your order.
@@ -745,7 +741,7 @@ export function CheckoutDialog({
                         const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                         const computedBeforeFees = computedSubtotal + computedShipping;
-                        const computedTransactionFee = (computedBeforeFees * 0.055) + 0.50;
+                        const computedTransactionFee = calculatePlatformFee(computedSubtotal, computedShipping);
                         const computedTotal = computedBeforeFees + computedTransactionFee;
                         setCompletedOrder({
                           orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
@@ -818,18 +814,16 @@ export function CheckoutDialog({
                       publishableKey={publishableKey}
                       subtotal={cartStats.subtotal}
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
-                      transactionFee={((cartStats.subtotal + (customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0)) * 0.055) + 0.50}
+                      transactionFee={calculatePlatformFee(
+                        cartStats.subtotal,
+                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0
+                      )}
                       totalAmount={(() => {
-                        const subtotal = cartStats.subtotal;
                         const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                        const beforeFees = subtotal + shipping;
-                        const transactionFee = (beforeFees * 0.055) + 0.50;
-                        return beforeFees + transactionFee;
+                        return cartStats.subtotal + shipping + calculatePlatformFee(cartStats.subtotal, shipping);
                       })()}
                       onSuccess={(orderData) => {
-                        console.log('🛒 Payment successful, received order data:', orderData);
-
                         const orderItems = cart.map(cartItem => {
                           let computedTotal: number;
                           let promoLabel: string | undefined;

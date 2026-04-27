@@ -624,45 +624,9 @@ export function registerMarketplaceRoutes(app: Express): void {
 
   // POST /api/customer/create-payment
   app.post('/api/customer/create-payment', async (req, res) => {
-    // Global payment processing lock to prevent ANY payment requests from overlapping
-    const globalPaymentLock = 'global_payment_processing';
     try {
       const { customerData, items, shippingInfo } = req.body;
       const { name: customerName, email: customerEmail, phone: customerPhone, address: customerAddress, selectedDeliveryAddress } = customerData || {};
-      
-      // Global payment lock disabled - allow payment processing
-      console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
-      
-      console.log('🔥 PAYMENT REQUEST START:', {
-        timestamp: new Date().toISOString(),
-        customerPhone,
-        customerName,
-        itemsCount: items?.length,
-        requestId: `${customerPhone}_${Date.now()}`
-      });
-      
-      console.log('🚚 CRITICAL DEBUG: Full request body received from frontend:');
-      console.log('  - customerName:', customerName);
-      console.log('  - items count:', items?.length);
-      
-      // CRITICAL DEBUG: Log address data to trace wrong address selection
-      console.log('🏠 ADDRESS DEBUG: Payment creation address data:', {
-        hasSelectedDeliveryAddress: !!selectedDeliveryAddress,
-        selectedDeliveryAddressId: selectedDeliveryAddress?.id,
-        selectedDeliveryAddressLine1: selectedDeliveryAddress?.addressLine1,
-        selectedDeliveryAddressCity: selectedDeliveryAddress?.city,
-        fallbackAddress: customerAddress,
-        shippingOption: shippingInfo?.option
-      });
-      console.log('  - shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
-      console.log('  - shippingInfo.option:', shippingInfo?.option);
-      console.log('  - shippingInfo.service:', shippingInfo?.service ? {
-          serviceName: shippingInfo.service.serviceName,
-          price: shippingInfo.service.price,
-          serviceId: shippingInfo.service.serviceId
-        } : 'NULL');
-      console.log('  - Is delivery order?', shippingInfo?.option === 'delivery');
-      console.log('  - Has service selected?', !!shippingInfo?.service);
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
@@ -743,25 +707,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Use the sellingType field sent from frontend instead of guessing from price
         const sellingType = item.sellingType || 'units';
         const isPalletOrder = sellingType === 'pallets';
-        const isUnitOrder = !isPriceListOrder && sellingType === 'units' && parseFloat(item.unitPrice) === basePrice;
+        const isUnitOrder = !isPriceListOrder && sellingType === 'units' && Math.abs(parseFloat(item.unitPrice) - basePrice) < 0.001;
         const hasActivePromos = product.promoActive && Array.isArray((product as any).promotionalOffers) && (product as any).promotionalOffers.length > 0;
         const isPromotionalOrder = !isPriceListOrder && sellingType === 'units' && !isUnitOrder && hasActivePromos;
-        
-        console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
-          itemQuantity: item.quantity,
-          itemUnitPrice: item.unitPrice,
-          productPrice: product.price,
-          productPalletPrice: product.palletPrice,
-          productPromoPrice: product.promoPrice,
-          productPromoActive: product.promoActive,
-          productMoq: product.moq,
-          productPalletMoq: product.palletMoq,
-          productStock: product.stock,
-          isUnitOrder,
-          isPalletOrder,
-          isPromotionalOrder,
-          allowSmartMOQ: product.stock < product.moq
-        });
         
         // Smart MOQ validation: Allow purchasing remaining stock even if below MOQ
         if ((isUnitOrder || isPromotionalOrder) && item.quantity < product.moq) {
@@ -770,8 +718,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             return res.status(400).json({ 
               message: `Minimum order quantity for ${product.name} is ${product.moq} units` 
             });
-          } else {
-            console.log(`🧠 SMART MOQ: Allowing ${item.quantity} units of ${product.name} (MOQ: ${product.moq}, Stock: ${product.stock})`);
           }
         } else if (isPalletOrder && product.palletMoq && item.quantity < product.palletMoq) {
           // Smart MOQ for pallets: If pallet stock is below pallet MOQ, allow customer to buy remaining pallets
@@ -780,8 +726,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             return res.status(400).json({ 
               message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
             });
-          } else {
-            console.log(`🧠 SMART PALLET MOQ: Allowing ${item.quantity} pallets of ${product.name} (MOQ: ${product.palletMoq}, Available: ${palletStock})`);
           }
         } else if (!isUnitOrder && !isPalletOrder && !isPromotionalOrder && !isPriceListOrder) {
           return res.status(400).json({ 
@@ -886,43 +830,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           }
         }
         
-        console.log(`🧮 CALCULATION DEBUG for product ${product.id}:`, {
-          productName: product.name,
-          isUnitOrder,
-          isPalletOrder,
-          isPromotionalOrder,
-          isPriceListOrder,
-          priceListCalculationPrice,
-          calculationPrice,
-          sentUnitPrice: item.unitPrice,
-          quantity: item.quantity,
-          promoPrice: product.promoPrice,
-          promoActive: product.promoActive,
-          promotionalOffers: product.promotionalOffers
-        });
-        
-        console.log(`📊 PRICING RESULT for product ${product.id}:`, pricing);
-        
-        console.log(`🔍 Item calculation for ${product.name}:`, {
-          promoActive: product.promoActive,
-          promoPrice: product.promoPrice,
-          regularPrice: product.price,
-          calculationPrice: calculationPrice,
-          quantity: item.quantity,
-          pricingResult: pricing
-        });
-
         if (isNaN(pricing.totalCost) || isNaN(item.quantity) || pricing.totalCost <= 0) {
-          console.error(`❌ Invalid pricing calculation for ${product.name}:`, {
-            pricingResult: pricing,
-            quantity: item.quantity,
-            productPrice: product.price,
-            promoPrice: product.promoPrice,
-            calculationPrice,
-            isNaN_totalCost: isNaN(pricing.totalCost),
-            isNaN_quantity: isNaN(item.quantity),
-            totalCost_value: pricing.totalCost
-          });
           return res.status(400).json({ 
             message: `Invalid price or quantity for ${product.name}` 
           });
@@ -1081,15 +989,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      console.log('🔍 Connect Account Status:', {
-        stripeAccountId: wholesaler.stripeAccountId,
-        status: connectAccountStatus,
-        willUseConnect: useConnect,
-        reason: connectAccountStatus === 'active' ? 'Account fully activated' : 
-                connectAccountStatus === 'incomplete' ? 'Account exists but incomplete' :
-                connectAccountStatus === 'error' ? 'Account validation failed' : 'No account'
-      });
-      
       // Create stable idempotency key to prevent duplicate payment intents on simultaneous requests.
       // A 5-minute time window is included so that switching shipping options (pickup ↔ delivery)
       // always generates a fresh key rather than colliding with a previous intent that had
@@ -1102,33 +1001,9 @@ export function registerMarketplaceRoutes(app: Express): void {
       const timeWindow = Math.floor(Date.now() / 300000); // Rotates every 5 min — allows fresh retry after switching options
       const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${shippingFlag}_${timeWindow}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
-      
-      console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
-      console.log('💰 Final payment details before Stripe:', {
-        stripeAmount,
-        stripeAmountType: typeof stripeAmount,
-        stripeAmountIsInteger: Number.isInteger(stripeAmount),
-        totalCustomerPays,
-        totalCustomerPaysType: typeof totalCustomerPays,
-        productSubtotal,
-        deliveryCost,
-        customerTransactionFee,
-        useConnect,
-        connectFlag
-      });
-      
+
       // Additional validation specifically for Stripe amount
       if (!Number.isInteger(stripeAmount) || stripeAmount <= 0 || isNaN(stripeAmount)) {
-        console.error('❌ STRIPE AMOUNT VALIDATION FAILED:', {
-          stripeAmount,
-          stripeAmountType: typeof stripeAmount,
-          isInteger: Number.isInteger(stripeAmount),
-          isPositive: stripeAmount > 0,
-          isNaN: isNaN(stripeAmount),
-          totalCustomerPays,
-          calculation: `${totalCustomerPays} * 100 = ${totalCustomerPays * 100}`,
-          rounded: Math.round(totalCustomerPays * 100)
-        });
         return res.status(400).json({ 
           message: 'Invalid payment amount calculated. Please try again.' 
         });
@@ -1136,15 +1011,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       let paymentIntent;
       try {
-        
-        console.log('💳 Stripe Connect Configuration:', {
-          wholesalerId: wholesaler.id,
-          stripeAccountId: wholesaler.stripeAccountId,
-          useConnect,
-          applicationFeeAmount,
-          wholesalerReceives: stripeWholesalerAmount
-        });
-
         const paymentConfig: any = {
           amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
           currency: 'gbp',
@@ -1165,27 +1031,9 @@ export function registerMarketplaceRoutes(app: Express): void {
               destination: wholesaler.stripeAccountId,
               amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
             };
-            console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
           }
         }
         
-        // Log final payment configuration for debugging
-        console.log('💳 Final payment configuration:', {
-          useConnect,
-          connectAccountStatus,
-          amount: paymentConfig.amount,
-          hasTransferData: !!paymentConfig.transfer_data,
-          destination: paymentConfig.transfer_data?.destination,
-          transferAmount: paymentConfig.transfer_data?.amount
-        });
-
-        console.log('💳 About to call Stripe with config:', {
-          amount: paymentConfig.amount,
-          amountType: typeof paymentConfig.amount,
-          currency: paymentConfig.currency,
-          hasTransferData: !!paymentConfig.transfer_data
-        });
-
         paymentIntent = await stripe.paymentIntents.create({
           ...paymentConfig,
         metadata: {
@@ -1220,22 +1068,11 @@ export function registerMarketplaceRoutes(app: Express): void {
         idempotencyKey: idempotencyKey
       });
       
-      console.log('✅ Payment intent created successfully:', paymentIntent.id);
-      
-      console.log('✅ Payment processing successful');
-      
       } catch (stripeError: any) {
-        console.error("❌ Stripe payment intent creation error:", stripeError);
-        console.error("❌ Stripe error details:", {
-          type: stripeError.type,
-          code: stripeError.code,
-          message: stripeError.message,
-          statusCode: stripeError.statusCode
-        });
+        console.error("Stripe payment intent creation error:", stripeError.message);
         
         // Handle specific Connect account errors and retry without Connect
         if ((stripeError.type === 'StripeInvalidRequestError' || stripeError.code === 'account_invalid') && useConnect) {
-          console.log('🔄 Connect account error detected, retrying without Connect...');
           
           // Retry payment creation without Connect configuration
           try {
@@ -1273,15 +1110,11 @@ export function registerMarketplaceRoutes(app: Express): void {
               }
             };
             
-            console.log('🔄 Creating fallback payment intent without Connect');
             paymentIntent = await stripe.paymentIntents.create(fallbackConfig, {
               idempotencyKey: `${idempotencyKey}_fallback`
             });
-            
-            console.log('✅ Fallback payment intent created successfully:', paymentIntent.id);
-            
           } catch (fallbackError: any) {
-            console.error("❌ Fallback payment creation also failed:", fallbackError);
+            console.error("Fallback payment creation also failed:", fallbackError);
             return res.status(500).json({ 
               message: "Payment setup failed. Please contact the business owner.",
               error: 'payment_config_error'
