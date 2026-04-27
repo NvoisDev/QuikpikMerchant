@@ -259,25 +259,31 @@ export class DeliveryStorage extends CustomerMgmtStorage {
 
   async createCollectionAddress(data: import('@shared/schema').InsertCollectionAddress) {
     const { collectionAddresses } = await import('@shared/schema');
-    if (data.isDefault) {
-      await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, data.wholesalerId));
-    }
-    const [row] = await db.insert(collectionAddresses).values(data).returning();
-    return row;
+    return await db.transaction(async (trx) => {
+      if (data.isDefault) {
+        await trx.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, data.wholesalerId));
+      }
+      const [row] = await trx.insert(collectionAddresses).values(data).returning();
+      return row;
+    });
   }
 
   async updateCollectionAddress(id: number, wholesalerId: string, updates: Partial<import('@shared/schema').InsertCollectionAddress>) {
     const { collectionAddresses } = await import('@shared/schema');
-    if (updates.isDefault) {
-      await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
-    }
-    const [row] = await db
-      .update(collectionAddresses)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
-      .returning();
-    if (!row) throw new Error('Collection address not found');
-    return row;
+    // Strip wholesalerId from updates — ownership must not change via client payload
+    const { wholesalerId: _discarded, ...safeUpdates } = updates as any;
+    return await db.transaction(async (trx) => {
+      if (safeUpdates.isDefault) {
+        await trx.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
+      }
+      const [row] = await trx
+        .update(collectionAddresses)
+        .set({ ...safeUpdates, updatedAt: new Date() })
+        .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
+        .returning();
+      if (!row) throw new Error('Collection address not found');
+      return row;
+    });
   }
 
   async deleteCollectionAddress(id: number, wholesalerId: string) {
@@ -294,21 +300,25 @@ export class DeliveryStorage extends CustomerMgmtStorage {
     if (activeOrders.length > 0) {
       throw new Error('COLLECTION_ADDRESS_IN_USE');
     }
-    await db
+    const [deleted] = await db
       .delete(collectionAddresses)
-      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)));
+      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
+      .returning({ id: collectionAddresses.id });
+    if (!deleted) throw new Error('Collection address not found');
   }
 
   async setDefaultCollectionAddress(wholesalerId: string, id: number) {
     const { collectionAddresses } = await import('@shared/schema');
-    await db.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
-    const [row] = await db
-      .update(collectionAddresses)
-      .set({ isDefault: true, updatedAt: new Date() })
-      .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
-      .returning();
-    if (!row) throw new Error('Collection address not found');
-    return row;
+    return await db.transaction(async (trx) => {
+      await trx.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));
+      const [row] = await trx
+        .update(collectionAddresses)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(and(eq(collectionAddresses.id, id), eq(collectionAddresses.wholesalerId, wholesalerId)))
+        .returning();
+      if (!row) throw new Error('Collection address not found');
+      return row;
+    });
   }
 
 }

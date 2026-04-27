@@ -96,7 +96,8 @@ export function registerCollectionAddressRoutes(app: Express) {
       const effectiveWholesalerId = getEffectiveWholesalerId(user);
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-      const updates = insertCollectionAddressSchema.partial().parse(req.body);
+      // Explicitly omit wholesalerId — ownership is always derived from auth context
+      const updates = insertCollectionAddressSchema.omit({ wholesalerId: true }).partial().parse(req.body);
       const address = await storage.updateCollectionAddress(id, effectiveWholesalerId, updates);
       res.json(address);
     } catch (err: any) {
@@ -121,6 +122,7 @@ export function registerCollectionAddressRoutes(app: Express) {
       if (err?.message === "COLLECTION_ADDRESS_IN_USE") {
         return res.status(409).json({ error: "Cannot delete an address linked to active or pending orders. Deactivate it instead." });
       }
+      if (err?.message === "Collection address not found") return res.status(404).json({ error: "Not found" });
       console.error("deleteCollectionAddress error:", err);
       res.status(500).json({ error: "Failed to delete collection address" });
     }
