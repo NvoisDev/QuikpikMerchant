@@ -28,7 +28,7 @@ interface OrderItem {
     name: string;
     imageUrl?: string;
     moq?: number;
-    quantityInPack?: number;
+    packQuantity?: number;
     unitSize?: string | null;
     unitOfMeasure?: string | null;
   };
@@ -1025,8 +1025,8 @@ export default function OrderDetail() {
                   <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
                   {item.product?.unitSize && item.product.unitOfMeasure && (
                     <div className="text-xs text-gray-400">
-                      {item.product.quantityInPack && item.product.quantityInPack > 1
-                        ? `${item.product.quantityInPack} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
+                      {item.product.packQuantity && item.product.packQuantity > 1
+                        ? `${item.product.packQuantity} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
                         : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`}
                     </div>
                   )}

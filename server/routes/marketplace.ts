@@ -207,7 +207,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             sellingType: orderItems.sellingType, // CRITICAL FIX: Include selling type in query
             appliedOfferLabel: orderItems.appliedOfferLabel,
             freeItems: orderItems.freeItems,
-            packQuantity: products.quantityInPack,
+            packQuantity: products.packQuantity,
             unitSize: products.unitSize,
             unitOfMeasure: products.unitOfMeasure,
           })
