@@ -288,13 +288,15 @@ export class DeliveryStorage extends CustomerMgmtStorage {
 
   async deleteCollectionAddress(id: number, wholesalerId: string) {
     const { collectionAddresses } = await import('@shared/schema');
-    // Check if address is used in any active/pending orders
+    // Block delete when address is linked to any order that is still in-flight.
+    // Terminal states (fulfilled, cancelled) are excluded — the address has already served its purpose.
+    const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'paid', 'shipped', 'ready_for_collection'] as const;
     const activeOrders = await db
       .select({ id: orders.id })
       .from(orders)
       .where(and(
         eq(orders.collectionAddressId!, id),
-        inArray(orders.status, ['pending', 'confirmed', 'processing'])
+        inArray(orders.status, [...ACTIVE_ORDER_STATUSES])
       ))
       .limit(1);
     if (activeOrders.length > 0) {
