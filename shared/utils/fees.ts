@@ -7,9 +7,9 @@
  * To adjust rates, change the constants here only.
  */
 
-const CUSTOMER_FEE_RATE = 0.055;
-const CUSTOMER_FEE_FIXED = 0.50;
-const PLATFORM_FEE_RATE = 0.046;
+export const CUSTOMER_FEE_RATE = 0.055;
+export const CUSTOMER_FEE_FIXED = 0.50;
+export const PLATFORM_FEE_RATE = 0.046;
 
 /**
  * Calculate the customer-facing transaction fee.
