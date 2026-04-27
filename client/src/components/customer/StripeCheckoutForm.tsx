@@ -240,7 +240,18 @@ const PaymentFormContent = ({
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          <PaymentElement onReady={() => setIsElementReady(true)} />
+          {!isElementReady && (
+            <div className="space-y-3 animate-pulse" aria-hidden="true">
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+              </div>
+            </div>
+          )}
+          <div className={!isElementReady ? "h-0 overflow-hidden" : ""}>
+            <PaymentElement onReady={() => setIsElementReady(true)} />
+          </div>
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
