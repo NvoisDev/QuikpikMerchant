@@ -1,13 +1,13 @@
 import type { Express } from "express";
-import { calculateCustomerFee, customerFeeLabel } from "../../shared/utils/fees";
+import { calculateCustomerFee } from "../../shared/utils/fees";
 import { formatDateTime } from "../../shared/utils/date";
 import {
-  InventoryCalculator, SendGridAttachment, SubscriptionService, and, buildInvoicePdf, db,
+  InventoryCalculator, SubscriptionService, and, db,
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
-  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS, sgMail,
+  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
 } from "./shared";
@@ -2347,78 +2347,8 @@ export function registerPaymentRoutes(app: Express): void {
         console.error('Failed to send quote confirmation email:', quoteEmailError);
       }
 
-      // Send quote email to customer
-      try {
-        if (customer.email) {
-          const isDeposit = validDepositPercentage > 0 && validDepositPercentage < 100;
-          const isPayLater = validDepositPercentage === 0;
-          const businessName = wholesaler.businessName || wholesaler.name || 'Your supplier';
-          const customerItemsHtml: string[] = [];
-          const pdfItems: any[] = [];
-          let totalWeightKg = 0;
-          for (const item of items) {
-            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
-            const productName = product?.name || `Product #${item.productId}`;
-            const packDesc = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
-            const displayName = packDesc ? `${productName} (${packDesc})` : productName;
-            const sellingType = item.sellingType || 'units';
-            const itemTotal = item.customPrice * item.quantity;
-            const unitWeightKg = sellingType === 'pallets'
-              ? parseFloat(product?.palletWeight || product?.pallet_weight || '0')
-              : parseFloat(product?.unitWeight || product?.unit_weight || '0');
-            if (unitWeightKg > 0) totalWeightKg += unitWeightKg * item.quantity;
-            customerItemsHtml.push(`<li style="margin: 6px 0;"><strong>${displayName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
-            pdfItems.push({ productName, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), lineTotal: itemTotal, appliedOfferLabel: null, product: { name: productName, quantityInPack: product?.quantityInPack, unitSize: product?.unitSize, unitOfMeasure: product?.unitOfMeasure } });
-          }
-          const custDeliveryRowHtml = quoteDeliveryCharge > 0 ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>` : '';
-          // Resolve delivery address text for customer email
-          let custDeliveryAddressText = resolvedDeliveryAddress || '';
-          if (fulfillmentType === 'delivery' && !custDeliveryAddressText && resolvedDeliveryAddressId) {
-            try {
-              const addr = await storage.getDeliveryAddress(resolvedDeliveryAddressId);
-              if (addr) custDeliveryAddressText = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean).join(', ');
-            } catch (e) { /* ignore */ }
-          }
-          const custDeliveryNoteHtml = wholesaler.deliveryNote && fulfillmentType === 'delivery' ? `${emailCard(`<p style="margin:0;font-size:13px">📦 ${wholesaler.deliveryNote}</p>`, { borderColor: '#fde68a', bgColor: '#fffbeb' })}` : '';
-          const custPaymentBadge = isPayLater ? emailBadge('Pay Later — No payment required now', '#3b82f6') : (isDeposit ? emailBadge(`Deposit required: £${depositAmount.toFixed(2)}`, '#f59e0b') : emailBadge(`Payment required: £${total.toFixed(2)}`, '#10b981'));
-          const quoteTxFee = !isPayLater ? Math.max(0, total - productSubtotal - quoteDeliveryCharge) : 0;
-          const custEmailBody = `${emailHeading(`Quote from ${businessName}`, { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>${fulfillmentType === 'delivery' ? emailCard(`<p style="margin:0 0 4px"><b>Fulfillment:</b> Delivery</p>${quoteDeliveryCharge > 0 ? `<p style="margin:0 0 4px"><b>Delivery charge:</b> £${quoteDeliveryCharge.toFixed(2)}</p>` : ''}${custDeliveryAddressText ? `<p style="margin:4px 0 0"><b>Delivery address:</b> ${custDeliveryAddressText}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' }) : emailCard(`<p style="margin:0"><b>Fulfillment:</b> Collection</p>`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${custDeliveryRowHtml}${!isPayLater && quoteTxFee > 0 ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:14px">Service Fee (${customerFeeLabel()}):</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:14px">£${quoteTxFee.toFixed(2)}</td></tr>` : ''}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${depositAmount.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Remaining balance:</td><td style="padding:4px 0;text-align:right">£${outstandingAmount.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr>${totalWeightKg > 0 ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:14px">Total Weight:</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:14px">${totalWeightKg.toFixed(2)} kg</td></tr>` : ''}</table>${custDeliveryNoteHtml}<p style="margin:16px 0 8px">${custPaymentBadge}</p>${!isPayLater && paymentLinkUrl ? emailButton('Pay Now', paymentLinkUrl, '#059669') : ''}${isPayLater ? `<p style="margin:16px 0 4px;font-size:14px;color:#6b7280">Please arrange payment directly with ${businessName}.</p>` : ''}`;
-          const custHtml = wrapCustomerEmail(custEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Your quote ${orderNumber} from ${businessName} — £${total.toFixed(2)}` });
-
-          // Generate PDF invoice attachment (non-blocking — email still sends without it if PDF fails)
-          let quoteAttachment: SendGridAttachment | null = null;
-          try {
-            const orderForPdf = { ...quoteOrder, items: pdfItems, retailer: customer, totalWeight: totalWeightKg > 0 ? totalWeightKg : undefined };
-            const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, !isPayLater);
-            quoteAttachment = {
-              content: pdfBuffer.toString('base64'),
-              filename: `invoice-${orderNumber}.pdf`,
-              type: 'application/pdf',
-              disposition: 'attachment',
-            };
-            console.log(`📎 Invoice PDF generated for quote email: invoice-${orderNumber}.pdf`);
-          } catch (pdfErr) {
-            console.error('⚠️ Could not generate PDF for quote email (email still sends):', pdfErr);
-          }
-
-          if (process.env.SENDGRID_API_KEY) {
-            sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-            const custMsg: MailDataRequired = {
-              to: customer.email,
-              from: { email: 'hello@quikpik.co', name: businessName },
-              subject: `Your quote ${orderNumber} from ${businessName}`,
-              html: custHtml,
-              ...(quoteAttachment ? { attachments: [quoteAttachment] } : {}),
-            };
-            await sgMail.send(custMsg);
-          } else {
-            await sendEmail({ to: customer.email, from: 'hello@quikpik.co', subject: `Your quote ${orderNumber} from ${businessName}`, html: custHtml });
-          }
-          console.log(`📧 Quote email sent to customer: ${customer.email}`);
-        }
-      } catch (custEmailError) {
-        console.error('Failed to send customer quote email:', custEmailError);
-      }
+      // Customer email is sent by the Stripe webhook handler (sendCustomerInvoiceEmail)
+      // after payment is confirmed — no separate quote email is sent here to avoid duplicates.
 
       res.json({
         success: true,
