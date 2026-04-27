@@ -302,26 +302,30 @@ export function registerOrderRoutes(app: Express): void {
           const actionType = updated.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
           // Resolve collection address: prefer linked address → wholesaler default → pickupAddress → businessAddress
           let collectionAddress = '';
-          if ((updated as any).collectionAddressId) {
+          if (updated.collectionAddressId) {
             try {
-              const caRow = await storage.getCollectionAddress((updated as any).collectionAddressId);
+              const caRow = await storage.getCollectionAddress(updated.collectionAddressId);
               if (caRow) {
                 const parts = [caRow.name, caRow.addressLine1, caRow.addressLine2, caRow.city, caRow.postcode].filter(Boolean);
                 collectionAddress = parts.join(', ');
               }
-            } catch (_) {}
+            } catch (caErr) {
+              console.warn('⚠️ Could not fetch linked collection address for SMS:', caErr);
+            }
           }
           if (!collectionAddress) {
             // No explicit selection — try wholesaler's default collection address
             try {
               const wholesalerAddrs = await storage.getCollectionAddresses(updated.wholesalerId);
-              const defaultAddr = wholesalerAddrs.find((a: any) => a.isDefault && a.isActive !== false)
-                ?? wholesalerAddrs.find((a: any) => a.isActive !== false);
+              const defaultAddr = wholesalerAddrs.find((a: { isDefault: boolean; isActive?: boolean }) => a.isDefault && a.isActive !== false)
+                ?? wholesalerAddrs.find((a: { isActive?: boolean }) => a.isActive !== false);
               if (defaultAddr) {
                 const parts = [defaultAddr.name, defaultAddr.addressLine1, defaultAddr.addressLine2, defaultAddr.city, defaultAddr.postcode].filter(Boolean);
                 collectionAddress = parts.join(', ');
               }
-            } catch (_) {}
+            } catch (caErr) {
+              console.warn('⚠️ Could not fetch default collection address for SMS:', caErr);
+            }
           }
           if (!collectionAddress) {
             collectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress ||

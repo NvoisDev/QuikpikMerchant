@@ -260,6 +260,9 @@ interface CollectionAddress {
 
 function CollectionAddressesSection() {
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
+  // Only owner or team admin may create/edit/delete/set-default
+  const canManage = authUser?.role !== 'team_member' || authUser?.teamMemberRole === 'admin';
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<CollectionAddress | null>(null);
   const [toDelete, setToDelete] = useState<CollectionAddress | null>(null);
@@ -357,9 +360,11 @@ function CollectionAddressesSection() {
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Collection Addresses</h3>
           <p className="text-sm text-gray-500 mt-0.5">Add multiple pickup locations. Customers and quotes will show the selected address. Orders without a specific address fall back to your registered business address.</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={openAdd}>
-          <Plus className="h-4 w-4" />Add Address
-        </Button>
+        {canManage && (
+          <Button size="sm" className="gap-1.5" onClick={openAdd}>
+            <Plus className="h-4 w-4" />Add Address
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -386,19 +391,21 @@ function CollectionAddressesSection() {
                   {[a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', ')}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {!a.isDefault && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
-                    Set default
+              {canManage && (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {!a.isDefault && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
+                      Set default
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(a)}>
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                )}
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(a)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -802,8 +809,8 @@ export default function Settings() {
                   <span className="font-medium text-sm sm:text-base">Account</span>
                 </div>
 
-                {/* Business Settings - visible to owners and team admins */}
-                {(user.role !== 'team_member' || user.teamMemberRole === 'admin') && (
+                {/* Business Settings - visible to all roles; management actions gated below */}
+                {(
                   <div 
                     className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                       activeTab === "business" 

@@ -106,6 +106,19 @@ interface Product {
   batchCount?: number;
 }
 
+interface CollectionAddress {
+  id: number;
+  wholesalerId: string;
+  name: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  postcode: string;
+  country: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
 export default function QuickQuote() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -167,10 +180,10 @@ export default function QuickQuote() {
     enabled: !!user?.enableMultiProfile,
   });
 
-  const { data: collectionAddresses = [] } = useQuery<any[]>({
+  const { data: collectionAddresses = [] } = useQuery<CollectionAddress[]>({
     queryKey: ['/api/collection-addresses'],
   });
-  const activeCollectionAddresses = collectionAddresses.filter((a: any) => a.isActive !== false);
+  const activeCollectionAddresses = collectionAddresses.filter((a: CollectionAddress) => a.isActive !== false);
 
   useEffect(() => {
     if (businessProfiles.length > 0 && selectedProfileId === null) {
@@ -403,7 +416,7 @@ export default function QuickQuote() {
 
   useEffect(() => {
     if (activeCollectionAddresses.length > 0 && collectionAddressId === null) {
-      const def = activeCollectionAddresses.find((a: any) => a.isDefault) || activeCollectionAddresses[0];
+      const def = activeCollectionAddresses.find((a: CollectionAddress) => a.isDefault) || activeCollectionAddresses[0];
       if (def) setCollectionAddressId(def.id);
     }
   }, [activeCollectionAddresses]);
@@ -1320,7 +1333,7 @@ export default function QuickQuote() {
                     onChange={(e) => setCollectionAddressId(e.target.value ? parseInt(e.target.value, 10) : null)}
                   >
                     <option value="">-- Select pickup location --</option>
-                    {activeCollectionAddresses.map((a: any) => (
+                    {activeCollectionAddresses.map((a: CollectionAddress) => (
                       <option key={a.id} value={a.id}>
                         {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
                         {a.isDefault ? ' (Default)' : ''}

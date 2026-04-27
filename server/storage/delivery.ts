@@ -271,7 +271,7 @@ export class DeliveryStorage extends CustomerMgmtStorage {
   async updateCollectionAddress(id: number, wholesalerId: string, updates: Partial<import('@shared/schema').InsertCollectionAddress>) {
     const { collectionAddresses } = await import('@shared/schema');
     // Strip wholesalerId from updates — ownership must not change via client payload
-    const { wholesalerId: _discarded, ...safeUpdates } = updates as any;
+    const { wholesalerId: _discarded, ...safeUpdates } = updates;
     return await db.transaction(async (trx) => {
       if (safeUpdates.isDefault) {
         await trx.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, wholesalerId));

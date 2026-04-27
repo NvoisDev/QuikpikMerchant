@@ -81,6 +81,18 @@ interface Order {
   stockRestoredCount?: number;
   readyToCollectAt?: string;
   fulfilledAt?: string;
+  collectionAddressId?: number | null;
+  collectionAddress?: {
+    id: number;
+    name: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    postcode: string;
+    country: string;
+    isDefault: boolean;
+    isActive: boolean;
+  } | null;
   cancellationRequest?: {
     id: number;
     status: 'pending' | 'approved' | 'rejected';
@@ -246,11 +258,6 @@ export default function OrderDetail() {
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
-
-  const { data: collectionAddresses = [] } = useQuery<any[]>({
-    queryKey: ['/api/collection-addresses'],
-    staleTime: 60000,
-  });
 
   useEffect(() => {
     if (!id) return;
@@ -976,17 +983,15 @@ export default function OrderDetail() {
                     {order.wholesalerBusinessName || 'Business Location'}
                   </div>
                   {(() => {
-                    // Prefer order.collectionAddressId lookup, then legacy pickupAddress, then businessAddress
-                    const linkedCA = (order as any)?.collectionAddressId
-                      ? collectionAddresses.find((a: any) => a.id === (order as any).collectionAddressId)
-                      : null;
-                    if (linkedCA) {
+                    // Use backend-enriched collectionAddress object directly from order response
+                    if (order.collectionAddress) {
+                      const ca = order.collectionAddress;
                       return (
                         <div className="flex items-start mt-2 gap-1">
                           <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
                           <div>
-                            <span className="text-orange-800 text-xs font-medium">{linkedCA.name}</span>
-                            <span className="text-orange-700 text-xs ml-1">— {[linkedCA.addressLine1, linkedCA.addressLine2, linkedCA.city, linkedCA.postcode].filter(Boolean).join(', ')}</span>
+                            <span className="text-orange-800 text-xs font-medium">{ca.name}</span>
+                            <span className="text-orange-700 text-xs ml-1">— {[ca.addressLine1, ca.addressLine2, ca.city, ca.postcode].filter(Boolean).join(', ')}</span>
                           </div>
                         </div>
                       );
