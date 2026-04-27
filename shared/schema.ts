@@ -1262,7 +1262,20 @@ export const insertProductSchema = createInsertSchema(products).omit({
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
   palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
-  unitsPerPallet: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  unitsPerPallet: z.union([z.string(), z.number()])
+    .optional()
+    .transform((val, ctx) => {
+      if (val === undefined || val === '') return undefined;
+      const parsed = parseInt(val.toString());
+      if (isNaN(parsed)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Units per pallet must be a valid number" });
+        return z.NEVER;
+      }
+      return parsed;
+    })
+    .refine((val) => val === undefined || val >= 1, {
+      message: "Units per pallet must be at least 1",
+    }),
   
   // Fix integer fields to accept string inputs from frontend
   packQuantity: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),

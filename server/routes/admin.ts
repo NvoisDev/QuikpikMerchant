@@ -2318,4 +2318,33 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // GET /api/admin/products/invalid-units-per-pallet
+  // Returns all products where unitsPerPallet is NULL or <= 0 (legacy data that would cause cost calculation errors)
+  app.get('/api/admin/products/invalid-units-per-pallet', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const invalidProducts = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          wholesalerId: products.wholesalerId,
+          wholesalerEmail: users.email,
+          unitsPerPallet: products.unitsPerPallet,
+          status: products.status,
+        })
+        .from(products)
+        .leftJoin(users, eq(products.wholesalerId, users.id))
+        .where(or(isNull(products.unitsPerPallet), lte(products.unitsPerPallet, 0)));
+
+      res.json({
+        count: invalidProducts.length,
+        products: invalidProducts,
+      });
+    } catch (error) {
+      console.error('Admin invalid-units-per-pallet error:', error);
+      res.status(500).json({ error: 'Failed to query products.' });
+    }
+  });
+
 }
