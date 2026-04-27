@@ -2579,7 +2579,9 @@ export function registerOrderRoutes(app: Express): void {
 
       const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
 
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod));
+      const pdfAmountPaid = (order as any).amountPaid ? parseFloat((order as any).amountPaid) : undefined;
+      const pdfAmountOutstanding = (order as any).amountOutstanding ? parseFloat((order as any).amountOutstanding) : undefined;
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -2606,7 +2608,9 @@ export function registerOrderRoutes(app: Express): void {
 
       const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
 
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
+      const pdfAmountPaid = order.amountPaid ? parseFloat(order.amountPaid) : undefined;
+      const pdfAmountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : undefined;
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -2644,7 +2648,9 @@ export function registerOrderRoutes(app: Express): void {
       const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
 
       // Show transaction fee only for Stripe-processed payments, not manual (cash/bank transfer) payments
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
+      const pdfAmountPaid = order.amountPaid ? parseFloat(order.amountPaid) : undefined;
+      const pdfAmountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : undefined;
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
       const pdfAttachment: SendGridAttachment = {
         content: pdfBuffer.toString('base64'),
         filename: invoiceFilename,
