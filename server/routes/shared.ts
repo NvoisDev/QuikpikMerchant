@@ -844,7 +844,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
 }
 
 // ─── Customer invoice email ───────────────────────────────────────────────────
-export async function sendCustomerInvoiceEmail(customer: any, order: any, items: any[], wholesaler: any): Promise<void> {
+export async function sendCustomerInvoiceEmail(customer: any, order: any, items: any[], wholesaler: any, isBalancePayment?: boolean): Promise<void> {
   try {
     const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
     const customerName = customer.name ||
@@ -887,13 +887,20 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
     const orderTotal = order.total ? parseFloat(order.total) : null;
     const paymentSummaryHtml = (isDeposit && amountPaid !== null && amountOutstanding !== null)
       ? `<div style="background:#fefce8;border:1px solid #fde047;padding:15px;border-radius:5px;margin:20px 0"><h4 style="margin:0 0 10px;color:#713f12;">Deposit Payment Summary</h4><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Deposit Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr>${orderTotal !== null ? `<tr><td style="padding:4px 0;color:#6b7280;">Order Total:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${orderTotal.toFixed(2)}</td></tr>` : ''}<tr><td style="padding:4px 0;color:#6b7280;font-weight:bold;">Outstanding Balance:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#b45309;">${currencySymbol}${amountOutstanding.toFixed(2)}</td></tr></table><p style="margin:10px 0 0;font-size:13px;color:#78350f;">The remaining balance will be collected separately before your order is dispatched.</p></div>`
-      : (amountPaid !== null && amountPaid > 0 && orderTotal !== null
-          ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Amount Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`
-          : '');
-    const emailTitle = isDeposit ? 'Deposit Received' : 'Order Confirmation';
+      : (isBalancePayment && orderTotal !== null)
+        ? (() => {
+            const balancePaid = order.latestPaymentAmount ? parseFloat(order.latestPaymentAmount) : amountPaid;
+            return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><h4 style="margin:0 0 10px;color:#14532d;">Payment Summary</h4><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Order Total:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${orderTotal.toFixed(2)}</td></tr><tr><td style="padding:4px 0;color:#6b7280;">Balance Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${balancePaid !== null ? balancePaid.toFixed(2) : '0.00'}</td></tr><tr><td style="padding:4px 0;color:#6b7280;font-weight:bold;">Outstanding Balance:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}0.00</td></tr></table></div>`;
+          })()
+        : (amountPaid !== null && amountPaid > 0 && orderTotal !== null
+            ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Amount Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`
+            : '');
+    const emailTitle = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Paid \u2014 Order Confirmed' : 'Order Confirmation';
     const emailIntro = isDeposit
-      ? `Thank you — your deposit payment has been received. We'll be in touch once the remaining balance is settled.`
-      : `Thank you for your order!`;
+      ? `Thank you \u2014 your deposit payment has been received. We'll be in touch once the remaining balance is settled.`
+      : isBalancePayment
+        ? `Great news \u2014 your balance payment has been received and your order is now fully paid. We'll be in touch shortly with dispatch details.`
+        : `Thank you for your order!`;
     const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">${emailTitle}</h2><p>Dear ${customerName},</p><p>${emailIntro}</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${paymentSummaryHtml}${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
     if (!process.env.SENDGRID_API_KEY) {
       console.log("SendGrid not configured — email skipped for order #" + order.id);
@@ -913,10 +920,12 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
     if (wholesaler.email) {
       try {
         const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
-        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : 'New Order Received';
+        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : 'New Order Received';
         const wholesalerBodyLabel = isDeposit
           ? `Deposit of ${currencySymbol}${amountPaid !== null ? amountPaid.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. Outstanding balance: ${currencySymbol}${amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?'}. Invoice attached as PDF.`
-          : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
+          : isBalancePayment
+            ? (() => { const balanceTxn = order.latestPaymentAmount ? parseFloat(order.latestPaymentAmount) : amountPaid; return `Balance payment of ${currencySymbol}${balanceTxn !== null ? balanceTxn.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. The order is now fully paid. Invoice attached as PDF.`; })()
+            : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
         const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">${wholesalerSubjectLabel} — ${orderRef}</h2><p>${wholesalerBodyLabel}</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
         await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
         console.log(`✅ Wholesaler invoice copy sent to ${wholesaler.email}`);

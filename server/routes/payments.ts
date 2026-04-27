@@ -405,6 +405,53 @@ export function registerPaymentRoutes(app: Express): void {
                 console.error(`⚠️ Failed to send confirmation email for order ${orderNumber}:`, emailErr);
               }
             })();
+          } else if (previouslyPaid > 0 && paymentStatus === 'paid') {
+            // Balance payment — the customer previously paid a deposit and has now settled the remainder.
+            // Send a "Balance Paid — Order Confirmed" email to both the customer and the wholesaler.
+            (async () => {
+              try {
+                const wholesaler = await storage.getUser(existingOrder.wholesalerId);
+                const retailerId = existingOrder.retailerId;
+                const customer = retailerId ? await storage.getUser(retailerId) : null;
+                const customerForEmail = customer || {
+                  name: existingOrder.customerName || 'Customer',
+                  email: session.customer_details?.email || null,
+                  firstName: existingOrder.customerName || 'Customer',
+                  lastName: '',
+                };
+                if (wholesaler && customerForEmail.email) {
+                  const savedItems = await storage.getOrderItems(existingOrder.id);
+                  const enrichedItems = await Promise.all(savedItems.map(async (item: any) => {
+                    const product = await storage.getProduct(item.productId);
+                    return {
+                      ...item,
+                      productName: product?.name || `Product #${item.productId}`,
+                      packDescriptor: formatPackDescriptor(
+                        product?.quantityInPack,
+                        product?.unitSize,
+                        product?.unitOfMeasure,
+                      ),
+                      product: product
+                        ? { name: product.name, quantityInPack: product.quantityInPack, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
+                        : null,
+                    };
+                  }));
+                  const orderForEmail = {
+                    ...existingOrder,
+                    amountPaid: cumulativePaid.toFixed(2),
+                    amountOutstanding: newOutstanding.toFixed(2),
+                    paymentStatus,
+                    // Pass the individual transaction amount so the email shows the balance
+                    // payment received (not the cumulative total paid to date).
+                    latestPaymentAmount: thisPayment.toFixed(2),
+                  };
+                  await sendCustomerInvoiceEmail(customerForEmail, orderForEmail, enrichedItems, wholesaler, true);
+                  console.log(`📧 Balance payment confirmation email sent to ${customerForEmail.email} for order ${orderNumber}`);
+                }
+              } catch (emailErr) {
+                console.error(`⚠️ Failed to send balance payment confirmation email for order ${orderNumber}:`, emailErr);
+              }
+            })();
           }
 
           return res.json({
