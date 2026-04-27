@@ -1,0 +1,98 @@
+🧾 Prompt: Alphabetical Sorting for Products (NON-BREAKING)
+🎯 Objective
+
+Enable alphabetical sorting (A–Z and Z–A) for products in the Products page, using the existing “Default order” dropdown — without affecting existing functionality or performance.
+
+🚨 NON-NEGOTIABLE RULES
+DO NOT break existing product loading
+DO NOT remove current “Default order” behaviour
+DO NOT affect stock, pricing, or product logic
+DO NOT change API response structure unless necessary
+
+👉 This is a sorting enhancement only
+
+🧱 PART 1: Frontend Dropdown Update
+Locate:
+
+Sorting dropdown (currently shows “Default order”)
+
+Add options:
+Default order
+Name (A–Z)
+Name (Z–A)
+Behaviour:
+Default = existing logic (unchanged)
+A–Z = ascending by product name
+Z–A = descending by product name
+🧱 PART 2: Sorting Logic (Frontend or Backend)
+Preferred (cleaner & scalable):
+
+👉 Backend-driven sorting
+
+Add query param to API:
+GET /api/products?sort=name_asc
+GET /api/products?sort=name_desc
+Backend logic:
+name_asc  → ORDER BY products.name ASC
+name_desc → ORDER BY products.name DESC
+IMPORTANT:
+Use case-insensitive sorting (LOWER(name))
+Trim whitespace if needed
+🧱 PART 3: Frontend Integration
+
+When user selects option:
+
+Update query param
+Refetch products via TanStack Query
+Maintain existing filters (status, search, etc.)
+Example:
+?status=active&sort=name_asc
+🧱 PART 4: Default Behaviour Preservation
+Ensure:
+If no sort param → existing “Default order” is used
+No impact on:
+pagination
+search
+filters
+🧱 PART 5: UI Feedback
+Update dropdown label dynamically:
+Default order
+Name (A–Z)
+Name (Z–A)
+
+👉 Reflect current selection clearly
+
+🧱 PART 6: Edge Cases
+Handle:
+Products with identical names → fallback to created_at
+Null/empty names → push to bottom
+Special characters → sort normally (no crash)
+🧪 PART 7: Testing
+✅ A–Z sorting
+Cassava → Egusi → Garri → Indomie
+✅ Z–A sorting
+Reverse order
+✅ Search + sort
+Search “garri” → still sorted correctly
+✅ Filters + sort
+“Active only” + A–Z works
+✅ Default
+No sort param → unchanged behaviour
+🧪 Acceptance Criteria
+Products sort correctly A–Z and Z–A
+Default order unchanged
+No regression in filters/search/pagination
+Sorting is consistent and case-insensitive
+🧠 Final Sanity Check
+
+If implementation:
+
+“Overrides existing logic or breaks filters”
+
+🚫 WRONG
+
+If implementation:
+
+“Adds optional sorting cleanly via dropdown + query param”
+
+✅ Correct
