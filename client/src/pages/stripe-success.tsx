@@ -28,7 +28,7 @@ export default function StripeSuccess() {
     queryKey: ['/api/stripe/connect/status'],
   });
 
-  const goToIntegrations = () => navigate('/settings?tab=integrations');
+  const goToIntegrations = () => navigate('/integrations');
 
   if (isLoading) {
     return (

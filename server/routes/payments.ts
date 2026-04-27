@@ -1170,7 +1170,7 @@ export function registerPaymentRoutes(app: Express): void {
       let accountStatus = 'not_connected';
 
       // Check if Stripe Connect is properly configured
-      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY && stripe);
+      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
       
       if (user.stripeAccountId && hasStripeKeys) {
         try {
