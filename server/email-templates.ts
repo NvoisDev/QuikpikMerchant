@@ -1,4 +1,5 @@
 import { formatDeliveryAddress, formatDeliveryAddressHTML } from '../shared/utils/address-formatter';
+import { formatDateTime } from '../shared/utils/date';
 import type { EmailRefundStatus } from '../shared/schema';
 
 export function formatPackDescriptor(
@@ -217,7 +218,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 
   const body = emailHeading('New Order Received', { size: '20px', color: '#10b981' }) +
     '<p style="margin:0 0 4px">Order <b>' + data.orderNumber + '</b></p>' +
-    '<p style="margin:0 0 16px;font-size:14px;color:#6b7280">' + new Date(data.orderDate).toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</p>' +
+    '<p style="margin:0 0 16px;font-size:14px;color:#6b7280">' + formatDateTime(data.orderDate) + '</p>' +
     emailCard(
       '<p style="margin:0 0 4px"><b>Customer:</b> ' + data.customerName + '</p>' +
       '<p style="margin:0 0 4px"><b>Email:</b> ' + data.customerEmail + '</p>' +
@@ -242,7 +243,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
   }, { preheader: 'New order ' + data.orderNumber + ' from ' + data.customerName + ' - \u00A3' + data.total });
 
   const text = 'New Order ' + data.orderNumber + ' - ' + data.customerName + '\n\n' +
-    'Order Date: ' + new Date(data.orderDate).toLocaleString('en-GB') + '\n' +
+    'Order Date: ' + formatDateTime(data.orderDate) + '\n' +
     'Total: \u00A3' + data.total + '\n' +
     'Fulfillment: ' + (data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery') + '\n\n' +
     'Customer: ' + data.customerName + '\nEmail: ' + data.customerEmail + '\nPhone: ' + data.customerPhone + '\n' +

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { calculateCustomerFee } from "../../shared/utils/fees";
+import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import {
   SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
@@ -301,7 +302,7 @@ export function registerOrderRoutes(app: Express): void {
             deliveryAddress: updated.deliveryAddress || null,
             fulfillmentType: updated.fulfillmentType || 'pickup',
             orderTotal: updated.total,
-            readyTime: updated.readyToCollectAt ? updated.readyToCollectAt.toLocaleString() : new Date().toLocaleString(),
+            readyTime: updated.readyToCollectAt ? formatDateTime(updated.readyToCollectAt) : formatDateTime(new Date()),
             orderUrl: `https://quikpik.app/store/${wholesaler.id}?tab=orders`
           });
 
@@ -479,7 +480,7 @@ export function registerOrderRoutes(app: Express): void {
             deliveryAddress: order.deliveryAddress || null,
             fulfillmentType: order.fulfillmentType || 'pickup',
             orderTotal: order.total,
-            readyTime: order.readyToCollectAt.toLocaleString(),
+            readyTime: formatDateTime(order.readyToCollectAt),
             orderUrl: `https://quikpik.app/store/${wholesaler.id}?tab=orders`
           });
 

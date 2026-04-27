@@ -28,6 +28,7 @@ import {
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import { formatNumber, formatCurrency } from "@shared/utils/currency";
+import { formatDateTime } from "@shared/utils/date";
 import { useToast } from "@/hooks/use-toast";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -972,15 +973,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   <p className="text-xs text-gray-400">Last Login</p>
                   <p className="text-sm font-medium text-gray-800 mt-1">
                     {selectedWholesaler.lastLoginAt
-                      ? new Date(selectedWholesaler.lastLoginAt).toLocaleString('en-GB', {
-                          timeZone: 'Europe/London',
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                        })
+                      ? formatDateTime(selectedWholesaler.lastLoginAt)
                       : "Never"}
                   </p>
                 </div>

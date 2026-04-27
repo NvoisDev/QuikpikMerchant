@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import { formatCurrency } from "@shared/utils/currency";
+import { formatDateTime } from "@shared/utils/date";
 import { calculateCustomerFee } from "@shared/utils/fees";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
@@ -927,7 +928,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                   </p>
                   {order.readyToCollectAt && (
                     <p className="text-orange-700 text-xs mt-2">
-                      Ready since: {new Date(order.readyToCollectAt).toLocaleString()}
+                      Ready since: {formatDateTime(order.readyToCollectAt)}
                     </p>
                   )}
                   <div className="mt-3 text-xs sm:text-sm text-orange-800">
@@ -1480,7 +1481,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 <h3 className="font-semibold text-orange-900 text-sm sm:text-base">📦 Your Order is Ready for Collection!</h3>
                 <p className="text-orange-800 text-xs sm:text-sm mt-1">Great news! Your order is prepared and waiting for you to collect.</p>
                 {order.readyToCollectAt && (
-                  <p className="text-orange-700 text-xs mt-2">Ready since: {new Date(order.readyToCollectAt).toLocaleString()}</p>
+                  <p className="text-orange-700 text-xs mt-2">Ready since: {formatDateTime(order.readyToCollectAt)}</p>
                 )}
                 <div className="mt-3 text-xs sm:text-sm text-orange-800">
                   <p className="font-medium">Next Steps:</p>
