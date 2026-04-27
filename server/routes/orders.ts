@@ -265,12 +265,38 @@ export function registerOrderRoutes(app: Express): void {
         const wholesaler = await storage.getUser(updated.wholesalerId);
         
         if (customer && wholesaler && customer.email) {
+          // Resolve collection address (linked → default → legacy fallback)
+          let emailCollAddr: string | undefined = wholesaler.businessAddress || undefined;
+          let emailCollAddrName: string | undefined;
+          if (updated.fulfillmentType !== 'delivery') {
+            try {
+              if (updated.collectionAddressId) {
+                const ca = await storage.getCollectionAddress(updated.collectionAddressId);
+                if (ca) {
+                  emailCollAddrName = ca.name;
+                  emailCollAddr = [ca.addressLine1, ca.addressLine2, [ca.city, ca.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!emailCollAddrName) {
+                const addrs = await storage.getCollectionAddresses(updated.wholesalerId);
+                const def = addrs.find((a: any) => a.isDefault && a.isActive !== false);
+                if (def) {
+                  emailCollAddrName = def.name;
+                  emailCollAddr = [def.addressLine1, def.addressLine2, [def.city, def.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!emailCollAddr) {
+                emailCollAddr = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
+              }
+            } catch (_) {}
+          }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: updated.orderNumber,
             customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
-            businessAddress: wholesaler.businessAddress,
+            businessAddress: emailCollAddr,
+            collectionAddressName: emailCollAddrName,
             deliveryAddress: updated.deliveryAddress || null,
             fulfillmentType: updated.fulfillmentType || 'pickup',
             orderTotal: updated.total,
@@ -417,12 +443,38 @@ export function registerOrderRoutes(app: Express): void {
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer && wholesaler && customer.email) {
+          // Resolve collection address (linked → default → legacy fallback)
+          let resendCollAddr: string | undefined = wholesaler.businessAddress || undefined;
+          let resendCollAddrName: string | undefined;
+          if (order.fulfillmentType !== 'delivery') {
+            try {
+              if (order.collectionAddressId) {
+                const ca = await storage.getCollectionAddress(order.collectionAddressId);
+                if (ca) {
+                  resendCollAddrName = ca.name;
+                  resendCollAddr = [ca.addressLine1, ca.addressLine2, [ca.city, ca.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!resendCollAddrName) {
+                const addrs = await storage.getCollectionAddresses(order.wholesalerId);
+                const def = addrs.find((a: any) => a.isDefault && a.isActive !== false);
+                if (def) {
+                  resendCollAddrName = def.name;
+                  resendCollAddr = [def.addressLine1, def.addressLine2, [def.city, def.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!resendCollAddr) {
+                resendCollAddr = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
+              }
+            } catch (_) {}
+          }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: order.orderNumber,
             customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
-            businessAddress: wholesaler.businessAddress,
+            businessAddress: resendCollAddr,
+            collectionAddressName: resendCollAddrName,
             deliveryAddress: order.deliveryAddress || null,
             fulfillmentType: order.fulfillmentType || 'pickup',
             orderTotal: order.total,

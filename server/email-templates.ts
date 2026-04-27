@@ -135,6 +135,7 @@ export interface ReadyForCollectionEmailData {
   wholesalerLogoUrl?: string | null;
   businessPhone?: string;
   businessAddress?: string;
+  collectionAddressName?: string;
   deliveryAddress?: string | null;
   fulfillmentType?: string;
   orderTotal: string;
@@ -173,6 +174,8 @@ export interface OrderEmailData {
   };
   orderDate: string;
   paymentMethod?: string;
+  collectionAddressName?: string;
+  collectionAddress?: string;
 }
 
 export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): { subject: string; html: string; text: string } {
@@ -180,7 +183,17 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 
   let pickupHtml = '';
   if (data.fulfillmentType === 'pickup') {
-    pickupHtml = emailCard('<p style="margin:0;color:#92400e"><b>Customer Collection</b> - Customer will collect from your business address.</p>', { borderColor: '#f59e0b', bgColor: '#fffbeb' });
+    let addrDetail = '';
+    if (data.collectionAddress) {
+      const addrLines = data.collectionAddress.split(', ').join('<br/>');
+      addrDetail = '<br/><span style="color:#6b7280;font-size:13px">' +
+        (data.collectionAddressName ? '<b>' + data.collectionAddressName + '</b><br/>' : '') +
+        addrLines + '</span>';
+    }
+    pickupHtml = emailCard(
+      '<p style="margin:0;color:#92400e"><b>Customer Collection</b>' + addrDetail + '</p>',
+      { borderColor: '#f59e0b', bgColor: '#fffbeb' }
+    );
   }
 
   const itemRows = data.items.map(item => {
@@ -261,6 +274,7 @@ export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailDat
       )
     : emailCard(
         '<p style="margin:0 0 4px"><b>Collect From:</b> ' + data.wholesalerName + '</p>' +
+        (data.collectionAddressName ? '<p style="margin:0 0 2px"><b>Location:</b> ' + data.collectionAddressName + '</p>' : '') +
         (data.businessAddress ? '<p style="margin:0 0 4px"><b>Address:</b> ' + data.businessAddress + '</p>' : '') +
         (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#10b981">' + data.businessPhone + '</a></p>' : ''),
         { borderColor: '#dbeafe', bgColor: '#eff6ff' }
@@ -303,6 +317,7 @@ export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailDat
       'Dear ' + data.customerName + ',\n\nYour order is ready for collection.\n\n' +
       'Ready Since: ' + data.readyTime + '\nOrder Total: \u00A3' + parseFloat(data.orderTotal).toFixed(2) + '\n' +
       'Collect From: ' + data.wholesalerName + '\n' +
+      (data.collectionAddressName ? 'Location: ' + data.collectionAddressName + '\n' : '') +
       (data.businessAddress ? 'Address: ' + data.businessAddress + '\n' : '') +
       (data.businessPhone ? 'Phone: ' + data.businessPhone + '\n' : '') +
       '\nPlease contact ' + data.wholesalerName + ' to arrange a collection time.\n\n' +

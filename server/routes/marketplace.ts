@@ -1836,12 +1836,39 @@ export function registerMarketplaceRoutes(app: Express): void {
               }
             }
 
+            // Resolve collection address for pickup notification
+            let emailCollectionAddressName: string | undefined;
+            let emailCollectionAddress: string | undefined;
+            const emailFulfillmentType = shippingInfo && shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
+            if (emailFulfillmentType === 'pickup') {
+              try {
+                const caId = order.collectionAddressId;
+                if (caId) {
+                  const ca = await storage.getCollectionAddress(caId);
+                  if (ca) {
+                    emailCollectionAddressName = ca.name;
+                    emailCollectionAddress = [ca.addressLine1, ca.addressLine2, [ca.city, ca.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                  }
+                }
+                if (!emailCollectionAddress) {
+                  const allAddrs = await storage.getCollectionAddresses(wholesaler.id);
+                  const def = allAddrs.find((a: any) => a.isDefault && a.isActive !== false);
+                  if (def) {
+                    emailCollectionAddressName = def.name;
+                    emailCollectionAddress = [def.addressLine1, def.addressLine2, [def.city, def.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                  }
+                }
+                if (!emailCollectionAddress) {
+                  emailCollectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
+                }
+              } catch (_) {}
+            }
+
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              // Use complete address string like customer email (WORKING APPROACH)  
               shippingAddress: shippingAddress,
               total: correctTotal,
               subtotal: productSubtotal,
@@ -1849,7 +1876,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
               wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
               shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2),
-              fulfillmentType: shippingInfo && shippingInfo.option === 'delivery' ? 'delivery' : 'pickup',
+              fulfillmentType: emailFulfillmentType,
               items: enrichedItemsForEmail,
               wholesaler: {
                 id: wholesaler.id,
@@ -1861,7 +1888,9 @@ export function registerMarketplaceRoutes(app: Express): void {
                 logoType: wholesaler.logoType,
               },
               orderDate: new Date().toISOString(),
-              paymentMethod: 'Card Payment'
+              paymentMethod: 'Card Payment',
+              collectionAddressName: emailCollectionAddressName,
+              collectionAddress: emailCollectionAddress,
             };
 
             const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
@@ -2219,6 +2248,32 @@ export function registerMarketplaceRoutes(app: Express): void {
               freeItems: item.freeItems,
             };
           }));
+          // Resolve collection address for pickup notification
+          let payLaterCollAddrName: string | undefined;
+          let payLaterCollAddr: string | undefined;
+          if (shippingOption !== 'delivery') {
+            try {
+              if (validatedCollectionAddressId) {
+                const ca = await storage.getCollectionAddress(validatedCollectionAddressId);
+                if (ca) {
+                  payLaterCollAddrName = ca.name;
+                  payLaterCollAddr = [ca.addressLine1, ca.addressLine2, [ca.city, ca.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!payLaterCollAddr) {
+                const allAddrs = await storage.getCollectionAddresses(wholesalerProfile.id);
+                const def = allAddrs.find((a: any) => a.isDefault && a.isActive !== false);
+                if (def) {
+                  payLaterCollAddrName = def.name;
+                  payLaterCollAddr = [def.addressLine1, def.addressLine2, [def.city, def.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                }
+              }
+              if (!payLaterCollAddr) {
+                payLaterCollAddr = wholesalerProfile.pickupAddress || wholesalerProfile.businessAddress || undefined;
+              }
+            } catch (_) {}
+          }
+
           const emailData: OrderEmailData = {
             orderNumber,
             customerName,
@@ -2244,6 +2299,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             },
             orderDate: new Date().toISOString(),
             paymentMethod: 'Pay Later',
+            collectionAddressName: payLaterCollAddrName,
+            collectionAddress: payLaterCollAddr,
           };
           const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
           await sendEmail({
