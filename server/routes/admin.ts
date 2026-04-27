@@ -382,6 +382,7 @@ export function registerAdminRoutes(app: Express): void {
           phoneNumber: users.phoneNumber,
           postalCode: users.postalCode,
           customerType: users.customerType,
+          role: users.role,
           latitude: users.latitude,
           longitude: users.longitude,
           geocodeStatus: users.geocodeStatus,
@@ -389,7 +390,7 @@ export function registerAdminRoutes(app: Express): void {
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(inArray(users.role, ['customer', 'retailer']))
+        .where(inArray(users.role, ['customer', 'retailer', 'wholesaler']))
         .orderBy(desc(users.createdAt));
 
       const customerIds = customers.map(c => c.id);
@@ -417,13 +418,21 @@ export function registerAdminRoutes(app: Express): void {
         }
       }
 
+      function deriveType(role: string, customerType: string | null): string | null {
+        if (customerType) return customerType;
+        if (role === 'wholesaler') return 'wholesale';
+        if (role === 'retailer') return 'retail';
+        return 'individual';
+      }
+
       const result = customers.map(c => ({
         id: c.id,
         name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
         businessName: c.businessName,
         phoneNumber: c.phoneNumber,
         postalCode: c.postalCode,
-        customerType: c.customerType,
+        customerType: deriveType(c.role, c.customerType),
+        role: c.role,
         latitude: c.latitude != null ? parseFloat(String(c.latitude)) : null,
         longitude: c.longitude != null ? parseFloat(String(c.longitude)) : null,
         geocodeStatus: c.geocodeStatus,
@@ -456,7 +465,7 @@ export function registerAdminRoutes(app: Express): void {
         .where(eq(users.id, req.params.id))
         .limit(1);
       if (!target[0]) return res.status(404).json({ error: 'Customer not found' });
-      if (!['customer', 'retailer'].includes(target[0].role)) return res.status(400).json({ error: 'Target user is not a customer' });
+      if (!['customer', 'retailer', 'wholesaler'].includes(target[0].role)) return res.status(400).json({ error: 'Target user is not a customer' });
 
       const updateData: Record<string, string | null> = {};
       if (customerType !== undefined) updateData.customerType = customerType || null;
@@ -530,7 +539,7 @@ export function registerAdminRoutes(app: Express): void {
       const pending = await db
         .select({ id: users.id, postalCode: users.postalCode })
         .from(users)
-        .where(and(inArray(users.role, ['customer', 'retailer']), or(isNull(users.latitude), isNull(users.longitude))));
+        .where(and(inArray(users.role, ['customer', 'retailer', 'wholesaler']), or(isNull(users.latitude), isNull(users.longitude))));
 
       let success = 0, flagged = 0;
       for (const customer of pending) {
