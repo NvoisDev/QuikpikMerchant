@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import type { Express } from "express";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
+import { calculateCheckoutTotals } from "./checkout-fee-calculations";
 import {
   InventoryCalculator, PreciseShippingCalculator, and, buildInvoicePdf, count, db, desc,
   emailButton, emailCard, emailHeading, eq, formatNumber, formatPhoneToInternational,
@@ -894,22 +895,18 @@ export function registerMarketplaceRoutes(app: Express): void {
       const deliveryCost = shippingInfo?.option === 'delivery' && shippingInfo?.flatDeliveryRate
         ? parseFloat(shippingInfo.flatDeliveryRate) || 0
         : parseFloat(shippingInfo?.service?.price || '0') || 0;
-      
-      const amountBeforeFees = productSubtotal + deliveryCost;
-      
-      // NEW FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
-      const customerTransactionFee = calculateCustomerFee(amountBeforeFees, 0);
-      const totalCustomerPays = amountBeforeFees + customerTransactionFee;
-      
-      // Wholesaler Platform Fee: 4.6% of products + delivery (deducted from what they receive)
-      const wholesalerPlatformFee = calculatePlatformFee(amountBeforeFees);
-      const wholesalerReceives = amountBeforeFees - wholesalerPlatformFee;
 
-      // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
-      const stripeAmount = Math.round(totalCustomerPays * 100);
+      const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost });
+      const {
+        amountBeforeFees,
+        customerTransactionFee,
+        totalCustomerPays,
+        wholesalerPlatformFee,
+        wholesalerReceives,
+        stripeAmountPence: stripeAmount,
+        stripeApplicationFeePence: stripeApplicationFee,
+      } = checkout;
       const stripeWholesalerAmount = Math.round(wholesalerReceives * 100);
-      const stripeApplicationFee = Math.round(wholesalerPlatformFee * 100);
       
       // Enhanced validation for all Stripe amounts
       if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || 
