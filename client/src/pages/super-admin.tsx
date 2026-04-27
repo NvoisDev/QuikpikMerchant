@@ -824,10 +824,11 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
 
       {/* Global GMV totals strip */}
       {(() => {
-        const totalGMVWithFees = filtered.reduce((s, w) => s + (w.gmvWithFees ?? 0), 0);
-        const totalGMVWithoutFees = filtered.reduce((s, w) => s + (w.gmvWithoutFees ?? 0), 0);
-        const totalGMV = filtered.reduce((s, w) => s + (w.totalGMV ?? 0), 0);
-        const totalFees = filtered.reduce((s, w) => s + (w.totalFeesEarned ?? 0), 0);
+        const nonTest = filtered.filter(w => !w.isTestAccount);
+        const totalGMVWithFees = nonTest.reduce((s, w) => s + (w.gmvWithFees ?? 0), 0);
+        const totalGMVWithoutFees = nonTest.reduce((s, w) => s + (w.gmvWithoutFees ?? 0), 0);
+        const totalGMV = nonTest.reduce((s, w) => s + (w.totalGMV ?? 0), 0);
+        const totalFees = nonTest.reduce((s, w) => s + (w.totalFeesEarned ?? 0), 0);
         return (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white rounded-xl border border-gray-200 p-3" style={{ borderLeftWidth: 3, borderLeftColor: PURPLE }}>
