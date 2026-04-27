@@ -905,11 +905,11 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               </Badge>
             )}
             <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
             </Badge>
             {isQuoteEdited(order) && (
               <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+                <RefreshCw className="h-3 w-3 mr-1" /> Invoice updated
               </Badge>
             )}
           </div>
@@ -930,7 +930,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                 {isQuoteEdited(order) && (
                   <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
-                    This quote was updated by the seller. The payment link below reflects the latest total.
+                    This invoice was updated by the seller. The payment link below reflects the latest total.
                   </p>
                 )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
@@ -1226,7 +1226,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                   {parseFloat(order.amountPaid || '0') > 0
                     ? 'Payment processed successfully'
                     : order.isQuote
-                      ? 'Quote received - awaiting payment'
+                      ? 'Invoice received - awaiting payment'
                       : 'Order placed - awaiting payment'}
                 </span>
               </div>
@@ -1473,11 +1473,11 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
               </Badge>
             )}
             <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+              {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
             </Badge>
             {isQuoteEdited(order) && (
               <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+                <RefreshCw className="h-3 w-3 mr-1" /> Invoice updated
               </Badge>
             )}
           </div>
@@ -1498,7 +1498,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 {isQuoteEdited(order) && (
                   <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
-                    This quote was updated by the seller. The payment link below reflects the latest total.
+                    This invoice was updated by the seller. The payment link below reflects the latest total.
                   </p>
                 )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
@@ -1772,7 +1772,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 <span className="font-medium break-words">
                   {parseFloat(order.amountPaid || '0') > 0
                     ? 'Payment processed successfully'
-                    : order.isQuote ? 'Quote received - awaiting payment' : 'Order placed - awaiting payment'}
+                    : order.isQuote ? 'Invoice received - awaiting payment' : 'Order placed - awaiting payment'}
                 </span>
               </div>
             </div>
@@ -2234,11 +2234,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                       </Badge>
                     ) : null}
                     <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-                      {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
+                      {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
                     </Badge>
                     {isQuoteEdited(order) && (
                       <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                        <RefreshCw className="h-3 w-3 mr-1" /> Quote updated
+                        <RefreshCw className="h-3 w-3 mr-1" /> Invoice updated
                       </Badge>
                     )}
                   </div>

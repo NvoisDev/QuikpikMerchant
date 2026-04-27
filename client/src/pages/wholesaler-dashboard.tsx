@@ -172,7 +172,7 @@ function MarginOverview() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <SegmentCard
-                  label="Quotes"
+                  label="Invoices"
                   seg={marginData.quotes}
                   icon={<TrendingUp className="w-4 h-4 text-purple-500 flex-shrink-0" />}
                 />

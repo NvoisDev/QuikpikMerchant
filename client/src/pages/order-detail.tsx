@@ -424,7 +424,7 @@ export default function OrderDetail() {
     try {
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       const orderRef = order.orderNumber || `#${order.id}`;
-      const docType = order.isQuote ? 'Quote' : 'Invoice';
+      const docType = 'Invoice';
 
       let nativeShareSucceeded = false;
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
@@ -773,12 +773,12 @@ export default function OrderDetail() {
           setEditSaveError(null);
           const warningText = data.warnings?.length ? ` Note: ${data.warnings.join('; ')}` : '';
           toast({
-            title: data.warnings?.length ? 'Quote updated (with warnings)' : 'Quote updated successfully',
+            title: data.warnings?.length ? 'Invoice updated (with warnings)' : 'Invoice updated successfully',
             description: `New total: ${formatMoney(parseFloat(data.total))}.${warningText}`,
             variant: data.warnings?.length ? 'default' : 'default',
           });
         } else {
-          const errorMsg = data.error || 'Failed to update quote';
+          const errorMsg = data.error || 'Failed to update invoice';
           setEditSaveError(errorMsg);
           toast({ title: data.errorType === 'OUT_OF_STOCK' ? 'Stock Unavailable' : 'Error', description: errorMsg, variant: 'destructive' });
         }
@@ -799,7 +799,7 @@ export default function OrderDetail() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">Edit Quote {order.orderNumber || `#${order.id}`}</h1>
+              <h1 className="text-lg font-semibold">Edit Invoice {order.orderNumber || `#${order.id}`}</h1>
               <p className="text-xs text-gray-500">Adjust items, quantities, and prices</p>
             </div>
           </div>
@@ -929,7 +929,7 @@ export default function OrderDetail() {
         <Dialog open={editProductDialogOpen} onOpenChange={setEditProductDialogOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Add Product to Quote</DialogTitle>
+              <DialogTitle>Add Product to Invoice</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div className="relative">
@@ -1183,7 +1183,7 @@ export default function OrderDetail() {
                   }}
                 >
                   <Pencil className="w-4 h-4 mr-1" />
-                  Edit Quote
+                  Edit Invoice
                 </Button>
               )}
               {order.status !== 'fulfilled' && !isViewer && (

@@ -302,7 +302,7 @@ export default function PublicProductPage() {
         {/* Inquiry Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Request a Quote</CardTitle>
+            <CardTitle>Request an Invoice</CardTitle>
             <p className="text-gray-600">Get in touch with the supplier for pricing and availability</p>
           </CardHeader>
           <CardContent>

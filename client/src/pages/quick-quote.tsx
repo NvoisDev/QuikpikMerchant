@@ -257,8 +257,8 @@ export default function QuickQuote() {
     }) => {
       const response = await apiRequest('POST', '/api/quotes', data);
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: 'Failed to create quote' }));
-        throw new Error(err.error || 'Failed to create quote');
+        const err = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
+        throw new Error(err.error || 'Failed to create invoice');
       }
       return response.json();
     },
@@ -281,7 +281,7 @@ export default function QuickQuote() {
         title: e.errorType === "OUT_OF_STOCK" ? "Stock Unavailable" : "Error",
         description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
           ? `Only ${e.available} units of "${e.productName || "this product"}" are in stock — you requested ${e.requested}. Please reduce the quantity.`
-          : (error.message || "Failed to create quote"),
+          : (error.message || "Failed to create invoice"),
         variant: "destructive",
       });
     },
@@ -292,7 +292,7 @@ export default function QuickQuote() {
     if (availableStock <= 0) {
       toast({
         title: "Out of Stock",
-        description: `"${product.name}" is out of stock and cannot be added to this quote.`,
+        description: `"${product.name}" is out of stock and cannot be added to this invoice.`,
         variant: "destructive",
       });
       setProductDialogOpen(false);
@@ -446,7 +446,7 @@ export default function QuickQuote() {
     if (quoteItems.length === 0) {
       toast({
         title: "Add Products",
-        description: "Please add at least one product to the quote",
+        description: "Please add at least one product to the invoice",
         variant: "destructive",
       });
       return;
@@ -598,7 +598,7 @@ export default function QuickQuote() {
                 className="flex-1"
                 onClick={resetQuote}
               >
-                New Quote
+                New Invoice
               </Button>
               <Link href="/orders" className="flex-1">
                 <Button className="w-full bg-green-600 hover:bg-green-700">
@@ -622,7 +622,7 @@ export default function QuickQuote() {
         </Link>
         <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-bold">Raise Invoice</h1>
-          <p className="text-sm md:text-base text-gray-600 truncate">Create quotes with custom prices</p>
+          <p className="text-sm md:text-base text-gray-600 truncate">Create invoices with custom prices</p>
         </div>
       </div>
 
@@ -646,7 +646,7 @@ export default function QuickQuote() {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Add New Customer</DialogTitle>
-                      <DialogDescription>Add a customer to create a quote for them.</DialogDescription>
+                      <DialogDescription>Add a customer to create an invoice for them.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <div className="grid grid-cols-2 gap-3">
@@ -812,7 +812,7 @@ export default function QuickQuote() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Quote Items
+                  Invoice Items
                 </CardTitle>
                 <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) setProductSearch(""); }}>
                   <DialogTrigger asChild>
@@ -1016,7 +1016,7 @@ export default function QuickQuote() {
                 <div className="text-center py-8 text-gray-500">
                   <ShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No products added yet</p>
-                  <p className="text-sm">Click "Add Product" to start building your quote</p>
+                  <p className="text-sm">Click "Add Product" to start building your invoice</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1243,7 +1243,7 @@ export default function QuickQuote() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quote Summary</CardTitle>
+              <CardTitle>Invoice Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {user?.enableMultiProfile && businessProfiles.length > 1 && (
@@ -1377,7 +1377,7 @@ export default function QuickQuote() {
                       onChange={(e) => setDeliveryCharge(e.target.value)}
                       className="w-28 text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
                     />
-                    <span className="text-xs text-gray-400">editable per quote</span>
+                    <span className="text-xs text-gray-400">editable per invoice</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
                     {(user as any)?.deliveryFlatRate ? `Default rate: ${formatCurrency((user as any).deliveryFlatRate)}` : 'No default rate set in settings'}
@@ -1586,7 +1586,7 @@ export default function QuickQuote() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Send Quote</CardTitle>
+              <CardTitle>Send Invoice</CardTitle>
               <CardDescription>
                 {depositPercentage > 0 && quotePaymentMethod !== 'payment_link'
                   ? 'How would you like to notify the customer?'

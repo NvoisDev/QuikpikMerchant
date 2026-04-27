@@ -533,7 +533,7 @@ export default function CustomerDetail() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => navigate(`/quick-quote?customerId=${customerId}`)}>
               <FileText className="h-4 w-4 mr-2" />
-              Create quote
+              Create invoice
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate(`/orders?customerId=${customerId}&search=${encodeURIComponent(fullName)}`)}>
               <ShoppingBag className="h-4 w-4 mr-2" />
@@ -676,7 +676,7 @@ export default function CustomerDetail() {
             onClick={() => navigate(`/quick-quote?customerId=${customerId}`)}
           >
             <FileText className="h-4 w-4" />
-            <span className="text-xs font-medium">Raise Quote</span>
+            <span className="text-xs font-medium">Raise Invoice</span>
           </Button>
           <Button
             variant="outline"

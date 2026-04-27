@@ -1233,7 +1233,7 @@ export default function OrdersFresh() {
                             <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                           )}
                           {order.isQuote ? (
-                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Quote Order (created by you)">
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Invoice Order (created by you)">
                               <UserPen className="w-3 h-3" />
                             </Badge>
                           ) : (
@@ -1398,7 +1398,7 @@ export default function OrdersFresh() {
                         )}
                         {order.isQuote ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                            <UserPen className="w-3 h-3 mr-1" />Quote
+                            <UserPen className="w-3 h-3 mr-1" />Invoice
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">

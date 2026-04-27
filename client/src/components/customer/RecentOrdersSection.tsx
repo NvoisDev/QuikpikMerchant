@@ -109,7 +109,7 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
                 </Badge>
               )}
               <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
-                {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Quote</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}
+                {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}
               </Badge>
             </div>
 
