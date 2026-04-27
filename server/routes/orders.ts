@@ -1564,7 +1564,7 @@ export function registerOrderRoutes(app: Express): void {
           actionType: 'quote_cancelled',
           entityType: 'quote',
           newValue: { reason: reason || 'unspecified', reasonCategory: reasonCategory || 'unspecified', stockRestored: stockRestoredCount },
-          description: `Quote cancelled — ${reason || 'no reason given'}. Stock restored: ${stockRestoredCount} item${stockRestoredCount !== 1 ? 's' : ''}.`,
+          description: `Invoice cancelled — ${reason || 'no reason given'}. Stock restored: ${stockRestoredCount} item${stockRestoredCount !== 1 ? 's' : ''}.`,
           performedBy: req.user?.id ?? 'system',
         });
       }
