@@ -149,11 +149,11 @@ export default function ProductManagement() {
     setViewMode(mode);
   };
   const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null);
-  const [marginSort, setMarginSort] = useState<"none" | "asc" | "desc">(() => {
+  const [marginSort, setMarginSort] = useState<"none" | "asc" | "desc" | "name_asc" | "name_desc">(() => {
     const saved = localStorage.getItem("productsMarginSort");
-    return saved === "asc" || saved === "desc" ? saved : "none";
+    return (saved === "asc" || saved === "desc" || saved === "name_asc" || saved === "name_desc") ? saved as "asc" | "desc" | "name_asc" | "name_desc" : "none";
   });
-  const handleSetMarginSort = (value: "none" | "asc" | "desc") => {
+  const handleSetMarginSort = (value: "none" | "asc" | "desc" | "name_asc" | "name_desc") => {
     localStorage.setItem("productsMarginSort", value);
     setMarginSort(value);
   };
@@ -1709,6 +1709,15 @@ export default function ProductManagement() {
     const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
     return matchesSearch && matchesStatus;
   }) || []).sort((a: any, b: any) => {
+    if (marginSort === "name_asc" || marginSort === "name_desc") {
+      const nameA = (a.name || "").toLowerCase().trim();
+      const nameB = (b.name || "").toLowerCase().trim();
+      if (!nameA && !nameB) return 0;
+      if (!nameA) return 1;
+      if (!nameB) return -1;
+      const cmp = nameA.localeCompare(nameB);
+      return marginSort === "name_asc" ? cmp : -cmp;
+    }
     if (marginSort !== "none") {
       const getMargin = (p: any): number | null => {
         const price = parseFloat(String(p.price));
@@ -2883,12 +2892,14 @@ export default function ProductManagement() {
                 <SelectItem value="expiring">Expiring Products</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "none" | "asc" | "desc")}>
+            <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "none" | "asc" | "desc" | "name_asc" | "name_desc")}>
               <SelectTrigger className="w-[160px] h-8 border-slate-200 rounded-lg">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Default order</SelectItem>
+                <SelectItem value="name_asc">Name (A–Z)</SelectItem>
+                <SelectItem value="name_desc">Name (Z–A)</SelectItem>
                 <SelectItem value="asc">Margin (low → high)</SelectItem>
                 <SelectItem value="desc">Margin (high → low)</SelectItem>
               </SelectContent>
