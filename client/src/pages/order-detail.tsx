@@ -805,13 +805,6 @@ export default function OrderDetail() {
                   </div>
                 </div>
               </label>
-              <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'later' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('later'); setProcessRefund(false); }}>
-                <input type="radio" name="refundType" checked={refundType === 'later'} onChange={() => { setRefundType('later'); setProcessRefund(false); }} className="w-4 h-4 text-green-600" />
-                <div className="ml-3">
-                  <span className="text-sm font-medium">Later</span>
-                  <p className="text-xs text-gray-500 mt-0.5">Process refund at a different time</p>
-                </div>
-              </label>
             </div>
 
             <div>
