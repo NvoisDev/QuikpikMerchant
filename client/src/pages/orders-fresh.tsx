@@ -729,7 +729,7 @@ export default function OrdersFresh() {
     .filter(o => (o.status || '').toLowerCase() !== 'cancelled')
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders - with null safety
-  const paidOrders = filteredByDate.filter(o => (o.status || '') === 'paid').length;
+  const paidOrders = filteredByDate.filter(o => (o.paymentStatus || '') === 'paid').length;
   const unfulfilledOrders = filteredByDate.filter(o => UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase())).length;
   
   // Tab badge counts come from server stats (accurate across all pages)

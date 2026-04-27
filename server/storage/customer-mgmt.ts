@@ -109,8 +109,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .select({
         customerId: orders.retailerId,
         totalOrders: count(orders.id),
-        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('paid', 'fulfilled', 'completed') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
-        totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN (${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid') AND ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
         lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
       })
       .from(orders)
@@ -219,8 +219,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .orderBy(desc(orders.createdAt));
 
     // Calculate stats (net amount: subtotal - platform fee)
-    const paidOrders = customerOrders.filter(order => 
-      ['paid', 'fulfilled', 'completed'].includes(order.status)
+    const paidOrders = customerOrders.filter(order =>
+      order.paymentStatus === 'paid' && order.status !== 'cancelled'
     );
     const totalSpent = paidOrders.reduce((sum, order) => {
       const subtotal = parseFloat(order.subtotal || order.total || '0');
@@ -229,7 +229,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     }, 0);
 
     const unpaidOrders = customerOrders.filter(order =>
-      ['pending', 'confirmed', 'processing', 'shipped', 'ready_for_collection'].includes(order.status)
+      (!order.paymentStatus || order.paymentStatus === 'unpaid') && order.status !== 'cancelled'
     );
     const totalUnpaid = unpaidOrders.reduce((sum, order) => {
       const subtotal = parseFloat(order.subtotal || order.total || '0');
