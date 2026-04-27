@@ -991,9 +991,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           }
         }
         
-        paymentIntent = await stripe.paymentIntents.create({
-          ...paymentConfig,
-        metadata: {
+        paymentIntent = await stripe.paymentIntents.create({ ...paymentConfig, metadata: {
           customerName,
           customerEmail,
           customerPhone,
@@ -1024,6 +1022,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       }, {
         idempotencyKey: idempotencyKey
       });
+      console.log(`Payment intent created: ${paymentIntent.id} (${stripeAmount} pence)`);
       
       } catch (stripeError: any) {
         console.error("Stripe payment intent creation error:", stripeError.message);

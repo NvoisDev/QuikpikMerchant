@@ -144,6 +144,7 @@ const PaymentFormContent = ({
         setPaymentSubmitted(false);
 
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('Payment succeeded:', paymentIntent.id);
         try {
           const response = await fetch("/api/marketplace/create-order", {
             method: "POST",
