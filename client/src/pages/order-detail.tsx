@@ -2037,9 +2037,7 @@ export default function OrderDetail() {
             <p className="text-sm text-gray-500">
               Order {order.orderNumber || `#${order.id}`} — outstanding{' '}
               <span className="font-medium text-gray-800">
-                {formatMoney(isStripePayment(order)
-                  ? parseFloat(order.amountOutstanding || '0')
-                  : Math.max(0, parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0') - parseFloat(order.amountPaid || '0')))}
+                {formatMoney(parseFloat(getOfflinePaymentDefaultAmount(order)))}
               </span>
             </p>
             <div className="space-y-1">
