@@ -2624,23 +2624,35 @@ export function registerPaymentRoutes(app: Express): void {
         ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member'
         : `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Wholesaler';
       const timestamp = new Date().toISOString();
+
+      // Resolve product names so audit entries and the customer email are human-readable
+      const auditAllProductIds = [...new Set([
+        ...existingItems.map(i => i.productId),
+        ...items.map(i => i.productId),
+      ])];
+      const auditProductRows = auditAllProductIds.length > 0
+        ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, auditAllProductIds))
+        : [];
+      const auditProductNameMap = new Map<number, string>(auditProductRows.map(p => [p.id, p.name]));
+      const auditPName = (id: number) => auditProductNameMap.get(id) ?? `Product #${id}`;
+
       const changeList: string[] = [];
       const restoredProductWarnings: string[] = [];
       for (const oldItem of existingItems) {
         const sellingTypeOld = oldItem.sellingType || 'units';
         const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
-        if (!inNew) changeList.push(`Removed product #${oldItem.productId} (${sellingTypeOld})`);
+        if (!inNew) changeList.push(`Removed ${auditPName(oldItem.productId)} (${sellingTypeOld})`);
       }
       for (const newItem of items) {
         const sellingTypeNew = newItem.sellingType || 'units';
         const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
         if (!inOld) {
-          changeList.push(`Added product #${newItem.productId}: ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`);
+          changeList.push(`Added ${auditPName(newItem.productId)}: ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`);
         } else {
           const parts: string[] = [];
           if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
           if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${parseFloat(inOld.unitPrice || '0').toFixed(2)}→£${newItem.customPrice.toFixed(2)}`);
-          if (parts.length > 0) changeList.push(`Product #${newItem.productId}: ${parts.join(', ')}`);
+          if (parts.length > 0) changeList.push(`${auditPName(newItem.productId)}: ${parts.join(', ')}`);
         }
       }
       const auditEntry = `[Quote edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${total.toFixed(2)}.`;
