@@ -57,17 +57,6 @@ const productCategories = [
   "Health & Pharmacy",
   "Baby & Childcare",
   "Pet Food & Supplies",
-  "Electronics & Gadgets",
-  "Home & Kitchen",
-  "Clothing & Fashion",
-  "Sports & Fitness",
-  "Books & Stationery",
-  "Toys & Games",
-  "Hardware & Tools",
-  "Garden & Outdoor",
-  "Automotive Supplies",
-  "Beauty & Cosmetics",
-  "Other"
 ];
 
 const productFormSchema = z.object({
