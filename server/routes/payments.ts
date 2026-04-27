@@ -2390,8 +2390,8 @@ export function registerPaymentRoutes(app: Express): void {
         if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
           return res.status(400).json({ error: 'Item quantity must be a positive integer', errorType: 'VALIDATION_ERROR' });
         }
-        if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice < 0) {
-          return res.status(400).json({ error: 'Item price must be a non-negative number', errorType: 'VALIDATION_ERROR' });
+        if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice <= 0) {
+          return res.status(400).json({ error: 'Item price must be greater than zero', errorType: 'VALIDATION_ERROR' });
         }
         const normalizedType = item.sellingType || 'units';
         if (!['units', 'pallets'].includes(normalizedType)) {

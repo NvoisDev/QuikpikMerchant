@@ -745,6 +745,7 @@ export default function OrderDetail() {
     const filteredEditProducts = editProducts.filter(p =>
       p.name.toLowerCase().includes(editProductSearch.toLowerCase())
     );
+    const hasInvalidItems = editItems.some(item => item.customPrice <= 0 || item.quantity < 1);
 
     const handleSaveQuote = async () => {
       setIsSavingQuote(true);
@@ -819,39 +820,49 @@ export default function OrderDetail() {
                         </button>
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
-                            if (item.quantity <= 1) return;
-                            const updated = [...editItems];
-                            updated[index] = { ...updated[index], quantity: updated[index].quantity - 1 };
-                            setEditItems(updated);
-                          }}>
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
-                            const updated = [...editItems];
-                            updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
-                            setEditItems(updated);
-                          }}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-500 text-xs">£</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.customPrice}
-                            onChange={(e) => {
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                              if (item.quantity <= 1) return;
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], customPrice: parseFloat(e.target.value) || 0 };
+                              updated[index] = { ...updated[index], quantity: updated[index].quantity - 1 };
                               setEditItems(updated);
-                            }}
-                            className="w-20 p-1 border rounded text-sm text-right"
-                          />
-                          <span className="text-xs text-gray-500">/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}</span>
+                            }}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                            <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                              const updated = [...editItems];
+                              updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
+                              setEditItems(updated);
+                            }}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {item.quantity < 1 && (
+                            <p className="text-xs text-red-600">Quantity must be at least 1</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 text-xs">£</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.customPrice}
+                              onChange={(e) => {
+                                const updated = [...editItems];
+                                updated[index] = { ...updated[index], customPrice: parseFloat(e.target.value) || 0 };
+                                setEditItems(updated);
+                              }}
+                              className={`w-20 p-1 border rounded text-sm text-right ${item.customPrice <= 0 ? 'border-red-400 bg-red-50' : ''}`}
+                            />
+                            <span className="text-xs text-gray-500">/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}</span>
+                          </div>
+                          {item.customPrice <= 0 && (
+                            <p className="text-xs text-red-600">Price must be greater than £0</p>
+                          )}
                         </div>
                         <span className="text-sm font-medium text-green-700 ml-auto">{formatMoney(item.customPrice * item.quantity)}</span>
                       </div>
@@ -884,6 +895,13 @@ export default function OrderDetail() {
               <p className="text-xs text-gray-400 mt-1">Final total recalculated on save (fees may apply).</p>
             </div>
 
+            {hasInvalidItems && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                <X className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-amber-700">All items must have a price greater than £0 and a quantity of at least 1 before saving.</p>
+              </div>
+            )}
+
             {editSaveError && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
                 <X className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
@@ -895,7 +913,7 @@ export default function OrderDetail() {
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
                 onClick={handleSaveQuote}
-                disabled={isSavingQuote || editItems.length === 0}
+                disabled={isSavingQuote || editItems.length === 0 || hasInvalidItems}
               >
                 {isSavingQuote ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
               </Button>
