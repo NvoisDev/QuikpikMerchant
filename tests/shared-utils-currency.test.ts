@@ -39,11 +39,23 @@ describe('formatCurrency', () => {
   });
 
   it('formats USD correctly', () => {
-    expect(formatCurrency(10, 'USD')).toBe('US$10.00');
+    expect(formatCurrency(10, 'USD')).toBe('$10.00');
   });
 
   it('formats EUR correctly', () => {
     expect(formatCurrency(10, 'EUR')).toBe('€10.00');
+  });
+
+  it('formats USD amounts over 1000 with comma separators', () => {
+    expect(formatCurrency(1500.75, 'USD')).toBe('$1,500.75');
+  });
+
+  it('returns $0.00 for zero in USD', () => {
+    expect(formatCurrency(0, 'USD')).toBe('$0.00');
+  });
+
+  it('formats a negative amount correctly', () => {
+    expect(formatCurrency(-1234.56)).toBe('£-1,234.56');
   });
 });
 
@@ -56,20 +68,28 @@ describe('getCurrencySymbol', () => {
     expect(getCurrencySymbol('GBP')).toBe('£');
   });
 
-  it('returns a symbol for USD', () => {
-    const symbol = getCurrencySymbol('USD');
-    expect(typeof symbol).toBe('string');
-    expect(symbol.length).toBeGreaterThan(0);
+  it('returns $ for USD', () => {
+    expect(getCurrencySymbol('USD')).toBe('$');
   });
 
-  it('returns a symbol for EUR', () => {
-    const symbol = getCurrencySymbol('EUR');
-    expect(typeof symbol).toBe('string');
-    expect(symbol.length).toBeGreaterThan(0);
+  it('returns € for EUR', () => {
+    expect(getCurrencySymbol('EUR')).toBe('€');
   });
 
   it('returns £ when called with an empty string (fallback)', () => {
     expect(getCurrencySymbol('')).toBe('£');
+  });
+
+  it('is case-insensitive for currency codes', () => {
+    expect(getCurrencySymbol('gbp')).toBe('£');
+    expect(getCurrencySymbol('usd')).toBe('$');
+    expect(getCurrencySymbol('eur')).toBe('€');
+  });
+
+  it('returns a non-empty string for an unknown currency code', () => {
+    const symbol = getCurrencySymbol('XYZ');
+    expect(typeof symbol).toBe('string');
+    expect(symbol.length).toBeGreaterThan(0);
   });
 });
 
