@@ -51,7 +51,7 @@ import sgMail from "@sendgrid/mail";
 import type { MailDataRequired } from "@sendgrid/mail";
 import { ReliableSMSService } from "../sms-service";
 import { sendSMS } from "../services/smsService";
-import { sendEmail } from "../sendgrid-service";
+import { sendEmail, sendStripeVerifiedEmail } from "../sendgrid-service";
 import {
   generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
 } from "../passwordResetService";
@@ -110,7 +110,7 @@ export {
   requireFeatureAccess, requireProductLimits, requireBroadcastLimits,
   requireTeamMemberLimits, getUserPlanLimits,
   sgMail,
-  ReliableSMSService, sendSMS, sendEmail,
+  ReliableSMSService, sendSMS, sendEmail, sendStripeVerifiedEmail,
   generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
   createEmailVerification, verifyEmailCode,
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,

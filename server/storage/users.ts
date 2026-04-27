@@ -147,6 +147,24 @@ export class UserStorageBase {
     return user;
   }
 
+  async getUserByStripeAccountId(stripeAccountId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.stripeAccountId, stripeAccountId));
+      
+    return user;
+  }
+
+  async claimStripeVerifiedEmailSend(userId: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ stripeVerifiedEmailSentAt: new Date() })
+      .where(and(eq(users.id, userId), isNull(users.stripeVerifiedEmailSentAt)))
+      .returning({ id: users.id });
+    return result.length > 0;
+  }
+
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
     return user;

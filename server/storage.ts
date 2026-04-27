@@ -85,6 +85,8 @@ export interface IStorage {
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   getAllUsersByEmail(email: string): Promise<User[]>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  getUserByStripeAccountId(stripeAccountId: string): Promise<User | undefined>;
+  claimStripeVerifiedEmailSend(userId: string): Promise<boolean>;
   getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]>;
   createUser(user: Partial<UpsertUser>): Promise<User>;
   updateUser(id: string, updates: Partial<UpsertUser>): Promise<User>;

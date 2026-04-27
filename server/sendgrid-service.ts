@@ -262,4 +262,22 @@ export async function sendPaymentReminderEmail(data: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail };
+export async function sendStripeVerifiedEmail(data: {
+  wholesalerEmail: string;
+  wholesalerName: string;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailButton, emailHeading } = await import('./email-templates');
+
+  const body = `${emailHeading('Your payment account is verified!', { color: '#10b981', size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Hi ${data.wholesalerName},</p><p style="margin:0 0 20px">Great news — Stripe has fully verified your payment account. You can now accept payments from your customers directly through Quikpik.</p>${emailCard(`${emailHeading('What this means for you', { size: '16px', color: '#0f766e' })}<p style="margin:0 0 8px;color:#0f766e">Your Stripe Connect account has been approved and is now active:</p><ul style="margin:0;padding-left:20px;color:#0f766e"><li style="margin-bottom:6px">Customers can pay for orders online</li><li style="margin-bottom:6px">Payments will be transferred directly to your bank account</li><li style="margin-bottom:6px">You can view your payouts from your Quikpik dashboard</li></ul>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailButton('Go to your Dashboard', 'https://quikpik.co/dashboard')}<p style="margin:20px 0 0;color:#6b7280;font-size:14px">If you have any questions, please don't hesitate to get in touch.</p><p style="margin:4px 0 0;font-weight:600">The Quikpik Team</p>`;
+
+  const html = wrapCustomerEmail(body, { businessName: 'Quikpik' }, { preheader: 'Your Stripe payment account is now fully verified and ready to accept payments.' });
+
+  return await sendEmail({
+    to: data.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject: 'Your payment account is verified — you can now accept payments',
+    html,
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail };

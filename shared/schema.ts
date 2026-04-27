@@ -136,6 +136,7 @@ export const users = pgTable("users", {
   stripeAccountId: varchar("stripe_account_id"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  stripeVerifiedEmailSentAt: timestamp("stripe_verified_email_sent_at"),
   
   // Subscription fields - Clean implementation driven by Stripe webhooks only
   subscriptionStatus: varchar("subscription_status").default("free"), // 'free', 'active', 'canceled', 'past_due', 'incomplete' - Updated via webhooks only

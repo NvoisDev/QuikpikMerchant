@@ -5,7 +5,7 @@ import {
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, isAuthenticated, lte, ne,
-  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendSMS, sgMail,
+  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS, sgMail,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate,
 } from "./shared";
@@ -946,6 +946,63 @@ export function registerPaymentRoutes(app: Express): void {
           console.log(`💳 invoice.payment_failed logged to system_error_logs for customer ${failCustId}`);
         } catch (logErr) {
           console.error('Failed to log payment failure to system_error_logs:', logErr);
+        }
+        return res.json({ received: true, type: event.type });
+      }
+
+      // ── Stripe Connect account verified ────────────────────────────────────────
+      if (event.type === 'account.updated') {
+        const account = event.data.object as Stripe.Account;
+        const accountId = account.id;
+        const chargesEnabled = account.charges_enabled ?? false;
+        const payoutsEnabled = account.payouts_enabled ?? false;
+
+        // Only act when the account is currently fully active (charges + payouts enabled).
+        // We detect the transition via previous_attributes (ONLY changed fields are present),
+        // but also fall through when previous_attributes has no delta — the idempotency guard
+        // (`stripeVerifiedEmailSentAt`) ensures the email is never sent twice.
+        const prev = event.data.previous_attributes as Partial<Stripe.Account> | undefined;
+        const transitionDetected =
+          prev?.charges_enabled === false || prev?.payouts_enabled === false;
+        const shouldAttemptSend = chargesEnabled && payoutsEnabled && (transitionDetected || !prev);
+
+        if (shouldAttemptSend) {
+          try {
+            const wholesaler = await storage.getUserByStripeAccountId(accountId);
+            if (!wholesaler || !wholesaler.email) {
+              console.log(`ℹ️ account.updated: no wholesaler found for stripeAccountId ${accountId}`);
+            } else if (wholesaler.role !== 'wholesaler') {
+              console.log(`ℹ️ account.updated: user ${wholesaler.id} is not a wholesaler, skipping`);
+            } else {
+              // Atomically claim the send slot — sets stripe_verified_email_sent_at
+              // only if it is currently NULL, preventing duplicate sends under
+              // concurrent webhook deliveries or rapid retries.
+              const claimed = await storage.claimStripeVerifiedEmailSend(wholesaler.id);
+              if (!claimed) {
+                console.log(`ℹ️ account.updated: verification email already sent for wholesaler ${wholesaler.id}, skipping`);
+              } else {
+                const businessName =
+                  wholesaler.businessName ||
+                  `${wholesaler.firstName ?? ''} ${wholesaler.lastName ?? ''}`.trim() ||
+                  'there';
+                const sent = await sendStripeVerifiedEmail({
+                  wholesalerEmail: wholesaler.email,
+                  wholesalerName: businessName,
+                });
+                if (sent) {
+                  console.log(`✅ Stripe verification email sent to wholesaler ${wholesaler.id} (${wholesaler.email})`);
+                } else {
+                  // Roll back the claim so the next retry attempt can try again.
+                  await storage.updateUserSettings(wholesaler.id, { stripeVerifiedEmailSentAt: null });
+                  console.error(`❌ account.updated: sendStripeVerifiedEmail failed for wholesaler ${wholesaler.id} — returning 500 so Stripe retries`);
+                  return res.status(500).json({ error: 'Email delivery failed, please retry' });
+                }
+              }
+            }
+          } catch (err) {
+            console.error('❌ Error processing account.updated webhook:', err);
+            return res.status(500).json({ error: 'Webhook processing error, please retry' });
+          }
         }
         return res.json({ received: true, type: event.type });
       }
