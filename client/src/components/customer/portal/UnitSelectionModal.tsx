@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { getPackQuantity } from "@shared/utils/product";
 import type { ExtendedProduct, CartItem } from "@/components/customer/portal-types";
 
@@ -112,7 +112,7 @@ export function UnitSelectionModal({
                         })()}
                         {(() => {
                           const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
-                          if (pw > 0) return <p className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</p>;
+                          if (pw > 0) return <p className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</p>;
                           return null;
                         })()}
                       </div>
@@ -159,7 +159,7 @@ export function UnitSelectionModal({
                     </p>
                     {(() => {
                       const palw = selectedProductForModal.palletWeight ? parseFloat(String(selectedProductForModal.palletWeight)) : 0;
-                      if (palw > 0) return <p className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</p>;
+                      if (palw > 0) return <p className="text-xs text-gray-400">{formatWeight(palw)} kg/pallet</p>;
                       return null;
                     })()}
                   </div>
@@ -281,10 +281,10 @@ export function UnitSelectionModal({
                   {(() => {
                     if (selectedModalType === 'units') {
                       const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
-                      if (pw > 0) return <div className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</div>;
+                      if (pw > 0) return <div className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</div>;
                     } else {
                       const palw = selectedProductForModal.palletWeight ? parseFloat(String(selectedProductForModal.palletWeight)) : 0;
-                      if (palw > 0) return <div className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</div>;
+                      if (palw > 0) return <div className="text-xs text-gray-400">{formatWeight(palw)} kg/pallet</div>;
                     }
                     return null;
                   })()}

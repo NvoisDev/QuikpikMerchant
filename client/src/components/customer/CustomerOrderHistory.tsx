@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { formatDateTime } from "@shared/utils/date";
 import { calculateCustomerFee } from "@shared/utils/fees";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
@@ -445,10 +445,10 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                     {(() => {
                       if (item.sellingType === 'pallets') {
                         const palw = item.palletWeight ? parseFloat(String(item.palletWeight)) : 0;
-                        if (palw > 0) return <p className="text-xs text-gray-400">{palw.toFixed(2)} kg/pallet</p>;
+                        if (palw > 0) return <p className="text-xs text-gray-400">{formatWeight(palw)} kg/pallet</p>;
                       } else {
                         const pw = item.totalPackageWeight ? parseFloat(String(item.totalPackageWeight)) : 0;
-                        if (pw > 0) return <p className="text-xs text-gray-400">{pw.toFixed(2)} kg/pack</p>;
+                        if (pw > 0) return <p className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</p>;
                       }
                       return null;
                     })()}
@@ -1051,8 +1051,8 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                   {item.unitSize && item.unitOfMeasure && (
                     <div className="text-xs text-gray-400">
                       {item.packQuantity && item.packQuantity > 1
-                        ? `${item.packQuantity} × ${parseFloat(item.unitSize)}${item.unitOfMeasure}`
-                        : `${parseFloat(item.unitSize)}${item.unitOfMeasure}`}
+                        ? `${item.packQuantity} × ${formatWeight(item.unitSize)}${item.unitOfMeasure}`
+                        : `${formatWeight(item.unitSize)}${item.unitOfMeasure}`}
                     </div>
                   )}
                   {item.appliedOfferLabel && (() => {
@@ -1593,8 +1593,8 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                   {item.unitSize && item.unitOfMeasure && (
                     <div className="text-xs text-gray-400">
                       {item.packQuantity && item.packQuantity > 1
-                        ? `${item.packQuantity} × ${parseFloat(item.unitSize)}${item.unitOfMeasure}`
-                        : `${parseFloat(item.unitSize)}${item.unitOfMeasure}`}
+                        ? `${item.packQuantity} × ${formatWeight(item.unitSize)}${item.unitOfMeasure}`
+                        : `${formatWeight(item.unitSize)}${item.unitOfMeasure}`}
                     </div>
                   )}
                   {item.appliedOfferLabel && (() => {

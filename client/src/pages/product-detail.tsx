@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatNumber } from "@/lib/utils";
+import { formatWeight } from "@shared/utils/currency";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -801,14 +802,14 @@ export default function ProductDetail() {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pack size</span>
                     <span className="font-medium text-gray-800">
-                      {product.packQuantity} × {product.unitSize}{product.unitOfMeasure}
+                      {product.packQuantity} × {formatWeight(product.unitSize)}{product.unitOfMeasure}
                     </span>
                   </div>
                 )}
                 {product.totalPackageWeight != null && parseFloat(product.totalPackageWeight) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pack weight</span>
-                    <span className="font-medium text-gray-800">{parseFloat(product.totalPackageWeight).toFixed(2)} kg</span>
+                    <span className="font-medium text-gray-800">{formatWeight(product.totalPackageWeight)} kg</span>
                   </div>
                 )}
                 {product.palletWeight != null &&
@@ -816,7 +817,7 @@ export default function ProductDetail() {
                   (product.sellingFormat === "pallets" || product.sellingFormat === "both") && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pallet weight</span>
-                    <span className="font-medium text-gray-800">{parseFloat(product.palletWeight).toFixed(2)} kg</span>
+                    <span className="font-medium text-gray-800">{formatWeight(product.palletWeight)} kg</span>
                   </div>
                 )}
               </div>

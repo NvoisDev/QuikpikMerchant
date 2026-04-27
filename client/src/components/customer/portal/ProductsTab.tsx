@@ -11,7 +11,7 @@ import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { getPackQuantity } from "@shared/utils/product";
 
 interface ProductsTabProps {
@@ -434,9 +434,9 @@ export function ProductsTab({
                           const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
                           const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                           const parts: string[] = [];
-                          if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+                          if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
                           if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
-                            parts.push(`${palw.toFixed(2)} kg/pallet`);
+                            parts.push(`${formatWeight(palw)} kg/pallet`);
                           }
                           return parts.length ? (
                             <span className="text-xs text-gray-400">{parts.join(' · ')}</span>
@@ -839,9 +839,9 @@ export function ProductsTab({
                             const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
                             const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                             const parts: string[] = [];
-                            if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+                            if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
                             if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
-                              parts.push(`${palw.toFixed(2)} kg/pallet`);
+                              parts.push(`${formatWeight(palw)} kg/pallet`);
                             }
                             return parts.length ? (
                               <span className="text-xs text-gray-400 mt-1 block">{parts.join(' · ')}</span>

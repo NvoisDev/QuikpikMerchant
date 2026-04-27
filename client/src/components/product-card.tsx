@@ -7,6 +7,7 @@ import { cleanAIDescription } from "@shared/utils";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatCurrency } from "@/lib/currencies";
+import { formatWeight } from "@shared/utils/currency";
 import { formatNumber } from "@/lib/utils";
 
 import {
@@ -167,7 +168,7 @@ function ProductCard({
 
   const formatProductSize = () => {
     if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
-      const unitSize = Math.round(parseFloat(product.unitSize));
+      const unitSize = formatWeight(product.unitSize);
       return `${product.packQuantity} x ${unitSize}${product.unitOfMeasure}`;
     }
     return null;
@@ -179,9 +180,9 @@ function ProductCard({
     const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
     const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
     const parts: string[] = [];
-    if (pw > 0) parts.push(`${pw.toFixed(2)} kg/pack`);
+    if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
     if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
-      parts.push(`${palw.toFixed(2)} kg/pallet`);
+      parts.push(`${formatWeight(palw)} kg/pallet`);
     }
     return parts.length ? parts.join(' · ') : null;
   })();

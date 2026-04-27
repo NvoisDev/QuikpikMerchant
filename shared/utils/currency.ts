@@ -101,3 +101,14 @@ export const formatNumber = (num: number | string): string => {
   if (isNaN(parsed)) return '0';
   return Math.floor(parsed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
+
+/**
+ * Format a weight or size value, stripping unnecessary trailing zeros.
+ * Caps at 2 decimal places so fractions are readable but not over-precise.
+ * Examples: "5.000" → "5", "20.00" → "20", "5.5" → "5.5", "5.25" → "5.25"
+ */
+export const formatWeight = (val: number | string): string => {
+  const n = parseFloat(String(val));
+  if (isNaN(n)) return '0';
+  return parseFloat(n.toFixed(2)).toString();
+};

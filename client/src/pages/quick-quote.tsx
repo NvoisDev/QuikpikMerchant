@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
+import { formatWeight } from "@shared/utils/currency";
 import { getPackQuantity } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -1033,12 +1034,12 @@ export default function QuickQuote() {
                           </div>
                           {item.packQuantity && item.unitSize && item.unitOfMeasure && (
                             <span className="text-xs text-gray-400">
-                              {item.packQuantity} × {item.unitSize}{item.unitOfMeasure}
+                              {item.packQuantity} × {formatWeight(item.unitSize)}{item.unitOfMeasure}
                             </span>
                           )}
                           {item.weightKg > 0 && (
                             <span className="text-xs text-gray-400">
-                              {item.weightKg.toFixed(2)} kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
+                              {formatWeight(item.weightKg)} kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
                             </span>
                           )}
                           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
@@ -1209,7 +1210,7 @@ export default function QuickQuote() {
                             {item.weightKg > 0 && (
                               <div className="text-xs text-gray-400 text-right">
                                 <Label className="text-xs text-gray-400">Weight</Label>
-                                <div className="mt-1.5">{(item.weightKg * item.quantity).toFixed(2)} kg</div>
+                                <div className="mt-1.5">{formatWeight(item.weightKg * item.quantity)} kg</div>
                               </div>
                             )}
                           </div>
@@ -1294,7 +1295,7 @@ export default function QuickQuote() {
                     {totalWeight > 0 && (
                       <div className="flex justify-between text-gray-600">
                         <span>Total Weight</span>
-                        <span>{totalWeight.toFixed(2)} kg</span>
+                        <span>{formatWeight(totalWeight)} kg</span>
                       </div>
                     )}
                   </div>
