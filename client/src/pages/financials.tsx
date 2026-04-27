@@ -156,7 +156,7 @@ export default function Financials() {
         </Card>
 
         {/* Stripe not connected prompt */}
-        {stripeNotConnected && (
+        {stripeNotConnected && user?.role === 'wholesaler' && (
           <Card className="border border-orange-200 bg-orange-50">
             <CardContent className="p-6 flex items-start gap-4">
               <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
