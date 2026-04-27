@@ -327,7 +327,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           status: order.status,
           total: correctedTotal.toFixed(2),
           subtotal: subtotal.toFixed(2),
-          transactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
+          customerTransactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
           platformFee: platformFee.toFixed(2), // For internal calculation only
           currency: "£",
           items: order.items,
@@ -1722,7 +1722,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           // Include financial details for ThankYouPage
           totalAmount: parseFloat(totalCustomerPays || correctTotal || '0'),
           subtotal: parseFloat(productSubtotal || '0'),
-          transactionFee: parseFloat(customerTransactionFee || '0'),
+          customerTransactionFee: parseFloat(customerTransactionFee || '0'),
           shippingCost: parseFloat(metadataShippingCost || '0')
         });
       } else {
@@ -3474,7 +3474,7 @@ Please contact the customer to confirm this order.
         fulfillmentType: order.fulfillmentType,
         items: previewItems,
         subtotal: subtotal.toFixed(2),
-        transactionFee: customerTransactionFee.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
         deliveryCost: deliveryCost.toFixed(2),
         shippingTotal: shippingTotal.toFixed(2),
         total: total.toFixed(2),

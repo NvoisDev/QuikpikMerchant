@@ -453,7 +453,7 @@ export default function CustomerPortal() {
     customerData: any;
     totalAmount: number;
     subtotal: number;
-    transactionFee: number;
+    customerTransactionFee: number;
     shippingCost: number;
     payLater?: boolean;
   } | null>(null);
@@ -1617,7 +1617,7 @@ export default function CustomerPortal() {
       customerData={completedOrder.customerData}
       totalAmount={completedOrder.totalAmount}
       subtotal={completedOrder.subtotal}
-      transactionFee={completedOrder.transactionFee}
+      customerTransactionFee={completedOrder.customerTransactionFee}
       shippingCost={completedOrder.shippingCost}
       payLater={completedOrder.payLater}
       wholesaler={{

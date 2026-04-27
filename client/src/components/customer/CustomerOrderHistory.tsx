@@ -12,7 +12,6 @@ import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { formatDateTime } from "@shared/utils/date";
-import { calculateCustomerFee } from "@shared/utils/fees";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
@@ -46,7 +45,6 @@ export interface Order {
   total: string;
   platformFee: string;
   subtotal: string;
-  transactionFee?: string;
   items: OrderItem[];
   wholesaler: {
     businessName: string;
@@ -344,7 +342,7 @@ interface ReorderPreview {
     unitOfMeasure?: string | null;
   }>;
   subtotal: string;
-  transactionFee: string;
+  customerTransactionFee: string;
   deliveryCost: string;
   shippingTotal: string;
   total: string;
@@ -507,7 +505,7 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Service Fee</span>
-                <span>{fmt(preview.transactionFee)}</span>
+                <span>{fmt(preview.customerTransactionFee)}</span>
               </div>
               {parseFloat(preview.deliveryCost) > 0 && (
                 <div className="flex justify-between text-sm">
@@ -856,7 +854,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');
   const online = isOnlinePayment(order);
-  const transactionFee = online ? parseFloat(order.transactionFee ?? (calculateCustomerFee(subtotal, 0)).toFixed(2)) : 0;
+  const transactionFee = online ? parseFloat(order.customerTransactionFee ?? "0.00") : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0'); // Use stored delivery cost
   const totalPaid = parseFloat(order.total || '0');
   const paymentMethodLabel = getPaymentMethodLabel(order);
@@ -1434,7 +1432,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
   const queryClient = useQueryClient();
   const subtotal = parseFloat(order.subtotal || '0');
   const online = isOnlinePayment(order);
-  const transactionFee = online ? parseFloat(order.transactionFee ?? (calculateCustomerFee(subtotal, 0)).toFixed(2)) : 0;
+  const transactionFee = online ? parseFloat(order.customerTransactionFee ?? "0.00") : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0');
   const totalPaid = parseFloat(order.total || '0');
   const paymentMethodLabel = getPaymentMethodLabel(order);

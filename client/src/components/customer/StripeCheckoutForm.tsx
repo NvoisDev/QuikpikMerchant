@@ -30,14 +30,14 @@ const PaymentFormContent = ({
   onSuccess,
   totalAmount,
   subtotal,
-  transactionFee,
+  customerTransactionFee,
   shippingCost,
   wholesaler,
 }: {
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   subtotal: number;
-  transactionFee: number;
+  customerTransactionFee: number;
   shippingCost: number;
   wholesaler: any;
 }) => {
@@ -165,7 +165,7 @@ const PaymentFormContent = ({
               customerData: {},
               totalAmount: orderData.totalAmount ?? totalAmount,
               subtotal: orderData.subtotal ?? subtotal,
-              transactionFee: orderData.transactionFee ?? transactionFee,
+              customerTransactionFee: orderData.customerTransactionFee ?? customerTransactionFee,
               shippingCost: orderData.shippingCost || shippingCost,
             });
             toast({
@@ -183,7 +183,7 @@ const PaymentFormContent = ({
               customerData: {},
               totalAmount,
               subtotal,
-              transactionFee,
+              customerTransactionFee,
               shippingCost,
             });
             toast({
@@ -201,7 +201,7 @@ const PaymentFormContent = ({
             customerData: {},
             totalAmount,
             subtotal,
-            transactionFee,
+            customerTransactionFee,
             shippingCost,
           });
           toast({
@@ -282,7 +282,7 @@ const PaymentFormContent = ({
   );
 };
 
-export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, transactionFee, shippingCost, clientSecret, publishableKey, onSuccess }: StripeCheckoutFormProps) => {
+export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, customerTransactionFee, shippingCost, clientSecret, publishableKey, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
   const { toast } = useToast();
@@ -334,7 +334,7 @@ export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount
         onSuccess={onSuccess}
         totalAmount={totalAmount}
         subtotal={subtotal}
-        transactionFee={transactionFee}
+        customerTransactionFee={customerTransactionFee}
         shippingCost={shippingCost}
         wholesaler={wholesaler}
       />

@@ -754,7 +754,7 @@ export function CheckoutDialog({
                             selectedDeliveryAddress: customerData.selectedDeliveryAddress,
                           },
                           subtotal: computedSubtotal,
-                          transactionFee: computedTransactionFee,
+                          customerTransactionFee: computedTransactionFee,
                           shippingCost: computedShipping,
                           totalAmount: computedTotal,
                           payLater: true,
@@ -812,7 +812,7 @@ export function CheckoutDialog({
                       publishableKey={publishableKey}
                       subtotal={cartStats.subtotal}
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
-                      transactionFee={calculateCustomerFee(
+                      customerTransactionFee={calculateCustomerFee(
                         cartStats.subtotal,
                         customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0
                       )}

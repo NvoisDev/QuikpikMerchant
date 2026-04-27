@@ -91,7 +91,7 @@ export interface StripeCheckoutFormProps {
   wholesaler: any;
   totalAmount: number;
   subtotal: number;
-  transactionFee: number;
+  customerTransactionFee: number;
   shippingCost: number;
   clientSecret: string;
   publishableKey?: string;
@@ -101,7 +101,7 @@ export interface StripeCheckoutFormProps {
     customerData: any;
     totalAmount: number;
     subtotal: number;
-    transactionFee: number;
+    customerTransactionFee: number;
     shippingCost: number;
   }) => void;
 }

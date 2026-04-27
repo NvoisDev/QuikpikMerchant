@@ -51,7 +51,7 @@ interface ThankYouPageProps {
   };
   totalAmount: number;
   subtotal: number;
-  transactionFee: number;
+  customerTransactionFee: number;
   shippingCost?: number;
   wholesaler: {
     businessName: string;
@@ -70,7 +70,7 @@ export const ThankYouPage = ({
   customerData, 
   totalAmount, 
   subtotal, 
-  transactionFee, 
+  customerTransactionFee, 
   shippingCost = 0,
   wholesaler,
   onContinueShopping, 
@@ -321,10 +321,10 @@ export const ThankYouPage = ({
                     <span>Subtotal:</span>
                     <span>{fmt(subtotal)}</span>
                   </div>
-                  {transactionFee > 0 && (
+                  {customerTransactionFee > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Service Fee (5.5% + £0.50):</span>
-                    <span>{fmt(transactionFee)}</span>
+                    <span>{fmt(customerTransactionFee)}</span>
                   </div>
                   )}
                   {shippingCost > 0 && (
