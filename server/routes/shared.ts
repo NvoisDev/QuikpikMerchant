@@ -135,7 +135,7 @@ export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, Ref
  * wholesalers to hit live Stripe. All Stripe call-sites must derive a client with
  * getStripeClient(Boolean(user.isTestAccount)) and never import `stripe` from this file.
  */
-export { getStripeClient, stripeTest, stripeLive, isLiveMode } from "../stripeConfig";
+export { getStripeClient, stripeTest, stripeLive, isLiveMode, getPublishableKey } from "../stripeConfig";
 import { getStripeClient } from "../stripeConfig";
 export const DO_NOT_USE_stripe = (() => {
   try { return getStripeClient(); }

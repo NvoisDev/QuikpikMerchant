@@ -94,6 +94,7 @@ export interface StripeCheckoutFormProps {
   transactionFee: number;
   shippingCost: number;
   clientSecret: string;
+  publishableKey?: string;
   onSuccess: (orderData: {
     orderNumber: string;
     cart: CartItem[];

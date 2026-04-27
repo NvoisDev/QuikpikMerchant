@@ -220,9 +220,22 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // GET /api/config/stripe-key — returns the publishable key for the frontend
-  // Checks whether the requesting user is a test account and forces test key if so.
-  app.get('/api/config/stripe-key', (req: any, res) => {
-    const forceTest = Boolean(req.user?.isTestAccount);
+  // Accepts an optional `wholesalerId` query param so that the customer portal
+  // (which may be unauthenticated) can retrieve the key matching the wholesaler's
+  // Stripe environment. Falls back to the authenticated user's flag otherwise.
+  app.get('/api/config/stripe-key', async (req: any, res) => {
+    let forceTest = Boolean(req.user?.isTestAccount);
+    const { wholesalerId } = req.query as { wholesalerId?: string };
+    if (wholesalerId) {
+      try {
+        const wholesaler = await storage.getUser(wholesalerId);
+        if (wholesaler) {
+          forceTest = Boolean(wholesaler.isTestAccount);
+        }
+      } catch {
+        // non-fatal — fall back to authenticated-user flag
+      }
+    }
     const publishableKey = getPublishableKey(forceTest);
     const environment = (forceTest || !isLiveMode()) ? 'test' : 'live';
     res.json({ publishableKey, environment });

@@ -251,6 +251,7 @@ export default function CustomerPortal() {
 
   // Payment intent creation state
   const [clientSecret, setClientSecret] = useState("");
+  const [publishableKey, setPublishableKey] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [lastUsedShippingOption, setLastUsedShippingOption] = useState<'pickup' | 'delivery' | null>(null);
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
@@ -1015,6 +1016,7 @@ export default function CustomerPortal() {
     if (shippingOptionChanged) {
       console.log('🚚 SHIPPING CHANGED: Creating new payment intent because shipping option changed from', lastUsedShippingOption, 'to', shippingOption);
       setClientSecret(''); // Clear existing payment intent
+      setPublishableKey(''); // Clear stale publishable key — new intent will supply a fresh one
       setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Update tracking
     }
     
@@ -1114,6 +1116,7 @@ export default function CustomerPortal() {
         
         console.log('✅ Valid client secret received:', data.clientSecret?.substring(0, 10) + '...');
         setClientSecret(data.clientSecret);
+        if (data.publishableKey) setPublishableKey(data.publishableKey);
         setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Track the shipping option for this payment intent
         console.log('🚚 SIMPLIFIED: Payment intent created successfully with shipping option:', shippingOption);
         toast({
@@ -1228,6 +1231,7 @@ export default function CustomerPortal() {
       if (response.ok) {
         const data = await response.json();
         setClientSecret(data.clientSecret);
+        if (data.publishableKey) setPublishableKey(data.publishableKey);
         setLastUsedShippingOption(shippingOption);
         console.log('✅ Payment intent created with fresh address data');
         toast({
@@ -2374,6 +2378,7 @@ export default function CustomerPortal() {
           wholesalerId={wholesalerId || ''}
           clientSecret={clientSecret}
           setClientSecret={setClientSecret}
+          publishableKey={publishableKey}
           isCreatingIntent={isCreatingIntent}
           authenticatedCustomer={authenticatedCustomer}
           createPaymentIntentForCheckout={createPaymentIntentForCheckout}

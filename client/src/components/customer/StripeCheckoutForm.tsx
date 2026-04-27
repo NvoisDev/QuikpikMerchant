@@ -8,9 +8,15 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import type { StripeCheckoutFormProps } from "./portal-types";
 
-async function fetchStripePromise() {
+async function fetchStripePromise(publishableKey?: string, wholesalerId?: string) {
+  if (publishableKey) {
+    return loadStripe(publishableKey);
+  }
   try {
-    const res = await fetch('/api/config/stripe-key', { credentials: 'include' });
+    const url = wholesalerId
+      ? `/api/config/stripe-key?wholesalerId=${encodeURIComponent(wholesalerId)}`
+      : '/api/config/stripe-key';
+    const res = await fetch(url, { credentials: 'include' });
     const data = res.ok ? await res.json() : {};
     const key = data.publishableKey || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
     return key ? loadStripe(key) : null;
@@ -287,15 +293,16 @@ const PaymentFormContent = ({
   );
 };
 
-export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, transactionFee, shippingCost, clientSecret, onSuccess }: StripeCheckoutFormProps) => {
+export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, transactionFee, shippingCost, clientSecret, publishableKey, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setStripePromise(fetchStripePromise());
-    console.log('🚚 STRIPE FORM: Client secret provided:', !!clientSecret);
-  }, [clientSecret]);
+    const wholesalerId = wholesaler?.id ? String(wholesaler.id) : undefined;
+    setStripePromise(fetchStripePromise(publishableKey, wholesalerId));
+    console.log('🚚 STRIPE FORM: Client secret provided:', !!clientSecret, 'publishableKey provided:', !!publishableKey, 'wholesalerId:', wholesalerId);
+  }, [clientSecret, publishableKey, wholesaler?.id]);
 
   if (!clientSecret || !stripePromise) {
     return (

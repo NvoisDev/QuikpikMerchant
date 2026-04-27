@@ -7,7 +7,7 @@ import {
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
   formatPackDescriptor, parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
   sendEmail, sendSMS, sendWelcomeMessages, sql, storage, sum, users, validatePhoneNumber,
-  getStripeClient, isLiveMode,
+  getStripeClient, isLiveMode, getPublishableKey,
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
   wholesalerCustomerRelationships,
@@ -1300,6 +1300,7 @@ export function registerMarketplaceRoutes(app: Express): void {
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
+        publishableKey: getPublishableKey(Boolean(wholesaler.isTestAccount)),
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toString(),
         customerTransactionFee: customerTransactionFee.toFixed(2),

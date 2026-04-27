@@ -33,6 +33,7 @@ interface CheckoutDialogProps {
   wholesalerId: string;
   clientSecret: string;
   setClientSecret: (v: string) => void;
+  publishableKey?: string;
   isCreatingIntent: boolean;
   authenticatedCustomer: any | null;
   createPaymentIntentForCheckout: (shippingOption: 'pickup' | 'delivery') => Promise<void>;
@@ -65,6 +66,7 @@ export function CheckoutDialog({
   wholesalerId,
   clientSecret,
   setClientSecret,
+  publishableKey,
   isCreatingIntent,
   authenticatedCustomer,
   createPaymentIntentForCheckout,
@@ -813,6 +815,7 @@ export function CheckoutDialog({
                       customerData={customerData}
                       wholesaler={wholesaler}
                       clientSecret={clientSecret}
+                      publishableKey={publishableKey}
                       subtotal={cartStats.subtotal}
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
                       transactionFee={((cartStats.subtotal + (customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0)) * 0.055) + 0.50}
