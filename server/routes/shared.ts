@@ -36,6 +36,7 @@ import { generateProductDescription, generateProductImage } from "../ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "../ai-taglines";
 import { formatPhoneToInternational, validatePhoneNumber } from "../../shared/phone-utils";
 import { getCurrencySymbol } from "../../shared/utils/currency";
+import { PLATFORM_FEE_RATE } from "../../shared/utils/fees";
 import { whatsAppBusinessService } from "../whatsapp-simple";
 import { PreciseShippingCalculator } from "../utils/preciseShippingCalculator";
 import { healthCheck } from "../health";
@@ -445,7 +446,7 @@ export const requireMemberPermission = (area: string) => async (req: any, res: a
 };
 
 // ─── Platform fee configuration ────────────────────────────────────────────────
-export const DEFAULT_PLATFORM_FEE_RATE = 0.046; // 4.6% — internal default, not disclosed publicly
+export const DEFAULT_PLATFORM_FEE_RATE = PLATFORM_FEE_RATE; // 4.6% — internal default, not disclosed publicly
 
 /**
  * Returns the platform fee rate for a specific wholesaler.
