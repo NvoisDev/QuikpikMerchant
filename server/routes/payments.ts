@@ -1174,8 +1174,9 @@ export function registerPaymentRoutes(app: Express): void {
       
       if (user.stripeAccountId && hasStripeKeys) {
         try {
-          // Get the actual account status from Stripe
-          const account = await stripe!.accounts.retrieve(user.stripeAccountId);
+          // Get the actual account status from Stripe — use per-user client so test accounts use test mode
+          const stripeClient = getStripeClient(Boolean(user.isTestAccount));
+          const account = await stripeClient.accounts.retrieve(user.stripeAccountId);
           
           // Check if account can receive payouts
           hasPayoutsEnabled = account.payouts_enabled;
