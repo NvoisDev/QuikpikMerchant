@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import type { Express } from "express";
-import { calculateCustomerFee, calculateWholesalerPlatformFee } from "../../shared/utils/fees";
+import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
 import {
   InventoryCalculator, PreciseShippingCalculator, and, buildInvoicePdf, count, db, desc,
   emailButton, emailCard, emailHeading, eq, formatPhoneToInternational,
@@ -291,7 +291,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         const correctedTotal = isOnline ? total : (subtotal + deliveryCost);
         
         // Platform fee paid by wholesaler: 4.6% of product subtotal (not shown to customers but calculated for completeness)
-        const platformFee = calculateWholesalerPlatformFee(subtotal);
+        const platformFee = calculatePlatformFee(subtotal);
         
         return {
           id: order.id,
@@ -885,7 +885,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
       // Wholesaler Platform Fee: 4.6% of products + delivery (deducted from what they receive)
-      const wholesalerPlatformFee = calculateWholesalerPlatformFee(amountBeforeFees);
+      const wholesalerPlatformFee = calculatePlatformFee(amountBeforeFees);
       const wholesalerReceives = amountBeforeFees - wholesalerPlatformFee;
 
       // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
@@ -2898,7 +2898,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       // Calculate platform fee (4.6% of total)
       const subtotal = totalAmount.toString();
-      const platformFee = calculateWholesalerPlatformFee(parseFloat(totalAmount)).toFixed(2);
+      const platformFee = calculatePlatformFee(parseFloat(totalAmount)).toFixed(2);
       const total = totalAmount.toString();
       
       // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
@@ -3079,7 +3079,7 @@ Please contact the customer to confirm this order.
 
       // Calculate platform fee (4.6%)
       const subtotal = parseFloat(totalAmount);
-      const platformFee = calculateWholesalerPlatformFee(subtotal);
+      const platformFee = calculatePlatformFee(subtotal);
       const finalTotal = subtotal;
 
       // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
@@ -3567,7 +3567,7 @@ Please contact the customer to confirm this order.
       });
 
       const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
-      const platformFee = calculateWholesalerPlatformFee(subtotal);
+      const platformFee = calculatePlatformFee(subtotal);
       const customerTransactionFee = calculateCustomerFee(subtotal, 0);
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');

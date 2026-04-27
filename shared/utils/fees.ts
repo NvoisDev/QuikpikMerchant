@@ -24,6 +24,6 @@ export function calculateCustomerFee(subtotal: number, delivery: number): number
  * Calculate the wholesaler platform fee (internal use only — never show to customers).
  * @param subtotal  Product subtotal (£)
  */
-export function calculateWholesalerPlatformFee(subtotal: number): number {
+export function calculatePlatformFee(subtotal: number): number {
   return subtotal * PLATFORM_FEE_RATE;
 }
