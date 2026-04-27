@@ -760,22 +760,29 @@ export function registerProductRoutes(app: Express): void {
       const { default: OpenAI } = await import('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-      const prompt = `Write a compelling product description for a wholesale product:
-      
-Product Name: ${productName}
-Category: ${category || 'General'}
-Features: ${features || 'N/A'}
-
-Write a professional, sales-focused description that highlights the key benefits and features. Keep it concise but persuasive, suitable for B2B wholesale buyers. Focus on quality, value, and practical benefits.`;
+      const prompt = `STRICT LIMIT: 100 characters or fewer total. Write a very short, punchy one-sentence wholesale product description for: ${productName}${category ? ` (${category})` : ''}. No bullet points, no formatting, no introductory phrases — just the description itself.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 300,
+        messages: [
+          {
+            role: "system",
+            content: "You write ultra-short product descriptions for wholesale platforms. CRITICAL RULE: every response must be 100 characters or fewer — count carefully. One sentence only. No bullet points, no formatting markers.",
+          },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 60,
         temperature: 0.7,
       });
 
-      const generatedDescription = response.choices[0].message.content;
+      let generatedDescription = (response.choices[0].message.content || "").trim();
+
+      if (generatedDescription.length > 100) {
+        const truncated = generatedDescription.slice(0, 100);
+        const lastSpace = truncated.lastIndexOf(" ");
+        generatedDescription = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
+      }
+
       res.json({ description: generatedDescription });
     } catch (error) {
       console.error("AI description generation error:", error);
