@@ -165,9 +165,9 @@ export default function Financials() {
                 <p className="text-sm text-orange-700 mt-1">
                   Connect your Stripe account to start receiving payouts and track them here.
                 </p>
-                <Link href="/settings">
+                <Link href="/integrations?category=payment">
                   <Button size="sm" className="mt-3 btn-theme-primary">
-                    Connect Stripe in Settings
+                    Connect Stripe in Integrations
                   </Button>
                 </Link>
               </div>
