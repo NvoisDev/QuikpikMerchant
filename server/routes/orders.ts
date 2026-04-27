@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { calculateCustomerFee } from "../../shared/utils/fees";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import {
   SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
@@ -1197,7 +1198,7 @@ export function registerOrderRoutes(app: Express): void {
         });
       }
 
-      const customerTransactionFee = (subtotal * 0.055) + 0.50; // 5.5% + £0.50 (customer pays) — always fixed
+      const customerTransactionFee = calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 (customer pays) — always fixed
       const total = subtotal + customerTransactionFee; // total = what the customer pays
 
       // Get wholesaler from first product (needed for per-wholesaler fee rate)

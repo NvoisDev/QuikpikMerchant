@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import { formatCurrency } from "@shared/utils/currency";
+import { calculateCustomerFee } from "@shared/utils/fees";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
@@ -815,7 +816,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');
   const online = isOnlinePayment(order);
-  const transactionFee = online ? parseFloat(order.transactionFee ?? (subtotal * 0.055 + 0.50).toFixed(2)) : 0;
+  const transactionFee = online ? parseFloat(order.transactionFee ?? (calculateCustomerFee(subtotal, 0)).toFixed(2)) : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0'); // Use stored delivery cost
   const totalPaid = parseFloat(order.total || '0');
   const paymentMethodLabel = getPaymentMethodLabel(order);
@@ -1382,7 +1383,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
   const queryClient = useQueryClient();
   const subtotal = parseFloat(order.subtotal || '0');
   const online = isOnlinePayment(order);
-  const transactionFee = online ? parseFloat(order.transactionFee ?? (subtotal * 0.055 + 0.50).toFixed(2)) : 0;
+  const transactionFee = online ? parseFloat(order.transactionFee ?? (calculateCustomerFee(subtotal, 0)).toFixed(2)) : 0;
   const deliveryCost = parseFloat(order.deliveryCost || '0');
   const totalPaid = parseFloat(order.total || '0');
   const paymentMethodLabel = getPaymentMethodLabel(order);

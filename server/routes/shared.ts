@@ -450,8 +450,6 @@ export const requireMemberPermission = (area: string) => async (req: any, res: a
 
 // ─── Platform fee configuration ────────────────────────────────────────────────
 export const DEFAULT_PLATFORM_FEE_RATE = 0.046; // 4.6% — internal default, not disclosed publicly
-export const CUSTOMER_TRANSACTION_FEE_RATE = 0.055; // Fixed — never customised
-export const CUSTOMER_TRANSACTION_FEE_FLAT = 0.50;  // Fixed — never customised
 
 /**
  * Returns the platform fee rate for a specific wholesaler.

@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { calculateCustomerFee } from "../../shared/utils/fees";
 import {
   InventoryCalculator, SendGridAttachment, SubscriptionService, and, buildInvoicePdf, db,
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
@@ -1966,7 +1967,7 @@ export function registerPaymentRoutes(app: Express): void {
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
-      const customerTransactionFee = isOffline ? 0 : (subtotal * 0.055) + 0.50; // 5.5% + £0.50 — always fixed
+      const customerTransactionFee = isOffline ? 0 : calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 — always fixed
       const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee
       const total = subtotal + customerTransactionFee;

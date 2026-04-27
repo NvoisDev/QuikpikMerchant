@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { calculatePlatformFee } from "@shared/utils/fees";
 import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -657,7 +658,7 @@ export default function OrdersFresh() {
     const deliveryCost = parseFloat(order.deliveryCost || '0');
     if (!isStripePayment(order)) return subtotal + deliveryCost;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : (subtotal + deliveryCost) * 0.046;
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : calculatePlatformFee(subtotal + deliveryCost);
     return (subtotal + deliveryCost) - feeToDeduct;
   };
 
