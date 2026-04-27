@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { usePresencePing } from "@/hooks/usePresencePing";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import { ImpersonationProvider } from "@/contexts/impersonation-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -107,6 +108,8 @@ function PublicRoutes() {
 // Component for authenticated routes that need authentication
 function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
+
+  usePresencePing(isAuthenticated);
 
   if (isLoading) {
     return <PageLoader />;

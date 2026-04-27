@@ -342,6 +342,9 @@ export interface IStorage {
   updateTeamMemberRole(id: number, role: string): Promise<void>;
   updateTeamMemberStatus(id: number, status: string): Promise<TeamMember>;
   updateTeamMemberLastLogin(id: number): Promise<void>;
+  updateTeamMemberLastSeen(id: number): Promise<void>;
+  updateUserLastSeen(id: string): Promise<void>;
+  getTeamMemberByEmail(wholesalerId: string, email: string): Promise<TeamMember | undefined>;
   getTeamMembersCount(wholesalerId: string): Promise<number>;
   
   // Tab permission operations

@@ -876,6 +876,21 @@ export class BroadcastStorage extends CustomerStorage {
       .where(eq(teamMembers.id, id));
   }
 
+  async updateTeamMemberLastSeen(id: number): Promise<void> {
+    await db.update(teamMembers)
+      .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+      .where(eq(teamMembers.id, id));
+  }
+
+  async getTeamMemberByEmail(wholesalerId: string, email: string): Promise<TeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(teamMembers)
+      .where(and(eq(teamMembers.wholesalerId, wholesalerId), eq(teamMembers.email, email)))
+      .limit(1);
+    return member;
+  }
+
   async getTeamMemberCount(wholesalerId: string): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })

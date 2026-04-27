@@ -139,8 +139,9 @@ export default function TeamManagement() {
 
   const { data: teamMembers, isLoading } = useQuery({
     queryKey: ["/api/team-members"],
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
   const { data: ownerProfile } = useQuery<{
@@ -148,9 +149,11 @@ export default function TeamManagement() {
     lastName: string | null;
     email: string | null;
     businessName: string | null;
+    lastSeenAt: string | null;
   }>({
     queryKey: ["/api/owner-profile"],
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
   // Fetch plan limits for downgrade warning banner
@@ -344,6 +347,11 @@ export default function TeamManagement() {
       title: "Invitation link copied",
       description: "You can now share this link directly with the team member.",
     });
+  };
+
+  const isOnline = (lastSeenAt: string | null | undefined): boolean => {
+    if (!lastSeenAt) return false;
+    return Date.now() - new Date(lastSeenAt).getTime() < 5 * 60 * 1000;
   };
 
   const formatLastLogin = (lastLoginAt: string | null | undefined) => {
@@ -718,8 +726,11 @@ export default function TeamManagement() {
                     <Crown className="h-4 w-4 text-amber-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
                       {[ownerProfile.firstName, ownerProfile.lastName].filter(Boolean).join(' ') || ownerProfile.businessName || ownerProfile.email}
+                      {isOnline(ownerProfile.lastSeenAt) && (
+                        <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Online" />
+                      )}
                     </h3>
                     <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
                       <Mail className="h-3 w-3 flex-shrink-0" />
@@ -771,8 +782,11 @@ export default function TeamManagement() {
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
                         {member.firstName} {member.lastName}
+                        {isOnline(member.lastSeenAt) && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Online" />
+                        )}
                       </h3>
                       <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
                         <Mail className="h-3 w-3 flex-shrink-0" />

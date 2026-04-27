@@ -256,6 +256,7 @@ export const users = pgTable("users", {
   isTestAccount: boolean("is_test_account").default(false), // Internal test accounts — hidden from wholesaler views and analytics
 
   lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
+  lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s
 
   // Multi-business profile feature (admin-enabled per wholesaler)
   enableMultiProfile: boolean("enable_multi_profile").default(false),
@@ -284,6 +285,7 @@ export const teamMembers = pgTable("team_members", {
   invitedAt: timestamp("invited_at").defaultNow(),
   joinedAt: timestamp("joined_at"),
   lastLoginAt: timestamp("last_login_at"),
+  lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

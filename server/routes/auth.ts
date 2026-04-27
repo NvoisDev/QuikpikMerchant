@@ -397,6 +397,27 @@ export function registerAuthRoutes(app: Express): void {
     });
   });
 
+  // POST /api/auth/ping — lightweight presence heartbeat, updates lastSeenAt
+  app.post('/api/auth/ping', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      await storage.updateUserLastSeen(userId);
+
+      // Also update the team_members row if this user is a team member
+      if (req.user.role === 'team_member' && req.user.wholesalerId && req.user.email) {
+        const member = await storage.getTeamMemberByEmail(req.user.wholesalerId, req.user.email);
+        if (member) {
+          await storage.updateTeamMemberLastSeen(member.id);
+        }
+      }
+
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Error updating presence ping:', error);
+      res.sendStatus(204);
+    }
+  });
+
   // PATCH /api/auth/user/onboarding
   app.patch('/api/auth/user/onboarding', requireAuth, async (req: any, res) => {
     try {
@@ -729,6 +750,7 @@ export function registerAuthRoutes(app: Express): void {
         lastName: owner.lastName,
         email: owner.email,
         businessName: owner.businessName,
+        lastSeenAt: owner.lastSeenAt ?? null,
       });
     } catch (error) {
       console.error('Error fetching owner profile:', error);

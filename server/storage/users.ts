@@ -299,6 +299,12 @@ export class UserStorageBase {
     return user;
   }
 
+  async updateUserLastSeen(id: string): Promise<void> {
+    await db.update(users)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
