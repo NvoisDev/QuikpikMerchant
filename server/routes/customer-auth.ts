@@ -7,7 +7,7 @@ import {
   wrapCustomerEmail
 } from "./shared";
 import { formatPhoneToInternational, isValidMobile } from "../../shared/phone-utils";
-import { signCustomerCookie, parseCustomerCookie, COOKIE_OPTIONS } from "../utils/customer-auth-cookie";
+import { signCustomerCookie, parseCustomerCookie, COOKIE_OPTIONS, renewCustomerCookieIfNeeded } from "../utils/customer-auth-cookie";
 
 // ─── Shared session helper ───────────────────────────────────────────────────
 async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
@@ -49,6 +49,24 @@ async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wh
 }
 
 export function registerCustomerAuthRoutes(app: Express): void {
+
+  // ─── Rolling-session renewal middleware ──────────────────────────────────
+  // Runs on every request handled by routes registered after this point.
+  // registerCustomerAuthRoutes() is called early in routes.ts (before orders,
+  // marketplace, addresses, etc.), so this covers all customer-facing routes.
+  // If new routes are ever registered before registerCustomerAuthRoutes(), they
+  // will not benefit from auto-renewal — keep registration order in mind.
+  //
+  // If the customer_auth cookie is valid and has less than 15 days of TTL
+  // remaining (>50% elapsed), a fresh 30-day cookie is issued transparently so
+  // active customers are never abruptly logged out.
+  app.use((req: any, res: any, next: any) => {
+    const parsed = parseCustomerCookie(req.cookies?.customer_auth);
+    if (parsed) {
+      renewCustomerCookieIfNeeded(parsed, res);
+    }
+    next();
+  });
 
   // ─── NEW FLOW: Phone OTP (wholesaler-agnostic) ───────────────────────────
 

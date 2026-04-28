@@ -79,3 +79,22 @@ export const COOKIE_OPTIONS = {
   maxAge: COOKIE_TTL_MS,
   sameSite: "lax" as const,
 };
+
+/**
+ * Rolling-session renewal: if the verified cookie has less than 15 days of TTL
+ * remaining (i.e. >50% of the 30-day TTL has elapsed), re-issue a fresh
+ * signed cookie with a full 30-day expiry on the current response.
+ *
+ * Call this after a successful parseCustomerCookie() wherever a response is
+ * being returned to the customer.
+ */
+const RENEWAL_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
+
+export function renewCustomerCookieIfNeeded(data: Record<string, any>, res: any): void {
+  if (!data?.expires) return;
+  const remainingMs = (data.expires as number) - Date.now();
+  if (remainingMs > 0 && remainingMs < RENEWAL_THRESHOLD_MS) {
+    const renewed = { ...data, expires: Date.now() + COOKIE_TTL_MS };
+    res.cookie("customer_auth", signCustomerCookie(renewed), COOKIE_OPTIONS);
+  }
+}
