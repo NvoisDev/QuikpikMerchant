@@ -3122,7 +3122,7 @@ export default function ProductManagement() {
                           <div className="flex items-center gap-0.5 mt-2 -ml-1.5">
                             <Button
                               variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              onClick={() => product.status !== 'locked' && handleEdit(product)}
+                              onClick={(e) => { e.stopPropagation(); product.status !== 'locked' && handleEdit(product); }}
                               disabled={product.status === 'locked'}
                               title="Edit"
                             >
@@ -3130,7 +3130,7 @@ export default function ProductManagement() {
                             </Button>
                             <Button
                               variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              onClick={() => { if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); } }}
+                              onClick={(e) => { e.stopPropagation(); if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); } }}
                               disabled={product.status === 'locked'}
                               title="Manage Stock"
                             >
@@ -3141,7 +3141,7 @@ export default function ProductManagement() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700"
-                                onClick={() => setExpandedBatchProductId(prev => prev === product.id ? null : product.id)}
+                                onClick={(e) => { e.stopPropagation(); setExpandedBatchProductId(prev => prev === product.id ? null : product.id); }}
                               >
                                 {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${product.batchCount !== 1 ? 'es' : ''}`}
                               </Button>
