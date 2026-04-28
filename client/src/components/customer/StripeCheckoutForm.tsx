@@ -143,14 +143,38 @@ const PaymentFormContent = ({
         setPaymentFailureDialog({ isOpen: true, title: errorTitle, message: errorMessage });
         setPaymentSubmitted(false);
 
+      } else if (paymentIntent && paymentIntent.status === 'processing') {
+        // Deferred payment method (BACS, SEPA, ACH) — payment is queued, not yet settled.
+        // Advance to the success screen so the customer isn't stuck on the payment form.
+        console.log('Payment processing (deferred method):', paymentIntent.id);
+        onSuccess({
+          orderNumber: "Processing…",
+          cart: [],
+          customerData: {},
+          totalAmount,
+          subtotal,
+          customerTransactionFee,
+          shippingCost,
+        });
+        toast({
+          title: "Payment Initiated",
+          description: "Your payment is being processed. You will receive a confirmation once complete.",
+        });
+
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         console.log('Payment succeeded:', paymentIntent.id);
         try {
-          const response = await fetch("/api/marketplace/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
-          });
+          const timeoutPromise = new Promise<Response>((_, reject) =>
+            setTimeout(() => reject(new Error('OrderTimeout')), 20000)
+          );
+          const response = await Promise.race([
+            fetch("/api/marketplace/create-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+            }),
+            timeoutPromise,
+          ]);
 
           if (response.ok) {
             const orderData = await response.json();

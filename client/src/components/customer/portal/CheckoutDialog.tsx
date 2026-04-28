@@ -711,9 +711,12 @@ export function CheckoutDialog({
                           quantity: cartItem.quantity,
                           sellingType: cartItem.sellingType,
                         }));
+                        const controller = new AbortController();
+                        const abortTimer = setTimeout(() => controller.abort(), 20000);
                         const response = await fetch('/api/marketplace/create-order-pay-later', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
+                          signal: controller.signal,
                           body: JSON.stringify({
                             cart: cartItems,
                             customerData: {
@@ -729,6 +732,7 @@ export function CheckoutDialog({
                             collectionAddressId: customerData.shippingOption === 'pickup' ? (selectedCollectionAddressId || null) : null,
                           }),
                         });
+                        clearTimeout(abortTimer);
                         if (!response.ok) {
                           const errData = await response.json().catch(() => ({}));
                           throw new Error(errData.error || errData.message || 'Failed to place order');
