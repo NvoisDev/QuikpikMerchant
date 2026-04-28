@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Users, ShoppingCart, TrendingUp, Search, LogOut, LayoutDashboard, Shield,
   Calendar, MapPin, AlertTriangle, RefreshCw, Package, DollarSign, Settings,
@@ -902,7 +903,21 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                         </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
                       </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>{planBadge(w.subscriptionTier)}</TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {planBadge(w.subscriptionTier)}
+                          {w.isCustomPricing && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 cursor-default">Custom</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs">
+                                {w.internalNote ? w.internalNote : "Custom pricing applied"}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{w.orderCount}</TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithFees ?? 0)}</TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithoutFees ?? 0)}</TableCell>
