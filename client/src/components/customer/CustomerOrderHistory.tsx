@@ -35,6 +35,9 @@ export interface OrderItem {
   packQuantity?: number;
   unitSize?: string;
   unitOfMeasure?: string;
+  palletWeight?: string | number | null;
+  unitWeight?: string | number | null;
+  quantityInPack?: number | null;
 }
 
 export interface Order {
@@ -1149,6 +1152,25 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               <span className="break-words">Subtotal:</span>
               <span className="font-medium">{fmt(subtotal)}</span>
             </div>
+            {(() => {
+              const totalWeight = (order.items ?? []).reduce((sum: number, item: OrderItem) => {
+                let weightPerUnit = 0;
+                if (item.sellingType === 'pallets') {
+                  weightPerUnit = parseFloat(String(item.palletWeight ?? '0')) || 0;
+                } else {
+                  const uw = parseFloat(String(item.unitWeight ?? '0')) || 0;
+                  weightPerUnit = uw * (item.quantityInPack || 1);
+                }
+                return sum + weightPerUnit * item.quantity;
+              }, 0);
+              if (totalWeight <= 0) return null;
+              return (
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span className="break-words">Total Weight:</span>
+                  <span className="font-medium">{formatWeight(totalWeight)} kg</span>
+                </div>
+              );
+            })()}
             {transactionFee > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="break-words">Service Fee (5.5% + £0.50):</span>

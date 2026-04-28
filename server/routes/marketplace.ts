@@ -230,6 +230,9 @@ export function registerMarketplaceRoutes(app: Express): void {
             packQuantity: products.packQuantity,
             unitSize: products.unitSize,
             unitOfMeasure: products.unitOfMeasure,
+            palletWeight: products.palletWeight,
+            unitWeight: products.unitWeight,
+            quantityInPack: products.quantityInPack,
           })
           .from(orderItems)
           .leftJoin(products, eq(orderItems.productId, products.id))
@@ -261,6 +264,9 @@ export function registerMarketplaceRoutes(app: Express): void {
             packQuantity: item.packQuantity ?? undefined,
             unitSize: item.unitSize ?? undefined,
             unitOfMeasure: item.unitOfMeasure ?? undefined,
+            palletWeight: item.palletWeight ?? undefined,
+            unitWeight: item.unitWeight ?? undefined,
+            quantityInPack: item.quantityInPack ?? undefined,
           })),
           wholesaler: wholesalerDetails ? {
             id: order.wholesalerId,
