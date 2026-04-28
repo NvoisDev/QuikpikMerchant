@@ -62,6 +62,18 @@ export function registerAuthRoutes(app: Express): void {
         }
       }
 
+      if (updates.vatEnabled !== undefined) {
+        updates.vatEnabled = Boolean(updates.vatEnabled);
+      }
+
+      if (updates.vatRate !== undefined) {
+        const rate = parseFloat(updates.vatRate);
+        if (isNaN(rate) || rate < 0 || rate > 1) {
+          return res.status(400).json({ success: false, message: "VAT rate must be a decimal between 0 and 1 (e.g. 0.20 for 20%)." });
+        }
+        updates.vatRate = rate.toFixed(4);
+      }
+
       if (updates.storeTagline !== undefined) {
         const trimmedTagline = updates.storeTagline == null ? '' : String(updates.storeTagline).trim();
         if (!trimmedTagline) {

@@ -543,7 +543,8 @@ export function registerOrderRoutes(app: Express): void {
         updateData.customerTransactionFee = '0.00';
         const subtotal = parseFloat(order.subtotal || '0');
         const delivery = parseFloat(order.deliveryCost || '0');
-        updateData.total = (subtotal + delivery).toFixed(2);
+        const vatAmount = parseFloat((order as any).vatAmount || '0');
+        updateData.total = (subtotal + vatAmount + delivery).toFixed(2);
       }
 
       if (paymentUpdate.newPaymentStatus === 'paid' && order.status === 'confirmed') {
@@ -888,6 +889,8 @@ export function registerOrderRoutes(app: Express): void {
       console.log(`📦 Retrieved order ${orderId} with ${order.items?.length || 0} items`);
       res.json({
         ...order,
+        vatEnabled: order.wholesaler?.vatEnabled ?? false,
+        vatRate: order.wholesaler?.vatRate ?? '0.2000',
         cancellationRequest: cancellationRequest ? {
           id: cancellationRequest.id,
           status: cancellationRequest.status,
@@ -1193,13 +1196,22 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       const customerTransactionFee = calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 (customer pays) — always fixed
-      const total = subtotal + customerTransactionFee; // total = what the customer pays
 
-      // Get wholesaler from first product (needed for per-wholesaler fee rate)
+      // Get wholesaler from first product (needed for per-wholesaler fee rate and VAT)
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
       const feeRate = await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee (wholesaler cost)
+
+      // VAT calculation — applied to subtotal only, never to fees
+      const wholesalerForVat = await storage.getUser(wholesalerId);
+      const vatEnabled = wholesalerForVat?.vatEnabled ?? false;
+      const vatRate = parseFloat(wholesalerForVat?.vatRate ?? '0');
+      const vatAmount = vatEnabled ? subtotal * vatRate : 0;
+      const vatRateApplied = vatEnabled ? vatRate : null;
+
+      const deliveryCost = 0; // quick-order route does not support delivery at creation time
+      const total = subtotal + vatAmount + deliveryCost + customerTransactionFee; // total = what the customer pays
 
       // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
       let validatedCollectionAddressId: number | null = null;
@@ -1222,6 +1234,8 @@ export function registerOrderRoutes(app: Express): void {
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
+        vatAmount: vatAmount.toFixed(2),
+        ...(vatRateApplied !== null ? { vatRateApplied: vatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),
         deliveryAddress,
         notes,

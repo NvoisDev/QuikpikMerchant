@@ -2019,7 +2019,13 @@ export function registerPaymentRoutes(app: Express): void {
       const customerTransactionFee = isOffline ? 0 : calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 — always fixed
       const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee
-      const total = subtotal + customerTransactionFee;
+
+      // VAT calculation — wholesaler already fetched above
+      const quoteVatEnabled = wholesaler?.vatEnabled ?? false;
+      const quoteVatRate = parseFloat(wholesaler?.vatRate ?? '0');
+      const quoteVatAmount = quoteVatEnabled ? productSubtotal * quoteVatRate : 0;
+      const quoteVatRateApplied = quoteVatEnabled ? quoteVatRate : null;
+      const total = productSubtotal + quoteVatAmount + quoteDeliveryCharge + customerTransactionFee;
       const depositAmount = total * (validDepositPercentage / 100);
       const outstandingAmount = total - depositAmount;
 
@@ -2066,6 +2072,8 @@ export function registerPaymentRoutes(app: Express): void {
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
         deliveryCost: quoteDeliveryCharge.toFixed(2),
+        vatAmount: quoteVatAmount.toFixed(2),
+        ...(quoteVatRateApplied !== null ? { vatRateApplied: quoteVatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),
         fulfillmentType: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
         ...(fulfillmentType === 'delivery' && resolvedDeliveryAddressId ? { deliveryAddressId: resolvedDeliveryAddressId } : {}),
@@ -2077,7 +2085,7 @@ export function registerPaymentRoutes(app: Express): void {
         depositPercentage: validDepositPercentage,
         balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
         amountPaid: '0.00',
-        amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteDeliveryCharge : total).toFixed(2),
+        amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteVatAmount + quoteDeliveryCharge : total).toFixed(2),
         paymentStatus: 'unpaid',
         // Always store paymentMethod when explicitly provided (including 'payment_link')
         // so the customer portal can correctly classify online vs offline orders.
@@ -2622,11 +2630,17 @@ export function registerPaymentRoutes(app: Express): void {
       const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0);
       const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate;
-      const total = subtotal + customerTransactionFee;
+
+      // VAT calculation — wholesaler already fetched above
+      const editVatEnabled = wholesaler?.vatEnabled ?? false;
+      const editVatRate = parseFloat(wholesaler?.vatRate ?? '0');
+      const editVatAmount = editVatEnabled ? productSubtotal * editVatRate : 0;
+      const editVatRateApplied = editVatEnabled ? editVatRate : null;
+      const total = productSubtotal + editVatAmount + quoteDeliveryCharge + customerTransactionFee;
       const depositAmount = total * (depositPercentage / 100);
       // Correctly account for any prior partial payments when computing outstanding
       const alreadyPaid = parseFloat(existingOrder.amountPaid || '0');
-      const baseOutstanding = isPayLaterEdit ? subtotal : total;
+      const baseOutstanding = isPayLaterEdit ? productSubtotal + editVatAmount + quoteDeliveryCharge : total;
       const newAmountOutstanding = Math.max(baseOutstanding - alreadyPaid, 0);
 
       // ── Step 4: Pre-validate new items stock BEFORE any mutations ─────────
@@ -2858,6 +2872,8 @@ export function registerPaymentRoutes(app: Express): void {
           subtotal: productSubtotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
           customerTransactionFee: customerTransactionFee.toFixed(2),
+          vatAmount: editVatAmount.toFixed(2),
+          ...(editVatRateApplied !== null ? { vatRateApplied: editVatRateApplied.toFixed(4) } : { vatRateApplied: null }),
           total: total.toFixed(2),
           amountOutstanding: newAmountOutstanding.toFixed(2),
           stripePaymentLinkId: newPaymentLinkId || null,

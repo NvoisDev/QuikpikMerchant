@@ -663,8 +663,11 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   });
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
+  const vatAmount = parseFloat(order.vatAmount || '0');
   const txFee = showTransactionFee ? parseFloat(order.customerTransactionFee || '0') : 0;
-  const grandTotal = showTransactionFee ? parseFloat(order.total || '0') || (subtotal + deliveryCost + txFee) : subtotal + deliveryCost;
+  const grandTotal = showTransactionFee
+    ? parseFloat(order.total || '0') || (subtotal + vatAmount + deliveryCost + txFee)
+    : subtotal + vatAmount + deliveryCost;
   const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
   const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
   let logoBuffer: Buffer | null = null;
@@ -834,6 +837,11 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     };
     drawTotRow('Subtotal', fmt(subtotal));
     if (deliveryCost > 0) drawTotRow('Delivery', fmt(deliveryCost));
+    if (vatAmount > 0) {
+      const storedRate = parseFloat(order.vatRateApplied || '0');
+      const vatRatePct = storedRate > 0 ? Math.round(storedRate * 100) : (subtotal > 0 ? Math.round((vatAmount / subtotal) * 100) : 0);
+      drawTotRow(`VAT (${vatRatePct}%)`, fmt(vatAmount));
+    }
     if (showTransactionFee && txFee > 0) drawTotRow('Service Fee', fmt(txFee));
     doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4).strokeColor(GREEN).lineWidth(1.5).stroke();
     tY += 4;

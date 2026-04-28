@@ -266,6 +266,10 @@ export const users = pgTable("users", {
   vatNumber: varchar("vat_number"),
   companyRegistrationNumber: varchar("company_registration_number"),
 
+  // VAT / Tax settings
+  vatEnabled: boolean("vat_enabled").default(false),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 4 }).default("0.2000"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -615,6 +619,8 @@ export const orders = pgTable("orders", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
   customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00"), // VAT charged on the order (subtotal × vatRate when wholesaler has VAT enabled)
+  vatRateApplied: decimal("vat_rate_applied", { precision: 5, scale: 4 }), // The exact VAT rate used at order creation time (e.g. 0.2000 for 20%)
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
   stripeTransferId: varchar("stripe_transfer_id"), // Stripe Transfer ID for exact payout reconciliation

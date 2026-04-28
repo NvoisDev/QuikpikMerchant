@@ -101,6 +101,8 @@ interface Order {
   paymentMethod?: string;
   stripePaymentLinkUrl?: string;
   customerTransactionFee?: string;
+  vatAmount?: string;
+  vatRateApplied?: string;
   wholesalerBusinessName?: string;
   businessProfileId?: number | null;
   businessProfileName?: string | null;
@@ -1642,6 +1644,20 @@ export default function OrderDetail() {
                   <span>{formatMoney(parseFloat(order.deliveryCost || '0'))}</span>
                 </div>
               )}
+              {parseFloat(order.vatAmount || '0') > 0 && (() => {
+                const vat = parseFloat(order.vatAmount || '0');
+                const storedRate = parseFloat(order.vatRateApplied || '0');
+                const sub = parseFloat(order.subtotal || '0');
+                const vatPct = storedRate > 0
+                  ? Math.round(storedRate * 100)
+                  : (sub > 0 ? Math.round((vat / sub) * 100) : 0);
+                return (
+                  <div className="flex justify-between text-gray-700">
+                    <span>VAT ({vatPct}%)</span>
+                    <span>{formatMoney(vat)}</span>
+                  </div>
+                );
+              })()}
               {isStripePayment(order) && (
                 <div className="flex justify-between text-red-600">
                   <span>Platform Fee</span>

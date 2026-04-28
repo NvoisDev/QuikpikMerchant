@@ -216,10 +216,11 @@ export function registerMarketplaceRoutes(app: Express): void {
           ? ((storedFee !== null && storedFee !== undefined) ? parseFloat(storedFee) : calculateCustomerFee(subtotal, 0))
           : 0;
 
-        // For offline orders, total = subtotal + delivery only (no fee).
+        // For offline orders, total = subtotal + vatAmount + delivery only (no fee).
         // Override any incorrectly-stored DB total to ensure transparency.
         const deliveryCost = parseFloat(order.deliveryCost || '0');
-        const correctedTotal = isOnline ? total : (subtotal + deliveryCost);
+        const orderVatAmount = parseFloat((order as any).vatAmount || '0');
+        const correctedTotal = isOnline ? total : (subtotal + orderVatAmount + deliveryCost);
         
         // Platform fee paid by wholesaler: 4.6% of product subtotal (not shown to customers but calculated for completeness)
         const platformFee = calculatePlatformFee(subtotal);
@@ -846,6 +847,18 @@ export function registerMarketplaceRoutes(app: Express): void {
         return res.status(400).json({ message: "Wholesaler not found" });
       }
 
+      // VAT calculation — applied on product subtotal only, never on fees
+      const checkoutVatEnabled = wholesaler.vatEnabled ?? false;
+      const checkoutVatRate = parseFloat(wholesaler.vatRate ?? '0');
+      const checkoutVatAmount = checkoutVatEnabled ? productSubtotal * checkoutVatRate : 0;
+      const checkoutVatRateApplied = checkoutVatEnabled ? checkoutVatRate : null;
+      const stripeVatPence = Math.round(checkoutVatAmount * 100);
+      const stripeAmountFinal = stripeAmount + stripeVatPence;
+      const totalCustomerPaysFinal = totalCustomerPays + checkoutVatAmount;
+      // VAT passes through to the wholesaler — platform fee is on subtotal only, not on VAT
+      const wholesalerReceivesWithVat = wholesalerReceives + checkoutVatAmount;
+      const stripeWholesalerAmountFinal = Math.round(wholesalerReceivesWithVat * 100);
+
       // Create Stripe payment intent — use account-aware client so test accounts always use test Stripe
       const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
       
@@ -885,8 +898,8 @@ export function registerMarketplaceRoutes(app: Express): void {
       const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${sortedItemsStr}`;
       const idempotencyKey = `pay_${createHash('sha256').update(idempotencyInput).digest('hex').slice(0, 32)}`;
 
-      // Additional validation specifically for Stripe amount
-      if (!Number.isInteger(stripeAmount) || stripeAmount <= 0 || isNaN(stripeAmount)) {
+      // Additional validation specifically for Stripe amount (VAT-inclusive)
+      if (!Number.isInteger(stripeAmountFinal) || stripeAmountFinal <= 0 || isNaN(stripeAmountFinal)) {
         return res.status(400).json({ 
           message: 'Invalid payment amount calculated. Please try again.' 
         });
@@ -895,7 +908,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       let paymentIntent;
       try {
         const paymentConfig: any = {
-          amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
+          amount: stripeAmountFinal, // VAT-inclusive total the customer pays
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
@@ -906,13 +919,13 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Add Stripe Connect configuration if wholesaler has Connect account
         if (useConnect) {
           // Additional validation for transfer amounts
-          if (stripeWholesalerAmount <= 0) {
-            console.error(`Invalid transfer amount for Connect account: ${stripeWholesalerAmount}`);
+          if (stripeWholesalerAmountFinal <= 0) {
+            console.error(`Invalid transfer amount for Connect account: ${stripeWholesalerAmountFinal}`);
             useConnect = false; // Fallback to direct payment
           } else {
             paymentConfig.transfer_data = {
               destination: wholesaler.stripeAccountId,
-              amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
+              amount: stripeWholesalerAmountFinal // Amount wholesaler receives (VAT pass-through + subtotal net)
             };
           }
         }
@@ -930,8 +943,10 @@ export function registerMarketplaceRoutes(app: Express): void {
           shippingCost: deliveryCost.toString(),
           customerTransactionFee: customerTransactionFee.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-          wholesalerReceives: wholesalerReceives.toFixed(2),
-          totalCustomerPays: totalCustomerPays.toFixed(2),
+          wholesalerReceives: wholesalerReceivesWithVat.toFixed(2),
+          totalCustomerPays: totalCustomerPaysFinal.toFixed(2),
+          vatAmount: checkoutVatAmount.toFixed(2),
+          vatRateApplied: checkoutVatRateApplied !== null ? checkoutVatRateApplied.toFixed(4) : '0',
           wholesalerId: firstProduct.wholesalerId,
           wholesalerBusinessName: wholesaler.businessName || 'Quikpik Wholesaler',
           orderType: 'customer_portal',
@@ -948,7 +963,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       }, {
         idempotencyKey: idempotencyKey
       });
-      console.log(`Payment intent created: ${paymentIntent.id} (${stripeAmount} pence)`);
+      console.log(`Payment intent created: ${paymentIntent.id} (${stripeAmountFinal} pence, VAT: ${checkoutVatAmount.toFixed(2)})`);
       
       } catch (stripeError: any) {
         console.error("Stripe payment intent creation error:", stripeError.message);
@@ -959,7 +974,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           // Retry payment creation without Connect configuration
           try {
             const fallbackConfig = {
-              amount: stripeAmount,
+              amount: stripeAmountFinal,
               currency: 'gbp',
               receipt_email: customerEmail,
               automatic_payment_methods: { enabled: true },
@@ -976,8 +991,10 @@ export function registerMarketplaceRoutes(app: Express): void {
                 shippingCost: deliveryCost.toString(),
                 customerTransactionFee: customerTransactionFee.toFixed(2),
                 wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-                wholesalerReceives: wholesalerReceives.toFixed(2),
-                totalCustomerPays: totalCustomerPays.toFixed(2),
+                wholesalerReceives: wholesalerReceivesWithVat.toFixed(2),
+                totalCustomerPays: totalCustomerPaysFinal.toFixed(2),
+                vatAmount: checkoutVatAmount.toFixed(2),
+                vatRateApplied: checkoutVatRateApplied !== null ? checkoutVatRateApplied.toFixed(4) : '0',
                 wholesalerId: firstProduct.wholesalerId,
                 wholesalerBusinessName: wholesaler.businessName || 'Quikpik Wholesaler',
                 orderType: 'customer_portal',
@@ -1019,9 +1036,11 @@ export function registerMarketplaceRoutes(app: Express): void {
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toString(),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        totalCustomerPays: totalCustomerPays.toFixed(2),
+        vatAmount: checkoutVatAmount.toFixed(2),
+        vatRateApplied: checkoutVatRateApplied !== null ? checkoutVatRateApplied.toFixed(4) : null,
+        totalCustomerPays: totalCustomerPaysFinal.toFixed(2),
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-        wholesalerReceives: wholesalerReceives.toFixed(2)
+        wholesalerReceives: wholesalerReceivesWithVat.toFixed(2)
       });
 
     } catch (error) {
@@ -1078,7 +1097,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         wholesalerReceives,
         selectedDeliveryAddressId,
         selectedDeliveryAddress: selectedDeliveryAddressJson,
-        shippingCost: metadataShippingCost
+        shippingCost: metadataShippingCost,
+        vatAmount: metadataVatAmount,
+        vatRateApplied: metadataVatRateApplied
       } = paymentIntent.metadata;
 
       // Parse shipping info from payment metadata
@@ -1317,6 +1338,10 @@ export function registerMarketplaceRoutes(app: Express): void {
             
             console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
+            // VAT — read from Stripe payment metadata (set at checkout creation time)
+            const webhookVatAmount = parseFloat(metadataVatAmount || '0');
+            const webhookVatRateAppliedStr = metadataVatRateApplied && metadataVatRateApplied !== '0' ? metadataVatRateApplied : null;
+
             // Create order with customer details AND SHIPPING DATA
             const orderData = {
               orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
@@ -1328,7 +1353,9 @@ export function registerMarketplaceRoutes(app: Express): void {
               subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 4.6% platform fee
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-              total: correctTotal, // Total = subtotal + customer transaction fee
+              vatAmount: webhookVatAmount.toFixed(2),
+              ...(webhookVatRateAppliedStr !== null ? { vatRateApplied: webhookVatRateAppliedStr } : {}),
+              total: correctTotal, // VAT-inclusive total (Stripe charged totalCustomerPaysFinal)
               status: 'paid',
               paymentStatus: 'paid', // CRITICAL: Set payment status for archive logic
               amountPaid: correctTotal, // Full amount paid on checkout
@@ -1843,11 +1870,17 @@ export function registerMarketplaceRoutes(app: Express): void {
         });
       }
 
-      const beforeFees = subtotal + shippingCost;
       // Pay Later orders have no Stripe processing — no transaction fee or platform fee
       const transactionFee = 0;
-      const total = beforeFees.toFixed(2);
       const platformFee = '0.00';
+
+      // VAT calculation — look up wholesaler VAT settings
+      const payLaterWholesalerForVat = await storage.getUser(wholesalerId);
+      const payLaterVatEnabled = payLaterWholesalerForVat?.vatEnabled ?? false;
+      const payLaterVatRate = parseFloat(payLaterWholesalerForVat?.vatRate ?? '0');
+      const payLaterVatAmount = payLaterVatEnabled ? subtotal * payLaterVatRate : 0;
+      const payLaterVatRateApplied = payLaterVatEnabled ? payLaterVatRate : null;
+      const total = (subtotal + payLaterVatAmount + shippingCost).toFixed(2);
 
       // --- Validate collectionAddressId belongs to this wholesaler (multi-tenant safety) ---
       let validatedCollectionAddressId: number | null = null;
@@ -1888,6 +1921,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         subtotal: subtotal.toFixed(2),
         platformFee,
         customerTransactionFee: transactionFee.toFixed(2),
+        vatAmount: payLaterVatAmount.toFixed(2),
+        ...(payLaterVatRateApplied !== null ? { vatRateApplied: payLaterVatRateApplied.toFixed(4) } : {}),
         total,
         status: 'pending',
         paymentStatus: 'unpaid',
@@ -2381,9 +2416,17 @@ export function registerMarketplaceRoutes(app: Express): void {
       }
       
       // Calculate platform fee (4.6% of total)
-      const subtotal = totalAmount.toString();
-      const platformFee = calculatePlatformFee(parseFloat(totalAmount)).toFixed(2);
-      const total = totalAmount.toString();
+      const subtotalNum = parseFloat(totalAmount);
+      const platformFee = calculatePlatformFee(subtotalNum).toFixed(2);
+
+      // VAT calculation — look up wholesaler VAT settings
+      const singleProductWholesalerForVat = await storage.getUser(product.wholesalerId);
+      const singleProductVatEnabled = singleProductWholesalerForVat?.vatEnabled ?? false;
+      const singleProductVatRate = parseFloat(singleProductWholesalerForVat?.vatRate ?? '0');
+      const singleProductVatAmount = singleProductVatEnabled ? subtotalNum * singleProductVatRate : 0;
+      const singleProductVatRateApplied = singleProductVatEnabled ? singleProductVatRate : null;
+      const subtotal = subtotalNum.toFixed(2);
+      const total = (subtotalNum + singleProductVatAmount).toFixed(2);
       
       // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
       let validatedCollectionAddressId: number | null = null;
@@ -2409,6 +2452,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         customerPhone: formattedPhoneNumber, // Store formatted phone number
         subtotal,
         platformFee,
+        vatAmount: singleProductVatAmount.toFixed(2),
+        ...(singleProductVatRateApplied !== null ? { vatRateApplied: singleProductVatRateApplied.toFixed(4) } : {}),
         total,
         status: 'confirmed',
         notes: notes || `Order placed via marketplace for ${product.name}`,
@@ -2564,7 +2609,14 @@ Please contact the customer to confirm this order.
       // Calculate platform fee (4.6%)
       const subtotal = parseFloat(totalAmount);
       const platformFee = calculatePlatformFee(subtotal);
-      const finalTotal = subtotal;
+
+      // VAT calculation — look up wholesaler VAT settings
+      const portalWholesalerForVat = await storage.getUser(firstProduct.wholesalerId);
+      const portalVatEnabled = portalWholesalerForVat?.vatEnabled ?? false;
+      const portalVatRate = parseFloat(portalWholesalerForVat?.vatRate ?? '0');
+      const portalVatAmount = portalVatEnabled ? subtotal * portalVatRate : 0;
+      const portalVatRateApplied = portalVatEnabled ? portalVatRate : null;
+      const finalTotal = subtotal + portalVatAmount;
 
       // Validate collectionAddressId belongs to this wholesaler (multi-tenant safety)
       let validatedCollAddrId: number | null = null;
@@ -2590,6 +2642,8 @@ Please contact the customer to confirm this order.
         customerPhone, // Store customer phone
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
+        vatAmount: portalVatAmount.toFixed(2),
+        ...(portalVatRateApplied !== null ? { vatRateApplied: portalVatRateApplied.toFixed(4) } : {}),
         total: finalTotal.toFixed(2),
         status: 'confirmed',
         deliveryAddress: customerAddress,
@@ -3053,7 +3107,13 @@ Please contact the customer to confirm this order.
       const customerTransactionFee = calculateCustomerFee(subtotal, 0);
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
-      const total = subtotal + customerTransactionFee + deliveryCost + shippingTotal;
+
+      // VAT calculation — reorderWholesalerObj already fetched above
+      const reorderVatEnabled = reorderWholesalerObj?.vatEnabled ?? false;
+      const reorderVatRate = parseFloat(reorderWholesalerObj?.vatRate ?? '0');
+      const reorderVatAmount = reorderVatEnabled ? subtotal * reorderVatRate : 0;
+      const reorderVatRateApplied = reorderVatEnabled ? reorderVatRate : null;
+      const total = subtotal + reorderVatAmount + customerTransactionFee + deliveryCost + shippingTotal;
 
       const newOrderData: any = {
         orderNumber: newOrderNumber,
@@ -3066,6 +3126,8 @@ Please contact the customer to confirm this order.
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
+        vatAmount: reorderVatAmount.toFixed(2),
+        ...(reorderVatRateApplied !== null ? { vatRateApplied: reorderVatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),
         fulfillmentType: order.fulfillmentType,
         deliveryAddress: order.deliveryAddress,

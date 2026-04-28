@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -602,6 +602,11 @@ export default function Settings() {
   const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
   const [deliveryNote, setDeliveryNote] = useState((user as any)?.deliveryNote || '');
   const [savingDelivery, setSavingDelivery] = useState(false);
+  const [vatEnabled, setVatEnabled] = useState((user as any)?.vatEnabled ?? false);
+  const [vatRateInput, setVatRateInput] = useState(
+    (user as any)?.vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20'
+  );
+  const [savingVat, setSavingVat] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
@@ -693,6 +698,8 @@ export default function Settings() {
       setDeliveryEnabled((user as any).enableDelivery ?? true);
       setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
       setDeliveryNote((user as any).deliveryNote || '');
+      setVatEnabled((user as any).vatEnabled ?? false);
+      setVatRateInput((user as any).vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20');
     }
   }, [user]);
 
@@ -713,6 +720,31 @@ export default function Settings() {
       toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setSavingDelivery(false);
+    }
+  };
+
+  const handleSaveVat = async () => {
+    const rateAsDecimal = parseFloat(vatRateInput) / 100;
+    if (isNaN(rateAsDecimal) || rateAsDecimal < 0 || rateAsDecimal > 1) {
+      toast({ title: "Invalid VAT rate", description: "Enter a percentage between 0 and 100.", variant: "destructive" });
+      return;
+    }
+    setSavingVat(true);
+    try {
+      const response = await apiRequest('PUT', '/api/user/profile', {
+        vatEnabled,
+        vatRate: rateAsDecimal,
+        vatNumber: businessForm.vatNumber || null,
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: "Tax settings saved", description: "Your VAT configuration has been updated." });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      }
+    } catch {
+      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingVat(false);
     }
   };
 
@@ -1545,6 +1577,75 @@ export default function Settings() {
                       >
                         <Save className="h-3.5 w-3.5" />
                         {savingDelivery ? "Saving..." : "Save Delivery Settings"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Tax / VAT Settings Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Receipt className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Tax Settings</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Configure VAT for your orders. When enabled, VAT is calculated at order creation and shown on invoices.</p>
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">VAT Registered</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Enable to add VAT to new orders automatically</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const enabling = !vatEnabled;
+                            setVatEnabled(enabling);
+                            if (enabling && (!vatRateInput || vatRateInput === '0')) {
+                              setVatRateInput('20');
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${vatEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${vatEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {vatEnabled && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">VAT Rate (%)</label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              placeholder="20"
+                              value={vatRateInput}
+                              onChange={(e) => setVatRateInput(e.target.value)}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-gray-500">%</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">Standard UK VAT is 20%</p>
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">VAT Number <span className="text-gray-400 font-normal">(optional)</span></label>
+                        <Input
+                          type="text"
+                          placeholder="e.g. GB123456789"
+                          value={businessForm.vatNumber}
+                          onChange={(e) => setBusinessForm({ ...businessForm, vatNumber: e.target.value })}
+                          className="w-full max-w-xs"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Printed on PDF invoices for legal compliance</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveVat}
+                        disabled={savingVat}
+                        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {savingVat ? "Saving..." : "Save Tax Settings"}
                       </Button>
                     </div>
                   </div>
