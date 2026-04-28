@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { calculatePlatformFee } from "@shared/utils/fees";
+import { formatWeight } from "@shared/utils/currency";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -1437,6 +1438,27 @@ export default function OrderDetail() {
               <span>Products:</span>
               <span>{formatMoney(parseFloat(order.subtotal || '0'))}</span>
             </div>
+            {(() => {
+              const totalWeight = (order.items ?? []).reduce((sum: number, item: any) => {
+                const product = item.product;
+                if (!product) return sum;
+                let weightPerUnit = 0;
+                if (item.sellingType === 'pallets') {
+                  weightPerUnit = parseFloat(product.palletWeight ?? '0') || 0;
+                } else {
+                  const uw = parseFloat(product.unitWeight ?? '0') || 0;
+                  weightPerUnit = uw * (product.quantityInPack || 1);
+                }
+                return sum + weightPerUnit * item.quantity;
+              }, 0);
+              if (totalWeight <= 0) return null;
+              return (
+                <div className="flex justify-between text-gray-500">
+                  <span>Total Weight:</span>
+                  <span>{formatWeight(totalWeight)} kg</span>
+                </div>
+              );
+            })()}
             {parseFloat(order.deliveryCost || '0') > 0 && (
               <div className="flex justify-between text-blue-700">
                 <span>Delivery:</span>
