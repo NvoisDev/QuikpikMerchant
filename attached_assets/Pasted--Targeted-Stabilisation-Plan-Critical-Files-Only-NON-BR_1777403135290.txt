@@ -1,0 +1,169 @@
+🧾 **Targeted Stabilisation Plan — Critical Files Only (NON-BREAKING)**
+
+---
+
+## 🎯 Objective
+
+Reduce risk and improve structure in the **two highest-risk backend files**:
+
+* marketplace.ts
+* orders.ts
+
+Without changing any functionality, behaviour, or Stripe/payment logic.
+
+---
+
+## ⚠️ Core Rules (NON-NEGOTIABLE)
+
+* Do NOT rewrite files
+* Do NOT change business logic
+* Do NOT modify API responses
+* Do NOT alter Stripe logic or flows
+* Do NOT introduce regressions
+
+👉 This is structure only, not refactoring logic
+
+---
+
+## 🔴 Scope (STRICT)
+
+ONLY work on:
+
+* server/routes/marketplace.ts
+* server/routes/orders.ts
+
+Do NOT touch:
+
+* payments.ts
+* admin.ts
+* frontend files
+
+---
+
+## 🧱 Step 1 — Safe Extraction Pattern
+
+When extracting logic:
+
+1. Move logic into a new module
+2. Import it back into the original file
+3. Ensure behaviour remains identical
+
+Example:
+
+Before:
+
+```ts
+// marketplace.ts
+function createCheckoutSession(...) { ... }
+```
+
+After:
+
+```ts
+// marketplace-payments.ts
+export function createCheckoutSession(...) { ... }
+
+// marketplace.ts
+import { createCheckoutSession } from './marketplace-payments';
+```
+
+---
+
+## 🟡 Step 2 — marketplace.ts Extraction Plan
+
+Extract into:
+
+* marketplace-payments.ts
+  → ALL Stripe-related logic (checkout sessions, payment intents)
+
+* marketplace-checkout.ts
+  → Order creation, totals, validation
+
+* marketplace-browsing.ts
+  → Product listing, discovery, filtering
+
+👉 Keep route handlers in marketplace.ts, only move internal logic
+
+---
+
+## 🟠 Step 3 — orders.ts Extraction Plan
+
+Extract into:
+
+* order-refunds.ts
+  → Refund logic, Stripe refund handling
+
+* order-invoices.ts
+  → Invoice generation, email sending
+
+* order-status.ts
+  → Status transitions (paid, fulfilled, cancelled)
+
+---
+
+## 🧪 Step 4 — Regression Testing (MANDATORY)
+
+After each extraction, verify:
+
+* Customer checkout works
+* Orders are created correctly
+* Stripe payments succeed
+* Refunds work correctly
+* No duplicate charges
+* No broken API responses
+
+---
+
+## 🔐 Step 5 — Stripe Safety (CRITICAL)
+
+* Ensure all Stripe calls still use:
+  getStripeClient(Boolean(wholesaler.isTestAccount))
+
+* Do NOT:
+
+  * Introduce global Stripe clients
+  * Change webhook behaviour
+  * Modify subscription logic
+
+---
+
+## 🧹 Step 6 — Clean-Up (Light Only)
+
+* Remove clearly unused code
+* Consolidate duplicate helpers into shared/ if safe
+* Standardise imports
+
+DO NOT:
+
+* Rename widely used functions
+* Refactor logic
+
+---
+
+## 📦 Deliverables
+
+* marketplace.ts and orders.ts reduced in responsibility
+* New supporting modules created
+* No functional changes
+* Cleaner separation of concerns
+
+---
+
+## ✅ Acceptance Criteria
+
+* System behaves EXACTLY the same
+* No regressions in payments or orders
+* Stripe flows remain fully intact
+* Code is easier to navigate and safer to modify
+
+---
+
+## 🧠 Guiding Principle
+
+“Stabilise the core, don’t touch the rest.”
+
+Focus only on the areas that:
+
+* Handle money
+* Handle orders
+* Carry the highest risk
