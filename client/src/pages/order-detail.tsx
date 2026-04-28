@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { calculatePlatformFee } from "@shared/utils/fees";
 import { formatWeight } from "@shared/utils/currency";
 import { useParams, useLocation } from "wouter";
@@ -301,6 +301,53 @@ export default function OrderDetail() {
   const [isSavingQuote, setIsSavingQuote] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
+
+  const swipeTouchStartX = useRef<number | null>(null);
+  const swipeTouchStartY = useRef<number | null>(null);
+  const [swipeDx, setSwipeDx] = useState(0);
+  const SWIPE_EDGE_THRESHOLD = 40;
+  const SWIPE_COMPLETE_THRESHOLD = 80;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch.clientX <= SWIPE_EDGE_THRESHOLD) {
+      swipeTouchStartX.current = touch.clientX;
+      swipeTouchStartY.current = touch.clientY;
+    } else {
+      swipeTouchStartX.current = null;
+      swipeTouchStartY.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (swipeTouchStartX.current === null) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - swipeTouchStartX.current;
+    const dy = Math.abs(touch.clientY - (swipeTouchStartY.current ?? 0));
+    if (dy > dx) {
+      swipeTouchStartX.current = null;
+      setSwipeDx(0);
+      return;
+    }
+    if (dx > 0) {
+      setSwipeDx(dx);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (swipeDx >= SWIPE_COMPLETE_THRESHOLD) {
+      navigate('/orders');
+    }
+    swipeTouchStartX.current = null;
+    swipeTouchStartY.current = null;
+    setSwipeDx(0);
+  }, [swipeDx, navigate]);
+
+  const handleTouchCancel = useCallback(() => {
+    swipeTouchStartX.current = null;
+    swipeTouchStartY.current = null;
+    setSwipeDx(0);
+  }, []);
 
   const { data: editProducts = [] } = useQuery<SimpleProduct[]>({
     queryKey: ['/api/products'],
@@ -1253,7 +1300,30 @@ export default function OrderDetail() {
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div
+      className="bg-gray-50 min-h-screen relative"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+    >
+      {swipeDx > 0 && (
+        <div
+          className="fixed inset-y-0 left-0 z-50 flex items-center pointer-events-none"
+          style={{ width: `${Math.min(swipeDx, 80)}px` }}
+        >
+          <div
+            className="absolute inset-0 bg-white"
+            style={{ opacity: Math.min(swipeDx / SWIPE_COMPLETE_THRESHOLD, 1) * 0.35 }}
+          />
+          {swipeDx >= SWIPE_COMPLETE_THRESHOLD * 0.4 && (
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white shadow ml-2"
+              style={{ opacity: Math.min((swipeDx - SWIPE_COMPLETE_THRESHOLD * 0.4) / (SWIPE_COMPLETE_THRESHOLD * 0.6), 1) }}>
+              <ChevronLeft className="h-4 w-4 text-gray-600" />
+            </div>
+          )}
+        </div>
+      )}
       <div className="max-w-lg mx-auto px-4 py-4 space-y-3 pb-28 text-sm">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
