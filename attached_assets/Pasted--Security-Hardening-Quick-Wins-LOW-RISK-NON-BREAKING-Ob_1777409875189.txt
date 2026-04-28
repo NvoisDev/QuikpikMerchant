@@ -1,0 +1,164 @@
+🛡️ Security Hardening — Quick Wins (LOW RISK, NON-BREAKING)
+
+---
+
+## 🎯 Objective
+
+Improve platform security by addressing key weaknesses in session handling and cookies **without changing authentication flows or breaking existing functionality**.
+
+---
+
+## ⚠️ Core Rules
+
+* Do NOT change login flows (Google OAuth / OTP)
+* Do NOT break existing sessions unexpectedly
+* Do NOT modify business logic or API behaviour
+* Changes must be backward compatible where possible
+
+---
+
+## 🔴 Part 1 — Secure Cookies
+
+Update all authentication/session cookies:
+
+### Requirements:
+
+* Set:
+
+  * `httpOnly: true` (already set — keep)
+  * `secure: true` (NEW — required)
+  * `sameSite: 'lax'` (keep as is)
+
+### Implementation:
+
+* Ensure cookies are ONLY sent over HTTPS
+* If environment is development:
+
+  * Allow `secure: false` locally ONLY
+  * Use environment check (NODE_ENV !== 'development')
+
+---
+
+## 🟠 Part 2 — Sign Customer Auth Cookie (HMAC)
+
+### Problem:
+
+Customer auth cookie is currently base64 JSON and can be tampered with.
+
+### Solution:
+
+Add HMAC signing to prevent forgery.
+
+---
+
+### Implementation:
+
+1. Create utility:
+
+```ts
+function signPayload(payload: string, secret: string): string
+function verifySignature(payload: string, signature: string, secret: string): boolean
+```
+
+2. When setting cookie:
+
+* Encode payload
+* Generate signature using SECRET (e.g. SESSION_SECRET)
+* Store as:
+
+```ts
+base64Payload.signature
+```
+
+3. On request:
+
+* Split payload + signature
+* Verify signature BEFORE parsing or DB lookup
+* If invalid:
+
+  * Reject request immediately (401)
+  * Do NOT query database
+
+---
+
+## 🟡 Part 3 — Early Rejection of Invalid Sessions
+
+### Requirement:
+
+* If cookie is:
+
+  * Missing
+  * Malformed
+  * Signature invalid
+
+👉 Immediately reject request
+
+Do NOT:
+
+* Attempt DB lookup
+* Continue request processing
+
+---
+
+## 🟢 Part 4 — Session Expiry (Light Check)
+
+* Ensure session TTL is enforced consistently
+* If session expired:
+
+  * Clear cookie
+  * Force re-authentication
+
+---
+
+## 🧪 Part 5 — Testing (MANDATORY)
+
+Test:
+
+* Valid login → works as normal
+* Tampered cookie → rejected immediately
+* Expired cookie → rejected
+* HTTPS behaviour:
+
+  * Cookies sent over HTTPS
+  * Not sent over HTTP (except local dev)
+
+---
+
+## 🔐 Part 6 — Logging (Minimal + Safe)
+
+* Log rejected auth attempts (no sensitive data)
+* Example:
+
+  * “Invalid cookie signature”
+  * “Expired session”
+
+Do NOT log:
+
+* Full cookie values
+* Secrets
+* Tokens
+
+---
+
+## 📦 Deliverables
+
+* Secure cookies enforced (HTTPS only)
+* Signed customer auth cookie
+* Invalid sessions rejected early
+* No changes to login UX
+* No regressions in authentication
+
+---
+
+## ✅ Acceptance Criteria
+
+* Cookie cannot be tampered with
+* Invalid cookies never reach database layer
+* Sessions behave exactly as before (from user perspective)
+* Platform remains stable
+
+---
+
+## 🧠 Guiding Principle
+
+“Reject early, trust nothing from the client.”
