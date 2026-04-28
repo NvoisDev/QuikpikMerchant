@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
-import { getPackQuantity } from "@shared/utils/product";
+import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
 import type { ExtendedProduct, CartItem } from "@/components/customer/portal-types";
 
 interface UnitSelectionModalProps {
@@ -111,7 +111,8 @@ export function UnitSelectionModal({
                           return null;
                         })()}
                         {(() => {
-                          const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
+                          const pw = computePackWeightKg(selectedProductForModal.packQuantity, selectedProductForModal.unitSize, selectedProductForModal.unitOfMeasure)
+                            || (selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0);
                           if (pw > 0) return <p className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</p>;
                           return null;
                         })()}
@@ -280,7 +281,8 @@ export function UnitSelectionModal({
                   )}
                   {(() => {
                     if (selectedModalType === 'units') {
-                      const pw = selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0;
+                      const pw = computePackWeightKg(selectedProductForModal.packQuantity, selectedProductForModal.unitSize, selectedProductForModal.unitOfMeasure)
+                        || (selectedProductForModal.totalPackageWeight ? parseFloat(selectedProductForModal.totalPackageWeight) : 0);
                       if (pw > 0) return <div className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</div>;
                     } else {
                       const palw = selectedProductForModal.palletWeight ? parseFloat(String(selectedProductForModal.palletWeight)) : 0;

@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatCurrency } from "@/lib/currencies";
 import { formatWeight } from "@shared/utils/currency";
+import { computePackWeightKg } from "@shared/utils/product";
 import { formatNumber } from "@/lib/utils";
 
 import {
@@ -154,7 +155,8 @@ function ProductCard({
   const productSize = formatProductSize();
 
   const weightLabel = (() => {
-    const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+    const pw = computePackWeightKg(product.packQuantity, product.unitSize, product.unitOfMeasure)
+      || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
     const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
     const parts: string[] = [];
     if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);

@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { formatDateTime } from "@shared/utils/date";
+import { computePackWeightKg } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
@@ -487,7 +488,8 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                         const palw = item.palletWeight ? parseFloat(String(item.palletWeight)) : 0;
                         if (palw > 0) return <p className="text-xs text-gray-400">{formatWeight(palw)} kg/pallet</p>;
                       } else {
-                        const pw = item.totalPackageWeight ? parseFloat(String(item.totalPackageWeight)) : 0;
+                        const pw = computePackWeightKg(item.packQuantity, item.unitSize, item.unitOfMeasure)
+                          || (item.totalPackageWeight ? parseFloat(String(item.totalPackageWeight)) : 0);
                         if (pw > 0) return <p className="text-xs text-gray-400">{formatWeight(pw)} kg/pack</p>;
                       }
                       return null;

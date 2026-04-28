@@ -12,7 +12,7 @@ import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
-import { getPackQuantity } from "@shared/utils/product";
+import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
 
 interface ProductsTabProps {
   setActiveTab: (tab: string) => void;
@@ -431,7 +431,8 @@ export function ProductsTab({
                           )}
                         </div>
                         {(() => {
-                          const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+                          const pw = computePackWeightKg((product as any).packQuantity, (product as any).unitSize, (product as any).unitOfMeasure)
+                            || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                           const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                           const parts: string[] = [];
                           if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
@@ -836,7 +837,8 @@ export function ProductsTab({
                             )}
                           </div>
                           {(() => {
-                            const pw = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+                            const pw = computePackWeightKg((product as any).packQuantity, (product as any).unitSize, (product as any).unitOfMeasure)
+                              || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                             const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                             const parts: string[] = [];
                             if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
