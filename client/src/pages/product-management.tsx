@@ -27,6 +27,7 @@ import type { Product, PromotionalOffer } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
+import { computePackWeightKg } from "@shared/utils/product";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
@@ -186,56 +187,6 @@ export default function ProductManagement() {
     return true;
   };
 
-  // Auto-calculation for total package weight
-  const calculateTotalPackageWeight = useCallback((packQuantity: string, unitOfMeasure: string, unitSize: string): number => {
-    const quantity = parseFloat(packQuantity) || 0;
-    const size = parseFloat(unitSize) || 0;
-    
-    if (quantity <= 0 || size <= 0 || !unitOfMeasure) {
-      return 0;
-    }
-
-    let weightInKg = 0;
-
-    switch (unitOfMeasure.toLowerCase()) {
-      case 'g':
-      case 'grams':
-        weightInKg = (quantity * size) / 1000;
-        break;
-        
-      case 'kg':
-      case 'kilograms':
-        weightInKg = quantity * size;
-        break;
-        
-      case 'ml':
-      case 'millilitres':
-        weightInKg = (quantity * size) / 1000;
-        break;
-        
-      case 'l':
-      case 'litres':
-        weightInKg = quantity * size;
-        break;
-        
-      case 'cl':
-      case 'centilitres':
-        weightInKg = (quantity * size) / 100;
-        break;
-        
-      case 'pieces':
-      case 'units':
-      case 'cans':
-      case 'bottles':
-        weightInKg = quantity * 0.1; // Estimate 100g per unit
-        break;
-        
-      default:
-        weightInKg = quantity * 0.1;
-    }
-
-    return Math.round(weightInKg * 1000) / 1000;
-  }, []);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -396,7 +347,7 @@ export default function ProductManagement() {
         const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
         
         if (packQuantity && unitOfMeasure && unitSize) {
-          const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
+          const calculatedWeight = computePackWeightKg(packQuantity, unitSize, unitOfMeasure);
           
           if (calculatedWeight > 0) {
             // Get current weight to avoid unnecessary updates
@@ -436,7 +387,7 @@ export default function ProductManagement() {
     });
 
     return () => subscription.unsubscribe();
-  }, [form, calculateTotalPackageWeight, toast]);
+  }, [form, toast]);
 
   // Safe pallet weight auto-calculation (re-enabled with guards)
   useEffect(() => {

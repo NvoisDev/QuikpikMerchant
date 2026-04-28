@@ -23,6 +23,7 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatNumber } from "@/lib/utils";
 import { formatWeight } from "@shared/utils/currency";
+import { computePackWeightKg } from "@shared/utils/product";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -806,12 +807,22 @@ export default function ProductDetail() {
                     </span>
                   </div>
                 )}
-                {product.totalPackageWeight != null && parseFloat(product.totalPackageWeight) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Pack weight</span>
-                    <span className="font-medium text-gray-800">{formatWeight(product.totalPackageWeight)} kg</span>
-                  </div>
-                )}
+                {(() => {
+                  const computed = computePackWeightKg(
+                    product.packQuantity,
+                    product.unitSize,
+                    product.unitOfMeasure,
+                  );
+                  const displayWeight = computed > 0
+                    ? computed
+                    : product.totalPackageWeight != null ? parseFloat(product.totalPackageWeight) : 0;
+                  return displayWeight > 0 ? (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Pack weight</span>
+                      <span className="font-medium text-gray-800">{formatWeight(displayWeight)} kg</span>
+                    </div>
+                  ) : null;
+                })()}
                 {product.palletWeight != null &&
                   parseFloat(product.palletWeight) > 0 &&
                   (product.sellingFormat === "pallets" || product.sellingFormat === "both") && (
