@@ -93,6 +93,9 @@ interface WholesalerRow {
   legalBusinessName?: string | null;
   vatNumber?: string | null;
   companyRegistrationNumber?: string | null;
+  isCustomPricing?: boolean;
+  internalNote?: string | null;
+  customPriceExpiresAt?: string | null;
 }
 interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
@@ -667,6 +670,9 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [impersonateTarget, setImpersonateTarget] = useState<WholesalerRow | null>(null);
   const [changePlanId, setChangePlanId] = useState("");
   const [changePlanConfirm, setChangePlanConfirm] = useState(false);
+  const [customPriceId, setCustomPriceId] = useState("");
+  const [customPriceNote, setCustomPriceNote] = useState("");
+  const [customPriceExpiry, setCustomPriceExpiry] = useState("");
   const [customFeeInput, setCustomFeeInput] = useState("");
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
   const [createTesterOpen, setCreateTesterOpen] = useState(false);
@@ -679,17 +685,29 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const activePlans = (allPlansData?.plans ?? []).filter(p => p.isActive);
 
   const changePlanMutation = useMutation({
-    mutationFn: async ({ id, planId }: { id: string; planId: string }) => {
-      const r = await apiRequest("POST", `/api/admin/wholesalers/${id}/change-plan`, { planId });
+    mutationFn: async ({ id, planId, customPriceId, internalNote, customPriceExpiresAt }: { id: string; planId: string; customPriceId?: string; internalNote?: string; customPriceExpiresAt?: string }) => {
+      const body: Record<string, string> = { planId };
+      if (customPriceId) body.customPriceId = customPriceId;
+      if (internalNote) body.internalNote = internalNote;
+      if (customPriceExpiresAt) body.customPriceExpiresAt = customPriceExpiresAt;
+      const r = await apiRequest("POST", `/api/admin/wholesalers/${id}/change-plan`, body);
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
       return r.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+    onSuccess: async (_data, variables) => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
+      if (updated) {
+        const fresh = updated.find(w => w.id === variables.id);
+        if (fresh) setSelectedWholesaler(fresh);
+      }
       toast({ title: "Plan changed successfully" });
       setChangePlanConfirm(false);
       setChangePlanId("");
+      setCustomPriceId("");
+      setCustomPriceNote("");
+      setCustomPriceExpiry("");
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -800,6 +818,10 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
     setSelectedWholesaler(w);
     setCustomFeeInput(w.customFeePercentage !== null && w.customFeePercentage !== undefined ? String(w.customFeePercentage) : "");
     setLegalInfoInput({ legalBusinessName: w.legalBusinessName || "", vatNumber: w.vatNumber || "", companyRegistrationNumber: w.companyRegistrationNumber || "" });
+    setChangePlanId("");
+    setCustomPriceId("");
+    setCustomPriceNote("");
+    setCustomPriceExpiry("");
     setDrawerOpen(true);
   };
 
@@ -1070,6 +1092,17 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
                   <CreditCard className="h-3.5 w-3.5" style={{ color: GREEN }} />Change Plan
                 </p>
+                {selectedWholesaler.isCustomPricing && (
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">Custom pricing</span>
+                    {selectedWholesaler.internalNote && (
+                      <span className="text-xs text-gray-500 italic">{selectedWholesaler.internalNote}</span>
+                    )}
+                    {selectedWholesaler.customPriceExpiresAt && (
+                      <span className="text-xs text-gray-400">expires {new Date(selectedWholesaler.customPriceExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <select
                     value={changePlanId}
@@ -1093,6 +1126,37 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 {changePlanId && changePlanId === (selectedWholesaler.currentPlan || "free") && (
                   <p className="text-xs text-amber-600 mt-1">This is already their current plan.</p>
                 )}
+                <div className="mt-2 space-y-1.5">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Custom Stripe Price ID <span className="text-gray-400">(optional)</span></label>
+                    <input
+                      type="text"
+                      placeholder="e.g. price_1ABC…"
+                      value={customPriceId}
+                      onChange={e => setCustomPriceId(e.target.value)}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-green-400 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Internal note <span className="text-gray-400">(optional)</span></label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Discounted annual deal until April 2027"
+                      value={customPriceNote}
+                      onChange={e => setCustomPriceNote(e.target.value)}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-green-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Price expires <span className="text-gray-400">(optional)</span></label>
+                    <input
+                      type="date"
+                      value={customPriceExpiry}
+                      onChange={e => setCustomPriceExpiry(e.target.value)}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-green-400"
+                    />
+                  </div>
+                </div>
               </div>
               {/* Multi-Profile Toggle */}
               <div className="border-t border-gray-100 pt-3">
@@ -1206,12 +1270,26 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 No active Stripe subscription found. This is an admin override — the plan will be set directly without Stripe billing.
               </div>
             )}
+            {customPriceId && (
+              <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-xs text-purple-700 space-y-0.5">
+                <p className="font-medium">Custom price will be applied</p>
+                <p className="font-mono break-all">{customPriceId}</p>
+                {customPriceNote && <p className="text-purple-600">{customPriceNote}</p>}
+                {customPriceExpiry && <p className="text-purple-500">Expires: {new Date(customPriceExpiry).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>}
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button size="sm" variant="outline" className="text-xs" onClick={() => setChangePlanConfirm(false)}>Cancel</Button>
             <Button size="sm" className="text-xs text-white" style={{ background: GREEN }}
               disabled={changePlanMutation.isPending}
-              onClick={() => selectedWholesaler && changePlanMutation.mutate({ id: selectedWholesaler.id, planId: changePlanId })}>
+              onClick={() => selectedWholesaler && changePlanMutation.mutate({
+                id: selectedWholesaler.id,
+                planId: changePlanId,
+                customPriceId: customPriceId || undefined,
+                internalNote: customPriceNote || undefined,
+                customPriceExpiresAt: customPriceExpiry || undefined,
+              })}>
               {changePlanMutation.isPending ? "Changing…" : "Confirm change"}
             </Button>
           </DialogFooter>

@@ -140,6 +140,24 @@ export function registerAdminRoutes(app: Express): void {
       const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
 
       const wholesalerIds = wholesalersList.map(w => w.id);
+
+      let subscriptionByWholesaler: Record<string, { isCustomPricing: boolean | null; internalNote: string | null; customPriceExpiresAt: Date | null }> = {};
+      if (wholesalerIds.length > 0) {
+        const subs = await db.select({
+          userId: userSubscriptions.userId,
+          isCustomPricing: userSubscriptions.isCustomPricing,
+          internalNote: userSubscriptions.internalNote,
+          customPriceExpiresAt: userSubscriptions.customPriceExpiresAt,
+        }).from(userSubscriptions).where(inArray(userSubscriptions.userId, wholesalerIds));
+        for (const s of subs) {
+          subscriptionByWholesaler[s.userId] = {
+            isCustomPricing: s.isCustomPricing ?? false,
+            internalNote: s.internalNote,
+            customPriceExpiresAt: s.customPriceExpiresAt,
+          };
+        }
+      }
+
       let ordersByWholesaler: Record<string, { count: number; cancelledCount: number; gmv: number; gmvWithFees: number; gmvWithoutFees: number; customerFees: number; platformFees: number; lastOrderAt: Date | null }> = {};
 
       let teamMemberLastLoginByWholesaler: Record<string, Date | null> = {};
@@ -232,6 +250,9 @@ export function registerAdminRoutes(app: Express): void {
           legalBusinessName: w.legalBusinessName ?? null,
           vatNumber: w.vatNumber ?? null,
           companyRegistrationNumber: w.companyRegistrationNumber ?? null,
+          isCustomPricing: subscriptionByWholesaler[w.id]?.isCustomPricing ?? false,
+          internalNote: subscriptionByWholesaler[w.id]?.internalNote ?? null,
+          customPriceExpiresAt: subscriptionByWholesaler[w.id]?.customPriceExpiresAt ?? null,
         };
       }).sort((a, b) => {
         // Test accounts always sort to the bottom
