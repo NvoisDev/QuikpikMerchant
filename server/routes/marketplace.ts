@@ -59,9 +59,19 @@ export function registerMarketplaceRoutes(app: Express): void {
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
       // Session guard: verify the caller is authenticated for this wholesaler
-      const sessionAuth = (req.session as any)?.customerAuth;
+      let sessionAuth = (req.session as any)?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        if (req.cookies?.customer_auth) {
+          try {
+            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            }
+          } catch { /* invalid cookie — fall through to 401 */ }
+        }
+        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+          return res.status(401).json({ error: "Not authenticated" });
+        }
       }
 
       const customerId: string = sessionAuth.customerId;
@@ -463,9 +473,19 @@ export function registerMarketplaceRoutes(app: Express): void {
       const { wholesalerId } = req.params;
 
       // Session guard
-      const sessionAuth = (req.session as any)?.customerAuth;
+      let sessionAuth = (req.session as any)?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        if (req.cookies?.customer_auth) {
+          try {
+            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            }
+          } catch { /* invalid cookie — fall through to 401 */ }
+        }
+        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+          return res.status(401).json({ error: "Not authenticated" });
+        }
       }
 
       const customerId: string = sessionAuth.customerId;
@@ -2642,9 +2662,19 @@ Please contact the customer to confirm this order.
       const { wholesalerId, orderId } = req.params;
 
       // Session guard
-      const sessionAuth = (req.session as any)?.customerAuth;
+      let sessionAuth = (req.session as any)?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        return res.status(401).json({ message: "Not authenticated" });
+        if (req.cookies?.customer_auth) {
+          try {
+            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            }
+          } catch { /* invalid cookie — fall through to 401 */ }
+        }
+        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
+          return res.status(401).json({ message: "Not authenticated" });
+        }
       }
 
       const customerId: string = sessionAuth.customerId;

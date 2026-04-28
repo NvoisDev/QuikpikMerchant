@@ -1,0 +1,154 @@
+🧾 VAT Configuration & Invoice Integration (DEFAULT OFF, GLOBAL-READY, NON-BREAKING)
+
+---
+
+## 🎯 Objective
+
+Introduce VAT handling across the platform with:
+
+* VAT disabled by default
+* Wholesalers can enable VAT if required
+* Default VAT rate = 20% when enabled
+* Fully editable VAT settings
+* Accurate VAT calculation on invoices and orders
+
+---
+
+## ⚠️ Core Rules
+
+* Do NOT break existing orders or totals
+* Do NOT retroactively modify historical orders
+* VAT must be calculated at order creation and stored
+* VAT settings belong to the wholesaler (not global)
+
+---
+
+## 🧱 Part 1 — Data Model
+
+Extend wholesaler/business profile:
+
+* vatEnabled (boolean, default: false)
+* vatRate (number, default: 0.20)
+* vatNumber (string, optional)
+
+---
+
+## 🧠 Part 2 — VAT Logic
+
+At order creation:
+
+IF vatEnabled = true:
+
+* vatAmount = subtotal × vatRate
+
+ELSE:
+
+* vatAmount = 0
+
+Total:
+
+total = subtotal + vatAmount + customerTransactionFee (if applicable)
+
+👉 VAT is calculated once and stored on the order
+
+---
+
+## 🧾 Part 3 — Invoice Updates
+
+Update invoice layout to include (ONLY if VAT enabled):
+
+* Subtotal
+* VAT (e.g. “VAT (20%)”)
+* Total (including VAT)
+
+Also include:
+
+* VAT number (if provided)
+
+If VAT disabled:
+
+* Do NOT show VAT line at all
+
+---
+
+## 🧍 Part 4 — Business Settings UI
+
+Section: “Tax Settings”
+
+Fields:
+
+* Toggle: “VAT Registered”
+
+  * Default: OFF
+
+* VAT Rate (%)
+
+  * Default: 20
+  * Editable
+
+* VAT Number (optional)
+
+---
+
+## 🎯 UX Behaviour
+
+* When user toggles VAT ON:
+
+  * Automatically populate VAT rate = 20%
+* User can edit rate if needed
+
+---
+
+## 🌍 Global Flexibility
+
+* Support:
+
+  * 0% VAT
+  * Different VAT rates per wholesaler
+* Do NOT hardcode UK logic anywhere else
+
+---
+
+## 🧪 Backward Compatibility
+
+* Existing orders:
+
+  * VAT = 0
+  * No changes
+
+* New orders:
+
+  * VAT applied only if enabled
+
+---
+
+## ⚠️ Safety
+
+* Always use stored vatAmount (never recalculate old orders)
+* Ensure VAT is not applied to platform/customer fees
+* Prevent double counting
+
+---
+
+## 📦 Deliverables
+
+* VAT toggle in business settings
+* VAT applied to new orders when enabled
+* Clean invoice display with VAT breakdown
+* No regressions in totals or payments
+
+---
+
+## ✅ Acceptance Criteria
+
+* VAT is OFF by default
+* Can be enabled and edited easily
+* Invoices reflect VAT correctly
+* Totals are accurate
+* System remains stable
+
+---
+
+## 🧠 Guiding Principle
+
+“VAT should be invisible unless needed, and accurate when enabled.”
