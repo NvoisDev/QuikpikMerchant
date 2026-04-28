@@ -713,26 +713,33 @@ export function CheckoutDialog({
                         }));
                         const controller = new AbortController();
                         const abortTimer = setTimeout(() => controller.abort(), 20000);
-                        const response = await fetch('/api/marketplace/create-order-pay-later', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          signal: controller.signal,
-                          body: JSON.stringify({
-                            cart: cartItems,
-                            customerData: {
-                              name: customerData.name,
-                              email: customerData.email,
-                              phone: customerData.phone,
-                            },
-                            shippingOption: customerData.shippingOption,
-                            wholesalerId: wholesaler.id,
-                            notes: customerData.notes || null,
-                            selectedDeliveryAddress: customerData.selectedDeliveryAddress || null,
-                            selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id || null,
-                            collectionAddressId: customerData.shippingOption === 'pickup' ? (selectedCollectionAddressId || null) : null,
-                          }),
-                        });
-                        clearTimeout(abortTimer);
+                        let response: Response;
+                        try {
+                          response = await fetch('/api/marketplace/create-order-pay-later', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            signal: controller.signal,
+                            body: JSON.stringify({
+                              cart: cartItems,
+                              customerData: {
+                                name: customerData.name,
+                                email: customerData.email,
+                                phone: customerData.phone,
+                              },
+                              shippingOption: customerData.shippingOption,
+                              wholesalerId: wholesaler.id,
+                              notes: customerData.notes || null,
+                              selectedDeliveryAddress: customerData.selectedDeliveryAddress || null,
+                              selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id || null,
+                              collectionAddressId: customerData.shippingOption === 'pickup' ? (selectedCollectionAddressId || null) : null,
+                            }),
+                          });
+                        } catch (fetchErr: unknown) {
+                          const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError';
+                          throw new Error(isAbort ? 'Request timed out. Please try again.' : (fetchErr instanceof Error ? fetchErr.message : 'Failed to place order'));
+                        } finally {
+                          clearTimeout(abortTimer);
+                        }
                         if (!response.ok) {
                           const errData = await response.json().catch(() => ({}));
                           throw new Error(errData.error || errData.message || 'Failed to place order');
