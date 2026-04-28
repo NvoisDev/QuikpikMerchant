@@ -1157,7 +1157,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         customerAddress,
         totalAmount,
         platformFee,
-        transactionFee,
         wholesalerId,
         orderType,
         items: itemsJson,
@@ -1367,7 +1366,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           : totalAmount;
 
         // Use the correct total from metadata instead of recalculating
-        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
+        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || '0')).toFixed(2);
         
         console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
           hasShippingInfo: !!shippingInfoJson,
