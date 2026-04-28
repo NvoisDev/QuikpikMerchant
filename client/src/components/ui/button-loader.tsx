@@ -80,6 +80,7 @@ const ButtonLoader: React.FC<ButtonLoaderProps> = ({
 
   return (
     <motion.button
+      type="button"
       className={`${getVariantStyles()} ${sizeClasses[size]} ${className} ${
         (isLoading || disabled) ? 'opacity-75 cursor-not-allowed' : ''
       }`}

@@ -967,11 +967,13 @@ export default function ProductManagement() {
         setIsDialogOpen(false);
         setShowUpgradeModal(true);
       } else {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        let message = "Failed to save product. Please check your inputs and try again.";
+        try {
+          const parsed = JSON.parse(error.message.replace(/^\d+: /, ''));
+          if (parsed.errors?.[0]?.message) message = parsed.errors[0].message;
+          else if (parsed.message) message = parsed.message;
+        } catch {}
+        toast({ title: "Error saving product", description: message, variant: "destructive" });
       }
     },
   });
