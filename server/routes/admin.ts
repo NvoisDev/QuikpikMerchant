@@ -241,11 +241,12 @@ export function registerAdminRoutes(app: Express): void {
           lastLoginAt: (() => {
             const ownerLogin = w.lastLoginAt ? new Date(w.lastLoginAt) : null;
             const teamLogin = teamMemberLastLoginByWholesaler[w.id] ?? null;
-            if (!ownerLogin && !teamLogin) return null;
-            if (!ownerLogin) return teamLogin;
-            if (!teamLogin) return ownerLogin;
-            return ownerLogin > teamLogin ? ownerLogin : teamLogin;
+            const lastSeen = w.lastSeenAt ? new Date(w.lastSeenAt) : null;
+            const candidates = [ownerLogin, teamLogin, lastSeen].filter(Boolean) as Date[];
+            if (candidates.length === 0) return null;
+            return candidates.reduce((a, b) => (a > b ? a : b));
           })(),
+          lastSeenAt: w.lastSeenAt ?? null,
           enableMultiProfile: w.enableMultiProfile ?? false,
           legalBusinessName: w.legalBusinessName ?? null,
           vatNumber: w.vatNumber ?? null,

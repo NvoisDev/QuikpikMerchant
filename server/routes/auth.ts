@@ -1334,6 +1334,9 @@ export function registerAuthRoutes(app: Express): void {
       // If user is a team member, get wholesaler info and treat as team member login
       if (teamMember) {
         const wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
+
+        // Stamp last login time for team member
+        await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
         
         // Create session for team member with wholesaler context
         req.session.user = {
