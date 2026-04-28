@@ -11,7 +11,7 @@ import {
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
 } from "./shared";
-import { getStripeClient, getPublishableKey, getWebhookSecrets, isLiveMode } from "../stripeConfig";
+import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode } from "../stripeConfig";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 
@@ -247,17 +247,19 @@ export function registerPaymentRoutes(app: Express): void {
   // POST /api/webhooks/stripe
   app.post('/api/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
-    const secrets = getWebhookSecrets();
+    const secretPairs = getWebhookSecretsWithLabels();
 
-    if (secrets.length === 0) {
+    if (secretPairs.length === 0) {
       console.error('❌ No STRIPE_WEBHOOK_SECRET configured');
       return res.status(400).json({ error: 'Webhook secret not configured' });
     }
 
     let event: Stripe.Event | undefined;
-    for (const secret of secrets) {
+    let matchedLabel = 'unknown';
+    for (const { secret, label } of secretPairs) {
       try {
         event = getStripeClient().webhooks.constructEvent(req.body, sig, secret);
+        matchedLabel = label;
         break; // verified — stop trying
       } catch {
         // try the next secret
@@ -267,7 +269,7 @@ export function registerPaymentRoutes(app: Express): void {
       console.error('❌ Stripe webhook signature verification failed (tried all secrets)');
       return res.status(400).json({ error: 'Invalid signature' });
     }
-    console.log(`✅ Stripe webhook verified: ${event.type} at ${new Date().toISOString()}`);
+    console.log(`✅ Stripe webhook received: type=${event.type} livemode=${event.livemode} secret=${matchedLabel} at ${new Date().toISOString()}`);
 
     try {
       if (event.type === 'checkout.session.completed') {
@@ -1022,16 +1024,20 @@ export function registerPaymentRoutes(app: Express): void {
                 if (sent) {
                   console.log(`✅ Stripe verification email sent to wholesaler ${wholesaler.id} (${wholesaler.email})`);
                 } else {
-                  // Roll back the claim so the next retry attempt can try again.
+                  // Roll back the claim so a future account.updated event (or internal retry) can try again.
                   await storage.updateUserSettings(wholesaler.id, { stripeVerifiedEmailSentAt: null });
-                  console.error(`❌ account.updated: sendStripeVerifiedEmail failed for wholesaler ${wholesaler.id} — returning 500 so Stripe retries`);
-                  return res.status(500).json({ error: 'Email delivery failed, please retry' });
+                  console.error(`❌ account.updated: sendStripeVerifiedEmail failed for wholesaler ${wholesaler.id} — returning 200 so Stripe does not retry`);
+                  // Return 200: email failure is not Stripe's concern; retrying via Stripe causes the
+                  // 35-event retry loop. The claim is already rolled back so an internal retry or the
+                  // next Stripe account.updated delivery will re-attempt.
+                  return res.json({ received: true, type: event.type, warning: 'Email delivery failed — will retry internally' });
                 }
               }
             }
           } catch (err) {
             console.error('❌ Error processing account.updated webhook:', err);
-            return res.status(500).json({ error: 'Webhook processing error, please retry' });
+            // Return 200 so Stripe does not keep retrying an event it cannot influence.
+            return res.json({ received: true, type: event.type, warning: 'Webhook processing error — logged' });
           }
         }
         return res.json({ received: true, type: event.type });
@@ -1042,6 +1048,9 @@ export function registerPaymentRoutes(app: Express): void {
       
     } catch (error) {
       console.error('❌ Webhook error:', error);
+      // Return 500 so Stripe retries transient failures (e.g. DB outage during
+      // checkout.session.completed). Non-retryable error paths (e.g. account.updated
+      // email failure) are already handled inline with a 200 before reaching here.
       return res.status(500).json({ error: 'Webhook processing failed' });
     }
   });

@@ -44,6 +44,9 @@ if (!stripeTest) {
 if (isLiveMode() && !stripeLive) {
   console.warn("⚠️  STRIPE_ENVIRONMENT=live but STRIPE_LIVE_SECRET_KEY not set — falling back to test client.");
 }
+if (isLiveMode() && !LIVE_WEBHOOK) {
+  console.warn("⚠️  STRIPE_ENVIRONMENT=live but STRIPE_LIVE_WEBHOOK_SECRET not set — webhook signature verification will fail for live events.");
+}
 
 /**
  * Returns the appropriate Stripe client.
@@ -80,4 +83,20 @@ export function getWebhookSecrets(): string[] {
   const primary   = isLiveMode() ? LIVE_WEBHOOK : TEST_WEBHOOK;
   const secondary = isLiveMode() ? TEST_WEBHOOK : LIVE_WEBHOOK;
   return [primary, secondary].filter((s): s is string => Boolean(s));
+}
+
+/**
+ * Returns webhook secrets paired with diagnostic labels.
+ * Use this instead of getWebhookSecrets() when you need to log which secret matched.
+ * Labels are derived from the actual secret values, not array position.
+ */
+export function getWebhookSecretsWithLabels(): Array<{ secret: string; label: string }> {
+  const primarySecret   = isLiveMode() ? LIVE_WEBHOOK : TEST_WEBHOOK;
+  const secondarySecret = isLiveMode() ? TEST_WEBHOOK : LIVE_WEBHOOK;
+  const primaryLabel   = isLiveMode() ? 'live-primary' : 'test-primary';
+  const secondaryLabel = isLiveMode() ? 'test-fallback' : 'live-fallback';
+  const pairs: Array<{ secret: string; label: string }> = [];
+  if (primarySecret) pairs.push({ secret: primarySecret, label: primaryLabel });
+  if (secondarySecret) pairs.push({ secret: secondarySecret, label: secondaryLabel });
+  return pairs;
 }
