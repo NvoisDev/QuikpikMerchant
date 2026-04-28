@@ -1262,10 +1262,10 @@ export const insertProductSchema = createInsertSchema(products).omit({
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
   palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
-  unitsPerPallet: z.union([z.string(), z.number()])
+  unitsPerPallet: z.union([z.string(), z.number(), z.null()])
     .optional()
     .transform((val, ctx) => {
-      if (val === undefined || val === '') return undefined;
+      if (val === undefined || val === null || val === '') return undefined;
       const parsed = parseInt(val.toString());
       if (isNaN(parsed)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Units per pallet must be a valid number" });
