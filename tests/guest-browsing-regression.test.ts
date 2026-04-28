@@ -9,7 +9,8 @@ const priceDisplaySource = readFileSync('client/src/components/customer/PriceDis
 const customerHelpSource = readFileSync('client/src/components/customer/CustomerHelp.tsx', 'utf8');
 const landingPageSource = readFileSync('client/src/pages/LandingPage.tsx', 'utf8');
 const helpPageSource = readFileSync('client/src/pages/help.tsx', 'utf8');
-const marketplaceRoutesSource = readFileSync('server/routes/marketplace.ts', 'utf8');
+const marketplaceRoutesSource = readFileSync('server/routes/marketplace.ts', 'utf8')
+  + '\n' + readFileSync('server/routes/marketplace-browsing.ts', 'utf8');
 
 const sourceBetween = (source: string, start: string, end: string) => {
   const startIndex = source.indexOf(start);
