@@ -308,12 +308,17 @@ export default function QuickQuote() {
     const baseCost = sellingType === 'pallets' && product.unitsPerPallet
       ? unitCost * product.unitsPerPallet
       : unitCost;
-    const parsedUnitWeight = parseFloat(product.unitWeight ?? '0') || 0;
     const weightKg = sellingType === 'pallets'
       ? (product.palletWeight ? parseFloat(product.palletWeight) : 0)
-      : parsedUnitWeight > 0
-        ? parsedUnitWeight * (product.quantityInPack || 1)
-        : parseFloat(product.totalPackageWeight ?? '0') || 0;
+      : (() => {
+          // Prefer the stored total package weight — it's the pre-calculated weight for a whole pack.
+          // Fall back to unitWeight × pack quantity for older products that don't have it set.
+          const totalPkgWeight = parseFloat(product.totalPackageWeight ?? '0') || 0;
+          if (totalPkgWeight > 0) return totalPkgWeight;
+          const uw = parseFloat(product.unitWeight ?? '0') || 0;
+          const pq = product.packQuantity || product.quantityInPack || 1;
+          return uw * pq;
+        })();
     
     // Check if already added with same product AND selling type
     const existingIndex = quoteItems.findIndex(

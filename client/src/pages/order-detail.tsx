@@ -1466,8 +1466,16 @@ export default function OrderDetail() {
                 if (item.sellingType === 'pallets') {
                   weightPerUnit = parseFloat(product.palletWeight ?? '0') || 0;
                 } else {
-                  const uw = parseFloat(product.unitWeight ?? '0') || 0;
-                  weightPerUnit = uw * (product.quantityInPack || 1);
+                  // Prefer the stored total package weight (most accurate for a whole pack).
+                  // Fall back to unitWeight × pack quantity for older products that don't have it.
+                  const totalPkgWeight = parseFloat(product.totalPackageWeight ?? '0') || 0;
+                  if (totalPkgWeight > 0) {
+                    weightPerUnit = totalPkgWeight;
+                  } else {
+                    const uw = parseFloat(product.unitWeight ?? '0') || 0;
+                    const pq = product.packQuantity || product.quantityInPack || 1;
+                    weightPerUnit = uw * pq;
+                  }
                 }
                 return sum + weightPerUnit * item.quantity;
               }, 0);

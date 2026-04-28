@@ -1,0 +1,146 @@
+Refactor the Order Detail / Invoice page (order-detail.tsx) to a modern, mobile-first, action-driven UI without changing any existing functionality, logic, or API behaviour.
+
+🎯 Primary Goals
+Improve visual hierarchy and reduce clutter
+Optimise for mobile usability (thumb-friendly, responsive)
+Make primary actions clear and easy to access
+Maintain 100% backward compatibility
+1. Refactor Strategy (CRITICAL — DO NOT SKIP)
+Do NOT rewrite the entire component in one pass
+Break the page into smaller components:
+OrderHeader
+CustomerCollectionCard
+ItemsCard
+PaymentSummaryCard
+StickyActionBar
+ActivityLogSection
+Focus on restructuring layout only — reuse all existing logic, state, and handlers
+Do NOT modify business logic, API calls, or Stripe/payment flows
+2. Layout Structure (Card-Based)
+
+Refactor the page into a clean, structured layout:
+
+A. Header (Top Section)
+Back button
+Order ID
+Status badges (Unpaid, Fulfilled, Collection, etc.)
+Trading name ("Trading As")
+
+Keep minimal — remove action clutter from this area.
+
+B. Customer + Collection Card (Merged)
+Customer name, email, phone
+Collection address and location
+Make:
+Phone clickable (tel:)
+Address copyable / tappable
+C. Items Card
+Clean list of items
+Product name (bold)
+Quantity + unit info (subtext)
+Price aligned right
+D. Payment Summary Card
+Subtotal
+Fees
+Total
+Highlight:
+“You receive £X” (net amount to wholesaler)
+
+Use stronger typography for key numbers.
+
+3. Sticky Action Bar (Mobile + Desktop)
+
+Introduce a sticky bottom action bar:
+
+Fixed at bottom of screen
+Full-width buttons on mobile
+Must NOT overlap content
+Dynamic Primary Action (based on order state):
+Unpaid:
+Primary: "Send Payment Link"
+Secondary: "Mark as Paid (offline)"
+Paid:
+Primary: "Ready for Collection"
+Ready:
+Primary: "Mark as Fulfilled"
+
+Ensure all existing handlers are reused.
+
+4. Secondary Actions Cleanup
+
+Move non-primary actions into a dropdown menu (⋯ More):
+
+Download Invoice
+Cancel Order
+Share Invoice
+
+Keep:
+
+"Edit Invoice" visible but styled as secondary
+5. Payment Link UI Improvement
+
+Replace raw Stripe URL display with:
+
+"Copy Payment Link" button
+"Share via WhatsApp" button
+
+Optional:
+
+Show shortened link instead of full Stripe URL
+Hide raw URL unless expanded
+6. Activity Log (IMPORTANT)
+Keep existing QuoteActivityLog component
+Place at the bottom of the page (below Payment Summary)
+
+Wrap in a collapsible section:
+
+Title: "Activity & History"
+
+Default behaviour:
+Collapsed on mobile
+Expanded on desktop
+
+Ensure:
+
+No data loss
+All entries render correctly
+No performance regression
+7. Visual Improvements
+Use consistent spacing (16–24px)
+Add clear separation between sections (cards)
+Reduce visual noise and repetition
+Align all text and values cleanly
+Emphasise key numbers (totals, net amount)
+8. Mobile Optimisation
+Ensure responsive stacking across all screen sizes
+Buttons must be thumb-friendly (min height ~44px)
+Avoid excessive scrolling for key actions
+Sticky action bar must always be accessible
+9. Regression Safety (MANDATORY)
+
+Before completion, verify:
+
+All order states:
+Unpaid
+Paid
+Ready for collection
+Fulfilled
+Cancelled
+Refunded
+Stripe payment flow works correctly
+Offline payment flow works correctly
+No duplicate API calls introduced
+No broken state transitions
+No UI blocking or freezing issues
+10. DO NOT CHANGE
+Business logic
+API routes
+Stripe/payment logic
+Order state transitions
+Existing data structures
+11. Deliverables
+Refactored component structure
+Fully responsive UI (mobile-first)
+Uses existing stack (React, Tailwind, Shadcn)
+No regressions in functionality
+Clean, modern, production-ready UI
