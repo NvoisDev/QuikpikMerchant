@@ -45,6 +45,43 @@ import { registerBrowsingRoutes } from "./marketplace-browsing";
 // ── Shared helpers (price-list) now live in marketplace-price-lists.ts ───────
 
 /**
+ * Resolves customer auth from the session, with a secure DB-verified cookie fallback.
+ * Returns the auth object when valid, or null to trigger a 401.
+ *
+ * Cookie fallback: parses the httpOnly `customer_auth` cookie (base64 JSON), verifies
+ * expiry and wholesalerId match, then confirms the customerId exists in
+ * wholesaler_customer_relationships before trusting it — preventing forged cookies.
+ */
+async function resolveCustomerAuth(
+  req: any,
+  wholesalerId: string
+): Promise<{ customerId: string; wholesalerId: string; phone: string } | null> {
+  const sessionAuth = (req.session as any)?.customerAuth;
+  if (sessionAuth && sessionAuth.wholesalerId === wholesalerId) {
+    return sessionAuth;
+  }
+  if (req.cookies?.customer_auth) {
+    try {
+      const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+      if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
+        const [rel] = await db
+          .select({ id: wholesalerCustomerRelationships.id })
+          .from(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
+            eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+          ))
+          .limit(1);
+        if (rel) {
+          return { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+        }
+      }
+    } catch { /* invalid cookie — fall through */ }
+  }
+  return null;
+}
+
+/**
  * Registers customer-facing marketplace routes (store browsing, cart, payment intents, orders).
  *
  * ⚠️  New payment logic belongs in `server/routes/payments.ts`, not here.
@@ -59,31 +96,8 @@ export function registerMarketplaceRoutes(app: Express): void {
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
       // Session guard: verify the caller is authenticated for this wholesaler
-      let sessionAuth = (req.session as any)?.customerAuth;
-      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        if (req.cookies?.customer_auth) {
-          try {
-            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
-              // Verify the claimed identity against the database before trusting the cookie
-              const [rel] = await db
-                .select({ id: wholesalerCustomerRelationships.id })
-                .from(wholesalerCustomerRelationships)
-                .where(and(
-                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
-                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
-                ))
-                .limit(1);
-              if (rel) {
-                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
-              }
-            }
-          } catch { /* invalid cookie — fall through to 401 */ }
-        }
-        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-          return res.status(401).json({ error: "Not authenticated" });
-        }
-      }
+      const sessionAuth = await resolveCustomerAuth(req, wholesalerId);
+      if (!sessionAuth) return res.status(401).json({ error: "Not authenticated" });
 
       const customerId: string = sessionAuth.customerId;
       const customerPhone: string = sessionAuth.phone || '';
@@ -484,31 +498,8 @@ export function registerMarketplaceRoutes(app: Express): void {
       const { wholesalerId } = req.params;
 
       // Session guard
-      let sessionAuth = (req.session as any)?.customerAuth;
-      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        if (req.cookies?.customer_auth) {
-          try {
-            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
-              // Verify the claimed identity against the database before trusting the cookie
-              const [rel] = await db
-                .select({ id: wholesalerCustomerRelationships.id })
-                .from(wholesalerCustomerRelationships)
-                .where(and(
-                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
-                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
-                ))
-                .limit(1);
-              if (rel) {
-                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
-              }
-            }
-          } catch { /* invalid cookie — fall through to 401 */ }
-        }
-        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-          return res.status(401).json({ error: "Not authenticated" });
-        }
-      }
+      const sessionAuth = await resolveCustomerAuth(req, wholesalerId);
+      if (!sessionAuth) return res.status(401).json({ error: "Not authenticated" });
 
       const customerId: string = sessionAuth.customerId;
       const customerPhone: string = sessionAuth.phone || '';
@@ -2684,31 +2675,8 @@ Please contact the customer to confirm this order.
       const { wholesalerId, orderId } = req.params;
 
       // Session guard
-      let sessionAuth = (req.session as any)?.customerAuth;
-      if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-        if (req.cookies?.customer_auth) {
-          try {
-            const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
-              // Verify the claimed identity against the database before trusting the cookie
-              const [rel] = await db
-                .select({ id: wholesalerCustomerRelationships.id })
-                .from(wholesalerCustomerRelationships)
-                .where(and(
-                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
-                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
-                ))
-                .limit(1);
-              if (rel) {
-                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
-              }
-            }
-          } catch { /* invalid cookie — fall through to 401 */ }
-        }
-        if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
-          return res.status(401).json({ message: "Not authenticated" });
-        }
-      }
+      const sessionAuth = await resolveCustomerAuth(req, wholesalerId);
+      if (!sessionAuth) return res.status(401).json({ message: "Not authenticated" });
 
       const customerId: string = sessionAuth.customerId;
       const customerPhone: string = sessionAuth.phone || '';
