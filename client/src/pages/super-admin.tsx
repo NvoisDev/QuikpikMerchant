@@ -59,6 +59,13 @@ const planBadge = (tier: string | null) => {
   return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Free</span>;
 };
 
+const customPriceDaysRemaining = (expiresAt: string | null | undefined): number | null => {
+  if (!expiresAt) return null;
+  const ts = new Date(expiresAt).getTime();
+  if (Number.isNaN(ts)) return null;
+  return Math.ceil((ts - Date.now()) / (1000 * 60 * 60 * 24));
+};
+
 type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "plans" | "map" | "logs";
 
 // ── Shared data interfaces ────────────────────────────────────────────────────
@@ -936,6 +943,22 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          {w.isCustomPricing && (() => {
+                            const days = customPriceDaysRemaining(w.customPriceExpiresAt);
+                            if (days === null || days > 30) return null;
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-300 cursor-default">
+                                    {days <= 0 ? "Expired" : `${days}d left`}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-xs">
+                                  {days <= 0 ? "Custom pricing has expired" : `Custom deal expires in ${days} day${days === 1 ? "" : "s"}`}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{w.orderCount}</TableCell>
@@ -1133,9 +1156,18 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                     {selectedWholesaler.internalNote && (
                       <span className="text-xs text-gray-500 italic">{selectedWholesaler.internalNote}</span>
                     )}
-                    {selectedWholesaler.customPriceExpiresAt && (
-                      <span className="text-xs text-gray-400">expires {new Date(selectedWholesaler.customPriceExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                    )}
+                    {selectedWholesaler.customPriceExpiresAt && (() => {
+                      const days = customPriceDaysRemaining(selectedWholesaler.customPriceExpiresAt);
+                      const dateStr = new Date(selectedWholesaler.customPriceExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                      const isWarning = days !== null && days <= 30;
+                      return isWarning ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-300">
+                          {days <= 0 ? `Expired ${dateStr}` : `Expires ${dateStr} (${days}d left)`}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">expires {dateStr}</span>
+                      );
+                    })()}
                     <Button
                       size="sm"
                       variant="outline"
