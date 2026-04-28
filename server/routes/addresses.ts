@@ -2,6 +2,7 @@ import type { Express } from "express";
 import {
   and, isAuthenticated, or, requireAuth, requireNotViewer, storage
 } from "./shared";
+import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 
 export function registerAddressRoutes(app: Express): void {
   // GET /api/delivery-address/:addressId (customer-facing, by session auth)
@@ -10,19 +11,9 @@ export function registerAddressRoutes(app: Express): void {
       const { addressId } = req.params;
       
       let customerAuth = (req.session as any)?.customerAuth;
-      
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
@@ -215,15 +206,9 @@ export function registerAddressRoutes(app: Express): void {
     try {
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
@@ -247,18 +232,9 @@ export function registerAddressRoutes(app: Express): void {
       
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
@@ -286,18 +262,9 @@ export function registerAddressRoutes(app: Express): void {
       
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now() && (!wholesalerId || cookieData.wholesalerId === wholesalerId)) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
@@ -341,19 +308,9 @@ export function registerAddressRoutes(app: Express): void {
       const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
       
       let customerAuth = (req.session as any)?.customerAuth;
-      
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
@@ -398,17 +355,9 @@ export function registerAddressRoutes(app: Express): void {
       
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId };
       }
       
       if (!customerAuth) {
@@ -438,17 +387,9 @@ export function registerAddressRoutes(app: Express): void {
       
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId };
       }
       
       if (!customerAuth) {
@@ -479,18 +420,9 @@ export function registerAddressRoutes(app: Express): void {
       
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {

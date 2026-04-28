@@ -20,6 +20,7 @@ import {
   resolveActivePriceListIds,
   resolveCustomerProductPrice,
 } from "./marketplace-price-lists";
+import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { registerBrowsingRoutes } from "./marketplace-browsing";
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -60,23 +61,10 @@ async function resolveCustomerAuth(
   if (sessionAuth && sessionAuth.wholesalerId === wholesalerId) {
     return sessionAuth;
   }
-  if (req.cookies?.customer_auth) {
-    try {
-      const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-      if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
-        const [rel] = await db
-          .select({ id: wholesalerCustomerRelationships.id })
-          .from(wholesalerCustomerRelationships)
-          .where(and(
-            eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
-            eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
-          ))
-          .limit(1);
-        if (rel) {
-          return { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
-        }
-      }
-    } catch { /* invalid cookie — fall through */ }
+  // HMAC-verified cookie fallback — no DB lookup needed (signature proves authenticity)
+  const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+  if (cookieData && cookieData.wholesalerId === wholesalerId) {
+    return { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
   }
   return null;
 }

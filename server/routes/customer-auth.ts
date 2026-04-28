@@ -7,6 +7,7 @@ import {
   wrapCustomerEmail
 } from "./shared";
 import { formatPhoneToInternational, isValidMobile } from "../../shared/phone-utils";
+import { signCustomerCookie, parseCustomerCookie, COOKIE_OPTIONS } from "../utils/customer-auth-cookie";
 
 // ─── Shared session helper ───────────────────────────────────────────────────
 async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
@@ -34,7 +35,7 @@ async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wh
     } else resolve();
   });
 
-  const cookiePayload = Buffer.from(JSON.stringify({
+  res.cookie('customer_auth', signCustomerCookie({
     customerId: customer.id,
     wholesalerId,
     name: customer.name,
@@ -44,14 +45,7 @@ async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wh
     groupName: customer.groupName || '',
     timestamp: Date.now(),
     expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
-  })).toString('base64');
-
-  res.cookie('customer_auth', cookiePayload, {
-    httpOnly: true,
-    secure: false,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    sameSite: 'lax',
-  });
+  }), COOKIE_OPTIONS);
 }
 
 export function registerCustomerAuthRoutes(app: Express): void {
@@ -343,16 +337,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
         }
       }
       // Try cookie-based auth
-      const cookieVal = req.cookies?.customer_auth;
-      if (cookieVal) {
-        try {
-          const parsed = JSON.parse(Buffer.from(cookieVal, 'base64').toString('utf8'));
-          if (parsed?.wholesalerId && parsed?.expires && Date.now() < parsed.expires) {
-            return res.json({ authenticated: true, wholesalerId: parsed.wholesalerId });
-          }
-        } catch {
-          // malformed cookie
-        }
+      const parsed = parseCustomerCookie(req.cookies?.customer_auth);
+      if (parsed?.wholesalerId) {
+        return res.json({ authenticated: true, wholesalerId: parsed.wholesalerId });
       }
       return res.json({ authenticated: false });
     } catch (err) {
@@ -640,7 +627,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
       console.log('✅ Sending SMS verification success response');
       
       // Create a signed token as backup for session persistence issues
-      const customerToken = Buffer.from(JSON.stringify({
+      // Set a fallback cookie with customer authentication
+      res.cookie('customer_auth', signCustomerCookie({
         customerId: customer.id || customer.customer_id,
         wholesalerId: wholesalerId,
         name: customer.name,
@@ -649,16 +637,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
         groupId: customer.groupId || customer.group_id,
         groupName: customer.groupName || customer.group_name,
         timestamp: Date.now(),
-        expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
-      })).toString('base64');
-      
-      // Set a fallback cookie with customer authentication
-      res.cookie('customer_auth', customerToken, {
-        httpOnly: true,
-        secure: false,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'lax'
-      });
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      }), COOKIE_OPTIONS);
       
       res.json({ 
         success: true, 
@@ -685,26 +665,20 @@ export function registerCustomerAuthRoutes(app: Express): void {
       let customerAuth = (req.session as any)?.customerAuth;
       
       // If session auth fails, try fallback cookie
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          
-          // Verify cookie data and expiration
-          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId,
-              name: cookieData.name,
-              email: cookieData.email || '',
-              phone: cookieData.phone || '',
-              groupId: cookieData.groupId || null,
-              groupName: cookieData.groupName || '',
-              expiresAt: new Date(cookieData.expires).toISOString()
-            };
-            console.log('🔓 Using fallback cookie authentication for customer:', cookieData.name);
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData && cookieData.wholesalerId === wholesalerId) {
+          customerAuth = {
+            customerId: cookieData.customerId,
+            wholesalerId: cookieData.wholesalerId,
+            name: cookieData.name,
+            email: cookieData.email || '',
+            phone: cookieData.phone || '',
+            groupId: cookieData.groupId || null,
+            groupName: cookieData.groupName || '',
+            expiresAt: new Date(cookieData.expires).toISOString(),
+          };
+          console.log('🔓 Using fallback cookie authentication for customer:', cookieData.name);
         }
       }
       
@@ -764,23 +738,19 @@ export function registerCustomerAuthRoutes(app: Express): void {
       let customerAuth = (req.session as any)?.customerAuth;
       
       // Fallback to cookie if session not found
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId,
-              name: cookieData.name,
-              email: cookieData.email || '',
-              phone: cookieData.phone || '',
-              groupId: cookieData.groupId || null,
-              groupName: cookieData.groupName || '',
-              expiresAt: new Date(cookieData.expires).toISOString()
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) {
+          customerAuth = {
+            customerId: cookieData.customerId,
+            wholesalerId: cookieData.wholesalerId,
+            name: cookieData.name,
+            email: cookieData.email || '',
+            phone: cookieData.phone || '',
+            groupId: cookieData.groupId || null,
+            groupName: cookieData.groupName || '',
+            expiresAt: new Date(cookieData.expires).toISOString(),
+          };
         }
       }
       
@@ -821,12 +791,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
       };
       
-      res.cookie('customer_auth', Buffer.from(JSON.stringify(cookieData)).toString('base64'), {
-        httpOnly: true,
-        secure: false,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'lax'
-      });
+      res.cookie('customer_auth', signCustomerCookie(cookieData), COOKIE_OPTIONS);
       
       console.log(`🔄 Customer ${customerAuth.name} switched from wholesaler ${customerAuth.wholesalerId} to ${targetWholesalerId}`);
       
@@ -880,21 +845,15 @@ export function registerCustomerAuthRoutes(app: Express): void {
       let customerAuth = (req.session as any)?.customerAuth;
       
       // If session auth fails, try fallback cookie
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          
-          // Verify cookie data and expiration
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              name: cookieData.name,
-              email: cookieData.email || '',
-              phone: cookieData.phone || ''
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) {
+          customerAuth = {
+            customerId: cookieData.customerId,
+            name: cookieData.name,
+            email: cookieData.email || '',
+            phone: cookieData.phone || '',
+          };
         }
       }
       
@@ -1353,7 +1312,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       // Set fallback cookie identical to SMS route
-      const customerToken = Buffer.from(JSON.stringify({
+      res.cookie('customer_auth', signCustomerCookie({
         customerId: customerRecord.id,
         wholesalerId,
         name: customerName,
@@ -1362,15 +1321,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
         groupId,
         groupName,
         timestamp: Date.now(),
-        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
-      })).toString('base64');
-
-      res.cookie('customer_auth', customerToken, {
-        httpOnly: true,
-        secure: false,
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: 'lax'
-      });
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      }), COOKIE_OPTIONS);
 
       console.log('✅ Sending email verification success response');
 

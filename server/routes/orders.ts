@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { calculateCustomerFee } from "../../shared/utils/fees";
+import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import {
@@ -119,18 +120,9 @@ export function registerOrderRoutes(app: Express): void {
       // Get customer from session or fallback auth
       let customerAuth = (req.session as any)?.customerAuth;
       
-      if (!customerAuth && req.cookies?.customer_auth) {
-        try {
-          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-          if (cookieData.expires > Date.now()) {
-            customerAuth = {
-              customerId: cookieData.customerId,
-              wholesalerId: cookieData.wholesalerId
-            };
-          }
-        } catch (cookieError) {
-          console.error('Failed to parse customer auth cookie:', cookieError);
-        }
+      if (!customerAuth) {
+        const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
       }
       
       if (!customerAuth) {
