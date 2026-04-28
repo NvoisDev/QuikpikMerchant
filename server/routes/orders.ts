@@ -2831,14 +2831,14 @@ export function registerOrderRoutes(app: Express): void {
       const sent = await sendWhatsAppMessage({ to: customerPhone, message });
 
       if (!sent) {
-        return res.status(500).json({ message: 'Failed to send WhatsApp message. Please check Twilio configuration.' });
+        return res.status(500).json({ message: 'Failed to send SMS. Please check Twilio configuration.' });
       }
 
-      console.log(`📱 Invoice WhatsApp sent for order ${order.orderNumber || id} → ${customerPhone}`);
-      res.json({ message: 'Invoice sent via WhatsApp' });
+      console.log(`📱 Invoice SMS sent for order ${order.orderNumber || id} → ${customerPhone}`);
+      res.json({ message: 'Invoice sent via SMS' });
     } catch (error) {
-      console.error('Error sending invoice via WhatsApp:', error);
-      res.status(500).json({ message: 'Failed to send invoice via WhatsApp' });
+      console.error('Error sending invoice via SMS:', error);
+      res.status(500).json({ message: 'Failed to send invoice via SMS' });
     }
   });
 

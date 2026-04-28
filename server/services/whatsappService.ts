@@ -9,40 +9,33 @@ interface WhatsAppMessageParams {
 
 export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promise<boolean> {
   try {
-    const { to, message, from } = params;
+    const { to, message } = params;
     
-    // Check if Twilio credentials are available
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    // Use dedicated WhatsApp number if set, otherwise fall back to the SMS number
-    const twilioPhoneNumber = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
     
     if (!accountSid || !authToken || !twilioPhoneNumber) {
-      console.log('📱 Twilio credentials not configured, skipping WhatsApp message');
+      console.log('📱 Twilio credentials not configured, skipping SMS');
       return false;
     }
 
     const client = twilio(accountSid, authToken);
     
-    // Format phone number to international format
     const formattedPhone = formatPhoneToInternational(to);
-    const fromNumber = `whatsapp:${twilioPhoneNumber}`;
-    const toNumber = `whatsapp:${formattedPhone}`;
 
-    console.log(`📱 Sending WhatsApp message from ${fromNumber} to ${toNumber}`);
-    
-    const DO_NOT_REPLY_FOOTER = '\n\n─────────────────\n⚠️ Please do not reply to this number. This is an automated message.';
+    console.log(`📱 Sending SMS from ${twilioPhoneNumber} to ${formattedPhone}`);
 
     await client.messages.create({
-      from: fromNumber,
-      to: toNumber,
-      body: message + DO_NOT_REPLY_FOOTER
+      from: twilioPhoneNumber,
+      to: formattedPhone,
+      body: message
     });
 
-    console.log(`✅ WhatsApp message sent successfully to ${formattedPhone}`);
+    console.log(`✅ SMS sent successfully to ${formattedPhone}`);
     return true;
   } catch (error) {
-    console.error('❌ WhatsApp message error:', error);
+    console.error('❌ SMS error:', error);
     return false;
   }
 }

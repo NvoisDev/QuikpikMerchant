@@ -523,13 +523,13 @@ export default function OrderDetail() {
     setIsSendingWhatsApp(true);
     try {
       await apiRequest('POST', `/api/orders/${order.id}/share-invoice-whatsapp`);
-      toast({ title: 'WhatsApp sent', description: 'The invoice has been sent to the customer via WhatsApp.' });
+      toast({ title: 'SMS sent', description: 'The invoice has been sent to the customer via SMS.' });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('400')) {
         toast({ title: 'No phone number on file', description: 'This customer has no phone number on record.', variant: 'destructive' });
       } else {
-        toast({ title: 'Error', description: 'Could not send the WhatsApp message. Please try again.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Could not send the SMS. Please try again.', variant: 'destructive' });
       }
     } finally {
       setIsSendingWhatsApp(false);
@@ -1799,7 +1799,7 @@ export default function OrderDetail() {
                         >
                           {isSendingWhatsApp
                             ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
-                            : <><MessageCircle className="h-4 w-4 mr-2" />Share via WhatsApp</>}
+                            : <><MessageCircle className="h-4 w-4 mr-2" />Send Invoice via SMS</>}
                         </Button>
                       )}
                       {order.stripePaymentLinkUrl && (
