@@ -2344,6 +2344,100 @@ export function registerPaymentRoutes(app: Express): void {
 
       console.log(`✅ Quote ${orderNumber} created successfully`);
 
+      // Send customer email for offline payment methods when sendVia === 'email'
+      // (For Stripe-based orders the Stripe webhook fires sendCustomerInvoiceEmail after payment;
+      //  offline methods never trigger a webhook, so we send the email directly here.)
+      if (sendVia === 'email' && isOffline && customer.email) {
+        try {
+          const isPayLaterCustomer = validDepositPercentage === 0;
+          const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+          const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
+
+          // Build items HTML list for the customer email
+          const customerItemsHtml: string[] = [];
+          for (const item of items) {
+            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+            const productName = product?.name || `Product #${item.productId}`;
+            const packDesc = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
+            const displayName = packDesc ? `${productName} (${packDesc})` : productName;
+            const sellingType = item.sellingType || 'units';
+            const itemTotal = item.customPrice * item.quantity;
+            customerItemsHtml.push(
+              `<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`
+            );
+          }
+
+          // Build payment arrangement copy (mirrors the SMS logic from task #777)
+          const offlineMethodDisplayName: Record<string, string> = {
+            bank_transfer: 'bank transfer',
+            cash: 'cash',
+            cheque: 'cheque',
+            other: '',
+          };
+          const isOfflineNonPayLaterMethod = isOfflineMethod && requestedPaymentMethod !== 'pay_later';
+          const offlineMethodName =
+            isOfflineNonPayLaterMethod && requestedPaymentMethod
+              ? (offlineMethodDisplayName[requestedPaymentMethod] ?? '')
+              : '';
+          const arrangementHtml = isPayLaterCustomer
+            ? `Please arrange payment with <strong>${businessName}</strong> directly.`
+            : offlineMethodName
+              ? `Please arrange payment via ${offlineMethodName} directly with <strong>${businessName}</strong>.`
+              : `Please arrange payment directly with <strong>${businessName}</strong>.`;
+
+          const deliveryRowHtml =
+            quoteDeliveryCharge > 0
+              ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>`
+              : '';
+
+          const emailSubjectPrefix = isPayLaterCustomer ? 'Invoice (Pay Later)' : 'Invoice';
+          const emailIntroText = isPayLaterCustomer
+            ? `${businessName} has sent you an invoice. Payment can be arranged later directly with the store.`
+            : offlineMethodName
+              ? `${businessName} has sent you an invoice. Please arrange payment via ${offlineMethodName}.`
+              : `${businessName} has sent you an invoice. Please arrange payment directly with the store.`;
+
+          const customerEmailBody = [
+            emailHeading('Your Invoice', { size: '22px', color: '#10b981' }),
+            `<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p>`,
+            `<p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>`,
+            emailCard(
+              `<p style="margin:0;font-size:15px">${emailIntroText}</p>`,
+              { borderColor: '#d1fae5', bgColor: '#f0fdf4' }
+            ),
+            `<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul>`,
+            `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${deliveryRowHtml}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>`,
+            emailCard(
+              `<p style="margin:0 0 6px;font-size:15px">${arrangementHtml}</p>${wholesalerContact ? `<p style="margin:0;font-size:13px;color:#6b7280">Contact ${businessName}: ${wholesalerContact}</p>` : ''}`,
+              { borderColor: '#dbeafe', bgColor: '#eff6ff' }
+            ),
+          ].join('');
+
+          const customerEmailHtml = wrapCustomerEmail(
+            customerEmailBody,
+            {
+              businessName,
+              logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt),
+            },
+            { preheader: `Invoice ${orderNumber} from ${businessName} — £${total.toFixed(2)}` }
+          );
+
+          await sendEmail({
+            to: customer.email,
+            from: 'hello@quikpik.co',
+            subject: `${emailSubjectPrefix} ${orderNumber} from ${businessName}`,
+            html: customerEmailHtml,
+          });
+          console.log(`📧 Customer invoice email (offline payment) sent to ${customer.email}`);
+
+          await db.update(orders)
+            .set({ quoteSentAt: new Date() })
+            .where(eq(orders.id, quoteOrder.id));
+        } catch (customerEmailError: any) {
+          console.error('⚠️ Failed to send customer invoice email (offline payment):', customerEmailError?.message);
+        }
+      }
+
       // Send confirmation email to wholesaler
 
       try {
