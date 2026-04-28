@@ -23,6 +23,7 @@ interface SubscriptionPlan {
   currency: string;
   description: string;
   features: string[];
+  billingInterval: string | null;
   limits: {
     products: number;
     broadcasts: number;
@@ -52,6 +53,7 @@ export default function SubscriptionPricing() {
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   const [showUpgradeWarningModal, setShowUpgradeWarningModal] = useState(false);
   const [pendingUpgrade, setPendingUpgrade] = useState<{ priceId: string; planName: string; planId: string } | null>(null);
+  const [billingMode, setBillingMode] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     if (permissionsLoading) return;
@@ -248,10 +250,14 @@ export default function SubscriptionPricing() {
       return;
     }
     
-    // Define plan hierarchy for upgrade/downgrade detection
-    const planHierarchy = { 'free': 0, 'standard': 1, 'premium': 2 };
-    const currentPlanLevel = planHierarchy[currentPlan as keyof typeof planHierarchy] || 0;
-    const targetPlanLevel = planHierarchy[plan.planId as keyof typeof planHierarchy] || 0;
+    // Define plan hierarchy for upgrade/downgrade detection (annual plans map to same tier)
+    const planHierarchy: Record<string, number> = {
+      'free': 0,
+      'standard': 1, 'standard_annual_intro': 1, 'standard_annual': 1,
+      'premium': 2, 'premium_annual_intro': 2, 'premium_annual': 2,
+    };
+    const currentPlanLevel = planHierarchy[currentPlan] ?? 0;
+    const targetPlanLevel = planHierarchy[plan.planId] ?? 0;
     
     // Handle downgrades (moving to a lower tier)
     if (targetPlanLevel < currentPlanLevel) {
@@ -288,8 +294,15 @@ export default function SubscriptionPricing() {
     createCheckoutMutation.mutate(pendingUpgrade.priceId);
   };
 
+  // Derive the base tier from a planId (strips _annual_intro / _annual suffix)
+  const getPlanBaseTier = (planId: string): string => {
+    if (planId === 'standard_annual_intro' || planId === 'standard_annual') return 'standard';
+    if (planId === 'premium_annual_intro' || planId === 'premium_annual') return 'premium';
+    return planId;
+  };
+
   const getPlanIcon = (planId: string) => {
-    switch (planId) {
+    switch (getPlanBaseTier(planId)) {
       case 'free': return <CheckIcon className="w-6 h-6" />;
       case 'standard': return <StarIcon className="w-6 h-6" />;
       case 'premium': return <CrownIcon className="w-6 h-6" />;
@@ -298,13 +311,39 @@ export default function SubscriptionPricing() {
   };
 
   const getPlanColor = (planId: string) => {
-    switch (planId) {
+    switch (getPlanBaseTier(planId)) {
       case 'free': return 'bg-gray-50 border-gray-200';
       case 'standard': return 'bg-blue-50 border-blue-200';
       case 'premium': return 'bg-purple-50 border-purple-200';
       default: return 'bg-gray-50 border-gray-200';
     }
   };
+
+  // Annual savings vs monthly equivalent
+  const getAnnualSavings = (plan: SubscriptionPlan): { pct: number; amount: number } | null => {
+    if (plan.billingInterval !== 'yearly') return null;
+    const tier = getPlanBaseTier(plan.planId);
+    const monthlyEquiv = tier === 'standard' ? 19.99 : tier === 'premium' ? 49.99 : null;
+    if (!monthlyEquiv) return null;
+    const monthlyTotal = monthlyEquiv * 12;
+    const annualPrice = parseFloat(plan.monthlyPrice);
+    const amount = monthlyTotal - annualPrice;
+    const pct = Math.round((amount / monthlyTotal) * 100);
+    return { pct, amount };
+  };
+
+  // Plans to show depending on billing mode:
+  // Monthly → free + standard + premium (hide all _annual variants)
+  // Annual  → free + standard_annual_intro + premium_annual_intro
+  const visiblePlans = plans.filter((p: SubscriptionPlan) => {
+    const isAnnual = p.billingInterval === 'yearly';
+    const isIntroAnnual = p.planId === 'standard_annual_intro' || p.planId === 'premium_annual_intro';
+    const isHiddenAnnual = p.planId === 'standard_annual' || p.planId === 'premium_annual';
+    if (isHiddenAnnual) return false;
+    if (billingMode === 'monthly') return !isAnnual;
+    if (billingMode === 'annual') return p.planId === 'free' || isIntroAnnual;
+    return true;
+  });
 
   const formatLimit = (limit: number) => {
     return limit === -1 ? 'Unlimited' : limit.toString();
@@ -398,7 +437,17 @@ export default function SubscriptionPricing() {
                     year: 'numeric'
                   })}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">Monthly subscription</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {currentSubscription.plan?.billingInterval === 'yearly' ? 'Annual subscription' : 'Monthly subscription'}
+                  {currentSubscription.subscription?.isCustomPricing && (
+                    <span className="ml-2 inline-flex items-center bg-violet-100 text-violet-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      Custom pricing
+                    </span>
+                  )}
+                </div>
+                {currentSubscription.subscription?.internalNote && (
+                  <div className="text-xs text-gray-400 mt-1 italic">{currentSubscription.subscription.internalNote}</div>
+                )}
               </div>
             )}
           </div>
@@ -507,9 +556,40 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
+      {/* Billing Mode Toggle */}
+      <div className="flex justify-center mb-8">
+        <div className="inline-flex items-center bg-gray-100 rounded-full p-1 gap-1">
+          <button
+            onClick={() => setBillingMode('monthly')}
+            className={clsx(
+              'px-5 py-2 rounded-full text-sm font-medium transition-all',
+              billingMode === 'monthly'
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingMode('annual')}
+            className={clsx(
+              'px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2',
+              billingMode === 'annual'
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            Annual
+            <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+              Save 17%
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Pricing Plans */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        {plans.map((plan: SubscriptionPlan) => (
+        {visiblePlans.map((plan: SubscriptionPlan) => (
           <Card 
             key={plan.id} 
             className={clsx(
@@ -532,7 +612,7 @@ export default function SubscriptionPricing() {
                 </Badge>
               </div>
             )}
-            {!isCurrentPlan(plan.planId) && plan.planId === 'standard' && (
+            {!isCurrentPlan(plan.planId) && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro') && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
               </div>
@@ -540,8 +620,8 @@ export default function SubscriptionPricing() {
 
             <CardHeader className="text-center">
               <div className={`mx-auto mb-4 p-3 rounded-full ${
-                plan.planId === 'free' ? 'bg-gray-200 text-gray-600' :
-                plan.planId === 'standard' ? 'bg-blue-200 text-blue-600' :
+                getPlanBaseTier(plan.planId) === 'free' ? 'bg-gray-200 text-gray-600' :
+                getPlanBaseTier(plan.planId) === 'standard' ? 'bg-blue-200 text-blue-600' :
                 'bg-purple-200 text-purple-600'
               }`}>
                 {getPlanIcon(plan.planId)}
@@ -551,10 +631,31 @@ export default function SubscriptionPricing() {
                 {plan.description}
               </CardDescription>
               <div className="mt-4">
-                <div className="text-4xl font-bold">
-                  {parseFloat(plan.monthlyPrice).toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
-                </div>
-                <div className="text-gray-600">per month</div>
+                {(() => {
+                  const savings = getAnnualSavings(plan);
+                  const isAnnual = plan.billingInterval === 'yearly';
+                  const price = parseFloat(plan.monthlyPrice);
+                  return (
+                    <>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="text-4xl font-bold">
+                          {price.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
+                        </div>
+                        {savings && (
+                          <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">
+                            Save {savings.pct}%
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-gray-600">{isAnnual ? 'per year' : price === 0 ? 'free' : 'per month'}</div>
+                      {isAnnual && savings && (
+                        <div className="text-xs text-green-600 mt-1 font-medium">
+                          Save £{savings.amount.toFixed(2)} vs monthly
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </CardHeader>
 
@@ -583,13 +684,19 @@ export default function SubscriptionPricing() {
                 </div>
               </div>
 
+              {(plan.planId === 'standard_annual_intro' || plan.planId === 'premium_annual_intro') && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  <strong>Introductory rate</strong> — full annual price applies from May 2027
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Button
                   onClick={() => handlePlanSelection(plan)}
                   disabled={processingPlanId === plan.planId || isCurrentPlan(plan.planId)}
                   className={`w-full ${
-                    plan.planId === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
-                    plan.planId === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
+                    getPlanBaseTier(plan.planId) === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
+                    getPlanBaseTier(plan.planId) === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
                     'bg-gray-600 hover:bg-gray-700'
                   }`}
                   variant={isCurrentPlan(plan.planId) ? "outline" : "default"}

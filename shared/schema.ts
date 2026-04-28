@@ -392,6 +392,9 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   canceledAt: timestamp("canceled_at"),
   trialStart: timestamp("trial_start"),
   trialEnd: timestamp("trial_end"),
+  internalNote: text("internal_note"),
+  isCustomPricing: boolean("is_custom_pricing").default(false),
+  customPriceExpiresAt: timestamp("custom_price_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

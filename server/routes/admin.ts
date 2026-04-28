@@ -1656,7 +1656,7 @@ export function registerAdminRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      const { planId: newPlanId } = req.body;
+      const { planId: newPlanId, customPriceId, internalNote, customPriceExpiresAt } = req.body;
       if (!newPlanId) return res.status(400).json({ error: 'planId is required' });
 
       const [targetUser] = await db.select().from(users)
@@ -1676,26 +1676,30 @@ export function registerAdminRoutes(app: Express): void {
         if (newPlanId === 'free') {
           // Downgrade to free: cancel the Stripe subscription with proration
           await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id, isTargetTestAccount);
-        } else if (targetPlan.stripePriceId) {
-          // Paid → paid: branch upgrade vs downgrade by comparing prices
+        } else if (customPriceId || targetPlan.stripePriceId) {
+          // Paid → paid: use custom price if provided, otherwise the plan's Stripe price
+          const effectivePriceId = customPriceId || targetPlan.stripePriceId!;
+          const isCustom = Boolean(customPriceId);
+
+          // Branch upgrade vs downgrade by comparing prices (use plan prices for direction)
           const [currentPlan] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
             .from(subscriptionPlans)
             .where(eq(subscriptionPlans.planId, targetUser.currentPlan || targetUser.subscriptionTier || 'free'));
           const currentPrice = parseFloat((currentPlan?.monthlyPrice as string) || '0');
           const newPrice = parseFloat(targetPlan.monthlyPrice as string);
-          const isDowngrade = newPrice < currentPrice;
+          const isDowngrade = !isCustom && newPrice < currentPrice;
 
           if (isDowngrade) {
             await SubscriptionService.immediateDowngradeWithProration(
               currentStripeSubId,
-              targetPlan.stripePriceId,
+              effectivePriceId,
               newPlanId,
               isTargetTestAccount,
             );
           } else {
             await SubscriptionService.upgradeSubscriptionWithProration(
               currentStripeSubId,
-              targetPlan.stripePriceId,
+              effectivePriceId,
               newPlanId,
               isTargetTestAccount,
             );
@@ -1711,8 +1715,11 @@ export function registerAdminRoutes(app: Express): void {
             planId: newPlanId,
             status: 'active',
             cancelAtPeriodEnd: false,
+            isCustomPricing: isCustom,
+            internalNote: internalNote || null,
+            customPriceExpiresAt: customPriceExpiresAt ? new Date(customPriceExpiresAt) : null,
             updatedAt: new Date(),
-          }).where(eq(userSubscriptions.userId, targetUser.id));
+          } as any).where(eq(userSubscriptions.userId, targetUser.id));
         }
       } else {
         // No active Stripe subscription — admin comped / force-set

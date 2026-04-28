@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { db } from "./db";
 import { users, subscriptionPlans, userSubscriptions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 import { getStripeClient } from "./stripeConfig";
 
@@ -607,6 +607,200 @@ export class SubscriptionService {
       console.error('❌ Failed to get subscription plans:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create the four annual subscription plans (intro + full-rate) if they don't already exist.
+   * Called once at server startup — idempotent.
+   */
+  static async initializeAnnualPlans() {
+    try {
+      const existing = await db.select({ planId: subscriptionPlans.planId })
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, 'standard_annual_intro'));
+      if (existing.length > 0) {
+        console.log('ℹ️ Annual plans already exist — skipping initialization');
+        return;
+      }
+
+      let platformStripe: ReturnType<typeof getStripeClient> | null = null;
+      try { platformStripe = getStripeClient(); } catch { /* no Stripe key */ }
+
+      const annualPlans = [
+        {
+          planId: 'standard_annual_intro',
+          name: 'Standard Annual (Intro)',
+          price: 199.99,
+          description: 'Annual plan — introductory rate until May 2027',
+          features: [
+            'Up to 5 products',
+            'Up to 5 price lists',
+            'Broadcast tools coming soon',
+            'Basic dashboard analytics',
+            'Priority email support',
+            'Save vs monthly billing',
+          ],
+          limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+          sortOrder: 10,
+        },
+        {
+          planId: 'premium_annual_intro',
+          name: 'Premium Annual (Intro)',
+          price: 499.99,
+          description: 'Annual plan — introductory rate until May 2027',
+          features: [
+            'Unlimited products',
+            'Unlimited price lists',
+            'Broadcast tools coming soon',
+            'Custom reports and insights',
+            'Priority email and phone support',
+            'Save vs monthly billing',
+          ],
+          limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
+          sortOrder: 11,
+        },
+        {
+          planId: 'standard_annual',
+          name: 'Standard Annual',
+          price: 239.88,
+          description: 'Full-rate annual Standard plan (from May 2027)',
+          features: [
+            'Up to 5 products',
+            'Up to 5 price lists',
+            'Broadcast tools coming soon',
+            'Basic dashboard analytics',
+            'Priority email support',
+          ],
+          limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+          sortOrder: 12,
+        },
+        {
+          planId: 'premium_annual',
+          name: 'Premium Annual',
+          price: 599.88,
+          description: 'Full-rate annual Premium plan (from May 2027)',
+          features: [
+            'Unlimited products',
+            'Unlimited price lists',
+            'Broadcast tools coming soon',
+            'Custom reports and insights',
+            'Priority email and phone support',
+          ],
+          limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
+          sortOrder: 13,
+        },
+      ];
+
+      for (const plan of annualPlans) {
+        let stripeProductId: string | null = null;
+        let stripePriceId: string | null = null;
+        if (platformStripe) {
+          try {
+            const product = await platformStripe.products.create({
+              name: plan.name,
+              description: plan.description,
+              metadata: { planId: plan.planId, platform: 'quikpik' },
+            });
+            stripeProductId = product.id;
+            const price = await platformStripe.prices.create({
+              product: product.id,
+              unit_amount: Math.round(plan.price * 100),
+              currency: 'gbp',
+              recurring: { interval: 'year' },
+              metadata: { planId: plan.planId, platform: 'quikpik' },
+            });
+            stripePriceId = price.id;
+          } catch (stripeErr: any) {
+            console.error(`⚠️ Stripe creation failed for ${plan.planId}:`, stripeErr?.message);
+          }
+        }
+        await db.insert(subscriptionPlans).values({
+          name: plan.name,
+          planId: plan.planId,
+          stripeProductId,
+          stripePriceId,
+          monthlyPrice: plan.price.toFixed(2),
+          currency: 'GBP',
+          description: plan.description,
+          features: plan.features,
+          limits: plan.limits,
+          billingInterval: 'yearly',
+          version: 1,
+          isActive: true,
+          sortOrder: plan.sortOrder,
+        });
+        console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr)`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize annual plans:', error);
+    }
+  }
+
+  /**
+   * Migrate subscribers from intro annual plans to full-rate annual plans.
+   * No-op until 1 May 2027. Safe to run daily.
+   */
+  static async runAnnualPlanMigrationIfDue() {
+    const migrationDate = new Date('2027-05-01T00:00:00Z');
+    if (new Date() < migrationDate) return;
+
+    console.log('📅 Running annual plan migration (due from 1 May 2027)...');
+    const planMap: Record<string, string> = {
+      standard_annual_intro: 'standard_annual',
+      premium_annual_intro: 'premium_annual',
+    };
+
+    const subsToMigrate = await db.select()
+      .from(userSubscriptions)
+      .where(and(
+        inArray(userSubscriptions.planId, ['standard_annual_intro', 'premium_annual_intro']),
+        eq(userSubscriptions.status, 'active'),
+        eq(userSubscriptions.isCustomPricing, false),
+      ));
+
+    if (subsToMigrate.length === 0) {
+      console.log('ℹ️ No intro annual subscribers to migrate');
+    }
+
+    for (const sub of subsToMigrate) {
+      const targetPlanId = planMap[sub.planId];
+      if (!targetPlanId) continue;
+      const [targetPlan] = await db.select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, targetPlanId));
+      if (!targetPlan?.stripePriceId) {
+        console.error(`⚠️ No Stripe price for ${targetPlanId} — skipping user ${sub.userId}`);
+        continue;
+      }
+
+      if (sub.stripeSubscriptionId) {
+        try {
+          const stripeClient = getStripeClient();
+          const stripeSub = await stripeClient.subscriptions.retrieve(sub.stripeSubscriptionId);
+          await stripeClient.subscriptions.update(sub.stripeSubscriptionId, {
+            items: [{ id: stripeSub.items.data[0].id, price: targetPlan.stripePriceId }],
+            proration_behavior: 'none',
+          });
+        } catch (stripeErr: any) {
+          console.error(`⚠️ Stripe update failed for ${sub.userId}:`, stripeErr?.message);
+          continue;
+        }
+      }
+
+      await db.update(userSubscriptions)
+        .set({ planId: targetPlanId, updatedAt: new Date() })
+        .where(eq(userSubscriptions.id, sub.id));
+      await db.update(users)
+        .set({ currentPlan: targetPlanId, subscriptionTier: targetPlanId } as any)
+        .where(eq(users.id, sub.userId));
+      console.log(`✅ Migrated ${sub.userId}: ${sub.planId} → ${targetPlanId}`);
+    }
+
+    // Archive the intro plans after migration
+    await db.update(subscriptionPlans)
+      .set({ isActive: false })
+      .where(inArray(subscriptionPlans.planId, ['standard_annual_intro', 'premium_annual_intro']));
+    console.log('✅ Annual plan migration complete — intro plans archived');
   }
 
   /**

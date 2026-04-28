@@ -215,6 +215,10 @@ async function runStartupMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS qal_quote_id_idx ON quote_activity_logs(quote_id)`,
     `CREATE INDEX IF NOT EXISTS qal_created_at_idx ON quote_activity_logs(quote_id, created_at DESC)`,
+    // Task #783: Annual subscription plans — new tracking fields on userSubscriptions
+    `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS internal_note TEXT`,
+    `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS is_custom_pricing BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS custom_price_expires_at TIMESTAMP`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
@@ -394,6 +398,7 @@ app.use((req, res, next) => {
     // Sync subscription plan features/limits from code into DB
     const { SubscriptionService } = await import("./subscription-service");
     await SubscriptionService.initializePlans();
+    await SubscriptionService.initializeAnnualPlans();
 
     // Ensure Stripe prices for Standard/Premium match the correct monthly_price amounts
     await fixStripePricesIfNeeded();
@@ -479,7 +484,19 @@ app.use((req, res, next) => {
       }
     });
     console.log(`🎯 Promotion notification system enabled (daily at 10 AM)`);
-    
+
+    // Annual plan migration: runs daily at 11 AM — no-op until 1 May 2027,
+    // then migrates intro annual subscribers to full-rate plans.
+    cron.schedule('0 11 * * *', async () => {
+      try {
+        const { SubscriptionService: SS } = await import("./subscription-service");
+        await SS.runAnnualPlanMigrationIfDue();
+      } catch (error) {
+        console.error('❌ Annual plan migration check failed:', error);
+      }
+    });
+    console.log(`📅 Annual plan migration scheduler enabled (daily at 11 AM)`);
+
     log(`serving on port ${port}`);
   });
   
