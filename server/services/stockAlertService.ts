@@ -2,7 +2,7 @@ import { db } from "../db";
 import { products, users, teamMembers } from "../../shared/schema";
 import { eq, lt, and, or, isNull, lte, inArray } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
-import { whatsAppBusinessService } from "../whatsapp-simple";
+import { sendWhatsAppMessage } from "./whatsappService";
 import { wrapCustomerEmail, emailHeading, emailCard, emailButton } from "../email-templates";
 
 export interface StockAlert {
@@ -257,24 +257,7 @@ export class StockAlertService {
     }
 
     try {
-      // Get wholesaler's WhatsApp credentials from the database
-      const wholesalerUser = await db
-        .select({
-          whatsappAccessToken: users.whatsappAccessToken,
-          whatsappBusinessPhoneId: users.whatsappBusinessPhoneId
-        })
-        .from(users)
-        .where(eq(users.id, wholesaler.wholesalerId))
-        .limit(1);
-
-      if (wholesalerUser.length === 0 || !wholesalerUser[0].whatsappAccessToken || !wholesalerUser[0].whatsappBusinessPhoneId) {
-        throw new Error('WhatsApp Business API credentials not configured');
-      }
-
-      await whatsAppBusinessService.sendMessage(wholesaler.wholesalerPhone, message, {
-        accessToken: wholesalerUser[0].whatsappAccessToken,
-        phoneNumberId: wholesalerUser[0].whatsappBusinessPhoneId
-      });
+      await sendWhatsAppMessage({ to: wholesaler.wholesalerPhone, message });
       console.log(`💬 WhatsApp stock alert sent to ${wholesaler.wholesalerName}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp stock alert to ${wholesaler.wholesalerName}:`, error);
