@@ -132,7 +132,7 @@ export default function ProductManagement() {
     localStorage.setItem("productsViewMode", mode);
     setViewMode(mode);
   };
-  const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null);
+
   const [marginSort, setMarginSort] = useState<"asc" | "desc" | "name_asc" | "name_desc">(() => {
     const saved = localStorage.getItem("productsMarginSort");
     const valid = ["asc", "desc", "name_asc", "name_desc"];
@@ -3143,58 +3143,6 @@ export default function ProductManagement() {
                                 {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${product.batchCount !== 1 ? 'es' : ''}`}
                               </Button>
                             )}
-                            <DropdownMenu
-                              open={openMenuProductId === product.id}
-                              onOpenChange={(open) => setOpenMenuProductId(open ? product.id : null)}
-                            >
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-44">
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(product.id, product.status === 'active' ? 'inactive' : 'active')}
-                                  disabled={product.status === 'locked'}
-                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                >
-                                  {product.status === 'active' ? (
-                                    <><ToggleLeft className="h-4 w-4 mr-2" />Set Inactive</>
-                                  ) : (
-                                    <><ToggleRight className="h-4 w-4 mr-2" />Set Active</>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => product.status !== 'locked' && handleDuplicate(product)}
-                                  disabled={product.status === 'locked'}
-                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                >
-                                  <Copy className="h-4 w-4 mr-2" />
-                                  Duplicate
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => navigate(`/promotions?productId=${product.id}`)}
-                                  disabled={product.status === 'locked'}
-                                  className={product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}
-                                >
-                                  <div className="relative mr-2">
-                                    <Tag className="h-4 w-4" />
-                                    {product.promoActive && (
-                                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500" />
-                                    )}
-                                  </div>
-                                  Promotions
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-red-600 focus:text-red-600">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                           )}
                         </div>
