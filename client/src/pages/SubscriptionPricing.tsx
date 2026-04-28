@@ -332,16 +332,15 @@ export default function SubscriptionPricing() {
     return { pct, amount };
   };
 
-  // Plans to show depending on billing mode:
-  // Monthly → free + standard + premium (hide all _annual variants)
-  // Annual  → free + standard_annual_intro + premium_annual_intro
+  // Plans to show depending on billing mode.
+  // Monthly mode: plans with no billing interval (free, standard, premium)
+  // Annual mode:  free + whichever annual plans are currently active in the DB.
+  // The API already filters isActive=true, so after the May 2027 migration the
+  // intro plans will disappear and the full-rate annual plans will appear automatically.
   const visiblePlans = plans.filter((p: SubscriptionPlan) => {
     const isAnnual = p.billingInterval === 'yearly';
-    const isIntroAnnual = p.planId === 'standard_annual_intro' || p.planId === 'premium_annual_intro';
-    const isHiddenAnnual = p.planId === 'standard_annual' || p.planId === 'premium_annual';
-    if (isHiddenAnnual) return false;
     if (billingMode === 'monthly') return !isAnnual;
-    if (billingMode === 'annual') return p.planId === 'free' || isIntroAnnual;
+    if (billingMode === 'annual') return p.planId === 'free' || isAnnual;
     return true;
   });
 
