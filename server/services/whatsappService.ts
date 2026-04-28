@@ -14,20 +14,13 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
     // Check if Twilio credentials are available
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    // Use dedicated WhatsApp number if set, otherwise fall back to the SMS number
+    const twilioPhoneNumber = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER;
     
     if (!accountSid || !authToken || !twilioPhoneNumber) {
       console.log('📱 Twilio credentials not configured, skipping WhatsApp message');
       return false;
     }
-
-    // Log detailed Twilio configuration for debugging
-    console.log('📱 Twilio WhatsApp Configuration:', {
-      hasSID: !!accountSid,
-      hasToken: !!authToken,
-      hasPhone: !!twilioPhoneNumber,
-      phoneNumber: twilioPhoneNumber
-    });
 
     const client = twilio(accountSid, authToken);
     

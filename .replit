@@ -66,6 +66,7 @@ integrations = ["javascript_stripe:1.0.0", "javascript_log_in_with_replit:1.0.0"
 
 [userenv.shared]
 APP_URL = "https://quikpik.app"
+TWILIO_WHATSAPP_NUMBER = "+15557941926"
 
 [postMerge]
 path = "scripts/post-merge.sh"
