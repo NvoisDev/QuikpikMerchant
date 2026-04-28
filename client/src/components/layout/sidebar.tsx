@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { getBaseTier } from "@/lib/planUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Button } from "@/components/ui/button";
@@ -78,9 +79,10 @@ export default function Sidebar() {
   });
   const pendingOrderCount = pendingOrderData?.count ?? 0;
 
-  const isPremiumUser = subscriptionData?.user?.currentPlan === "premium";
-  const isStandardUser = subscriptionData?.user?.currentPlan === "standard";
-  const isFreeUser = !isPremiumUser && !isStandardUser;
+  const planTier = getBaseTier(subscriptionData?.user?.currentPlan);
+  const isPremiumUser = planTier === "premium";
+  const isStandardUser = planTier === "standard";
+  const isFreeUser = planTier === "free";
 
   // collapsed = icon-rail only (desktop); "dc" is shorthand below
   const dc = isDesktopCollapsed;

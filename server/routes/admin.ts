@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
+import { getProductLimit } from "../utils/plan-tier";
 import {
   ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, subscriptionPlans, userSubscriptions, users, products, orderItems,
@@ -650,7 +651,7 @@ export function registerAdminRoutes(app: Express): void {
         resolvedPlanId = recoverPlan.planId;
       }
 
-      const recoverProductLimit = resolvedPlanId === 'premium' ? -1 : (resolvedPlanId === 'standard' ? 5 : 2);
+      const recoverProductLimit = getProductLimit(resolvedPlanId);
       const recoverPeriodEnd = new Date(stripeSub.current_period_end * 1000);
       const recoverPeriodStart = new Date(stripeSub.current_period_start * 1000);
 

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAuth } from '@/hooks/useAuth';
 import clsx from 'clsx';
 import PageHeader from '@/components/PageHeader';
+import { getBaseTier } from '@/lib/planUtils';
 
 interface SubscriptionPlan {
   id: string;
@@ -294,12 +295,8 @@ export default function SubscriptionPricing() {
     createCheckoutMutation.mutate(pendingUpgrade.priceId);
   };
 
-  // Derive the base tier from a planId (strips _annual_intro / _annual suffix)
-  const getPlanBaseTier = (planId: string): string => {
-    if (planId === 'standard_annual_intro' || planId === 'standard_annual') return 'standard';
-    if (planId === 'premium_annual_intro' || planId === 'premium_annual') return 'premium';
-    return planId;
-  };
+  // Derive the base tier from a planId (strips _annual_intro / _annual suffix) — uses shared helper
+  const getPlanBaseTier = (planId: string) => getBaseTier(planId);
 
   const getPlanIcon = (planId: string) => {
     switch (getPlanBaseTier(planId)) {

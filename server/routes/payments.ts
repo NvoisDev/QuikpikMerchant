@@ -14,6 +14,7 @@ import {
 import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode } from "../stripeConfig";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
+import { getBaseTier, getProductLimit } from "../utils/plan-tier";
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -500,7 +501,7 @@ export function registerPaymentRoutes(app: Express): void {
         if (userId && tier) {
           console.log(`🔄 Processing ${subscriptionType || 'new'} subscription: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 5 : 2);
+          const productLimit = getProductLimit(tier);
           
           // Get subscription details from Stripe if available
           let subscriptionEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -538,7 +539,7 @@ export function registerPaymentRoutes(app: Express): void {
             subscriptionPeriodStart: periodStart,
           });
 
-          if (tier === 'standard' || tier === 'premium') {
+          if (getBaseTier(tier) !== 'free') {
             await unlockForUpgrade(userId);
           }
           
@@ -573,7 +574,7 @@ export function registerPaymentRoutes(app: Express): void {
         if (userId && tier) {
           console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 5 : 2);
+          const productLimit = getProductLimit(tier);
           
           await storage.updateUser(userId, {
             currentPlan: tier,
@@ -582,7 +583,7 @@ export function registerPaymentRoutes(app: Express): void {
             subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           });
 
-          if (tier === 'standard' || tier === 'premium') {
+          if (getBaseTier(tier) !== 'free') {
             await unlockForUpgrade(userId);
           }
           
@@ -1505,7 +1506,7 @@ export function registerPaymentRoutes(app: Express): void {
           await storage.updateUser(userId, {
             currentPlan: targetPlan.planId,
             subscriptionStatus: 'active',
-            productLimit: targetPlan.planId === 'premium' ? -1 : (targetPlan.planId === 'standard' ? 5 : 2),
+            productLimit: getProductLimit(targetPlan.planId),
             subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
 

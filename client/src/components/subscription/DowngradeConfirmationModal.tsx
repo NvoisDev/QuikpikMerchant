@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCurrency } from '@/lib/currencies';
+import { getBaseTier } from '@/lib/planUtils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -201,7 +202,7 @@ export function DowngradeConfirmationModal({
           )}
 
           {/* Data Impact Warning */}
-          {currentPlan === 'premium' || currentPlan === 'standard' ? (
+          {getBaseTier(currentPlan) !== 'free' ? (
             <Card className="bg-amber-50 border-amber-200">
               <CardContent className="p-4">
                 <h3 className="font-semibold text-amber-900 mb-2">⚠️ Data Impact</h3>
