@@ -1,0 +1,129 @@
+🧾 Prompt: Fix Intermittent UI Freezes (SAFE, NON-BREAKING)
+🎯 Objective
+
+Identify and fix all cases where the UI becomes unresponsive (buttons disabled, loading stuck), ensuring all async actions safely reset state, without changing business logic.
+
+🚨 NON-NEGOTIABLE RULES
+Do NOT change API logic
+Do NOT change Stripe logic
+Do NOT change business flows
+Do NOT remove loading states
+
+👉 Only fix state handling + resilience
+
+🧱 PART 1 — GLOBAL PATTERN ENFORCEMENT
+
+Find ALL usages of:
+
+isLoading
+isSubmitting
+isProcessing
+paymentSubmitted
+✅ Rule:
+
+EVERY async function must follow:
+
+setIsProcessing(true);
+
+try {
+  await action();
+} catch (err) {
+  // handle error
+} finally {
+  setIsProcessing(false);
+  setPaymentSubmitted(false); // if applicable
+}
+🚫 Reject any pattern where:
+setX(false) is missing
+Only handled in success path
+🧱 PART 2 — DOUBLE-SUBMIT PROTECTION
+
+Ensure:
+
+if (isProcessing) return;
+
+at the start of ALL submit handlers
+
+🧱 PART 3 — GLOBAL ERROR CATCH
+
+Ensure every async handler has:
+
+catch (err) {
+  console.error(err);
+  showToast("Something went wrong");
+}
+
+👉 No silent failures
+
+🧱 PART 4 — TIMEOUT SAFETY (VERY IMPORTANT)
+
+Wrap critical requests:
+
+await Promise.race([
+  apiCall(),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Timeout")), 15000)
+  )
+]);
+
+👉 Prevent infinite loading if backend hangs
+
+🧱 PART 5 — UI FAILSAFE RESET
+
+Add safety reset:
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setIsProcessing(false);
+    setPaymentSubmitted(false);
+  }, 20000);
+
+  return () => clearTimeout(timer);
+}, [isProcessing]);
+
+👉 Last-resort recovery
+
+🧱 PART 6 — DEBUG LOGGING (TEMPORARY)
+
+Add logs:
+
+console.log("START action");
+console.log("END action");
+console.log("ERROR action", err);
+
+👉 Identify where freeze happens
+
+🧱 PART 7 — IDENTIFY HOTSPOTS
+
+Focus especially on:
+
+Checkout / payment flows
+Quote creation
+Edit quote
+Order submission
+🧪 PART 8 — TEST SCENARIOS
+
+Simulate:
+
+Slow network
+Stripe failure
+API failure
+Double click
+
+Confirm:
+
+UI NEVER gets stuck
+Buttons always re-enable
+User can retry
+🧾 PART 9 — OUTPUT FORMAT
+Async state handling audited: ✅
+Missing resets fixed: ✅
+Double-submit protection added: ✅
+Timeout protection added: ✅
+Failsafe reset added: ✅
+
+Validation:
+- No UI freeze observed ✅
+
+Final status:
+🟢 SAFE — UI FREEZE RESOLVED
