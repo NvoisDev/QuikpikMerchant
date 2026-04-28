@@ -668,6 +668,7 @@ export class SubscriptionService {
         ],
         limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
         sortOrder: 12,
+        isPubliclyVisible: false,
       },
       {
         planId: 'premium_annual',
@@ -683,6 +684,7 @@ export class SubscriptionService {
         ],
         limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
         sortOrder: 13,
+        isPubliclyVisible: false,
       },
     ];
 
@@ -735,10 +737,12 @@ export class SubscriptionService {
         limits: plan.limits,
         billingInterval: 'yearly',
         version: 1,
-        isActive: true,
+        // Full-rate annual plans (standard_annual, premium_annual) start inactive.
+        // They are activated by runAnnualPlanMigrationIfDue() in May 2027 to replace intro plans.
+        isActive: plan.isPubliclyVisible !== false,
         sortOrder: plan.sortOrder,
       });
-      console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr)`);
+      console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr, active=${plan.isPubliclyVisible !== false})`);
     }
   }
 
@@ -802,11 +806,17 @@ export class SubscriptionService {
       console.log(`✅ Migrated ${sub.userId}: ${sub.planId} → ${targetPlanId}`);
     }
 
-    // Archive the intro plans after migration
+    // Activate full-rate annual plans so they appear in the pricing UI
+    await db.update(subscriptionPlans)
+      .set({ isActive: true })
+      .where(inArray(subscriptionPlans.planId, ['standard_annual', 'premium_annual']));
+
+    // Archive the intro plans — they will no longer appear in the pricing UI
     await db.update(subscriptionPlans)
       .set({ isActive: false })
       .where(inArray(subscriptionPlans.planId, ['standard_annual_intro', 'premium_annual_intro']));
-    console.log('✅ Annual plan migration complete — intro plans archived');
+
+    console.log('✅ Annual plan migration complete — full-rate plans activated, intro plans archived');
   }
 
   /**

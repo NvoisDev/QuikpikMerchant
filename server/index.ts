@@ -219,6 +219,12 @@ async function runStartupMigrations() {
     `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS internal_note TEXT`,
     `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS is_custom_pricing BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS custom_price_expires_at TIMESTAMP`,
+    // Ensure full-rate annual plans are hidden from public pricing UI until May 2027 migration activates them.
+    // The migration job (runAnnualPlanMigrationIfDue) sets them active and archives intro plans.
+    `UPDATE subscription_plans SET is_active = false
+     WHERE plan_id IN ('standard_annual', 'premium_annual')
+       AND is_active = true
+       AND NOW() < '2027-05-01 00:00:00+00'::timestamptz`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
