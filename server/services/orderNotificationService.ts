@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import { whatsAppBusinessService } from "../whatsapp-simple";
+import { sendWhatsAppMessage } from "./whatsappService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
 import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, emailTable, getEmailLogoUrl, formatPackDescriptor } from "../email-templates";
@@ -121,25 +121,8 @@ export class OrderNotificationService {
    */
   private async sendWhatsAppNotification(notification: OrderStatusNotification, message: string): Promise<void> {
     try {
-      // Get the order to find the wholesaler ID
-      const order = await storage.getOrder(notification.orderId);
-      if (!order) {
-        console.log(`📱 Order ${notification.orderId} not found - skipping WhatsApp notification`);
-        return;
-      }
-
-      // Get wholesaler WhatsApp credentials
-      const wholesaler = await storage.getUser(order.wholesalerId);
-      if (!wholesaler || !(wholesaler as any).whatsappEnabled || !(wholesaler as any).whatsappAccessToken) {
-        console.log(`📱 WhatsApp not configured for wholesaler - skipping WhatsApp notification`);
-        return;
-      }
-
       const formattedPhone = formatPhoneToInternational(notification.customerPhone);
-      await whatsAppBusinessService.sendMessage(formattedPhone, message, {
-        accessToken: (wholesaler as any).whatsappAccessToken,
-        phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
-      });
+      await sendWhatsAppMessage({ to: formattedPhone, message });
       console.log(`💬 WhatsApp notification sent for order ${notification.orderNumber}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp for order ${notification.orderNumber}:`, error);
