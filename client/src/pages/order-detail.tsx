@@ -9,9 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -246,7 +252,6 @@ const isStripePayment = (order: Order): boolean =>
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
-  // Offline payments: no platform fee deducted — wholesaler keeps the full amount
   if (!isStripePayment(order)) return subtotal + deliveryCost;
   const actualPlatformFee = parseFloat(order.platformFee || '0');
   const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : calculatePlatformFee(subtotal + deliveryCost);
@@ -295,6 +300,7 @@ export default function OrderDetail() {
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isSavingQuote, setIsSavingQuote] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
+  const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
 
   const { data: editProducts = [] } = useQuery<SimpleProduct[]>({
     queryKey: ['/api/products'],
@@ -658,6 +664,34 @@ export default function OrderDetail() {
       });
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  const generateAndCopyPaymentLink = async () => {
+    if (!order) return;
+    setIsGeneratingPaymentLink(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/generate-balance-link`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (data.success && data.paymentLink) {
+        try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
+        if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
+        toast({
+          title: data.smsSent ? "Payment Link Sent!" : "Payment Link Copied",
+          description: data.smsSent
+            ? `Customer has been texted the payment link. Link also copied to clipboard.`
+            : `Payment link copied to clipboard.`
+        });
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to generate payment link", variant: "destructive" });
+    } finally {
+      setIsGeneratingPaymentLink(false);
     }
   };
 
@@ -1167,220 +1201,261 @@ export default function OrderDetail() {
     );
   }
 
+  // ─── Sticky action bar logic ───────────────────────────────────────────────
+  const isPaid = order.paymentStatus === 'paid';
+  const isCancelled = order.status === 'cancelled';
+  const isFulfilled = order.status === 'fulfilled';
+  const isReadyForCollection = order.status === 'ready_for_collection';
+  const isPickup = order.fulfillmentType === 'pickup' || order.fulfillmentType === 'collection';
+
+  type PrimaryAction = 'send_payment_link' | 'record_payment' | 'ready_for_collection' | 'mark_fulfilled' | null;
+
+  const getPrimaryAction = (): PrimaryAction => {
+    if (isViewer || isCancelled || isFulfilled) return null;
+    if (!isPaid) {
+      return order.isQuote ? 'send_payment_link' : 'record_payment';
+    }
+    if (isPickup && !isReadyForCollection) return 'ready_for_collection';
+    return 'mark_fulfilled';
+  };
+
+  const primaryAction = getPrimaryAction();
+
+  const primaryActionConfig: Record<NonNullable<PrimaryAction>, { label: string; color: string; icon: React.ReactNode; onClick: () => void; loading?: boolean }> = {
+    send_payment_link: {
+      label: 'Send Payment Link',
+      color: 'bg-blue-600 hover:bg-blue-700',
+      icon: <Link className="h-4 w-4 mr-2" />,
+      onClick: generateAndCopyPaymentLink,
+      loading: isGeneratingPaymentLink,
+    },
+    record_payment: {
+      label: 'Record Payment',
+      color: 'bg-green-600 hover:bg-green-700',
+      icon: <DollarSign className="h-4 w-4 mr-2" />,
+      onClick: openMarkAsPaid,
+    },
+    ready_for_collection: {
+      label: 'Ready for Collection',
+      color: 'bg-orange-500 hover:bg-orange-600',
+      icon: <Clock className="h-4 w-4 mr-2" />,
+      onClick: markReadyForCollection,
+      loading: updatingOrderId === order.id,
+    },
+    mark_fulfilled: {
+      label: 'Mark as Fulfilled',
+      color: 'bg-green-600 hover:bg-green-700',
+      icon: <CheckCircle className="h-4 w-4 mr-2" />,
+      onClick: () => setIsFulfillConfirmOpen(true),
+      loading: updatingOrderId === order.id,
+    },
+  };
+
+  // ─── Main render ──────────────────────────────────────────────────────────
   return (
-    <div className="bg-white min-h-screen">
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4 text-sm pb-20 md:pb-0">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/orders')} className="p-2">
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-3 pb-28 text-sm">
+
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/orders')} className="p-2 -ml-2">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Order {order.orderNumber || `#${order.id}`}</h1>
-            <p className="text-xs text-gray-500">Order ID: {order.id}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-semibold truncate">Order {order.orderNumber || `#${order.id}`}</h1>
+            <p className="text-xs text-gray-400">
+              {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
           </div>
-        </div>
-
-        {/* Action Buttons — top bar */}
-        {order.status !== 'cancelled' && (
-          <div className="flex items-center gap-2 border-b pb-3 flex-wrap">
-            {/* Secondary actions — always visible on all screen sizes */}
-            <div className="flex gap-2 flex-wrap">
-              {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
-                <Button
-                  variant="outline"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-50 min-h-[44px]"
-                  onClick={() => {
-                    const items: EditItem[] = (order.items || []).map(item => ({
-                      productId: item.productId,
-                      productName: item.product?.name || `Product #${item.productId}`,
-                      quantity: item.quantity,
-                      customPrice: parseFloat(item.unitPrice || '0'),
-                      sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
-                      imageUrl: item.product?.imageUrl,
-                    }));
-                    setEditItems(items);
-                    setShowEditMode(true);
-                  }}
-                >
-                  <Pencil className="w-4 h-4 mr-1" />
-                  Edit Invoice
-                </Button>
-              )}
-              {order.status !== 'fulfilled' && !isViewer && (
-                <Button
-                  variant="outline"
-                  className="border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
-                  onClick={() => {
-                    if (order.items) {
-                      setReturnItems(order.items.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
-                        maxQty: item.quantity
-                      })));
-                    }
-                    setShowCancelForm(true);
-                  }}
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Cancel
-                </Button>
-              )}
-            </div>
-            {/* Primary actions — hidden on mobile (shown in sticky bar below), visible on desktop */}
-            <div className="hidden md:flex gap-2 ml-auto">
-              {order.fulfillmentType === 'pickup' &&
-               order.status !== 'ready_for_collection' &&
-               order.status !== 'fulfilled' &&
-               !isViewer && (
-                <Button
-                  onClick={markReadyForCollection}
-                  disabled={updatingOrderId === order.id}
-                  className="bg-orange-500 hover:bg-orange-600 text-white min-h-[44px] disabled:opacity-50"
-                >
-                  <Clock className="h-4 w-4 mr-1" />
-                  {updatingOrderId === order.id ? 'Updating...' : 'Ready for Collection'}
-                </Button>
-              )}
-              {order.status !== 'fulfilled' && !isViewer && (
-                <Button
-                  onClick={() => setIsFulfillConfirmOpen(true)}
-                  disabled={updatingOrderId === order.id}
-                  className="bg-green-600 hover:bg-green-700 text-white min-h-[44px] disabled:opacity-50"
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  {updatingOrderId === order.id ? 'Updating...' : 'Fulfilled'}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Status & Fulfillment */}
-        <div>
-          <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
-          <div className="flex gap-2 flex-wrap">
-            {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
-              <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">Paid</Badge>
-            ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
-              <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-1">Part Paid</Badge>
-            ) : (
-              <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">Unpaid</Badge>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 hover:bg-blue-50 text-xs h-9 px-3"
+                onClick={() => {
+                  const items: EditItem[] = (order.items || []).map(item => ({
+                    productId: item.productId,
+                    productName: item.product?.name || `Product #${item.productId}`,
+                    quantity: item.quantity,
+                    customPrice: parseFloat(item.unitPrice || '0'),
+                    sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
+                    imageUrl: item.product?.imageUrl,
+                  }));
+                  setEditItems(items);
+                  setShowEditMode(true);
+                }}
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1" />
+                Edit
+              </Button>
             )}
-            {order.status === 'fulfilled' ? (
-              <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">Fulfilled</Badge>
-            ) : order.status === 'ready_for_collection' ? (
-              <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1">Ready</Badge>
-            ) : order.status === 'cancelled' ? (
-              <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">Cancelled</Badge>
-            ) : (
-              <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">Unfulfilled</Badge>
-            )}
-            {parseFloat(order.amountRefunded || '0') > 0 && (() => {
-              const refAmt = parseFloat(order.amountRefunded || '0');
-              const paidAmt = parseFloat(order.amountPaid || '0');
-              const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
-              if (!order.refundedAt) {
-                return <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Refund Pending</Badge>;
-              }
-              return isFullRefund
-                ? <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">Refunded</Badge>
-                : <Badge className="bg-amber-100 text-amber-800 text-xs px-2 py-1">Partial Refund</Badge>;
-            })()}
-            {order.fulfillmentType && (
-              <Badge variant="outline" className="text-xs px-2 py-1">
-                {order.fulfillmentType === 'delivery' ? (
-                  <><Truck className="w-3 h-3 mr-1" />Delivery</>
-                ) : (
-                  <><MapPin className="w-3 h-3 mr-1" />Collection</>
-                )}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Business Profile */}
-        {order.businessProfileName && (
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-blue-600 font-medium">Trading As</p>
-              <p className="text-sm font-semibold text-blue-900">{order.businessProfileName}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Customer Information */}
-        <div>
-          <h3 className="font-medium mb-2 text-sm">Customer Information</h3>
-          <div className="space-y-1 text-xs">
-            <div><span className="font-medium">Name:</span> {order.customerName}</div>
-            <div><span className="font-medium">Email:</span> {order.customerEmail}</div>
-            {order.customerPhone && (
-              <div><span className="font-medium">Phone:</span> {order.customerPhone}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Delivery / Collection Address */}
-        {order.fulfillmentType === 'delivery' ? (
-          <div>
-            <h3 className="font-medium mb-3 text-sm">Delivery Address</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <MapPin className="h-4 w-4 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm text-gray-700">
-                  {order.deliveryAddressId ? (
-                    <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
-                  ) : order.deliveryAddress ? (
-                    (() => {
-                      try {
-                        const parsed = JSON.parse(order.deliveryAddress);
-                        if (parsed && typeof parsed === 'object') {
-                          return (
-                            <div>
-                              <div className="font-medium text-gray-900">{parsed.addressLine1}</div>
-                              {parsed.addressLine2 && <div className="text-gray-700">{parsed.addressLine2}</div>}
-                              <div className="text-gray-700">{parsed.city}</div>
-                              <div className="text-gray-700">{parsed.postalCode}</div>
-                              {parsed.country && <div className="text-gray-700">{parsed.country}</div>}
-                            </div>
-                          );
+            {order.status !== 'cancelled' && !isViewer && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={downloadInvoice} disabled={isDownloadingInvoice}>
+                    {isDownloadingInvoice
+                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      : <FileText className="h-4 w-4 mr-2" />}
+                    Download Invoice
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={shareInvoice} disabled={isSharingInvoice}>
+                    {isSharingInvoice
+                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      : <Share2 className="h-4 w-4 mr-2" />}
+                    Share Invoice
+                  </DropdownMenuItem>
+                  {order.status !== 'fulfilled' && (
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => {
+                        if (order.items) {
+                          setReturnItems(order.items.map(item => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
+                            maxQty: item.quantity
+                          })));
                         }
-                      } catch {
-                        return <div className="text-gray-700">{order.deliveryAddress}</div>;
-                      }
-                      return <div className="text-gray-700">{order.deliveryAddress}</div>;
-                    })()
-                  ) : (
-                    <div className="text-gray-500 italic">No delivery address information available</div>
+                        setShowCancelForm(true);
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel Order
+                    </DropdownMenuItem>
                   )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {order.status === 'cancelled' && (
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={downloadInvoice} disabled={isDownloadingInvoice} title="Download Invoice">
+                {isDownloadingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Status badges ──────────────────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex gap-2 flex-wrap">
+              {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
+                <Badge className="bg-green-100 text-green-800 border-0 text-xs">Paid</Badge>
+              ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
+                <Badge className="bg-amber-100 text-amber-800 border-0 text-xs">Part Paid</Badge>
+              ) : (
+                <Badge className="bg-red-100 text-red-800 border-0 text-xs">Unpaid</Badge>
+              )}
+              {order.status === 'fulfilled' ? (
+                <Badge className="bg-blue-100 text-blue-800 border-0 text-xs">Fulfilled</Badge>
+              ) : order.status === 'ready_for_collection' ? (
+                <Badge className="bg-yellow-100 text-yellow-800 border-0 text-xs">Ready for Collection</Badge>
+              ) : order.status === 'cancelled' ? (
+                <Badge className="bg-red-100 text-red-800 border-0 text-xs">Cancelled</Badge>
+              ) : (
+                <Badge className="bg-gray-100 text-gray-600 border-0 text-xs">Unfulfilled</Badge>
+              )}
+              {parseFloat(order.amountRefunded || '0') > 0 && (() => {
+                const refAmt = parseFloat(order.amountRefunded || '0');
+                const paidAmt = parseFloat(order.amountPaid || '0');
+                const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
+                if (!order.refundedAt) {
+                  return <Badge className="bg-amber-100 text-amber-800 border-0 text-xs">Refund Pending</Badge>;
+                }
+                return isFullRefund
+                  ? <Badge className="bg-purple-100 text-purple-800 border-0 text-xs">Refunded</Badge>
+                  : <Badge className="bg-amber-100 text-amber-800 border-0 text-xs">Partial Refund</Badge>;
+              })()}
+              {order.fulfillmentType && (
+                <Badge variant="outline" className="text-xs">
+                  {order.fulfillmentType === 'delivery'
+                    ? <><Truck className="w-3 h-3 mr-1" />Delivery</>
+                    : <><MapPin className="w-3 h-3 mr-1" />Collection</>}
+                </Badge>
+              )}
+            </div>
+            {order.businessProfileName && (
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t">
+                <Building2 className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                <div>
+                  <span className="text-xs text-blue-500">Trading As </span>
+                  <span className="text-xs font-semibold text-blue-900">{order.businessProfileName}</span>
                 </div>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Customer + Fulfillment card ────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-gray-900">Customer</h2>
+            <div className="space-y-1 text-xs text-gray-700">
+              {order.customerName && <div className="font-medium text-sm text-gray-900">{order.customerName}</div>}
+              {order.customerEmail && <div>{order.customerEmail}</div>}
+              {order.customerPhone && <div>{order.customerPhone}</div>}
             </div>
-          </div>
-        ) : (
-          <div>
-            <h3 className="font-medium mb-3 text-sm">Collection Address</h3>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <Package className="h-4 w-4 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm">
-                  <div className="font-medium text-orange-800">Collect from business</div>
-                  <div className="text-orange-700 font-medium mt-1">
+
+            {order.fulfillmentType === 'delivery' ? (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Truck className="h-3.5 w-3.5 text-blue-600" />
+                  <span className="text-xs font-semibold text-gray-900">Delivery Address</span>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                  <div className="text-xs text-gray-700">
+                    {order.deliveryAddressId ? (
+                      <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
+                    ) : order.deliveryAddress ? (
+                      (() => {
+                        try {
+                          const parsed = JSON.parse(order.deliveryAddress);
+                          if (parsed && typeof parsed === 'object') {
+                            return (
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-gray-900">{parsed.addressLine1}</div>
+                                {parsed.addressLine2 && <div>{parsed.addressLine2}</div>}
+                                <div>{parsed.city}</div>
+                                <div>{parsed.postalCode}</div>
+                                {parsed.country && <div>{parsed.country}</div>}
+                              </div>
+                            );
+                          }
+                        } catch {
+                          return <div>{order.deliveryAddress}</div>;
+                        }
+                        return <div>{order.deliveryAddress}</div>;
+                      })()
+                    ) : (
+                      <span className="text-gray-400 italic">No delivery address</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Package className="h-3.5 w-3.5 text-orange-600" />
+                  <span className="text-xs font-semibold text-gray-900">Collection</span>
+                </div>
+                <div className="bg-orange-50 border border-orange-100 rounded-lg p-3">
+                  <div className="text-xs font-medium text-orange-900">
                     {order.wholesalerBusinessName || 'Business Location'}
                   </div>
                   {(() => {
-                    // Use backend-enriched collectionAddress object directly from order response
                     if (order.collectionAddress) {
                       const ca = order.collectionAddress;
                       return (
-                        <div className="flex items-start mt-2 gap-1">
+                        <div className="flex items-start mt-1 gap-1">
                           <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="text-orange-800 text-xs font-medium">{ca.name}</span>
-                            <span className="text-orange-700 text-xs ml-1">— {[ca.addressLine1, ca.addressLine2, ca.city, ca.postcode].filter(Boolean).join(', ')}</span>
+                          <div className="text-xs text-orange-800">
+                            <span className="font-medium">{ca.name}</span>
+                            <span className="ml-1 text-orange-700">— {[ca.addressLine1, ca.addressLine2, ca.city, ca.postcode].filter(Boolean).join(', ')}</span>
                           </div>
                         </div>
                       );
@@ -1390,666 +1465,610 @@ export default function OrderDetail() {
                     const resolvedAddr = pickupAddr || bizAddr;
                     if (resolvedAddr) {
                       return (
-                        <div className="flex items-start mt-2 gap-1">
+                        <div className="flex items-start mt-1 gap-1">
                           <MapPin className="h-3 w-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-orange-700 text-xs">{resolvedAddr}</span>
+                          <span className="text-xs text-orange-700">{resolvedAddr}</span>
                         </div>
                       );
                     }
                     return (
-                      <div className="text-orange-600 text-xs mt-2">
-                        Please contact the business to arrange collection time and get the exact address.
+                      <div className="text-xs text-orange-600 mt-1">
+                        Contact the business to arrange collection time and address.
                       </div>
                     );
                   })()}
                   {(user as AuthUser)?.businessPhone && (
-                    <div className="text-orange-600 text-xs mt-1">
+                    <div className="text-xs text-orange-600 mt-1">
                       Phone: {(user as AuthUser).businessPhone}
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Order Items */}
-        <div>
-          <h3 className="font-medium mb-2 text-sm">Items ({order.items?.length || 0})</h3>
-          <div className="space-y-2">
-            {order.items?.map((item, index) => (
-              <div key={index} className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
-                  {item.product?.unitSize && item.product.unitOfMeasure && (
-                    <div className="text-xs text-gray-400">
-                      {item.product.packQuantity && item.product.packQuantity > 1
-                        ? `${item.product.packQuantity} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
-                        : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`}
+        {/* ── Items card ────────────────────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Items ({order.items?.length || 0})</h2>
+            <div className="space-y-3">
+              {order.items?.map((item, index) => (
+                <div key={index} className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900">{item.product?.name || 'Unknown Product'}</div>
+                    {item.product?.unitSize && item.product.unitOfMeasure && (
+                      <div className="text-xs text-gray-400">
+                        {item.product.packQuantity && item.product.packQuantity > 1
+                          ? `${item.product.packQuantity} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
+                          : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {formatMoney(parseFloat(item.unitPrice))}
                     </div>
-                  )}
-                  <div className="text-xs text-gray-500">
-                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {formatMoney(parseFloat(item.unitPrice))}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.appliedOfferLabel && (
+                        <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                          🎁 {item.appliedOfferLabel}
+                        </span>
+                      )}
+                      {(item.freeItems || 0) > 0 && (
+                        <span className="inline-flex items-center text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                          +{item.freeItems} free
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {item.appliedOfferLabel && (
-                    <span className="inline-flex items-center text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full mt-0.5">
-                      🎁 {item.appliedOfferLabel}
-                    </span>
-                  )}
-                  {(item.freeItems || 0) > 0 && (
-                    <span className="inline-flex items-center text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full mt-0.5 ml-1">
-                      +{item.freeItems} free
-                    </span>
-                  )}
+                  <div className="font-semibold text-sm text-gray-900 flex-shrink-0">
+                    {formatMoney(parseFloat(item.total))}
+                  </div>
                 </div>
-                <div className="font-medium text-sm ml-4">
-                  {formatMoney(parseFloat(item.total))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Payment Summary */}
-        <div>
-          <h3 className="font-medium mb-2 text-sm">Payment Summary</h3>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span>Products:</span>
-              <span>{formatMoney(parseFloat(order.subtotal || '0'))}</span>
+              ))}
             </div>
-            {(() => {
-              const totalWeight = (order.items ?? []).reduce((sum: number, item: any) => {
-                const product = item.product;
-                if (!product) return sum;
-                let weightPerUnit = 0;
-                if (item.sellingType === 'pallets') {
-                  weightPerUnit = parseFloat(product.palletWeight ?? '0') || 0;
-                } else {
-                  // Prefer the stored total package weight (most accurate for a whole pack).
-                  // Fall back to unitWeight × pack quantity for older products that don't have it.
-                  const totalPkgWeight = parseFloat(product.totalPackageWeight ?? '0') || 0;
-                  if (totalPkgWeight > 0) {
-                    weightPerUnit = totalPkgWeight;
+          </CardContent>
+        </Card>
+
+        {/* ── Payment Summary card ──────────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-gray-900">Payment Summary</h2>
+
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Products</span>
+                <span>{formatMoney(parseFloat(order.subtotal || '0'))}</span>
+              </div>
+              {(() => {
+                const totalWeight = (order.items ?? []).reduce((sum: number, item: any) => {
+                  const product = item.product;
+                  if (!product) return sum;
+                  let weightPerUnit = 0;
+                  if (item.sellingType === 'pallets') {
+                    weightPerUnit = parseFloat(product.palletWeight ?? '0') || 0;
                   } else {
-                    const uw = parseFloat(product.unitWeight ?? '0') || 0;
-                    const pq = product.packQuantity || product.quantityInPack || 1;
-                    weightPerUnit = uw * pq;
+                    const totalPkgWeight = parseFloat(product.totalPackageWeight ?? '0') || 0;
+                    if (totalPkgWeight > 0) {
+                      weightPerUnit = totalPkgWeight;
+                    } else {
+                      const uw = parseFloat(product.unitWeight ?? '0') || 0;
+                      const pq = product.packQuantity || product.quantityInPack || 1;
+                      weightPerUnit = uw * pq;
+                    }
                   }
-                }
-                return sum + weightPerUnit * item.quantity;
-              }, 0);
-              if (totalWeight <= 0) return null;
-              return (
-                <div className="flex justify-between text-gray-500">
-                  <span>Total Weight:</span>
-                  <span>{formatWeight(totalWeight)} kg</span>
-                </div>
-              );
-            })()}
-            {parseFloat(order.deliveryCost || '0') > 0 && (
-              <div className="flex justify-between text-blue-700">
-                <span>Delivery:</span>
-                <span>{formatMoney(parseFloat(order.deliveryCost || '0'))}</span>
-              </div>
-            )}
-            {isStripePayment(order) && (
-              <div className="flex justify-between text-red-600">
-                <span>Platform Fee:</span>
-                <span>-{formatMoney(parseFloat(order.platformFee || '0') || calculatePlatformFee(parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')))}</span>
-              </div>
-            )}
-            {parseFloat(order.amountRefunded || '0') > 0 && (() => {
-              const wholesalerTotal = calculateNetAmount(order);
-              const amountPaid = parseFloat(order.amountPaid || '0');
-              const amountRefunded = parseFloat(order.amountRefunded || '0');
-              const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
-              const wholesalerRefund = wholesalerTotal * refundProportion;
-              const isPartialRefund = refundProportion < 0.99;
-              const refundDateStr = order.refundedAt
-                ? new Date(order.refundedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                : ((order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
-                  ? 'pending confirmation'
-                  : null);
-              const retained = wholesalerTotal - wholesalerRefund;
-              return (
-                <>
-                  <div className="flex justify-between text-purple-600">
-                    <div>
-                      <span>{isPartialRefund ? 'Partial Refund:' : 'Refunded:'}</span>
-                      {refundDateStr && <span className="text-xs text-purple-400 ml-1">· {refundDateStr}</span>}
-                    </div>
-                    <span>-{formatMoney(wholesalerRefund)}</span>
+                  return sum + weightPerUnit * item.quantity;
+                }, 0);
+                if (totalWeight <= 0) return null;
+                return (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Total Weight</span>
+                    <span>{formatWeight(totalWeight)} kg</span>
                   </div>
-                  {isPartialRefund && retained > 0 && (
-                    <div className="flex justify-between text-gray-500 text-xs mt-0.5">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span>Retained by customer:</span>
-                        {refundDateStr && <span className="text-gray-400">· {refundDateStr}</span>}
-                        {order.stockRestored && order.stockRestoredCount && order.stockRestoredCount > 0 && (
-                          <span className="text-green-600">· {order.stockRestoredCount} unit{order.stockRestoredCount !== 1 ? 's' : ''} restocked</span>
-                        )}
-                      </div>
-                      <span>{formatMoney(retained)}</span>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-            {order.paymentMethod && (
-              <div className="flex justify-between text-gray-600 text-xs mt-1">
-                <span>Method:</span>
-                <span className="font-medium">{getPaymentMethodLabel(order.paymentMethod)}</span>
-              </div>
-            )}
-            <div className="border-t pt-1 mt-2">
-              <div className="flex justify-between font-medium text-green-600">
-                <span>Your Net Amount:</span>
-                <span>{formatMoney((() => {
-                  if (order.status === 'cancelled' && parseFloat(order.amountRefunded || '0') > 0) return 0;
-                  const wholesalerTotal = calculateNetAmount(order);
-                  const amountPaid = parseFloat(order.amountPaid || '0');
-                  const amountRefunded = parseFloat(order.amountRefunded || '0');
-                  const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 0;
-                  return Math.max(0, wholesalerTotal * (1 - refundProportion));
-                })())}</span>
-              </div>
-            </div>
-            <div className="text-xs text-gray-500 mt-1">{isStripePayment(order) ? 'Amount you receive after platform fee deduction' : 'Amount you receive (no platform fee for offline payments)'}</div>
-          </div>
-        </div>
-
-        {/* Mark as Paid */}
-        {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && !isViewer && (
-          <Button size="sm" variant="outline" className="w-full border-green-600 text-green-700 hover:bg-green-50 text-xs" onClick={openMarkAsPaid}>
-            <DollarSign className="h-3.5 w-3.5 mr-1.5" />
-            Mark as Paid (offline)
-          </Button>
-        )}
-
-        {/* Download Invoice */}
-        <Button size="sm" variant="outline" className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 text-xs" onClick={downloadInvoice} disabled={isDownloadingInvoice}>
-          {isDownloadingInvoice ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 mr-1.5" />}
-          {isDownloadingInvoice ? 'Generating PDF...' : 'Download Invoice'}
-        </Button>
-
-        {/* Share Invoice */}
-        {!isViewer && (
-          <Button size="sm" variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50 text-xs" onClick={shareInvoice} disabled={isSharingInvoice}>
-            {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5 mr-1.5" />}
-            {isSharingInvoice ? 'Sending...' : 'Share Invoice with Customer'}
-          </Button>
-        )}
-
-        {/* Send Invoice via WhatsApp */}
-        {!isViewer && (order.customerPhone || order.retailer?.phoneNumber) && (
-          <Button size="sm" variant="outline" className="w-full border-green-500 text-green-700 hover:bg-green-50 text-xs" onClick={sendInvoiceWhatsApp} disabled={isSendingWhatsApp}>
-            {isSendingWhatsApp ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-1.5" />}
-            {isSendingWhatsApp ? 'Sending...' : 'Send Invoice via WhatsApp'}
-          </Button>
-        )}
-
-        {/* Payment Status Section for Quotes */}
-        {order.isQuote && (() => {
-          const productTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-          const amountPaidRaw = parseFloat(order.amountPaid || '0');
-          // For Stripe payments amountPaid includes customer fee, so use ratio to derive wholesaler amount.
-          // For offline payments amountPaid IS the wholesale amount — use it directly.
-          const wholesalerPaid = isStripePayment(order)
-            ? (() => {
-                const customerTotal = parseFloat(order.total || '0');
-                const paymentRatio = customerTotal > 0 ? amountPaidRaw / customerTotal : 0;
-                return productTotal * paymentRatio;
-              })()
-            : Math.min(amountPaidRaw, productTotal);
-          const wholesalerOutstanding = order.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
-
-          return (
-            <div>
-              <h3 className="font-medium mb-2 text-sm flex items-center">
-                <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-                Payment Status
-              </h3>
-              <div className="bg-gray-50 p-3 rounded text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span>Order Total:</span>
-                  <span className="font-medium">{formatMoney(productTotal)}</span>
+                );
+              })()}
+              {parseFloat(order.deliveryCost || '0') > 0 && (
+                <div className="flex justify-between text-blue-700">
+                  <span>Delivery</span>
+                  <span>{formatMoney(parseFloat(order.deliveryCost || '0'))}</span>
                 </div>
-                {order.depositPercentage && order.depositPercentage > 0 && order.depositPercentage < 100 && (
-                  <div className="flex justify-between text-amber-700">
-                    <span>Deposit ({order.depositPercentage}%):</span>
-                    <span>{formatMoney(productTotal * (order.depositPercentage / 100))}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-green-600">
-                  <span>Amount Paid:</span>
-                  <span className="font-medium">{formatMoney(wholesalerPaid)}</span>
-                </div>
+              )}
+              {isStripePayment(order) && (
                 <div className="flex justify-between text-red-600">
-                  <span>Outstanding Balance:</span>
-                  <span className="font-medium">{formatMoney(wholesalerOutstanding)}</span>
+                  <span>Platform Fee</span>
+                  <span>-{formatMoney(parseFloat(order.platformFee || '0') || calculatePlatformFee(parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')))}</span>
                 </div>
-                {order.balanceDueDays !== undefined && order.balanceDueDays > 0 && wholesalerOutstanding > 0 && (
-                  <div className="flex justify-between text-red-700 font-medium">
-                    <span>Balance Due By:</span>
-                    <span>{new Date(new Date(order.createdAt).getTime() + (order.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  </div>
-                )}
-                <div className="pt-2 border-t flex flex-wrap gap-2">
-                  {parseFloat(order.amountRefunded || '0') > 0 ? (() => {
-                    const refAmt = parseFloat(order.amountRefunded || '0');
-                    const paidAmt = parseFloat(order.amountPaid || '0');
-                    const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
-                    if (order.refundedAt) {
-                      return isFullRefund
-                        ? <Badge className="bg-purple-600 text-white">Refunded</Badge>
-                        : <Badge className="bg-amber-100 text-amber-800">Partial Refund</Badge>;
-                    }
-                    return <Badge className="bg-amber-100 text-amber-800">Refund Pending</Badge>;
-                  })() : (
-                    <Badge className={getPaymentStatusColor(order.paymentStatus || 'unpaid')}>
-                      {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
-                    </Badge>
-                  )}
+              )}
+              {order.paymentMethod && (
+                <div className="flex justify-between text-gray-500">
+                  <span>Method</span>
+                  <span className="font-medium">{getPaymentMethodLabel(order.paymentMethod)}</span>
                 </div>
-                {order.paymentMethod && (
-                  <div className="flex justify-between text-gray-600 text-xs mt-1">
-                    <span>Method:</span>
-                    <span className="font-medium">{getPaymentMethodLabel(order.paymentMethod)}</span>
-                  </div>
-                )}
-
-                {wholesalerOutstanding > 0.01 && !isViewer && (
-                  <div className="pt-2 border-t mt-2 space-y-2">
-                    <Button
-                      size="sm"
-                      className="w-full bg-green-600 hover:bg-green-700 text-xs"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(`/api/orders/${order.id}/generate-balance-link`, {
-                            method: 'POST',
-                            credentials: 'include',
-                          });
-                          const data = await response.json();
-                          if (data.success && data.paymentLink) {
-                            try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
-                            if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
-                            toast({
-                              title: data.smsSent ? "Payment Link Sent!" : "Payment Link Generated",
-                              description: data.smsSent
-                                ? `Customer has been texted the payment link for £${data.amount}. Link also copied to clipboard.`
-                                : `Payment link created and copied to clipboard.`
-                            });
-                          } else {
-                            toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
-                          }
-                        } catch {
-                          toast({ title: "Error", description: "Failed to generate payment link", variant: "destructive" });
-                        }
-                      }}
-                    >
-                      Send Payment Link to Customer
-                    </Button>
-
-                    {order.stripePaymentLinkUrl && (
-                      <div className="bg-gray-50 p-2 rounded border">
-                        <p className="text-xs text-gray-600 mb-1">
-                          {order.paymentStatus === 'part_paid' ? 'Balance Payment Link (tap to copy):' : 'Payment Link (tap to copy):'}
-                        </p>
-                        <div
-                          className="text-xs text-blue-600 break-all cursor-pointer hover:bg-gray-100 p-1 rounded"
-                          onClick={() => { navigator.clipboard.writeText(order.stripePaymentLinkUrl || ''); toast({ title: "Link copied!" }); }}
-                        >
-                          {order.stripePaymentLinkUrl}
+              )}
+              {parseFloat(order.amountRefunded || '0') > 0 && (() => {
+                const wholesalerTotal = calculateNetAmount(order);
+                const amountPaid = parseFloat(order.amountPaid || '0');
+                const amountRefunded = parseFloat(order.amountRefunded || '0');
+                const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 1;
+                const wholesalerRefund = wholesalerTotal * refundProportion;
+                const isPartialRefund = refundProportion < 0.99;
+                const refundDateStr = order.refundedAt
+                  ? new Date(order.refundedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : ((order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
+                    ? 'pending confirmation'
+                    : null);
+                const retained = wholesalerTotal - wholesalerRefund;
+                return (
+                  <>
+                    <div className="flex justify-between text-purple-600">
+                      <div>
+                        <span>{isPartialRefund ? 'Partial Refund' : 'Refunded'}</span>
+                        {refundDateStr && <span className="text-purple-400 ml-1">· {refundDateStr}</span>}
+                      </div>
+                      <span>-{formatMoney(wholesalerRefund)}</span>
+                    </div>
+                    {isPartialRefund && retained > 0 && (
+                      <div className="flex justify-between text-gray-500">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span>Retained by customer</span>
+                          {refundDateStr && <span className="text-gray-400">· {refundDateStr}</span>}
+                          {order.stockRestored && order.stockRestoredCount && order.stockRestoredCount > 0 && (
+                            <span className="text-green-600">· {order.stockRestoredCount} unit{order.stockRestoredCount !== 1 ? 's' : ''} restocked</span>
+                          )}
                         </div>
-                        {order.paymentStatus === 'part_paid' && (
-                          <p className="text-xs text-orange-600 mt-1">Note: Click "Send Payment Link" above to generate a fresh link if this one has expired.</p>
-                        )}
+                        <span>{formatMoney(retained)}</span>
                       </div>
                     )}
-                    {!order.stripePaymentLinkUrl && order.paymentStatus === 'part_paid' && (
-                      <p className="text-xs text-gray-500 mt-1">Click the button above to generate a payment link for the outstanding balance.</p>
-                    )}
-                  </div>
-                )}
+                  </>
+                );
+              })()}
+              <div className="border-t pt-2 mt-1">
+                <div className="flex justify-between font-semibold text-green-700 text-sm">
+                  <span>Your Net Amount</span>
+                  <span>{formatMoney((() => {
+                    if (order.status === 'cancelled' && parseFloat(order.amountRefunded || '0') > 0) return 0;
+                    const wholesalerTotal = calculateNetAmount(order);
+                    const amountPaid = parseFloat(order.amountPaid || '0');
+                    const amountRefunded = parseFloat(order.amountRefunded || '0');
+                    const refundProportion = amountPaid > 0 ? Math.min(amountRefunded / amountPaid, 1) : 0;
+                    return Math.max(0, wholesalerTotal * (1 - refundProportion));
+                  })())}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {isStripePayment(order) ? 'After platform fee' : 'No platform fee for offline payments'}
+                </div>
               </div>
             </div>
-          );
-        })()}
 
-        {/* Order Photos */}
-        <div>
-          <h3 className="font-medium mb-2 text-sm flex items-center">
-            <Camera className="h-4 w-4 mr-2 text-green-600" />
-            Order Photos
-          </h3>
-          <div className="space-y-3">
-            {!isViewer && (
-            <div>
-              <input
-                type="file"
-                id={`order-photo-upload-${order.id}`}
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files || []);
-                  if (!files.length) return;
-                  for (const file of files) {
-                    if (file.size > 10485760) {
-                      toast({ title: "File too large", description: `${file.name} exceeds 10MB`, variant: "destructive" });
-                      continue;
-                    }
-                    try {
-                      await uploadOrderPhoto(file);
-                    } catch (err) {
-                      const message = err instanceof Error ? err.message : 'Please try again.';
-                      toast({ title: "Upload Failed", description: message, variant: "destructive" });
-                    }
-                  }
-                  e.target.value = '';
-                }}
-              />
+            {/* Offline payment — mark as paid */}
+            {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && !isViewer && (
               <Button
-                className="w-full text-xs bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => document.getElementById(`order-photo-upload-${order.id}`)?.click()}
+                size="sm"
+                variant="outline"
+                className="w-full border-green-600 text-green-700 hover:bg-green-50 min-h-[44px]"
+                onClick={openMarkAsPaid}
               >
-                <Camera className="h-3 w-3 mr-2" />
-                Add Photo
+                <DollarSign className="h-4 w-4 mr-1.5" />
+                Record Offline Payment
               </Button>
-            </div>
             )}
 
-            {order.orderImages && order.orderImages.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {order.orderImages.map((image) => (
-                  <div key={image.id} className="relative group">
-                    <img
-                      src={image.url}
-                      alt={image.filename}
-                      className="w-full h-20 object-cover rounded border cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(image.url, '_blank')}
-                    />
-                    {!isViewer && (
-                    <button
-                      onClick={() => handleDeletePhoto(image.id)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                      title="Delete photo"
-                    >
-                      ×
-                    </button>
-                    )}
-                    <div className="text-xs text-gray-500 mt-1 truncate">{image.filename}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-dashed">
-                <div className="flex items-center justify-center">
-                  <ImageIcon className="h-4 w-4 mr-2 text-gray-400" />
-                  No photos uploaded yet
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            {/* Quote payment status + payment link */}
+            {order.isQuote && (() => {
+              const productTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+              const amountPaidRaw = parseFloat(order.amountPaid || '0');
+              const wholesalerPaid = isStripePayment(order)
+                ? (() => {
+                    const customerTotal = parseFloat(order.total || '0');
+                    const paymentRatio = customerTotal > 0 ? amountPaidRaw / customerTotal : 0;
+                    return productTotal * paymentRatio;
+                  })()
+                : Math.min(amountPaidRaw, productTotal);
+              const wholesalerOutstanding = order.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
 
-        {/* Order Timeline */}
-        <div className="bg-transparent">
-          <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
-          <div className="space-y-2">
-            {(() => {
-              const hasPaid = parseFloat(order.amountPaid || '0') > 0;
-              const hasDeposit = order.depositPercentage && order.depositPercentage > 0 && order.depositPercentage < 100;
-              const pTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
               return (
-                <div className="flex items-start gap-2">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 ${hasPaid ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <div>
-                    <div className={`text-xs ${hasPaid ? 'font-medium' : 'text-gray-500'}`}>
-                      {hasDeposit
-                        ? (hasPaid ? `Deposit received (${order.depositPercentage}%)` : `Awaiting deposit payment (${order.depositPercentage}%)`)
-                        : (hasPaid ? 'Payment received' : 'Awaiting payment')}
+                <div className="border-t pt-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-gray-500">Order Total</div>
+                      <div className="font-semibold text-gray-900 text-sm">{formatMoney(productTotal)}</div>
                     </div>
-                    {hasPaid && (
-                      <div className="text-xs text-gray-500">
-                        {hasDeposit
-                          ? formatMoney(pTotal * ((order.depositPercentage || 0) / 100))
-                          : formatMoney(pTotal)}
-                        {' • '}{new Date(order.createdAt).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {order.depositPercentage && order.depositPercentage > 0 && order.depositPercentage < 100 && order.status !== 'cancelled' && (() => {
-              const prodTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
-              const custTotal = parseFloat(order.total || '0');
-              const paidRatio = custTotal > 0 ? parseFloat(order.amountPaid || '0') / custTotal : 0;
-              const wPaid = prodTotal * paidRatio;
-              const wOutstanding = prodTotal - wPaid;
-              const isFullyPaid = parseFloat(order.amountPaid || '0') >= custTotal;
-              const depositAmt = prodTotal * (order.depositPercentage / 100);
-              return (
-                <div className="flex items-start gap-2">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 ${isFullyPaid ? 'bg-green-500' : 'bg-orange-400'}`}></div>
-                  <div>
-                    <div className={`text-xs ${isFullyPaid ? 'font-medium' : 'text-orange-600'}`}>
-                      {isFullyPaid
-                        ? 'Balance payment received'
-                        : `Balance outstanding: ${formatMoney(wOutstanding)}`}
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-gray-500">Amount Paid</div>
+                      <div className="font-semibold text-green-700 text-sm">{formatMoney(wholesalerPaid)}</div>
                     </div>
-                    {isFullyPaid && (
-                      <div className="text-xs text-gray-500">
-                        {formatMoney(prodTotal - depositAmt)} • Full payment complete
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {order.status !== 'cancelled' && (
-              <div className="flex items-start gap-2">
-                <div className={`w-2 h-2 rounded-full mt-1.5 ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <div>
-                  <div className={`text-xs ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'font-medium' : 'text-gray-500'}`}>
-                    {order.fulfillmentType === 'pickup' ? 'Ready for Collection' : 'Ready for Delivery'}
-                  </div>
-                  {order.readyToCollectAt && (
-                    <div className="text-xs text-gray-500">
-                      {new Date(order.readyToCollectAt).toLocaleDateString()} at {new Date(order.readyToCollectAt).toLocaleTimeString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {order.status !== 'cancelled' && (
-              <div className="flex items-start gap-2">
-                <div className={`w-2 h-2 rounded-full mt-1.5 ${order.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <div>
-                  <div className={`text-xs ${order.status === 'fulfilled' ? 'font-medium' : 'text-gray-500'}`}>
-                    {order.fulfillmentType === 'pickup' ? 'Collected' : 'Delivered'}
-                  </div>
-                  {order.status === 'fulfilled' && order.fulfilledAt && (
-                    <div className="text-xs text-gray-500">
-                      {new Date(order.fulfilledAt).toLocaleDateString()} at {new Date(order.fulfilledAt).toLocaleTimeString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {order.cancellationRequest && (
-              <div className="flex items-start gap-2">
-                <div className={`w-2 h-2 rounded-full mt-1.5 ${order.cancellationRequest.status === 'pending' ? 'bg-orange-500' : 'bg-orange-400'}`}></div>
-                <div>
-                  <div className={`text-xs font-medium ${order.cancellationRequest.status === 'pending' ? 'text-orange-700' : 'text-orange-600'}`}>
-                    Cancellation Requested
-                    {order.cancellationRequest.status === 'pending' && <span className="ml-1 text-orange-500">(Pending Review)</span>}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(order.cancellationRequest.requestedAt).toLocaleDateString()} at {new Date(order.cancellationRequest.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Reason: {order.cancellationRequest.reasonCategory.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    {order.cancellationRequest.reasonNotes && ` - ${order.cancellationRequest.reasonNotes}`}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {order.cancellationRequest?.status === 'approved' && (
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
-                <div>
-                  <div className="text-xs font-medium text-green-700">Cancellation Approved</div>
-                  {order.cancellationRequest.respondedAt && (
-                    <div className="text-xs text-gray-500">
-                      {new Date(order.cancellationRequest.respondedAt).toLocaleDateString()} at {new Date(order.cancellationRequest.respondedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {order.cancellationRequest?.status === 'rejected' && (
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 rounded-full mt-1.5 bg-red-400"></div>
-                <div>
-                  <div className="text-xs font-medium text-red-600">Cancellation Declined</div>
-                  {order.cancellationRequest.respondedAt && (
-                    <div className="text-xs text-gray-500">{new Date(order.cancellationRequest.respondedAt).toLocaleDateString()}</div>
-                  )}
-                  {order.cancellationRequest.responseMessage && (
-                    <div className="text-xs text-gray-500">{order.cancellationRequest.responseMessage}</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {parseFloat(order.amountRefunded || '0') > 0 && (() => {
-              const refundedAmt = parseFloat(order.amountRefunded || '0');
-              const paidAmt = parseFloat(order.amountPaid || '0');
-              const isPartial = paidAmt > 0 && refundedAmt < paidAmt;
-              const isProcessed = !!order.refundedAt;
-              const canRetry = !isProcessed && !!order.stripePaymentIntentId;
-              const label = isPartial
-                ? (isProcessed ? 'Partial refund to card' : 'Partial refund pending')
-                : (isProcessed ? 'Refund to card' : 'Refund pending');
-              const dotColor = isProcessed ? 'bg-purple-500' : 'bg-amber-400';
-              const textColor = isProcessed ? 'text-purple-700' : 'text-amber-700';
-              return (
-                <div className="flex items-start gap-2">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 ${dotColor}`}></div>
-                  <div>
-                    <div className={`text-xs font-medium ${textColor}`}>
-                      {label}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {isProcessed
-                        ? new Date(order.refundedAt!).toLocaleDateString()
-                        : (order.notes || '').includes('Refund failed:')
-                          ? 'Sent to Stripe but failed — use Retry'
-                          : (order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
-                            ? 'Refund pending Stripe confirmation'
-                            : 'Not yet sent to Stripe'}
-                    </div>
-                    {order.refundReason && !order.cancellationRequest && (
-                      <div className="text-xs text-gray-400 mt-0.5">{order.refundReason}</div>
-                    )}
-                    {canRetry && !isViewer && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        <button
-                          onClick={retryRefund}
-                          disabled={isRetryingRefund || isMarkingRefunded}
-                          className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
-                        >
-                          {isRetryingRefund ? 'Sending...' : 'Retry Refund to Card'}
-                        </button>
-                        {order.status === 'cancelled' && (
-                          <button
-                            onClick={markAsRefunded}
-                            disabled={isMarkingRefunded || isRetryingRefund}
-                            className="text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
-                          >
-                            {isMarkingRefunded ? 'Saving...' : 'Mark Refunded'}
-                          </button>
+                    {wholesalerOutstanding > 0.01 && (
+                      <div className="bg-red-50 rounded p-2 col-span-2">
+                        <div className="text-red-500">Outstanding Balance</div>
+                        <div className="font-bold text-red-700 text-sm">{formatMoney(wholesalerOutstanding)}</div>
+                        {order.balanceDueDays !== undefined && order.balanceDueDays > 0 && (
+                          <div className="text-red-400 mt-0.5">
+                            Due by {new Date(new Date(order.createdAt).getTime() + (order.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
                         )}
                       </div>
                     )}
                   </div>
+
+                  <div className="pt-1">
+                    {parseFloat(order.amountRefunded || '0') > 0 ? (() => {
+                      const refAmt = parseFloat(order.amountRefunded || '0');
+                      const paidAmt = parseFloat(order.amountPaid || '0');
+                      const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
+                      if (order.refundedAt) {
+                        return isFullRefund
+                          ? <Badge className="bg-purple-100 text-purple-800 border-0">Refunded</Badge>
+                          : <Badge className="bg-amber-100 text-amber-800 border-0">Partial Refund</Badge>;
+                      }
+                      return <Badge className="bg-amber-100 text-amber-800 border-0">Refund Pending</Badge>;
+                    })() : (
+                      <Badge className={getPaymentStatusColor(order.paymentStatus || 'unpaid') + ' border-0'}>
+                        {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {wholesalerOutstanding > 0.01 && !isViewer && (
+                    <div className="space-y-2">
+                      <Button
+                        size="sm"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px]"
+                        onClick={generateAndCopyPaymentLink}
+                        disabled={isGeneratingPaymentLink}
+                      >
+                        {isGeneratingPaymentLink
+                          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+                          : <><Copy className="h-4 w-4 mr-2" />Copy Payment Link</>}
+                      </Button>
+                      {(order.customerPhone || order.retailer?.phoneNumber) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-green-500 text-green-700 hover:bg-green-50 min-h-[44px]"
+                          onClick={sendInvoiceWhatsApp}
+                          disabled={isSendingWhatsApp}
+                        >
+                          {isSendingWhatsApp
+                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                            : <><MessageCircle className="h-4 w-4 mr-2" />Share via WhatsApp</>}
+                        </Button>
+                      )}
+                      {order.stripePaymentLinkUrl && (
+                        <div
+                          className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(order.stripePaymentLinkUrl || '');
+                            toast({ title: "Link copied!" });
+                          }}
+                        >
+                          <Link className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                          <span className="text-xs text-blue-600 truncate">{order.stripePaymentLinkUrl}</span>
+                          <Copy className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 ml-auto" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })()}
+          </CardContent>
+        </Card>
 
-            {order.status === 'cancelled' && (
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
+        {/* ── Order Photos card ─────────────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
+              <Camera className="h-4 w-4 text-gray-500" />
+              Order Photos
+            </h2>
+            <div className="space-y-3">
+              {!isViewer && (
                 <div>
-                  <div className="text-xs font-medium text-red-700">Order Cancelled</div>
-                  {order.cancelledAt && (
-                    <div className="text-xs text-gray-500">
-                      {new Date(order.cancelledAt).toLocaleDateString()} at {new Date(order.cancelledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
-                  {order.refundReason && !order.cancellationRequest && (
-                    <div className="text-xs text-gray-500">{order.refundReason}</div>
-                  )}
+                  <input
+                    type="file"
+                    id={`order-photo-upload-${order.id}`}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (!files.length) return;
+                      for (const file of files) {
+                        if (file.size > 10485760) {
+                          toast({ title: "File too large", description: `${file.name} exceeds 10MB`, variant: "destructive" });
+                          continue;
+                        }
+                        try {
+                          await uploadOrderPhoto(file);
+                        } catch (err) {
+                          const message = err instanceof Error ? err.message : 'Please try again.';
+                          toast({ title: "Upload Failed", description: message, variant: "destructive" });
+                        }
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-dashed min-h-[44px]"
+                    onClick={() => document.getElementById(`order-photo-upload-${order.id}`)?.click()}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Add Photo
+                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+              {order.orderImages && order.orderImages.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {order.orderImages.map((image) => (
+                    <div key={image.id} className="relative group">
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="w-full h-24 object-cover rounded-lg border cursor-pointer hover:opacity-90"
+                        onClick={() => window.open(image.url, '_blank')}
+                      />
+                      {!isViewer && (
+                        <button
+                          onClick={() => handleDeletePhoto(image.id)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          title="Delete photo"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-4 text-xs text-gray-400">
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  No photos yet
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Quote Activity Log — lazy-loaded, visible only for quotes */}
+        {/* ── Order Timeline card ───────────────────────────────────────── */}
+        <Card className="border shadow-sm">
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Order Timeline</h2>
+            <div className="space-y-2.5">
+              {(() => {
+                const hasPaid = parseFloat(order.amountPaid || '0') > 0;
+                const hasDeposit = order.depositPercentage && order.depositPercentage > 0 && order.depositPercentage < 100;
+                const pTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+                return (
+                  <div className="flex items-start gap-2">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${hasPaid ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <div>
+                      <div className={`text-xs ${hasPaid ? 'font-medium text-gray-900' : 'text-gray-500'}`}>
+                        {hasDeposit
+                          ? (hasPaid ? `Deposit received (${order.depositPercentage}%)` : `Awaiting deposit (${order.depositPercentage}%)`)
+                          : (hasPaid ? 'Payment received' : 'Awaiting payment')}
+                      </div>
+                      {hasPaid && (
+                        <div className="text-xs text-gray-500">
+                          {hasDeposit
+                            ? formatMoney(pTotal * ((order.depositPercentage || 0) / 100))
+                            : formatMoney(pTotal)}
+                          {' · '}{new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {order.depositPercentage && order.depositPercentage > 0 && order.depositPercentage < 100 && order.status !== 'cancelled' && (() => {
+                const prodTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
+                const custTotal = parseFloat(order.total || '0');
+                const paidRatio = custTotal > 0 ? parseFloat(order.amountPaid || '0') / custTotal : 0;
+                const wPaid = prodTotal * paidRatio;
+                const wOutstanding = prodTotal - wPaid;
+                const isFullyPaid = parseFloat(order.amountPaid || '0') >= custTotal;
+                const depositAmt = prodTotal * (order.depositPercentage / 100);
+                return (
+                  <div className="flex items-start gap-2">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isFullyPaid ? 'bg-green-500' : 'bg-orange-400'}`}></div>
+                    <div>
+                      <div className={`text-xs ${isFullyPaid ? 'font-medium text-gray-900' : 'text-orange-600'}`}>
+                        {isFullyPaid
+                          ? 'Balance payment received'
+                          : `Balance outstanding: ${formatMoney(wOutstanding)}`}
+                      </div>
+                      {isFullyPaid && (
+                        <div className="text-xs text-gray-500">
+                          {formatMoney(prodTotal - depositAmt)} · Full payment complete
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {order.status !== 'cancelled' && (
+                <div className="flex items-start gap-2">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div>
+                    <div className={`text-xs ${['ready_for_collection', 'fulfilled'].includes(order.status) ? 'font-medium text-gray-900' : 'text-gray-500'}`}>
+                      {isPickup ? 'Ready for Collection' : 'Ready for Delivery'}
+                    </div>
+                    {order.readyToCollectAt && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(order.readyToCollectAt).toLocaleDateString()} at {new Date(order.readyToCollectAt).toLocaleTimeString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {order.status !== 'cancelled' && (
+                <div className="flex items-start gap-2">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${order.status === 'fulfilled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div>
+                    <div className={`text-xs ${order.status === 'fulfilled' ? 'font-medium text-gray-900' : 'text-gray-500'}`}>
+                      {isPickup ? 'Collected' : 'Delivered'}
+                    </div>
+                    {order.status === 'fulfilled' && order.fulfilledAt && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(order.fulfilledAt).toLocaleDateString()} at {new Date(order.fulfilledAt).toLocaleTimeString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {order.cancellationRequest && (
+                <div className="flex items-start gap-2">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${order.cancellationRequest.status === 'pending' ? 'bg-orange-500' : 'bg-orange-400'}`}></div>
+                  <div>
+                    <div className={`text-xs font-medium ${order.cancellationRequest.status === 'pending' ? 'text-orange-700' : 'text-orange-600'}`}>
+                      Cancellation Requested
+                      {order.cancellationRequest.status === 'pending' && <span className="ml-1 text-orange-500">(Pending Review)</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(order.cancellationRequest.requestedAt).toLocaleDateString()} at {new Date(order.cancellationRequest.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Reason: {order.cancellationRequest.reasonCategory.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      {order.cancellationRequest.reasonNotes && ` - ${order.cancellationRequest.reasonNotes}`}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {order.cancellationRequest?.status === 'approved' && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-green-500"></div>
+                  <div>
+                    <div className="text-xs font-medium text-green-700">Cancellation Approved</div>
+                    {order.cancellationRequest.respondedAt && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(order.cancellationRequest.respondedAt).toLocaleDateString()} at {new Date(order.cancellationRequest.respondedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {order.cancellationRequest?.status === 'rejected' && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-400"></div>
+                  <div>
+                    <div className="text-xs font-medium text-red-600">Cancellation Declined</div>
+                    {order.cancellationRequest.respondedAt && (
+                      <div className="text-xs text-gray-500">{new Date(order.cancellationRequest.respondedAt).toLocaleDateString()}</div>
+                    )}
+                    {order.cancellationRequest.responseMessage && (
+                      <div className="text-xs text-gray-500">{order.cancellationRequest.responseMessage}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {parseFloat(order.amountRefunded || '0') > 0 && (() => {
+                const refundedAmt = parseFloat(order.amountRefunded || '0');
+                const paidAmt = parseFloat(order.amountPaid || '0');
+                const isPartial = paidAmt > 0 && refundedAmt < paidAmt;
+                const isProcessed = !!order.refundedAt;
+                const canRetry = !isProcessed && !!order.stripePaymentIntentId;
+                const label = isPartial
+                  ? (isProcessed ? 'Partial refund to card' : 'Partial refund pending')
+                  : (isProcessed ? 'Refund to card' : 'Refund pending');
+                const dotColor = isProcessed ? 'bg-purple-500' : 'bg-amber-400';
+                const textColor = isProcessed ? 'text-purple-700' : 'text-amber-700';
+                return (
+                  <div className="flex items-start gap-2">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`}></div>
+                    <div>
+                      <div className={`text-xs font-medium ${textColor}`}>{label}</div>
+                      <div className="text-xs text-gray-500">
+                        {isProcessed
+                          ? new Date(order.refundedAt!).toLocaleDateString()
+                          : (order.notes || '').includes('Refund failed:')
+                            ? 'Sent to Stripe but failed — use Retry'
+                            : (order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
+                              ? 'Refund pending Stripe confirmation'
+                              : 'Not yet sent to Stripe'}
+                      </div>
+                      {order.refundReason && !order.cancellationRequest && (
+                        <div className="text-xs text-gray-400 mt-0.5">{order.refundReason}</div>
+                      )}
+                      {canRetry && !isViewer && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          <button
+                            onClick={retryRefund}
+                            disabled={isRetryingRefund || isMarkingRefunded}
+                            className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
+                          >
+                            {isRetryingRefund ? 'Sending...' : 'Retry Refund to Card'}
+                          </button>
+                          {order.status === 'cancelled' && (
+                            <button
+                              onClick={markAsRefunded}
+                              disabled={isMarkingRefunded || isRetryingRefund}
+                              className="text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 px-2.5 py-1 rounded-md transition-colors"
+                            >
+                              {isMarkingRefunded ? 'Saving...' : 'Mark Refunded'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {order.status === 'cancelled' && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-500"></div>
+                  <div>
+                    <div className="text-xs font-medium text-red-700">Order Cancelled</div>
+                    {order.cancelledAt && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(order.cancelledAt).toLocaleDateString()} at {new Date(order.cancelledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                    {order.refundReason && !order.cancellationRequest && (
+                      <div className="text-xs text-gray-500">{order.refundReason}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Activity & History ────────────────────────────────────────── */}
         {order.isQuote && (
-          <div className="px-4 pb-4">
-            <QuoteActivityLog orderId={order.id} />
-          </div>
+          <Card className="border shadow-sm">
+            <CardContent className="px-4 py-3">
+              <QuoteActivityLog orderId={order.id} />
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Mobile sticky bottom bar — primary actions only, hidden on desktop */}
-      {order.status !== 'cancelled' && !isViewer && (
-        (() => {
-          const showReadyForCollection =
-            order.fulfillmentType === 'pickup' &&
-            order.status !== 'ready_for_collection' &&
-            order.status !== 'fulfilled';
-          const showFulfilled = order.status !== 'fulfilled';
-          if (!showReadyForCollection && !showFulfilled) return null;
-          return (
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 flex gap-3 z-50">
-              {showReadyForCollection && (
-                <Button
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl min-h-[44px] disabled:opacity-50"
-                  onClick={markReadyForCollection}
-                  disabled={updatingOrderId === order.id}
-                >
-                  <Clock className="h-4 w-4 mr-1" />
-                  {updatingOrderId === order.id ? 'Updating...' : 'Ready for Collection'}
-                </Button>
-              )}
-              {showFulfilled && (
-                <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-2xl min-h-[44px] disabled:opacity-50"
-                  onClick={() => setIsFulfillConfirmOpen(true)}
-                  disabled={updatingOrderId === order.id}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  {updatingOrderId === order.id ? 'Updating...' : 'Fulfilled'}
-                </Button>
-              )}
-            </div>
-          );
-        })()
+      {/* ── Sticky action bar ─────────────────────────────────────────────── */}
+      {primaryAction && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50">
+          <div className="max-w-lg mx-auto">
+            <Button
+              className={`w-full text-white min-h-[48px] rounded-xl text-sm font-semibold ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
+              onClick={primaryActionConfig[primaryAction].onClick}
+              disabled={!!(primaryActionConfig[primaryAction].loading) || updatingOrderId === order.id}
+            >
+              {primaryActionConfig[primaryAction].loading
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Working...</>
+                : <>{primaryActionConfig[primaryAction].icon}{primaryActionConfig[primaryAction].label}</>}
+            </Button>
+          </div>
+        </div>
       )}
 
-      {/* Fulfill Confirmation Dialog */}
+      {/* ── Fulfill Confirmation Dialog ───────────────────────────────────── */}
       <Dialog open={isFulfillConfirmOpen} onOpenChange={setIsFulfillConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -2082,7 +2101,7 @@ export default function OrderDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Paid Dialog */}
+      {/* ── Mark as Paid Dialog ───────────────────────────────────────────── */}
       <Dialog open={isMarkAsPaidOpen} onOpenChange={setIsMarkAsPaidOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
