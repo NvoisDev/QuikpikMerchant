@@ -2,7 +2,7 @@ import { db } from './db';
 import { orders, users, orderItems, products } from '@shared/schema';
 import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
 import { sendPaymentReminderEmail } from './sendgrid-service';
-import { sendSMS } from './services/smsService';
+import { sendWhatsAppMessage } from './services/whatsappService';
 import { getStripeClient } from './stripeConfig';
 
 interface OrderWithPaymentTerms {
@@ -221,8 +221,8 @@ async function sendPaymentReminder(
         smsMessage = `Hi ${firstName}, overdue notice: £${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately:${paymentLink ? ` ${paymentLink}` : ' contact us.'}`;
       }
       
-      await sendSMS({ to: order.customerPhone, message: smsMessage });
-      console.log(`✅ SMS reminder sent to ${order.customerPhone} for order ${orderRef}`);
+      await sendWhatsAppMessage({ to: order.customerPhone, message: smsMessage });
+      console.log(`✅ WhatsApp reminder sent to ${order.customerPhone} for order ${orderRef}`);
     } catch (error) {
       console.error(`❌ Failed to send SMS reminder for order ${orderRef}:`, error);
     }

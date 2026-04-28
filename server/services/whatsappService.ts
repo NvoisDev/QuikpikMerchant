@@ -38,10 +38,12 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
 
     console.log(`📱 Sending WhatsApp message from ${fromNumber} to ${toNumber}`);
     
+    const DO_NOT_REPLY_FOOTER = '\n\n─────────────────\n⚠️ Please do not reply to this number. This is an automated message.';
+
     await client.messages.create({
       from: fromNumber,
       to: toNumber,
-      body: message
+      body: message + DO_NOT_REPLY_FOOTER
     });
 
     console.log(`✅ WhatsApp message sent successfully to ${formattedPhone}`);

@@ -2,7 +2,6 @@ import { db } from "../db";
 import { products, users, teamMembers } from "../../shared/schema";
 import { eq, lt, and, or, isNull, lte, inArray } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
-import { ReliableSMSService } from "../sms-service";
 import { whatsAppBusinessService } from "../whatsapp-simple";
 import { wrapCustomerEmail, emailHeading, emailCard, emailButton } from "../email-templates";
 
@@ -20,12 +19,6 @@ export interface StockAlert {
 }
 
 export class StockAlertService {
-  private smsService: ReliableSMSService;
-
-  constructor() {
-    this.smsService = new ReliableSMSService();
-  }
-
   /**
    * Check all products for low stock and send alerts to wholesalers
    */
@@ -145,7 +138,6 @@ export class StockAlertService {
     // Send to account owner via all available channels
     await Promise.allSettled([
       this.sendEmailAlert(wholesaler, messages.email),
-      this.sendSMSAlert(wholesaler, alerts),
       this.sendWhatsAppAlert(wholesaler, messages.whatsapp)
     ]);
 
@@ -167,7 +159,7 @@ export class StockAlertService {
         const memberAlertOverride = { ...wholesaler, wholesalerEmail: member.email };
         await this.sendEmailAlert(memberAlertOverride, messages.email);
         if (member.phoneNumber) {
-          await this.sendSMSAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, alerts);
+          await this.sendWhatsAppAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, messages.whatsapp);
         }
       }
 
@@ -252,33 +244,6 @@ export class StockAlertService {
       console.log(`📧 Email stock alert sent to ${wholesaler.wholesalerName}`);
     } catch (error) {
       console.error(`❌ Failed to send email stock alert to ${wholesaler.wholesalerName}:`, error);
-    }
-  }
-
-  /**
-   * Send SMS alert
-   */
-  private async sendSMSAlert(wholesaler: StockAlert, alerts: StockAlert[]): Promise<void> {
-    if (!wholesaler.wholesalerPhone) {
-      console.log(`📱 No phone number for ${wholesaler.wholesalerName} - skipping SMS alert`);
-      return;
-    }
-
-    try {
-      const result = await ReliableSMSService.sendStockAlertSMS(
-        wholesaler.wholesalerPhone, 
-        wholesaler.wholesalerName, 
-        'low_stock', 
-        alerts.length,
-        wholesaler.wholesalerId
-      );
-      if (result.success) {
-        console.log(`📱 SMS stock alert sent to ${wholesaler.wholesalerName}`);
-      } else {
-        console.error(`❌ Failed to send SMS stock alert to ${wholesaler.wholesalerName}: ${result.error}`);
-      }
-    } catch (error) {
-      console.error(`❌ Failed to send SMS stock alert to ${wholesaler.wholesalerName}:`, error);
     }
   }
 

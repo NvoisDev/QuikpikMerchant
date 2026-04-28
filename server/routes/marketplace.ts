@@ -9,7 +9,7 @@ import {
   getCurrencySymbol, getEmailLogoUrl, getUserPlanLimits, gte, inArray, like,
   multiWholesalerService, or, orderCancellationRequests, orderItems, orders,
   formatPackDescriptor, parseCustomerName, products, quickOrderService, requireAuth, sendCustomerInvoiceEmail,
-  sendEmail, sendSMS, sendWelcomeMessages, sql, storage, sum, users, validatePhoneNumber,
+  sendEmail, sendWhatsAppMessage, sendWelcomeMessages, sql, storage, sum, users, validatePhoneNumber,
   getStripeClient, isLiveMode, getPublishableKey,
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
@@ -2276,9 +2276,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         const wholesaler = await storage.getUser(order.wholesalerId);
         const customerName = (order as any).customerName || customerPhone;
         
-        // SMS notification
+        // WhatsApp notification to wholesaler
         if (wholesaler?.phoneNumber) {
-          await sendSMS({
+          await sendWhatsAppMessage({
             to: wholesaler.phoneNumber,
             message: `🔔 Cancellation Request: Customer ${customerName} has requested to cancel order ${order.orderNumber}. Reason: ${reasonCategory}. Please review in your dashboard.`,
           });

@@ -9,7 +9,7 @@ import {
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
   orderNotificationService, orderPhotoUpload, orders, products,
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
-  sendRefundReceipt, sendSMS, sgMail, sql, stockMovements, storage, sum,
+  sendRefundReceipt, sendWhatsAppMessage, sgMail, sql, stockMovements, storage, sum,
   getStripeClient, isLiveMode,
   wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate
 } from "./shared";
@@ -388,15 +388,15 @@ export function registerOrderRoutes(app: Express): void {
             ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!${itemsList}\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
             : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!${itemsList}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
           
-          const smsSent = await sendSMS({
+          const smsSent = await sendWhatsAppMessage({
             to: customer.phoneNumber,
             message: smsMessage
           });
           
           if (smsSent) {
-            console.log(`📱 Ready for ${actionType} SMS sent to ${customer.phoneNumber}`);
+            console.log(`📱 Ready for ${actionType} WhatsApp sent to ${customer.phoneNumber}`);
           } else {
-            console.log(`⚠️ SMS not sent (Twilio not configured or failed)`);
+            console.log(`⚠️ WhatsApp not sent (Twilio not configured or failed)`);
           }
         } else {
           console.log(`⚠️ No phone number available for customer ${updated.retailerId}`);
@@ -639,10 +639,10 @@ export function registerOrderRoutes(app: Express): void {
           if (customer.phoneNumber) {
             try {
               const smsMsg = isPaidInFull
-                ? `Hi ${customerName}! ${businessName} has received your payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Your order is now fully paid. Thank you!\n\nDo not reply to this message.`
-                : `Hi ${customerName}! ${businessName} has received a payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Outstanding balance: ${currencySymbol}${outstanding.toFixed(2)}.\n\nDo not reply to this message.`;
-              await sendSMS({ to: customer.phoneNumber, message: smsMsg });
-              console.log(`📱 Payment notification SMS sent to customer ${customer.phoneNumber}`);
+                ? `Hi ${customerName}! ${businessName} has received your payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Your order is now fully paid. Thank you!`
+                : `Hi ${customerName}! ${businessName} has received a payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Outstanding balance: ${currencySymbol}${outstanding.toFixed(2)}.`;
+              await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
+              console.log(`📱 Payment notification WhatsApp sent to customer ${customer.phoneNumber}`);
             } catch (smsErr) {
               console.error('⚠️ Failed to send customer payment SMS:', smsErr);
             }
@@ -1660,10 +1660,10 @@ export function registerOrderRoutes(app: Express): void {
                 smsMsg += ` Refund of £${actualRefundAmount.toFixed(2)} pending.`;
               }
             }
-            smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}\n\nDo not reply to this message.`;
+            smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}`;
             
-            await sendSMS({ to: customer.phoneNumber, message: smsMsg });
-            console.log(`📱 Cancellation SMS sent to ${customer.phoneNumber}`);
+            await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
+            console.log(`📱 Cancellation WhatsApp sent to ${customer.phoneNumber}`);
           }
           
           // Email notification with itemised receipt
@@ -2077,8 +2077,8 @@ export function registerOrderRoutes(app: Express): void {
             message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
           }
           
-          await sendSMS({ to: customerPhone, message });
-          console.log(`📱 Cancellation response SMS sent to ${customerPhone}`);
+          await sendWhatsAppMessage({ to: customerPhone, message });
+          console.log(`📱 Cancellation response WhatsApp sent to ${customerPhone}`);
         }
         
         // Email notification
@@ -3244,13 +3244,12 @@ export function registerOrderRoutes(app: Express): void {
             : 'Outstanding Balance';
           const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
           
-          const smsResult = await sendSMS({
+          smsSent = await sendWhatsAppMessage({
             to: customerPhone,
             message: smsMessage
           });
           
-          smsSent = smsResult.success;
-          console.log(`📱 SMS ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for ${paymentTypeLabel.toLowerCase()}`);
+          console.log(`📱 WhatsApp ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for ${paymentTypeLabel.toLowerCase()}`);
         } catch (smsError) {
           console.error('❌ Failed to send payment SMS:', smsError);
         }

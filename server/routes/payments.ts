@@ -7,7 +7,7 @@ import {
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
   getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, inArray, isAuthenticated, lte, ne,
-  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendSMS,
+  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendWhatsAppMessage,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
 } from "./shared";
@@ -2294,17 +2294,17 @@ export function registerPaymentRoutes(app: Express): void {
         const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: £${quoteDeliveryCharge.toFixed(2)}` : '';
         const deliveryNoteText = wholesaler.deliveryNote ? `\n📦 ${wholesaler.deliveryNote}` : '';
         const message = isPayLater
-          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isDeposit 
-          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`
-          : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.\n\n${wholesalerContact ? `Contact ${businessName}: ${wholesalerContact}\n\n` : ''}Do not reply to this message.`;
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
         
         try {
-          await sendSMS({
+          await sendWhatsAppMessage({
             to: customer.phoneNumber,
             message,
           });
-          console.log(`📱 Quote SMS sent to ${customer.phoneNumber}`);
+          console.log(`📱 Invoice WhatsApp sent to ${customer.phoneNumber}`);
           
           // Update quote sent timestamp
           await db.update(orders)

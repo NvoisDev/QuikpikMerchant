@@ -1,6 +1,5 @@
 import { sendWelcomeEmail } from './emailService.js';
 import { sendWhatsAppMessage } from './whatsappService.js';
-import { sendSMS, createWelcomeSMSMessage } from './smsService.js';
 
 interface WelcomeMessageParams {
   customerName: string;
@@ -39,7 +38,7 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
     emailSent: false,
     smsSent: false,
     whatsappSent: false,
-    errors: []
+    errors: [],
   };
 
   // Send welcome email if customer has email
@@ -62,32 +61,6 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
       }
     } catch (error) {
       result.errors.push(`Email error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  // Send welcome SMS if customer has phone
-  if (customerPhone) {
-    try {
-      const smsMessage = createWelcomeSMSMessage({
-        customerName,
-        wholesalerName,
-        wholesalerEmail,
-        wholesalerPhone,
-        wholesalerAccountName,
-        portalUrl
-      });
-
-      const smsSuccess = await sendSMS({
-        to: customerPhone,
-        message: smsMessage
-      });
-      
-      result.smsSent = smsSuccess;
-      if (!smsSuccess) {
-        result.errors.push('Failed to send welcome SMS');
-      }
-    } catch (error) {
-      result.errors.push(`SMS error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

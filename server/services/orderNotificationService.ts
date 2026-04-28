@@ -1,6 +1,5 @@
 import { storage } from "../storage";
 import { whatsAppBusinessService } from "../whatsapp-simple";
-import { sendSMS } from "../services/smsService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
 import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, emailTable, getEmailLogoUrl, formatPackDescriptor } from "../email-templates";
@@ -30,7 +29,6 @@ export class OrderNotificationService {
     
     // Send notifications via all available channels
     await Promise.allSettled([
-      this.sendSMSNotification(notification, statusMessages.sms),
       this.sendWhatsAppNotification(notification, statusMessages.whatsapp),
       this.sendEmailNotification(notification, statusMessages.email)
     ]);
@@ -116,19 +114,6 @@ export class OrderNotificationService {
     }
 
     return messages;
-  }
-
-  /**
-   * Send SMS notification
-   */
-  private async sendSMSNotification(notification: OrderStatusNotification, message: string): Promise<void> {
-    try {
-      const formattedPhone = formatPhoneToInternational(notification.customerPhone);
-      await sendSMS({ to: formattedPhone, message });
-      console.log(`📱 SMS notification sent for order ${notification.orderNumber}`);
-    } catch (error) {
-      console.error(`❌ Failed to send SMS for order ${notification.orderNumber}:`, error);
-    }
   }
 
   /**
