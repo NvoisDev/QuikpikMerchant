@@ -402,7 +402,7 @@ export function registerOrderRoutes(app: Express): void {
           console.log(`⚠️ No phone number available for customer ${updated.retailerId}`);
         }
       } catch (smsError) {
-        console.error('❌ Failed to send ready for collection SMS:', smsError);
+        console.error('❌ Failed to send ready for collection WhatsApp:', smsError);
         // Don't fail the API call if SMS fails
       }
 
@@ -644,7 +644,7 @@ export function registerOrderRoutes(app: Express): void {
               await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
               console.log(`📱 Payment notification WhatsApp sent to customer ${customer.phoneNumber}`);
             } catch (smsErr) {
-              console.error('⚠️ Failed to send customer payment SMS:', smsErr);
+              console.error('⚠️ Failed to send customer payment WhatsApp:', smsErr);
             }
           }
 
@@ -3251,7 +3251,7 @@ export function registerOrderRoutes(app: Express): void {
           
           console.log(`📱 WhatsApp ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for ${paymentTypeLabel.toLowerCase()}`);
         } catch (smsError) {
-          console.error('❌ Failed to send payment SMS:', smsError);
+          console.error('❌ Failed to send payment WhatsApp:', smsError);
         }
       }
 

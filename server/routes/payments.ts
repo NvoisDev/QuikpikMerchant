@@ -2311,7 +2311,7 @@ export function registerPaymentRoutes(app: Express): void {
             .set({ quoteSentAt: new Date() })
             .where(eq(orders.id, quoteOrder.id));
         } catch (smsError) {
-          console.error('❌ Failed to send quote SMS:', smsError);
+          console.error('❌ Failed to send quote WhatsApp:', smsError);
         }
       }
 

@@ -224,7 +224,7 @@ async function sendPaymentReminder(
       await sendWhatsAppMessage({ to: order.customerPhone, message: smsMessage });
       console.log(`✅ WhatsApp reminder sent to ${order.customerPhone} for order ${orderRef}`);
     } catch (error) {
-      console.error(`❌ Failed to send SMS reminder for order ${orderRef}:`, error);
+      console.error(`❌ Failed to send WhatsApp reminder for order ${orderRef}:`, error);
     }
   }
 }
