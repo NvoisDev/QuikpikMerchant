@@ -2346,9 +2346,21 @@ export function registerPaymentRoutes(app: Express): void {
             const displayName = packDesc ? `${productName} (${packDesc})` : productName;
             const sellingType = item.sellingType || 'units';
             const itemTotal = item.customPrice * item.quantity;
-            const unitWeightKg = sellingType === 'pallets'
-              ? parseFloat(product?.palletWeight || product?.pallet_weight || '0')
-              : parseFloat(product?.unitWeight || product?.unit_weight || '0');
+            let unitWeightKg = 0;
+            if (sellingType === 'pallets') {
+              unitWeightKg = parseFloat(product?.palletWeight || product?.pallet_weight || '0');
+            } else {
+              // Prefer stored total package weight (accurate for a whole pack).
+              // Fall back to unitWeight × pack quantity for older products.
+              const totalPkgWeight = parseFloat(product?.totalPackageWeight || '0');
+              if (totalPkgWeight > 0) {
+                unitWeightKg = totalPkgWeight;
+              } else {
+                const uw = parseFloat(product?.unitWeight || product?.unit_weight || '0');
+                const pq = product?.packQuantity || product?.quantityInPack || 1;
+                unitWeightKg = uw * pq;
+              }
+            }
             if (unitWeightKg > 0) wholesalerTotalWeightKg += unitWeightKg * item.quantity;
             itemsForEmail.push(`<li style="margin: 6px 0;"><strong>${displayName}</strong> - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
           }
