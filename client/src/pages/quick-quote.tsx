@@ -281,7 +281,7 @@ export default function QuickQuote() {
         title: e.errorType === "OUT_OF_STOCK" ? "Stock Unavailable" : "Error",
         description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
           ? `Only ${e.available} units of "${e.productName || "this product"}" are in stock — you requested ${e.requested}. Please reduce the quantity.`
-          : (error.message || "Failed to create invoice"),
+          : (error.message || "Something went wrong, please try again"),
         variant: "destructive",
       });
     },
@@ -439,6 +439,7 @@ export default function QuickQuote() {
   };
 
   const handleCreateQuote = () => {
+    try {
     if (!selectedCustomer) {
       toast({
         title: "Select Customer",
@@ -516,6 +517,14 @@ export default function QuickQuote() {
       ...(fulfillmentType === 'pickup' && collectionAddressId ? { collectionAddressId } : {}),
       ...(user?.enableMultiProfile && businessProfiles.length > 1 && selectedProfileId ? { businessProfileId: selectedProfileId } : {}),
     });
+    } catch (err: unknown) {
+      console.error('[handleCreateQuote] unexpected error', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Something went wrong, please try again",
+        variant: "destructive",
+      });
+    }
   };
 
   const copyPaymentLink = () => {

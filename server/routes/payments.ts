@@ -6,8 +6,8 @@ import {
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
-  getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, inArray, isAuthenticated, lte, ne,
-  or, orderItems, orders, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendWhatsAppMessage,
+  getEmailLogoUrl, getProjectedDowngradeImpact, getUserPlanLimits, gte, inArray, isAuthenticated, isNull, lte, ne,
+  or, orderItems, orders, productBatches, products, requireAuth, requireNotViewer, requireOwner, sendEmail, sendStripeVerifiedEmail, sendWhatsAppMessage,
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
 } from "./shared";
@@ -1953,7 +1953,21 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(400).json({ error: 'One or more products not found', errorType: 'PRODUCT_NOT_FOUND' });
         }
         if (sellingType === 'units') {
-          const available = productForCheck.stock || 0;
+          // For batch-tracked products stock=0 while actual availability lives in productBatches.
+          // Prefer totalBatchStock (sum of active, non-expired batches) when it exists.
+          const today = new Date().toISOString().split('T')[0];
+          const [batchRow] = await db
+            .select({ totalBatchStock: sum(productBatches.quantity) })
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+              )
+            );
+          const batchStock = batchRow?.totalBatchStock != null ? Number(batchRow.totalBatchStock) : null;
+          const available = batchStock ?? productForCheck.stock ?? 0;
           if (available < item.quantity) {
             return res.status(400).json({
               error: `"${productForCheck.name}" is out of stock. ${available} units available, ${item.quantity} requested.`,
