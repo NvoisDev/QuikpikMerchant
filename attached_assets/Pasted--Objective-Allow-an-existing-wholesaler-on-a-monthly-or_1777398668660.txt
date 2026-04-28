@@ -1,0 +1,142 @@
+🎯 Objective
+
+Allow an existing wholesaler on a monthly (or current) plan to:
+
+Upgrade to an annual subscription
+Optionally receive a custom discounted annual price
+Apply the change immediately with proration
+Keep Stripe + internal data clean and consistent
+🧠 Core Principles
+Modify the existing Stripe subscription (do NOT create a new one)
+Use Stripe proration to handle billing fairly
+Support custom pricing per wholesaler (manually applied)
+Keep logic simple (no expiry automation yet)
+🔧 Part 1 — Stripe Setup
+1. Create Annual Prices in Stripe
+
+For each plan:
+
+Standard Annual → £199.99/year
+Premium Annual → £499.99/year
+
+(Optional for discounts)
+
+Create custom one-off price(s) in Stripe:
+e.g. £149.99/year
+e.g. £399.99/year
+
+👉 These will be used per customer when needed
+
+🔄 Part 2 — Subscription Upgrade Flow
+Endpoint / Service Behaviour
+
+When upgrading a wholesaler:
+
+Retrieve existing Stripe subscription
+Identify current subscription item
+Replace price with:
+Standard annual price OR
+Custom discounted price
+Apply update with:
+proration_behavior = "create_prorations"
+Expected Stripe Behaviour
+Unused monthly time is credited
+Annual plan is charged immediately (minus credit)
+Billing cycle resets to annual
+🧱 Part 3 — Backend Logic
+Update Subscription (Single Source Flow)
+Input:
+wholesalerId
+targetPlan (Standard / Premium)
+optional customPriceId
+Logic:
+IF customPriceId exists
+  → use custom price
+ELSE
+  → use standard annual price
+Call Stripe:
+stripe.subscriptions.update(...)
+Store in Database
+
+Persist:
+
+billingInterval = "annual"
+stripePriceId (actual price used)
+isCustomPricing = true/false
+internalNote (optional, e.g. "Discount until April 2027")
+⚠️ Part 4 — Safety Rules
+Do NOT:
+Cancel and recreate subscription
+Create multiple active subscriptions
+Charge manually outside Stripe
+Ensure:
+One active subscription per wholesaler
+Stripe is always source of truth for billing
+🧾 Part 5 — Frontend / UX
+After Upgrade
+
+Show clearly:
+
+IF standard:
+
+£199.99/year
+
+IF discounted:
+
+£149.99/year
+£199.99
+“Custom pricing applied”
+
+Confirmation State
+
+After upgrade:
+
+Show success message:
+“Subscription updated to annual plan”
+Optionally show:
+“Your unused monthly time has been credited”
+🧠 Part 6 — Internal Tracking (IMPORTANT)
+
+Since expiry is not automated yet:
+
+Add internal note or DB field:
+
+“Customer on discounted annual plan until April 2027”
+
+This ensures:
+Future manual price correction
+No forgotten discounts
+🔁 Part 7 — Future-Proofing (Light)
+
+Design so later you can:
+
+Add expiry logic without refactoring
+Replace manual notes with:
+customPriceExpiresAt
+🧪 Part 8 — Testing (MANDATORY)
+
+Test scenarios:
+
+Monthly → Annual (standard)
+Monthly → Annual (discounted)
+Verify:
+No duplicate subscriptions
+Proration applied correctly
+Correct amount charged
+Billing cycle resets properly
+Edge cases:
+Upgrade twice
+Missing priceId
+Stripe failure handling
+✅ Acceptance Criteria
+Subscription updates in-place (no recreation)
+Stripe proration works correctly
+Custom pricing supported
+No double billing
+UI reflects correct pricing
+System remains stable and consistent
+🚀 Outcome
+Clean upgrade path for wholesalers
+Flexible pricing for deals
+No over-engineering
+Ready to scale later (admin + expiry automation)
