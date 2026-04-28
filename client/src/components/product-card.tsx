@@ -92,21 +92,13 @@ const calcMarginPct = (price: string | number, costPrice: string | number): numb
 
 interface ProductCardProps {
   product: Product;
-  onEdit: (product: Product) => void;
-  onDelete: (id: number) => void;
-  onDuplicate?: (product: Product) => void;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
-  onManageStock?: (product: Product) => void;
   isViewer?: boolean;
 }
 
 function ProductCard({
   product,
-  onEdit,
-  onDelete,
-  onDuplicate,
   onStatusChange,
-  onManageStock,
   isViewer = false,
 }: ProductCardProps) {
   const [, navigate] = useLocation();

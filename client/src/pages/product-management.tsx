@@ -2936,11 +2936,7 @@ export default function ProductManagement() {
                 <div key={product.id} className="space-y-3">
                   <ProductCard
                     product={product}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
-                    onManageStock={handleManageStock}
                     isViewer={isViewer}
                   />
                 </div>
