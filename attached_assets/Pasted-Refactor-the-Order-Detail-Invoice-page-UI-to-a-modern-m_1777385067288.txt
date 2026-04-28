@@ -1,0 +1,128 @@
+Refactor the Order Detail / Invoice page UI to a modern, mobile-first design while preserving 100% of existing functionality and logic.
+
+Primary Goals:
+- Improve visual hierarchy and reduce clutter
+- Optimise for mobile usability (thumb-friendly, responsive)
+- Make primary actions clear and easy to access
+- Keep all existing features, API calls, and behaviours unchanged
+
+---
+
+1. Layout & Structure
+
+- Convert the page into a clean, card-based layout with consistent spacing
+- Use max-width container for readability on desktop
+- Sections should be:
+
+  1) Header (top)
+     - Back button
+     - Order ID
+     - Status badges (Unpaid, Fulfilled, Collection, etc.)
+     - Trading name ("Trading As")
+
+  2) Customer & Collection (merge into one card)
+     - Customer name, phone, email
+     - Collection location + address
+     - Make phone clickable (tel:)
+     - Make address copyable / tappable
+
+  3) Items
+     - Clean list layout
+     - Product name (bold)
+     - Quantity + unit info (subtext)
+     - Price aligned right
+
+  4) Payment Summary
+     - Subtotal
+     - Fees
+     - Total
+     - Highlight:
+       - “You receive £X” (net amount)
+     - Use stronger typography for key numbers
+
+---
+
+2. Actions (CRITICAL)
+
+A. Remove cluttered buttons from top and mid-page
+
+B. Introduce a Sticky Action Bar (mobile + desktop)
+
+- Fixed at bottom of screen
+- Primary action must be dynamic based on order state:
+
+  Unpaid:
+    - Primary: "Send Payment Link"
+    - Secondary: "Mark as Paid (offline)"
+
+  Paid:
+    - Primary: "Ready for Collection"
+
+  Ready:
+    - Primary: "Mark as Fulfilled"
+
+- Buttons must be large, full-width on mobile, and thumb-friendly
+
+---
+
+3. Secondary Actions (Clean up)
+
+Move non-primary actions into a dropdown menu (⋯ More):
+
+- Download Invoice
+- Cancel Order
+- Share Invoice
+
+Keep:
+- "Edit Invoice" visible but de-emphasised (secondary button near header)
+
+---
+
+4. Payment Link UI (Important UX Fix)
+
+Replace raw Stripe URL display with:
+
+- "Copy Payment Link" button
+- "Share via WhatsApp" button
+
+Optional:
+- Show shortened link instead of full URL
+- Hide raw URL unless explicitly expanded
+
+---
+
+5. Visual Design Improvements
+
+- Use consistent card padding and spacing (16–24px)
+- Increase whitespace between sections
+- Use subtle shadows or borders for cards
+- Align all text and numbers cleanly
+- Reduce visual noise (remove unnecessary labels or repetition)
+
+---
+
+6. Mobile Optimisation
+
+- Ensure layout stacks cleanly on small screens
+- Sticky action bar must not overlap content
+- Ensure all buttons are easily tappable (min height ~44px)
+- Avoid long scrolling for key actions
+
+---
+
+7. DO NOT CHANGE
+
+- Business logic
+- API calls
+- Stripe/payment behaviour
+- Order state transitions
+- Existing data structures
+
+---
+
+8. Deliverables
+
+- Updated React component structure
+- Fully responsive UI (mobile-first)
+- Uses existing stack (React, Tailwind, Shadcn)
+- No regressions in functionality
