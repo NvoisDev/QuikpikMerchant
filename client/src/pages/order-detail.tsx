@@ -104,6 +104,7 @@ interface Order {
   stripePaymentIntentId?: string;
   notes?: string;
   cancelledAt?: string;
+  retailer?: { phoneNumber?: string | null; businessName?: string | null };
   stockRestored?: boolean;
   stockRestoredCount?: number;
   readyToCollectAt?: string;
@@ -1573,7 +1574,7 @@ export default function OrderDetail() {
         )}
 
         {/* Send Invoice via WhatsApp */}
-        {!isViewer && order.customerPhone && (
+        {!isViewer && (order.customerPhone || order.retailer?.phoneNumber) && (
           <Button size="sm" variant="outline" className="w-full border-green-500 text-green-700 hover:bg-green-50 text-xs" onClick={sendInvoiceWhatsApp} disabled={isSendingWhatsApp}>
             {isSendingWhatsApp ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-1.5" />}
             {isSendingWhatsApp ? 'Sending...' : 'Send Invoice via WhatsApp'}
