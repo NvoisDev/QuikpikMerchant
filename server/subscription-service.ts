@@ -420,9 +420,16 @@ export class SubscriptionService {
         .where(eq(userSubscriptions.userId, userId))
         .orderBy(userSubscriptions.createdAt);
 
+      // Strip admin-only fields from the subscription before returning to the client
+      let publicSubscription: Record<string, unknown> | null = null;
+      if (userSub?.subscription) {
+        const { internalNote: _note, isCustomPricing, customPriceExpiresAt, ...rest } = userSub.subscription;
+        publicSubscription = { ...rest, isCustomPricing };
+      }
+
       return {
         user,
-        subscription: userSub?.subscription || null,
+        subscription: publicSubscription,
         plan: userSub?.plan || null,
         currentPlan: user.currentPlan || 'free',
         subscriptionStatus: user.subscriptionStatus || 'free'
@@ -614,125 +621,124 @@ export class SubscriptionService {
    * Called once at server startup — idempotent.
    */
   static async initializeAnnualPlans() {
-    try {
-      const existing = await db.select({ planId: subscriptionPlans.planId })
-        .from(subscriptionPlans)
-        .where(eq(subscriptionPlans.planId, 'standard_annual_intro'));
-      if (existing.length > 0) {
-        console.log('ℹ️ Annual plans already exist — skipping initialization');
-        return;
-      }
+    const annualPlanDefs = [
+      {
+        planId: 'standard_annual_intro',
+        name: 'Standard Annual (Intro)',
+        price: 199.99,
+        description: 'Annual plan — introductory rate until May 2027',
+        features: [
+          'Up to 5 products',
+          'Up to 5 price lists',
+          'Broadcast tools coming soon',
+          'Basic dashboard analytics',
+          'Priority email support',
+          'Save vs monthly billing',
+        ],
+        limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        sortOrder: 10,
+      },
+      {
+        planId: 'premium_annual_intro',
+        name: 'Premium Annual (Intro)',
+        price: 499.99,
+        description: 'Annual plan — introductory rate until May 2027',
+        features: [
+          'Unlimited products',
+          'Unlimited price lists',
+          'Broadcast tools coming soon',
+          'Custom reports and insights',
+          'Priority email and phone support',
+          'Save vs monthly billing',
+        ],
+        limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
+        sortOrder: 11,
+      },
+      {
+        planId: 'standard_annual',
+        name: 'Standard Annual',
+        price: 239.88,
+        description: 'Full-rate annual Standard plan (from May 2027)',
+        features: [
+          'Up to 5 products',
+          'Up to 5 price lists',
+          'Broadcast tools coming soon',
+          'Basic dashboard analytics',
+          'Priority email support',
+        ],
+        limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        sortOrder: 12,
+      },
+      {
+        planId: 'premium_annual',
+        name: 'Premium Annual',
+        price: 599.88,
+        description: 'Full-rate annual Premium plan (from May 2027)',
+        features: [
+          'Unlimited products',
+          'Unlimited price lists',
+          'Broadcast tools coming soon',
+          'Custom reports and insights',
+          'Priority email and phone support',
+        ],
+        limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
+        sortOrder: 13,
+      },
+    ];
 
-      let platformStripe: ReturnType<typeof getStripeClient> | null = null;
-      try { platformStripe = getStripeClient(); } catch { /* no Stripe key */ }
+    // Check each plan individually so partial failures can be backfilled on next startup
+    const existingRows = await db.select({ planId: subscriptionPlans.planId })
+      .from(subscriptionPlans)
+      .where(inArray(subscriptionPlans.planId, annualPlanDefs.map(p => p.planId)));
+    const existingIds = new Set(existingRows.map(r => r.planId));
 
-      const annualPlans = [
-        {
-          planId: 'standard_annual_intro',
-          name: 'Standard Annual (Intro)',
-          price: 199.99,
-          description: 'Annual plan — introductory rate until May 2027',
-          features: [
-            'Up to 5 products',
-            'Up to 5 price lists',
-            'Broadcast tools coming soon',
-            'Basic dashboard analytics',
-            'Priority email support',
-            'Save vs monthly billing',
-          ],
-          limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
-          sortOrder: 10,
-        },
-        {
-          planId: 'premium_annual_intro',
-          name: 'Premium Annual (Intro)',
-          price: 499.99,
-          description: 'Annual plan — introductory rate until May 2027',
-          features: [
-            'Unlimited products',
-            'Unlimited price lists',
-            'Broadcast tools coming soon',
-            'Custom reports and insights',
-            'Priority email and phone support',
-            'Save vs monthly billing',
-          ],
-          limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
-          sortOrder: 11,
-        },
-        {
-          planId: 'standard_annual',
-          name: 'Standard Annual',
-          price: 239.88,
-          description: 'Full-rate annual Standard plan (from May 2027)',
-          features: [
-            'Up to 5 products',
-            'Up to 5 price lists',
-            'Broadcast tools coming soon',
-            'Basic dashboard analytics',
-            'Priority email support',
-          ],
-          limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
-          sortOrder: 12,
-        },
-        {
-          planId: 'premium_annual',
-          name: 'Premium Annual',
-          price: 599.88,
-          description: 'Full-rate annual Premium plan (from May 2027)',
-          features: [
-            'Unlimited products',
-            'Unlimited price lists',
-            'Broadcast tools coming soon',
-            'Custom reports and insights',
-            'Priority email and phone support',
-          ],
-          limits: { products: -1, broadcasts: -1, teamMembers: -1, customGroups: -1, priceLists: -1 },
-          sortOrder: 13,
-        },
-      ];
+    const missing = annualPlanDefs.filter(p => !existingIds.has(p.planId));
+    if (missing.length === 0) {
+      console.log('ℹ️ Annual plans already exist — skipping initialization');
+      return;
+    }
 
-      for (const plan of annualPlans) {
-        let stripeProductId: string | null = null;
-        let stripePriceId: string | null = null;
-        if (platformStripe) {
-          try {
-            const product = await platformStripe.products.create({
-              name: plan.name,
-              description: plan.description,
-              metadata: { planId: plan.planId, platform: 'quikpik' },
-            });
-            stripeProductId = product.id;
-            const price = await platformStripe.prices.create({
-              product: product.id,
-              unit_amount: Math.round(plan.price * 100),
-              currency: 'gbp',
-              recurring: { interval: 'year' },
-              metadata: { planId: plan.planId, platform: 'quikpik' },
-            });
-            stripePriceId = price.id;
-          } catch (stripeErr: any) {
-            console.error(`⚠️ Stripe creation failed for ${plan.planId}:`, stripeErr?.message);
-          }
-        }
-        await db.insert(subscriptionPlans).values({
+    let platformStripe: ReturnType<typeof getStripeClient> | null = null;
+    try { platformStripe = getStripeClient(); } catch { /* no Stripe key configured */ }
+
+    for (const plan of missing) {
+      let stripeProductId: string | null = null;
+      let stripePriceId: string | null = null;
+
+      if (platformStripe) {
+        // Create Stripe product+price; throw on failure so we don't store a plan without a price
+        const product = await platformStripe.products.create({
           name: plan.name,
-          planId: plan.planId,
-          stripeProductId,
-          stripePriceId,
-          monthlyPrice: plan.price.toFixed(2),
-          currency: 'GBP',
           description: plan.description,
-          features: plan.features,
-          limits: plan.limits,
-          billingInterval: 'yearly',
-          version: 1,
-          isActive: true,
-          sortOrder: plan.sortOrder,
+          metadata: { planId: plan.planId, platform: 'quikpik' },
         });
-        console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr)`);
+        stripeProductId = product.id;
+        const price = await platformStripe.prices.create({
+          product: product.id,
+          unit_amount: Math.round(plan.price * 100),
+          currency: 'gbp',
+          recurring: { interval: 'year' },
+          metadata: { planId: plan.planId, platform: 'quikpik' },
+        });
+        stripePriceId = price.id;
       }
-    } catch (error) {
-      console.error('❌ Failed to initialize annual plans:', error);
+
+      await db.insert(subscriptionPlans).values({
+        name: plan.name,
+        planId: plan.planId,
+        stripeProductId,
+        stripePriceId,
+        monthlyPrice: plan.price.toFixed(2),
+        currency: 'GBP',
+        description: plan.description,
+        features: plan.features,
+        limits: plan.limits,
+        billingInterval: 'yearly',
+        version: 1,
+        isActive: true,
+        sortOrder: plan.sortOrder,
+      });
+      console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr)`);
     }
   }
 
@@ -791,7 +797,7 @@ export class SubscriptionService {
         .set({ planId: targetPlanId, updatedAt: new Date() })
         .where(eq(userSubscriptions.id, sub.id));
       await db.update(users)
-        .set({ currentPlan: targetPlanId, subscriptionTier: targetPlanId } as any)
+        .set({ currentPlan: targetPlanId, subscriptionTier: targetPlanId })
         .where(eq(users.id, sub.userId));
       console.log(`✅ Migrated ${sub.userId}: ${sub.planId} → ${targetPlanId}`);
     }

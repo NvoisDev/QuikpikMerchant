@@ -445,9 +445,6 @@ export default function SubscriptionPricing() {
                     </span>
                   )}
                 </div>
-                {currentSubscription.subscription?.internalNote && (
-                  <div className="text-xs text-gray-400 mt-1 italic">{currentSubscription.subscription.internalNote}</div>
-                )}
               </div>
             )}
           </div>

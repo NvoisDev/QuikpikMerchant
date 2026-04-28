@@ -1716,10 +1716,10 @@ export function registerAdminRoutes(app: Express): void {
             status: 'active',
             cancelAtPeriodEnd: false,
             isCustomPricing: isCustom,
-            internalNote: internalNote || null,
-            customPriceExpiresAt: customPriceExpiresAt ? new Date(customPriceExpiresAt) : null,
+            internalNote: (internalNote as string) || null,
+            customPriceExpiresAt: customPriceExpiresAt ? new Date(customPriceExpiresAt as string) : null,
             updatedAt: new Date(),
-          } as any).where(eq(userSubscriptions.userId, targetUser.id));
+          }).where(eq(userSubscriptions.userId, targetUser.id));
         }
       } else {
         // No active Stripe subscription — admin comped / force-set
