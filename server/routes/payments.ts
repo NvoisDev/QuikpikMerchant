@@ -2307,8 +2307,21 @@ export function registerPaymentRoutes(app: Express): void {
         
         const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: £${quoteDeliveryCharge.toFixed(2)}` : '';
         const deliveryNoteText = wholesaler.deliveryNote ? `\n📦 ${wholesaler.deliveryNote}` : '';
+        const offlineMethodDisplayName: Record<string, string> = {
+          bank_transfer: 'bank transfer',
+          cash: 'cash',
+          cheque: 'cheque',
+          other: '',
+        };
+        const isOfflineNonPayLater = isOfflineMethod && requestedPaymentMethod !== 'pay_later';
+        const offlineMethodName = isOfflineNonPayLater && requestedPaymentMethod ? offlineMethodDisplayName[requestedPaymentMethod] ?? '' : '';
+        const offlineArrangement = offlineMethodName
+          ? `Please arrange payment via ${offlineMethodName} directly with ${businessName}.`
+          : `Please arrange payment directly with ${businessName}.`;
         const message = isPayLater
           ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          : isOfflineNonPayLater
+          ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\n${offlineArrangement}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isDeposit 
           ? `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : `Hi ${customer.firstName || 'there'}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
