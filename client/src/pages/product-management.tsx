@@ -2950,7 +2950,10 @@ export default function ProductManagement() {
             <div className="space-y-4">
               {filteredProducts.map((product: any) => (
                 <div key={product.id} className="space-y-3">
-                  <Card className={`transition-all duration-200 ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-200 cursor-not-allowed' : 'hover:shadow-md hover:border-slate-300'}`}>
+                  <Card
+                    className={`transition-all duration-200 ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-200 cursor-not-allowed' : 'hover:shadow-md hover:border-slate-300 cursor-pointer'}`}
+                    onClick={() => product.status !== 'locked' && handleEdit(product)}
+                  >
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex items-start gap-3">
                         <img 

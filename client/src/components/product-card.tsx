@@ -11,22 +11,13 @@ import { formatWeight } from "@shared/utils/currency";
 import { formatNumber } from "@/lib/utils";
 
 import {
-  Edit,
-  Copy,
-  Trash2,
   AlertTriangle,
-  PackagePlus,
-  Tag,
-  ToggleLeft,
-  ToggleRight,
   Lock,
-  MoreHorizontal,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -139,12 +130,6 @@ function ProductCard({
     if (onStatusChange) onStatusChange(product.id, newStatus);
   };
 
-  const handleDuplicate = () => {
-    if (onDuplicate) onDuplicate(product);
-  };
-
-  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-
   const isLocked = product.status === 'locked';
   const currentStatusConfig = getStatusConfig(product.status);
 
@@ -235,69 +220,6 @@ function ProductCard({
             className="w-full h-36 object-cover"
           />
 
-          {/* ⋯ Actions menu — top-left floating pill (hidden for viewers) */}
-          {!isViewer && (
-            <div className="absolute top-2 left-2">
-              <DropdownMenu open={actionsMenuOpen} onOpenChange={setActionsMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 bg-white/85 backdrop-blur-sm hover:bg-white shadow-sm rounded-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreHorizontal className="h-3.5 w-3.5 text-slate-700" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenuItem
-                    onClick={() => !isLocked && onEdit(product)}
-                    disabled={isLocked}
-                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    <Edit className="h-4 w-4 mr-2" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => !isLocked && onManageStock?.(product)}
-                    disabled={isLocked}
-                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    <PackagePlus className="h-4 w-4 mr-2" /> Manage Stock
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => !isLocked && handleStatusChange(product.status === 'active' ? 'inactive' : 'active')}
-                    disabled={isLocked}
-                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    {product.status === 'active'
-                      ? <><ToggleLeft className="h-4 w-4 mr-2" /> Set Inactive</>
-                      : <><ToggleRight className="h-4 w-4 mr-2 text-green-600" /> Set Active</>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => !isLocked && navigate(`/promotions?productId=${product.id}`)}
-                    disabled={isLocked}
-                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    <Tag className="h-4 w-4 mr-2" /> Promotions
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => !isLocked && handleDuplicate()}
-                    disabled={isLocked}
-                    className={isLocked ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    <Copy className="h-4 w-4 mr-2" /> Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onDelete(product.id)}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
 
           {/* Status badge — dropdown for non-viewers, static for viewers */}
           <div className="absolute top-2 right-2">
