@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search
+  Pencil, Plus, Minus, Search, MessageCircle
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -270,6 +270,7 @@ export default function OrderDetail() {
   const [isMarkingRefunded, setIsMarkingRefunded] = useState(false);
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [processRefund, setProcessRefund] = useState(true);
   const [refundType, setRefundType] = useState<'card'>('card');
   const [restockInventory, setRestockInventory] = useState(true);
@@ -460,6 +461,24 @@ export default function OrderDetail() {
       }
     } finally {
       setIsSharingInvoice(false);
+    }
+  };
+
+  const sendInvoiceWhatsApp = async () => {
+    if (!order) return;
+    setIsSendingWhatsApp(true);
+    try {
+      await apiRequest('POST', `/api/orders/${order.id}/share-invoice-whatsapp`);
+      toast({ title: 'WhatsApp sent', description: 'The invoice has been sent to the customer via WhatsApp.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('400')) {
+        toast({ title: 'No phone number on file', description: 'This customer has no phone number on record.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Error', description: 'Could not send the WhatsApp message. Please try again.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSendingWhatsApp(false);
     }
   };
 
@@ -1550,6 +1569,14 @@ export default function OrderDetail() {
           <Button size="sm" variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50 text-xs" onClick={shareInvoice} disabled={isSharingInvoice}>
             {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5 mr-1.5" />}
             {isSharingInvoice ? 'Sending...' : 'Share Invoice with Customer'}
+          </Button>
+        )}
+
+        {/* Send Invoice via WhatsApp */}
+        {!isViewer && order.customerPhone && (
+          <Button size="sm" variant="outline" className="w-full border-green-500 text-green-700 hover:bg-green-50 text-xs" onClick={sendInvoiceWhatsApp} disabled={isSendingWhatsApp}>
+            {isSendingWhatsApp ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-1.5" />}
+            {isSendingWhatsApp ? 'Sending...' : 'Send Invoice via WhatsApp'}
           </Button>
         )}
 

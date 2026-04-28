@@ -2797,6 +2797,51 @@ export function registerOrderRoutes(app: Express): void {
     }
   });
 
+  // POST /api/orders/:id/share-invoice-whatsapp
+  app.post('/api/orders/:id/share-invoice-whatsapp', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user;
+      const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+      if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
+
+      const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+
+      const customerPhone = order.customerPhone || order.retailer?.phoneNumber;
+      if (!customerPhone) {
+        return res.status(400).json({ message: 'No customer phone number on record for this order' });
+      }
+
+      const customerName = order.customerName || order.retailer?.businessName || 'there';
+      const businessName = effectiveWholesaler.businessName || wholesaler.businessName || 'Your Supplier';
+      const portalLink = `https://quikpik.app/store/${order.wholesalerId}?tab=orders`;
+
+      const message =
+        `Hi ${customerName},\n\n` +
+        `Your invoice from ${businessName} is ready.\n\n` +
+        `View & pay securely here:\n${portalLink}\n\n` +
+        `Sent via Quikpik — secure wholesale ordering platform.`;
+
+      const sent = await sendWhatsAppMessage({ to: customerPhone, message });
+
+      if (!sent) {
+        return res.status(500).json({ message: 'Failed to send WhatsApp message. Please check Twilio configuration.' });
+      }
+
+      console.log(`📱 Invoice WhatsApp sent for order ${order.orderNumber || id} → ${customerPhone}`);
+      res.json({ message: 'Invoice sent via WhatsApp' });
+    } catch (error) {
+      console.error('Error sending invoice via WhatsApp:', error);
+      res.status(500).json({ message: 'Failed to send invoice via WhatsApp' });
+    }
+  });
+
   // POST /api/orders/:id/send-receipt
   app.post('/api/orders/:id/send-receipt', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
