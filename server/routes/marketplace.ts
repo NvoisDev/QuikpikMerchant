@@ -64,8 +64,19 @@ export function registerMarketplaceRoutes(app: Express): void {
         if (req.cookies?.customer_auth) {
           try {
             const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
+              // Verify the claimed identity against the database before trusting the cookie
+              const [rel] = await db
+                .select({ id: wholesalerCustomerRelationships.id })
+                .from(wholesalerCustomerRelationships)
+                .where(and(
+                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
+                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+                ))
+                .limit(1);
+              if (rel) {
+                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+              }
             }
           } catch { /* invalid cookie — fall through to 401 */ }
         }
@@ -478,8 +489,19 @@ export function registerMarketplaceRoutes(app: Express): void {
         if (req.cookies?.customer_auth) {
           try {
             const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
+              // Verify the claimed identity against the database before trusting the cookie
+              const [rel] = await db
+                .select({ id: wholesalerCustomerRelationships.id })
+                .from(wholesalerCustomerRelationships)
+                .where(and(
+                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
+                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+                ))
+                .limit(1);
+              if (rel) {
+                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+              }
             }
           } catch { /* invalid cookie — fall through to 401 */ }
         }
@@ -2667,8 +2689,19 @@ Please contact the customer to confirm this order.
         if (req.cookies?.customer_auth) {
           try {
             const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
-            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
-              sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+            if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId && cookieData.customerId) {
+              // Verify the claimed identity against the database before trusting the cookie
+              const [rel] = await db
+                .select({ id: wholesalerCustomerRelationships.id })
+                .from(wholesalerCustomerRelationships)
+                .where(and(
+                  eq(wholesalerCustomerRelationships.customerId, cookieData.customerId),
+                  eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+                ))
+                .limit(1);
+              if (rel) {
+                sessionAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId, phone: cookieData.phone || '' };
+              }
             }
           } catch { /* invalid cookie — fall through to 401 */ }
         }
