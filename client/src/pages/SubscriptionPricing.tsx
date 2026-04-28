@@ -687,7 +687,7 @@ export default function SubscriptionPricing() {
                 <Button
                   onClick={() => handlePlanSelection(plan)}
                   disabled={processingPlanId === plan.planId || isCurrentPlan(plan.planId)}
-                  className={`w-full ${
+                  className={`w-full whitespace-normal h-auto py-2 ${
                     getPlanBaseTier(plan.planId) === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
                     getPlanBaseTier(plan.planId) === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
                     'bg-gray-600 hover:bg-gray-700'

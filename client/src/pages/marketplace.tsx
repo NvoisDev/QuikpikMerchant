@@ -354,7 +354,7 @@ export default function Marketplace() {
                       <Button
                         onClick={() => handlePlanSelection(plan)}
                         disabled={processingPlanId === plan.planId}
-                        className={clsx("w-full text-white", colors.btn)}
+                        className={clsx("w-full whitespace-normal h-auto py-2 text-white", colors.btn)}
                       >
                         {processingPlanId === plan.planId
                           ? "Processing..."
