@@ -46,12 +46,13 @@ import { registerBrowsingRoutes } from "./marketplace-browsing";
 // ── Shared helpers (price-list) now live in marketplace-price-lists.ts ───────
 
 /**
- * Resolves customer auth from the session, with a secure DB-verified cookie fallback.
+ * Resolves customer auth from the session, with an HMAC-verified cookie fallback.
  * Returns the auth object when valid, or null to trigger a 401.
  *
- * Cookie fallback: parses the httpOnly `customer_auth` cookie (base64 JSON), verifies
- * expiry and wholesalerId match, then confirms the customerId exists in
- * wholesaler_customer_relationships before trusting it — preventing forged cookies.
+ * Cookie fallback: calls parseCustomerCookie which verifies the HMAC-SHA256
+ * signature before JSON-parsing the payload. No DB lookup is needed — the
+ * signature already guarantees the payload was issued by this server and has
+ * not been tampered with.
  */
 async function resolveCustomerAuth(
   req: any,

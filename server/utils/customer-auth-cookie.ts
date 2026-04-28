@@ -72,10 +72,10 @@ export function parseCustomerCookie(raw: string | undefined): Record<string, any
   return data;
 }
 
-/** Standard cookie options — secure only in production */
+/** Standard cookie options — secure flag only in production */
 export const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV !== "development",
+  secure: process.env.NODE_ENV === "production",
   maxAge: COOKIE_TTL_MS,
   sameSite: "lax" as const,
 };
