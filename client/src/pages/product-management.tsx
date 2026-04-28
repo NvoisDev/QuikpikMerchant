@@ -1017,13 +1017,13 @@ export default function ProductManagement() {
       });
     },
     onError: (error: any) => {
-      setIsDialogOpen(false);
-      setEditingProduct(null);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update product",
-        variant: "destructive",
-      });
+      let message = "Failed to update product. Please check your inputs and try again.";
+      try {
+        const parsed = JSON.parse(error.message.replace(/^\d+: /, ''));
+        if (parsed.errors?.[0]?.message) message = parsed.errors[0].message;
+        else if (parsed.message) message = parsed.message;
+      } catch {}
+      toast({ title: "Error updating product", description: message, variant: "destructive" });
     },
   });
 
