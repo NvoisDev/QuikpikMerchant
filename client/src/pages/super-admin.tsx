@@ -671,6 +671,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
   const [impersonateTarget, setImpersonateTarget] = useState<WholesalerRow | null>(null);
   const [changePlanId, setChangePlanId] = useState("");
   const [changePlanConfirm, setChangePlanConfirm] = useState(false);
+  const [removeCustomPricingConfirm, setRemoveCustomPricingConfirm] = useState(false);
   const [customPriceId, setCustomPriceId] = useState("");
   const [customPriceNote, setCustomPriceNote] = useState("");
   const [customPriceExpiry, setCustomPriceExpiry] = useState("");
@@ -709,6 +710,25 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
       setCustomPriceId("");
       setCustomPriceNote("");
       setCustomPriceExpiry("");
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const removeCustomPricingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await apiRequest("POST", `/api/admin/wholesalers/${id}/remove-custom-pricing`, {});
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: async (_data, id) => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
+      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
+      if (updated) {
+        const fresh = updated.find(w => w.id === id);
+        if (fresh) setSelectedWholesaler(fresh);
+      }
+      toast({ title: "Custom pricing removed" });
+      setRemoveCustomPricingConfirm(false);
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -1116,6 +1136,15 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                     {selectedWholesaler.customPriceExpiresAt && (
                       <span className="text-xs text-gray-400">expires {new Date(selectedWholesaler.customPriceExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                      disabled={removeCustomPricingMutation.isPending}
+                      onClick={() => setRemoveCustomPricingConfirm(true)}
+                    >
+                      Remove custom pricing
+                    </Button>
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -1306,6 +1335,33 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                 customPriceExpiresAt: customPriceExpiry || undefined,
               })}>
               {changePlanMutation.isPending ? "Changing…" : "Confirm change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove custom pricing confirmation dialog */}
+      <Dialog open={removeCustomPricingConfirm} onOpenChange={open => { if (!open) setRemoveCustomPricingConfirm(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-red-500" />Remove Custom Pricing
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-gray-700">
+              Remove custom pricing from <strong>{selectedWholesaler?.businessName || selectedWholesaler?.email}</strong>?
+            </p>
+            <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs text-red-700">
+              This will clear the custom pricing flag, internal note, and expiry date. The wholesaler will revert to standard billing for their current plan.
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setRemoveCustomPricingConfirm(false)}>Cancel</Button>
+            <Button size="sm" className="text-xs text-white bg-red-600 hover:bg-red-700"
+              disabled={removeCustomPricingMutation.isPending}
+              onClick={() => selectedWholesaler && removeCustomPricingMutation.mutate(selectedWholesaler.id)}>
+              {removeCustomPricingMutation.isPending ? "Removing…" : "Confirm removal"}
             </Button>
           </DialogFooter>
         </DialogContent>

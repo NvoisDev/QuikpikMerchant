@@ -1673,6 +1673,29 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // POST /api/admin/wholesalers/:id/remove-custom-pricing — clear custom pricing fields
+  app.post('/api/admin/wholesalers/:id/remove-custom-pricing', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const [targetUser] = await db.select().from(users)
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
+      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
+
+      await db.update(userSubscriptions).set({
+        isCustomPricing: false,
+        internalNote: null,
+        customPriceExpiresAt: null,
+        updatedAt: new Date(),
+      }).where(eq(userSubscriptions.userId, targetUser.id));
+
+      res.json({ success: true, userId: targetUser.id });
+    } catch (error) {
+      console.error('Admin remove-custom-pricing error:', error);
+      res.status(500).json({ error: 'Failed to remove custom pricing' });
+    }
+  });
+
   // POST /api/admin/wholesalers/:id/change-plan — manual plan reassignment
   app.post('/api/admin/wholesalers/:id/change-plan', requireAuth, async (req: any, res) => {
     try {
