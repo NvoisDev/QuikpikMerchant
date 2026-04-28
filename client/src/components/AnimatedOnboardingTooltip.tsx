@@ -317,6 +317,7 @@ export function AnimatedOnboardingTooltip({
                 </div>
               </div>
               <motion.button
+                type="button"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
                 whileHover={{ scale: 1.1 }}
@@ -366,6 +367,7 @@ export function AnimatedOnboardingTooltip({
               <div className="flex items-center space-x-2">
                 {onPlayPause && (
                   <motion.button
+                    type="button"
                     onClick={onPlayPause}
                     className="flex items-center space-x-1 text-sm text-gray-600 hover:text-primary transition-colors"
                     whileHover={{ scale: 1.05 }}
@@ -377,6 +379,7 @@ export function AnimatedOnboardingTooltip({
                 )}
                 
                 <motion.button
+                  type="button"
                   onClick={onSkip}
                   className="flex items-center space-x-1 text-sm text-gray-600 hover:text-primary transition-colors"
                   whileHover={{ scale: 1.05 }}
