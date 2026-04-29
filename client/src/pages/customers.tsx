@@ -2692,11 +2692,11 @@ export default function Customers() {
                             <tbody className="divide-y">
                               {priceListItems.map((item) => {
                                 const standard = parseFloat(item.product?.price || "0");
-                                const hasFixed = !!(item.customPrice && parseFloat(item.customPrice) > 0);
-                                const hasPct = !!(item.discountPercentage && parseFloat(item.discountPercentage) > 0);
+                                const hasFixed = !!(item.customPrice?.trim());
+                                const hasPct = !!(item.discountPercentage?.trim());
                                 let custom = standard;
-                                if (hasFixed) custom = parseFloat(item.customPrice);
-                                else if (hasPct) custom = standard * (1 - parseFloat(item.discountPercentage) / 100);
+                                if (hasFixed) custom = parseFloat(item.customPrice) || 0;
+                                else if (hasPct) custom = standard * (1 - (parseFloat(item.discountPercentage) || 0) / 100);
                                 const saving = standard - custom;
                                 const savingPct = standard > 0 ? (saving / standard) * 100 : 0;
                                 const priced = hasFixed || hasPct;
@@ -2706,7 +2706,7 @@ export default function Customers() {
                                       {item.product?.name || "Unknown"}
                                     </td>
                                     <td className="px-3 py-2.5 text-right text-muted-foreground line-through text-xs">
-                                      {priced ? formatMoney(standard) : "—"}
+                                      {formatMoney(standard)}
                                     </td>
                                     <td className="px-3 py-2.5 text-right font-semibold text-green-700">
                                       {priced ? formatMoney(custom) : <span className="text-muted-foreground font-normal text-xs italic">no price set</span>}
