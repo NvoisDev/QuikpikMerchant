@@ -539,6 +539,13 @@ export default function CustomerPortal() {
     refetchIntervalInBackground: false,
   });
 
+  // Reset payLaterMode if wholesaler doesn't support it (e.g. toggled off between sessions)
+  useEffect(() => {
+    if (wholesaler && !wholesaler.allowPayLater && payLaterMode) {
+      setPayLaterMode(false);
+    }
+  }, [wholesaler, payLaterMode]);
+
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
