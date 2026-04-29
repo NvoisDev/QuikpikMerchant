@@ -935,7 +935,21 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
             return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><h4 style="margin:0 0 10px;color:#14532d;">Payment Summary</h4><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Order Total:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${orderTotal.toFixed(2)}</td></tr><tr><td style="padding:4px 0;color:#6b7280;">Balance Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${balancePaid !== null ? balancePaid.toFixed(2) : '0.00'}</td></tr><tr><td style="padding:4px 0;color:#6b7280;font-weight:bold;">Outstanding Balance:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}0.00</td></tr></table></div>`;
           })()
         : (amountPaid !== null && amountPaid > 0 && orderTotal !== null
-            ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0;color:#6b7280;">Amount Paid:</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`
+            ? (() => {
+                const subtotalVal = order.subtotal ? parseFloat(order.subtotal) : null;
+                const deliveryVal = order.shippingCost ? parseFloat(order.shippingCost) : 0;
+                const feeVal = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : 0;
+                const subtotalRow = subtotalVal !== null && subtotalVal > 0
+                  ? `<tr><td style="padding:4px 0;color:#6b7280;">Product Subtotal:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${subtotalVal.toFixed(2)}</td></tr>`
+                  : '';
+                const deliveryRow = deliveryVal > 0
+                  ? `<tr><td style="padding:4px 0;color:#6b7280;">Delivery:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${deliveryVal.toFixed(2)}</td></tr>`
+                  : '';
+                const feeRow = feeVal > 0
+                  ? `<tr><td style="padding:4px 0;color:#6b7280;">Service Fee:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${feeVal.toFixed(2)}</td></tr>`
+                  : '';
+                return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse">${subtotalRow}${deliveryRow}${feeRow}<tr style="border-top:1px solid #bbf7d0"><td style="padding:8px 0 4px;font-weight:bold;">Amount Paid:</td><td style="padding:8px 0 4px;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`;
+              })()
             : '');
     const emailTitle = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Paid \u2014 Order Confirmed' : 'Order Confirmation';
     const emailIntro = isDeposit
