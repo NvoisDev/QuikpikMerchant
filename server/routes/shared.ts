@@ -939,9 +939,7 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
                 const subtotalVal = order.subtotal ? parseFloat(order.subtotal) : null;
                 const deliveryVal = order.shippingCost ? parseFloat(order.shippingCost) : 0;
                 const feeVal = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : 0;
-                const subtotalRow = subtotalVal !== null && subtotalVal > 0
-                  ? `<tr><td style="padding:4px 0;color:#6b7280;">Product Subtotal:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${subtotalVal.toFixed(2)}</td></tr>`
-                  : '';
+                const subtotalRow = `<tr><td style="padding:4px 0;color:#6b7280;">Product Subtotal:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${(subtotalVal ?? 0).toFixed(2)}</td></tr>`;
                 const deliveryRow = deliveryVal > 0
                   ? `<tr><td style="padding:4px 0;color:#6b7280;">Delivery:</td><td style="padding:4px 0;text-align:right;">${currencySymbol}${deliveryVal.toFixed(2)}</td></tr>`
                   : '';
