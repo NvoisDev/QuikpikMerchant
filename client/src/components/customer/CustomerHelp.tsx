@@ -73,11 +73,11 @@ const helpSections: HelpSection[] = [
       },
       {
         question: "Why is there a service fee on my order?",
-        answer: "A service fee of 5.5% + £0.50 is added to every card payment to cover the cost of secure payment processing and platform services. This is calculated on your order subtotal (including any delivery charge) and is shown clearly before you complete checkout."
+        answer: "A service fee is added to every card payment to cover the cost of secure payment processing and platform services. It is calculated on your order subtotal (including any delivery charge) and is shown clearly before you complete checkout. Full details are available in our Help Hub."
       },
       {
         question: "Where can I see the service fee before I pay?",
-        answer: "The fee is shown as a separate line item in your cart summary, labelled 'Service Fee (5.5% + £0.50)', before you proceed to payment. The final total you see already includes this charge — there are no hidden costs added afterwards."
+        answer: "The fee is shown as a separate line item labelled 'Service Fee' in your cart summary before you proceed to payment. The final total you see already includes this charge — there are no hidden costs added afterwards. For full details on how the fee is calculated, visit our Help Hub."
       }
     ]
   },

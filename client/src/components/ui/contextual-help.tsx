@@ -154,7 +154,7 @@ const helpContexts = {
                 <p class="mb-2">Service fees are clearly displayed:</p>
                 <ul class="list-disc list-inside space-y-1">
                   <li>Product subtotal</li>
-                  <li>Service fee (5.5% + £0.50)</li>
+                  <li>Service fee</li>
                   <li>Shipping cost (if applicable)</li>
                   <li><strong>Total amount charged</strong></li>
                 </ul>

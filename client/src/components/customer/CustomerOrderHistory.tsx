@@ -1148,7 +1148,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
             })()}
             {transactionFee > 0 && (
               <div className="flex justify-between text-xs">
-                <span className="break-words">Service Fee (5.5% + £0.50):</span>
+                <span className="break-words">Service Fee:</span>
                 <span className="font-medium">{fmt(transactionFee)}</span>
               </div>
             )}
@@ -1701,7 +1701,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             </div>
             {transactionFee > 0 && (
               <div className="flex justify-between text-xs">
-                <span>Service Fee (5.5% + £0.50):</span>
+                <span>Service Fee:</span>
                 <span className="font-medium">{fmt(transactionFee)}</span>
               </div>
             )}

@@ -323,7 +323,7 @@ export const ThankYouPage = ({
                   </div>
                   {customerTransactionFee > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Service Fee (5.5% + £0.50):</span>
+                    <span>Service Fee:</span>
                     <span>{fmt(customerTransactionFee)}</span>
                   </div>
                   )}

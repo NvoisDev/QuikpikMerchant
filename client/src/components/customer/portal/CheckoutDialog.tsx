@@ -332,7 +332,7 @@ export function CheckoutDialog({
                   )}
 
                   <div className="flex justify-between text-gray-600">
-                    <span>Service Fee (5.5% + £0.50)</span>
+                    <span>Service Fee</span>
                     <PriceDisplay
                       price={calculateCustomerFee(
                         cartStats.subtotal,
@@ -367,7 +367,7 @@ export function CheckoutDialog({
                   </svg>
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">Payment Processing Fee</p>
-                    <p>A service fee of 5.5% + £0.50 is applied to cover secure payment processing and platform services.</p>
+                    <p>A service fee is applied to cover secure payment processing and platform services.</p>
                   </div>
                 </div>
               </div>
