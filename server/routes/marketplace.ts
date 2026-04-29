@@ -889,9 +889,11 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      // Deterministic idempotency key: SHA-256 of wholesalerId + normalised phone + sorted items.
-      // Using the wholesaler's wholesalerId (from first validated item) ensures keys are scoped
-      // per-wholesaler and stable across retries for the same cart/customer combination.
+      // Deterministic idempotency key: SHA-256 of wholesalerId + normalised phone + final Stripe
+      // amount (pence, includes delivery + VAT) + sorted items. Including stripeAmountFinal ensures
+      // the key changes whenever the total changes (e.g. customer switches delivery method), which
+      // prevents Stripe from rejecting the request with an idempotency conflict. True retries with
+      // the same cart and same total still reuse the same key and payment intent.
       const normalizedPhone = (customerPhone || 'guest').replace(/[^0-9]/g, '');
       const sortedItemsStr = validatedItems
         .map(i => `${i.product.id}:${i.quantity}:${i.unitPrice}`)
