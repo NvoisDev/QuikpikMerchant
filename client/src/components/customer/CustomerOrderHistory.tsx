@@ -893,18 +893,18 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
 
         {/* Outstanding Balance Alert - Show if there's money owed (not for cancelled orders) */}
         {parseFloat(order.amountOutstanding || '0') > 0 && order.status !== 'cancelled' && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-start">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
                 <span className="text-lg">💳</span>
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-orange-900 text-sm">Outstanding Balance</h4>
-                <p className="text-orange-800 text-xs mt-1">
+                <h4 className="font-semibold text-blue-900 text-sm">Outstanding Balance</h4>
+                <p className="text-blue-800 text-xs mt-1">
                   You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
                 </p>
                 {isQuoteEdited(order) && (
-                  <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-blue-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
                     This invoice was updated by the seller. Click Pay Now below to complete payment with the updated total.
                   </p>
@@ -924,7 +924,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                     <span>Amount Paid:</span>
                     <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
                   </div>
-                  <div className="flex justify-between text-orange-700 font-semibold border-t pt-1">
+                  <div className="flex justify-between text-blue-700 font-semibold border-t pt-1">
                     <span>Outstanding:</span>
                     <span>{fmt(order.amountOutstanding || '0')}</span>
                   </div>
@@ -1480,18 +1480,18 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
 
         {/* Outstanding Balance Alert */}
         {parseFloat(order.amountOutstanding || '0') > 0 && order.status !== 'cancelled' && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-start">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
                 <span className="text-lg">💳</span>
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-orange-900 text-sm">Outstanding Balance</h4>
-                <p className="text-orange-800 text-xs mt-1">
+                <h4 className="font-semibold text-blue-900 text-sm">Outstanding Balance</h4>
+                <p className="text-blue-800 text-xs mt-1">
                   You have an outstanding balance of <span className="font-bold">{fmt(order.amountOutstanding || '0')}</span> on this order.
                 </p>
                 {isQuoteEdited(order) && (
-                  <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-blue-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
                     This invoice was updated by the seller. Click Pay Now below to complete payment with the updated total.
                   </p>
@@ -1511,7 +1511,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                     <span>Amount Paid:</span>
                     <span className="font-medium">{fmt(order.amountPaid || '0')}</span>
                   </div>
-                  <div className="flex justify-between text-orange-700 font-semibold border-t pt-1">
+                  <div className="flex justify-between text-blue-700 font-semibold border-t pt-1">
                     <span>Outstanding:</span>
                     <span>{fmt(order.amountOutstanding || '0')}</span>
                   </div>
