@@ -79,6 +79,19 @@ async function resolveCustomerAuth(
  * — never the module-level `stripe` singleton (which has no per-request account context).
  */
 export function registerMarketplaceRoutes(app: Express): void {
+  // GET /api/config/customer-fee — public, no auth required
+  // Returns the live customer transaction fee config so the checkout dialog
+  // can display the correct fee instead of using hardcoded defaults.
+  app.get('/api/config/customer-fee', async (_req, res) => {
+    try {
+      const config = await getCurrentFeeConfig();
+      res.json({ percentage: config.percentage, fixed: config.fixed });
+    } catch (err) {
+      console.error('[/api/config/customer-fee] error:', err);
+      res.status(500).json({ percentage: 0.055, fixed: 0.50 });
+    }
+  });
+
   // GET /api/customer-orders/:wholesalerId/:phoneNumber
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
     try {

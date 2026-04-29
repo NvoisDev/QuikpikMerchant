@@ -24,6 +24,18 @@ vi.mock('../server/storage', () => ({
   },
 }));
 
+// Pin the fee config so tests are deterministic regardless of DB state.
+// The test fixture uses the original default rate: 5.5% + £0.50.
+vi.mock('../server/utils/fee-config', () => ({
+  getCurrentFeeConfig: vi.fn().mockResolvedValue({
+    id: 1,
+    percentage: 0.055,
+    fixed: 0.50,
+    createdAt: new Date('2026-01-01'),
+    createdBy: 'test',
+  }),
+}));
+
 vi.mock('../server/stripeConfig', () => ({
   getStripeClient: vi.fn(),
   getPublishableKey: vi.fn().mockReturnValue('pk_test_fake'),

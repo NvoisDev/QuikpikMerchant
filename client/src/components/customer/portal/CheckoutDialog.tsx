@@ -97,6 +97,17 @@ export function CheckoutDialog({
     staleTime: 60000,
   });
 
+  const { data: liveFeeConfig } = useQuery<{ percentage: number; fixed: number }>({
+    queryKey: ["/api/config/customer-fee"],
+    queryFn: async () => {
+      const r = await fetch("/api/config/customer-fee");
+      if (!r.ok) return { percentage: 0.055, fixed: 0.50 };
+      return r.json();
+    },
+    staleTime: 60000,
+  });
+  const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50 };
+
   const defaultCollectionAddress = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
 
   useEffect(() => {
@@ -336,7 +347,8 @@ export function CheckoutDialog({
                     <PriceDisplay
                       price={calculateCustomerFee(
                         cartStats.subtotal,
-                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0
+                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
+                        feeConfig
                       )}
                       currency={wholesaler?.defaultCurrency || 'GBP'}
                       isGuestMode={false}
@@ -351,7 +363,7 @@ export function CheckoutDialog({
                   <PriceDisplay
                     price={(() => {
                       const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                      return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping);
+                      return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig);
                     })()}
                     currency={wholesaler?.defaultCurrency || 'GBP'}
                     isGuestMode={false}
@@ -693,7 +705,7 @@ export function CheckoutDialog({
                         {(() => {
                           const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                             ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                          return formatCurrency(cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping));
+                          return formatCurrency(cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig));
                         })()}
                       </strong>{' '}
                       will be due on invoice. The supplier will be notified of your order.
@@ -750,7 +762,7 @@ export function CheckoutDialog({
                         const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                         const computedBeforeFees = computedSubtotal + computedShipping;
-                        const computedTransactionFee = calculateCustomerFee(computedSubtotal, computedShipping);
+                        const computedTransactionFee = calculateCustomerFee(computedSubtotal, computedShipping, feeConfig);
                         const computedTotal = computedBeforeFees + computedTransactionFee;
                         setCompletedOrder({
                           orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
@@ -825,12 +837,13 @@ export function CheckoutDialog({
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
                       customerTransactionFee={calculateCustomerFee(
                         cartStats.subtotal,
-                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0
+                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
+                        feeConfig
                       )}
                       totalAmount={(() => {
                         const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                        return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping);
+                        return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig);
                       })()}
                       onSuccess={(orderData) => {
                         const orderItems = cart.map(cartItem => {
