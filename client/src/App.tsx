@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import "@/lib/impersonation";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -82,7 +82,7 @@ function PublicRoutes() {
         <Route path="/marketplace/product/:id" component={ProductOrderPage} />
         <Route path="/product/:slug" component={PublicProductPage} />
         <Route path="/customer/payment-success" component={PaymentSuccess} />
-        <Route path="/customer/:id" component={CustomerLogin} />
+        <Route path="/customer/:id" component={({ params }) => { const [, setLocation] = useLocation(); useEffect(() => { setLocation(`/store/${params.id}`, { replace: true }); }, [params.id]); return null; }} />
         <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
         <Route path="/store/:id" component={CustomerPortal} />
         <Route path="/team-invitation" component={TeamInvitation} />
