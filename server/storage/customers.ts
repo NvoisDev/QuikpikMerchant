@@ -1426,6 +1426,7 @@ export class CustomerStorage extends OrderStorage {
         totalBadges: wholesaler.total_badges,
         completedAchievements: wholesaler.completed_achievements,
         onboardingProgress: wholesaler.onboarding_progress,
+        allowPayLater: wholesaler.allow_pay_later || false,
       };
 
       return {

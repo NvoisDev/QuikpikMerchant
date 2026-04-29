@@ -639,7 +639,7 @@ export function CheckoutDialog({
 
             {/* Payment Form */}
             <div className="border-t pt-6">
-              {customerData.shippingOption && (
+              {customerData.shippingOption && wholesaler?.allowPayLater && (
                 <div className="mb-5">
                   <h3 className="font-semibold mb-2">Payment Method</h3>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden">
@@ -683,7 +683,7 @@ export function CheckoutDialog({
               )}
 
               {/* Pay Later — place order directly */}
-              {payLaterMode && customerData.shippingOption ? (
+              {payLaterMode && wholesaler?.allowPayLater && customerData.shippingOption ? (
                 <div className="space-y-3">
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium">Pay Later — No payment required now</p>

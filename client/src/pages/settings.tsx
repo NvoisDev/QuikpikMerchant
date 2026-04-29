@@ -602,6 +602,8 @@ export default function Settings() {
   const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
   const [deliveryNote, setDeliveryNote] = useState((user as any)?.deliveryNote || '');
   const [savingDelivery, setSavingDelivery] = useState(false);
+  const [allowPayLater, setAllowPayLater] = useState((user as any)?.allowPayLater ?? false);
+  const [savingPayLater, setSavingPayLater] = useState(false);
   const [vatEnabled, setVatEnabled] = useState((user as any)?.vatEnabled ?? false);
   const [vatRateInput, setVatRateInput] = useState(
     (user as any)?.vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20'
@@ -698,6 +700,7 @@ export default function Settings() {
       setDeliveryEnabled((user as any).enableDelivery ?? true);
       setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
       setDeliveryNote((user as any).deliveryNote || '');
+      setAllowPayLater((user as any).allowPayLater ?? false);
       setVatEnabled((user as any).vatEnabled ?? false);
       setVatRateInput((user as any).vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20');
     }
@@ -720,6 +723,22 @@ export default function Settings() {
       toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setSavingDelivery(false);
+    }
+  };
+
+  const handleSavePayLater = async () => {
+    setSavingPayLater(true);
+    try {
+      const response = await apiRequest('PUT', '/api/user/profile', { allowPayLater });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: allowPayLater ? "Pay Later enabled" : "Pay Later disabled", description: allowPayLater ? "Customers can now choose to pay later at checkout." : "Pay Later option has been removed from checkout." });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      }
+    } catch {
+      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingPayLater(false);
     }
   };
 
@@ -1577,6 +1596,39 @@ export default function Settings() {
                       >
                         <Save className="h-3.5 w-3.5" />
                         {savingDelivery ? "Saving..." : "Save Delivery Settings"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Pay Later Settings Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Receipt className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Pay Later</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Allow customers to place orders without paying upfront. You will be responsible for collecting payment separately.</p>
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Enable Pay Later</p>
+                          <p className="text-xs text-gray-500 mt-0.5">When on, customers see a "Pay Later" option at checkout alongside the standard payment flow</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAllowPayLater(!allowPayLater)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${allowPayLater ? 'bg-green-600' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${allowPayLater ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleSavePayLater}
+                        disabled={savingPayLater}
+                        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {savingPayLater ? "Saving..." : "Save Pay Later Settings"}
                       </Button>
                     </div>
                   </div>

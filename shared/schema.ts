@@ -271,6 +271,9 @@ export const users = pgTable("users", {
   vatEnabled: boolean("vat_enabled").default(false),
   vatRate: decimal("vat_rate", { precision: 5, scale: 4 }).default("0.2000"),
 
+  // Pay Later — wholesaler-controlled
+  allowPayLater: boolean("allow_pay_later").default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1773,8 +1773,11 @@ export function registerMarketplaceRoutes(app: Express): void {
         }
       }
 
-      // --- Look up wholesaler for delivery rate ---
+      // --- Look up wholesaler for delivery rate + pay-later gate ---
       const wholesalerProfile = await storage.getWholesalerProfile(wholesalerId);
+      if (!wholesalerProfile?.allowPayLater) {
+        return res.status(403).json({ message: 'Pay Later is not enabled by this supplier' });
+      }
       const shippingCost = shippingOption === 'delivery' && wholesalerProfile?.deliveryFlatRate
         ? parseFloat(wholesalerProfile.deliveryFlatRate)
         : 0;
@@ -1880,9 +1883,10 @@ export function registerMarketplaceRoutes(app: Express): void {
         });
       }
 
-      // Pay Later orders have no Stripe processing — no transaction fee or platform fee
-      const transactionFee = 0;
-      const platformFee = '0.00';
+      // Pay Later orders: apply customer transaction fee (matches Pay Now behaviour)
+      const payLaterFeeConfig = await getCurrentFeeConfig();
+      const transactionFee = calculateCustomerFee(subtotal, shippingCost, payLaterFeeConfig);
+      const platformFee = calculatePlatformFee(subtotal).toFixed(2);
 
       // VAT calculation — look up wholesaler VAT settings
       const payLaterWholesalerForVat = await storage.getUser(wholesalerId);
@@ -1890,7 +1894,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       const payLaterVatRate = parseFloat(payLaterWholesalerForVat?.vatRate ?? '0');
       const payLaterVatAmount = payLaterVatEnabled ? subtotal * payLaterVatRate : 0;
       const payLaterVatRateApplied = payLaterVatEnabled ? payLaterVatRate : null;
-      const total = (subtotal + payLaterVatAmount + shippingCost).toFixed(2);
+      const total = (subtotal + payLaterVatAmount + shippingCost + transactionFee).toFixed(2);
 
       // --- Validate collectionAddressId belongs to this wholesaler (multi-tenant safety) ---
       let validatedCollectionAddressId: number | null = null;
@@ -1947,6 +1951,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         deliveryCarrier: shippingOption === 'delivery' ? 'Supplier Arranged' : null,
         deliveryCost: shippingCost.toFixed(2),
         shippingTotal: shippingCost.toFixed(2),
+        feePercentageUsed: payLaterFeeConfig.percentage.toFixed(4),
+        fixedFeeUsed: payLaterFeeConfig.fixed.toFixed(2),
       };
 
       const order = await db.transaction(async (trx) => {
