@@ -65,6 +65,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
@@ -2383,10 +2384,11 @@ export default function Customers() {
           </DialogHeader>
 
           <Tabs defaultValue="products" className="mt-2">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details"><Edit3 className="h-4 w-4 mr-1" />Details</TabsTrigger>
               <TabsTrigger value="products"><Package className="h-4 w-4 mr-1" />Products</TabsTrigger>
               <TabsTrigger value="assign"><Users className="h-4 w-4 mr-1" />Assign</TabsTrigger>
+              <TabsTrigger value="impact"><Eye className="h-4 w-4 mr-1" />Impact</TabsTrigger>
             </TabsList>
 
             {/* Details Tab — edit name/description/dates/active */}
@@ -2640,6 +2642,129 @@ export default function Customers() {
                   <span className="sm:hidden sr-only">Share Now</span>
                 </Button>
               </div>
+            </TabsContent>
+
+            {/* Impact Tab */}
+            <TabsContent value="impact" className="space-y-4 pt-4">
+              {(() => {
+                const today = new Date().toISOString().slice(0, 10);
+                const isExpired = !!(priceListForm.endDate && priceListForm.endDate < today);
+                const isInactive = !priceListForm.isActive || isExpired;
+
+                return (
+                  <>
+                    {isInactive && (
+                      <Alert className="border-yellow-300 bg-yellow-50">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                        <AlertDescription className="text-yellow-800 text-sm">
+                          {!priceListForm.isActive
+                            ? "This price list is inactive. Customers won't see these prices until you activate it on the Details tab."
+                            : "This price list has expired. Update the end date on the Details tab to re-activate it."}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Products impact table */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                        <Package className="h-4 w-4 text-green-600" />
+                        What customers will pay
+                      </p>
+                      {priceListItems.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg bg-gray-50">
+                          Add products on the <span className="font-medium">Products</span> tab to preview prices here.
+                        </div>
+                      ) : (
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="text-left px-3 py-2 font-medium text-gray-600 text-xs">Product</th>
+                                <th className="text-right px-3 py-2 font-medium text-gray-600 text-xs">Standard</th>
+                                <th className="text-right px-3 py-2 font-medium text-gray-600 text-xs">Their price</th>
+                                <th className="text-right px-3 py-2 font-medium text-gray-600 text-xs">Saving</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                              {priceListItems.map((item) => {
+                                const standard = parseFloat(item.product?.price || "0");
+                                const hasFixed = !!(item.customPrice && parseFloat(item.customPrice) > 0);
+                                const hasPct = !!(item.discountPercentage && parseFloat(item.discountPercentage) > 0);
+                                let custom = standard;
+                                if (hasFixed) custom = parseFloat(item.customPrice);
+                                else if (hasPct) custom = standard * (1 - parseFloat(item.discountPercentage) / 100);
+                                const saving = standard - custom;
+                                const savingPct = standard > 0 ? (saving / standard) * 100 : 0;
+                                const priced = hasFixed || hasPct;
+                                return (
+                                  <tr key={item.productId} className="bg-white">
+                                    <td className="px-3 py-2.5 text-gray-800 max-w-[140px] truncate">
+                                      {item.product?.name || "Unknown"}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right text-muted-foreground line-through text-xs">
+                                      {priced ? formatMoney(standard) : "—"}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right font-semibold text-green-700">
+                                      {priced ? formatMoney(custom) : <span className="text-muted-foreground font-normal text-xs italic">no price set</span>}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right">
+                                      {priced && saving > 0 ? (
+                                        <span className="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                                          -{savingPct.toFixed(0)}%
+                                        </span>
+                                      ) : priced ? (
+                                        <span className="text-xs text-muted-foreground">—</span>
+                                      ) : null}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Assigned customers */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                        <Users className="h-4 w-4 text-green-600" />
+                        Who gets these prices
+                      </p>
+                      {priceListAssignments.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg bg-gray-50">
+                          Assign customers on the <span className="font-medium">Assign</span> tab to see who benefits.
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {priceListAssignments.map((a, idx) => {
+                            if (a.customerId) {
+                              const c = customers.find(x => x.id === a.customerId);
+                              const name = c ? `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phoneNumber : a.customerId;
+                              return (
+                                <Link key={idx} href={`/customers/${a.customerId}`}>
+                                  <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-gray-200 transition-colors">
+                                    {name}
+                                  </Badge>
+                                </Link>
+                              );
+                            }
+                            if (a.customerGroupId) {
+                              const g = customerGroups.find(x => x.id === a.customerGroupId);
+                              return (
+                                <Badge key={idx} variant="outline" className="text-xs border-primary/40 text-primary flex items-center gap-0.5">
+                                  <Users className="h-2.5 w-2.5" />{g?.name || `Group ${a.customerGroupId}`}
+                                </Badge>
+                              );
+                            }
+                            return null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </TabsContent>
           </Tabs>
         </DialogContent>
