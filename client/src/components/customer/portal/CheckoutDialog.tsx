@@ -104,7 +104,7 @@ export function CheckoutDialog({
       if (!r.ok) return { percentage: 0.055, fixed: 0.50 };
       return r.json();
     },
-    staleTime: 60000,
+    staleTime: 0,
   });
   const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50 };
 
