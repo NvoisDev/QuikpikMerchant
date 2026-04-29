@@ -1052,14 +1052,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   <p className="text-xs text-gray-400">Last Active</p>
                   <p className="text-sm font-medium text-gray-800 mt-1">{selectedWholesaler.lastSeenAt ? format(new Date(selectedWholesaler.lastSeenAt), "dd MMM yyyy") : "Never"}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-400">Last Login</p>
-                  <p className="text-sm font-medium text-gray-800 mt-1">
-                    {selectedWholesaler.lastLoginAt
-                      ? formatDateTime(selectedWholesaler.lastLoginAt)
-                      : "Never"}
-                  </p>
-                </div>
+
                 <div className="bg-gray-50 rounded-lg p-3 col-span-2">
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-gray-400">Last Real User Activity</p>
