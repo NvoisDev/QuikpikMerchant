@@ -1,0 +1,183 @@
+🧾 Activity Tracking Fix — Multi-Auth Support (IMPERSONATION-SAFE, NON-BREAKING)
+
+---
+
+## 🎯 Objective
+
+Fix inaccurate tracking of “last login” and “activity” by:
+
+* Supporting ALL authentication methods:
+
+  * Google OAuth (wholesaler owners)
+  * Email + password (team members)
+  * OTP (customers)
+* Preventing super admin impersonation from corrupting activity data
+* Accurately reflecting real user engagement
+
+---
+
+## ⚠️ Core Rules
+
+* Do NOT break existing login flows
+* Do NOT remove existing fields — extend instead
+* Must support all user roles and auth methods
+* Must be backward compatible
+
+---
+
+## 🧱 Part 1 — Data Model
+
+Add to users table:
+
+* lastLoginAt (timestamp)
+* lastActivityAt (timestamp)
+* lastRealUserActivityAt (timestamp)
+
+---
+
+## 🔐 Part 2 — Login Tracking (ALL AUTH METHODS)
+
+Update on successful login ONLY:
+
+### Triggers:
+
+1. Google OAuth success
+2. Email + password login success (team members)
+3. OTP verification success (customers)
+
+---
+
+### Behaviour:
+
+Set:
+
+* lastLoginAt = now()
+* lastActivityAt = now()
+* lastRealUserActivityAt = now()
+
+---
+
+## 🔄 Part 3 — Activity Tracking
+
+On key backend actions:
+
+* product updates
+* order creation/edit
+* customer changes
+* settings updates
+
+Update:
+
+* lastActivityAt = now()
+
+---
+
+## 🚫 Part 4 — Impersonation Protection (CRITICAL)
+
+Detect impersonation via:
+
+* session flag (isImpersonating = true)
+* OR role === 'super_admin'
+
+---
+
+### Behaviour:
+
+IF impersonating:
+
+* DO update:
+  lastActivityAt
+
+* DO NOT update:
+  lastLoginAt
+  lastRealUserActivityAt
+
+---
+
+## ✅ Part 5 — Real User Activity
+
+IF user is:
+
+* wholesaler
+* team_member
+* customer
+
+AND NOT impersonating:
+
+Update:
+
+* lastRealUserActivityAt = now()
+
+---
+
+## 🖥️ Part 6 — Admin Panel Labels
+
+Display clearly:
+
+* “Last Login” → lastLoginAt
+* “Last Active (System)” → lastActivityAt
+* “Last Real User Activity” → lastRealUserActivityAt
+
+Add tooltip:
+
+* “Excludes admin impersonation activity”
+
+---
+
+## 🧪 Part 7 — Backward Compatibility
+
+* If new fields are null:
+
+  * fallback to existing activity field
+* No changes to historical records
+
+---
+
+## 🧪 Part 8 — Testing Scenarios
+
+1. Owner logs in via Google
+   → all fields update
+
+2. Team member logs in via email/password
+   → all fields update
+
+3. Customer logs in via OTP
+   → all fields update
+
+4. Product updated by team member
+   → lastActivityAt + lastRealUserActivityAt update
+
+5. Super admin impersonates
+   → ONLY lastActivityAt updates
+
+---
+
+## 🔐 Part 9 — Safety
+
+* Tracking must happen server-side
+* Do NOT trust frontend signals
+* Do NOT allow impersonation to overwrite real usage
+
+---
+
+## 📦 Deliverables
+
+* Unified login tracking across all auth methods
+* Accurate activity tracking
+* Clean admin panel visibility
+* No regressions in auth or sessions
+
+---
+
+## ✅ Acceptance Criteria
+
+* All login types correctly tracked
+* Admin impersonation does not affect real user metrics
+* Team activity is visible and accurate
+* No broken flows
+
+---
+
+## 🧠 Guiding Principle
+
+“Every real user login counts — regardless of how they log in.”
