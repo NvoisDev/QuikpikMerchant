@@ -24,7 +24,7 @@ import {
   ChevronRight, ChevronDown, Menu, X, Flag, AlertCircle, CheckCircle, Mail, Phone,
   Building2, Eye, ToggleLeft, ToggleRight, Star, CreditCard,
   Activity, LogIn, Terminal, Clock, UserCheck, Zap, PlusCircle, Archive,
-  BadgeCheck, Percent, FileText, UserPlus,
+  BadgeCheck, Percent, FileText, UserPlus, Info,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
@@ -98,6 +98,7 @@ interface WholesalerRow {
   customFeePercentage: number | null; isTestAccount?: boolean;
   lastLoginAt?: string | null;
   lastSeenAt?: string | null;
+  lastRealUserActivityAt?: string | null;
   enableMultiProfile?: boolean;
   legalBusinessName?: string | null;
   vatNumber?: string | null;
@@ -1051,11 +1052,29 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                   <p className="text-xs text-gray-400">Last Active</p>
                   <p className="text-sm font-medium text-gray-800 mt-1">{selectedWholesaler.lastSeenAt ? format(new Date(selectedWholesaler.lastSeenAt), "dd MMM yyyy") : "Never"}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400">Last Login</p>
                   <p className="text-sm font-medium text-gray-800 mt-1">
                     {selectedWholesaler.lastLoginAt
                       ? formatDateTime(selectedWholesaler.lastLoginAt)
+                      : "Never"}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-gray-400">Last Real User Activity</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Excludes super admin impersonation activity
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 mt-1">
+                    {(selectedWholesaler.lastRealUserActivityAt ?? selectedWholesaler.lastSeenAt)
+                      ? formatDateTime((selectedWholesaler.lastRealUserActivityAt ?? selectedWholesaler.lastSeenAt)!)
                       : "Never"}
                   </p>
                 </div>

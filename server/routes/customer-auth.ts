@@ -278,6 +278,14 @@ export function registerCustomerAuthRoutes(app: Express): void {
       sessionAny.verifiedCode = undefined;
       sessionAny.verifiedPhoneExpiry = undefined;
 
+      // Stamp login time on the customer record — real login, always update all three fields
+      if (match.customerId) {
+        const now = new Date();
+        await db.update(users)
+          .set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now })
+          .where(eq(users.id, match.customerId));
+      }
+
       await buildAndSaveCustomerSession(req, res, customer, wholesalerId);
       console.log(`🔐 Phone-OTP session created for ${customerName} → wholesaler ${wholesalerId}`);
 

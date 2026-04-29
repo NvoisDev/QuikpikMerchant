@@ -239,14 +239,15 @@ export function registerAdminRoutes(app: Express): void {
             : null,
           isTestAccount: w.isTestAccount ?? false,
           lastLoginAt: (() => {
+            // Only consider actual login events — never lastSeenAt (presence pings)
             const ownerLogin = w.lastLoginAt ? new Date(w.lastLoginAt) : null;
             const teamLogin = teamMemberLastLoginByWholesaler[w.id] ?? null;
-            const lastSeen = w.lastSeenAt ? new Date(w.lastSeenAt) : null;
-            const candidates = [ownerLogin, teamLogin, lastSeen].filter(Boolean) as Date[];
+            const candidates = [ownerLogin, teamLogin].filter(Boolean) as Date[];
             if (candidates.length === 0) return null;
             return candidates.reduce((a, b) => (a > b ? a : b));
           })(),
           lastSeenAt: w.lastSeenAt ?? null,
+          lastRealUserActivityAt: w.lastRealUserActivityAt ?? null,
           enableMultiProfile: w.enableMultiProfile ?? false,
           legalBusinessName: w.legalBusinessName ?? null,
           vatNumber: w.vatNumber ?? null,

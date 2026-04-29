@@ -4,6 +4,7 @@ import {
   products, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
 import { productBatches } from "@shared/schema";
+import { isImpersonating } from "../utils/isImpersonating";
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -112,6 +113,11 @@ export function registerProductRoutes(app: Express): void {
         }
         return newProduct;
       });
+
+      // Track real-user activity (skip when super admin is impersonating)
+      if (!isImpersonating(req)) {
+        storage.updateUserRealActivity(targetUserId).catch(() => {});
+      }
 
       res.json(product);
     } catch (error) {
@@ -252,6 +258,11 @@ export function registerProductRoutes(app: Express): void {
         return updatedProduct;
       });
       // ──────────────────────────────────────────────────────────────────────
+
+      // Track real-user activity (skip when super admin is impersonating)
+      if (!isImpersonating(req)) {
+        storage.updateUserRealActivity(targetUserId).catch(() => {});
+      }
 
       res.json(product);
     } catch (error) {

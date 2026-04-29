@@ -257,6 +257,7 @@ export const users = pgTable("users", {
 
   lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
   lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s
+  lastRealUserActivityAt: timestamp("last_real_user_activity_at"), // Updated only by real user actions — never by super admin impersonation
 
   // Multi-business profile feature (admin-enabled per wholesaler)
   enableMultiProfile: boolean("enable_multi_profile").default(false),

@@ -7,6 +7,7 @@ import {
   sgMail, sql, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail, GoogleAuthBlockedError
 } from "./shared";
+import { isImpersonating } from "../utils/isImpersonating";
 
 export function registerAuthRoutes(app: Express): void {
   // PUT /api/user/profile
@@ -159,9 +160,10 @@ export function registerAuthRoutes(app: Express): void {
         throw authErr;
       }
 
-      // Stamp last login time for wholesalers and admins
+      // Stamp last login time for wholesalers and admins (real login — always update all three fields)
       if (user.role === 'wholesaler' || user.role === 'admin') {
-        await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+        const now = new Date();
+        await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, user.id));
       }
 
       // Set user session in passport format for compatibility
@@ -424,8 +426,15 @@ export function registerAuthRoutes(app: Express): void {
   // POST /api/auth/ping — lightweight presence heartbeat, updates lastSeenAt
   app.post('/api/auth/ping', requireAuth, async (req: any, res) => {
     try {
+      // Skip all activity updates when a super admin is impersonating this account
+      // so that the wholesaler's tracking fields reflect only real user activity.
+      if (isImpersonating(req)) {
+        return res.sendStatus(204);
+      }
+
       const userId = req.user.id;
-      await storage.updateUserLastSeen(userId);
+      // Update both lastSeenAt and lastRealUserActivityAt for genuine user pings
+      await storage.updateUserRealActivity(userId);
 
       // Also update the team_members row if this user is a team member
       if (req.user.role === 'team_member' && req.user.wholesalerId && req.user.email) {
@@ -487,6 +496,12 @@ export function registerAuthRoutes(app: Express): void {
       console.log("✅ Settings updated successfully for user:", userId);
       console.log("- Updated logo type:", updatedUser.logoType);
       console.log("- Updated logo URL length:", updatedUser.logoUrl?.length || 0);
+
+      // Update real-user activity timestamp only when not impersonating
+      if (!isImpersonating(req)) {
+        storage.updateUserRealActivity(userId).catch(() => {});
+      }
+
       res.json(updatedUser);
     } catch (error: any) {
       console.error("❌ Error updating settings:", error);
@@ -1286,11 +1301,14 @@ export function registerAuthRoutes(app: Express): void {
         wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
       }
 
-      // Record last login time on both the teamMembers row and the users row
+      // Record last login time on both the teamMembers row and the users row (real login)
       if (teamMember?.id) {
         await storage.updateTeamMemberLastLogin(teamMember.id);
       }
-      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, authenticatedUser.id));
+      {
+        const now = new Date();
+        await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, authenticatedUser.id));
+      }
 
       // Create session for team member with wholesaler context
       req.session.user = {
@@ -1347,8 +1365,11 @@ export function registerAuthRoutes(app: Express): void {
       if (teamMember) {
         const wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
 
-        // Stamp last login time for team member
-        await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+        // Stamp last login time for team member (real login)
+        {
+          const now = new Date();
+          await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, user.id));
+        }
         
         // Create session for team member with wholesaler context
         req.session.user = {
@@ -1388,8 +1409,11 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Stamp last login time for business owner
-      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, authenticatedUser.id));
+      // Stamp last login time for business owner (real login)
+      {
+        const now = new Date();
+        await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, authenticatedUser.id));
+      }
 
       // Create session for business owner
       req.session.user = {

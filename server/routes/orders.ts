@@ -3,6 +3,7 @@ import { calculateCustomerFee } from "../../shared/utils/fees";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
+import { isImpersonating } from "../utils/isImpersonating";
 import {
   SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
   createStripeRefundReceipt, db, desc, emailBadge, emailButton, emailCard, emailHeading, eq,
@@ -1265,6 +1266,11 @@ export function registerOrderRoutes(app: Express): void {
         }
       }
       
+      // Track real-user activity (skip when super admin is impersonating)
+      if (!isImpersonating(req)) {
+        storage.updateUserRealActivity(userId).catch(() => {});
+      }
+
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -1330,6 +1336,11 @@ export function registerOrderRoutes(app: Express): void {
             console.error(`Failed to auto-archive order ${id}:`, error);
           }
         }, 24 * 60 * 60 * 1000);
+      }
+
+      // Track real-user activity (skip when super admin is impersonating)
+      if (!isImpersonating(req)) {
+        storage.updateUserRealActivity(wholesalerId).catch(() => {});
       }
 
       res.json(updatedOrder);

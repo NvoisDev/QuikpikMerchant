@@ -305,6 +305,13 @@ export class UserStorageBase {
       .where(eq(users.id, id));
   }
 
+  async updateUserRealActivity(id: string): Promise<void> {
+    const now = new Date();
+    await db.update(users)
+      .set({ lastSeenAt: now, lastRealUserActivityAt: now })
+      .where(eq(users.id, id));
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)

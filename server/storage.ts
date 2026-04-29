@@ -344,6 +344,7 @@ export interface IStorage {
   updateTeamMemberLastLogin(id: number): Promise<void>;
   updateTeamMemberLastSeen(id: number): Promise<void>;
   updateUserLastSeen(id: string): Promise<void>;
+  updateUserRealActivity(id: string): Promise<void>;
   getTeamMemberByEmail(wholesalerId: string, email: string): Promise<TeamMember | undefined>;
   getTeamMembersCount(wholesalerId: string): Promise<number>;
   
