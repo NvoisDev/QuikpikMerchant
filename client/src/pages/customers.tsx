@@ -2649,7 +2649,9 @@ export default function Customers() {
               {(() => {
                 const today = new Date().toISOString().slice(0, 10);
                 const isExpired = !!(priceListForm.endDate && priceListForm.endDate < today);
-                const isInactive = !priceListForm.isActive || isExpired;
+                const notYetStarted = !!(priceListForm.startDate && priceListForm.startDate > today);
+                const outsideDateWindow = isExpired || notYetStarted;
+                const isInactive = !priceListForm.isActive || outsideDateWindow;
 
                 return (
                   <>
@@ -2659,7 +2661,9 @@ export default function Customers() {
                         <AlertDescription className="text-yellow-800 text-sm">
                           {!priceListForm.isActive
                             ? "This price list is inactive. Customers won't see these prices until you activate it on the Details tab."
-                            : "This price list has expired. Update the end date on the Details tab to re-activate it."}
+                            : isExpired
+                              ? "This price list has expired. Update the end date on the Details tab to re-activate it."
+                              : `This price list doesn't start until ${priceListForm.startDate}. Customers won't see these prices until then.`}
                         </AlertDescription>
                       </Alert>
                     )}
@@ -2709,8 +2713,8 @@ export default function Customers() {
                                     </td>
                                     <td className="px-3 py-2.5 text-right">
                                       {priced && saving > 0 ? (
-                                        <span className="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                                          -{savingPct.toFixed(0)}%
+                                        <span className="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                          {formatMoney(saving)} ({savingPct.toFixed(0)}%)
                                         </span>
                                       ) : priced ? (
                                         <span className="text-xs text-muted-foreground">—</span>
@@ -2729,7 +2733,7 @@ export default function Customers() {
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
                         <Users className="h-4 w-4 text-green-600" />
-                        Who gets these prices
+                        Assigned to
                       </p>
                       {priceListAssignments.length === 0 ? (
                         <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg bg-gray-50">
