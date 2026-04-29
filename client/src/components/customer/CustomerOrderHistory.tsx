@@ -906,7 +906,7 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                 {isQuoteEdited(order) && (
                   <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
-                    This invoice was updated by the seller. The payment link below reflects the latest total.
+                    This invoice was updated by the seller. Click Pay Now below to complete payment with the updated total.
                   </p>
                 )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
@@ -1493,7 +1493,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                 {isQuoteEdited(order) && (
                   <p className="text-amber-700 text-xs mt-1 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 flex-shrink-0" />
-                    This invoice was updated by the seller. The payment link below reflects the latest total.
+                    This invoice was updated by the seller. Click Pay Now below to complete payment with the updated total.
                   </p>
                 )}
                 <div className="mt-2 bg-white rounded p-2 space-y-1 text-xs">
