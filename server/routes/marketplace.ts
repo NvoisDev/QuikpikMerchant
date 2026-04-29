@@ -897,7 +897,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         .map(i => `${i.product.id}:${i.quantity}:${i.unitPrice}`)
         .sort()
         .join('|');
-      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${sortedItemsStr}`;
+      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${stripeAmountFinal}-${sortedItemsStr}`;
       const idempotencyKey = `pay_${createHash('sha256').update(idempotencyInput).digest('hex').slice(0, 32)}`;
 
       // Additional validation specifically for Stripe amount (VAT-inclusive)
