@@ -9,13 +9,15 @@
  * delegates entirely to those canonical helpers.
  */
 
-import { calculateCustomerFee, calculatePlatformFee } from '../../shared/utils/fees';
+import { calculateCustomerFee, calculatePlatformFee, type CustomerFeeConfig } from '../../shared/utils/fees';
 
 export type CheckoutInput = {
   productSubtotal: number;
   deliveryCost: number;
   /** Net coupon/discount already deducted from productSubtotal before calling this function. */
   couponDiscount?: number;
+  /** Live fee config fetched from DB — uses hardcoded defaults when omitted. */
+  feeConfig?: CustomerFeeConfig;
 };
 
 export type CheckoutCalculation = {
@@ -24,7 +26,7 @@ export type CheckoutCalculation = {
   couponDiscount: number;
   /** productSubtotal + deliveryCost − couponDiscount — the base on which all fees are applied. */
   amountBeforeFees: number;
-  /** Customer-facing transaction fee: 5.5% of amountBeforeFees + £0.50. */
+  /** Customer-facing transaction fee: configurable % of amountBeforeFees + fixed amount. */
   customerTransactionFee: number;
   /** Total the customer is charged (amountBeforeFees + customerTransactionFee). */
   totalCustomerPays: number;
@@ -36,6 +38,8 @@ export type CheckoutCalculation = {
   stripeAmountPence: number;
   /** Integer pence value passed as `application_fee_amount` to Stripe. */
   stripeApplicationFeePence: number;
+  /** The fee config that was used — for snapshotting on the order record. */
+  feeConfig: CustomerFeeConfig;
 };
 
 /**
@@ -43,11 +47,11 @@ export type CheckoutCalculation = {
  * product subtotal through to the two integers required by Stripe.
  */
 export function calculateCheckoutTotals(input: CheckoutInput): CheckoutCalculation {
-  const { productSubtotal, deliveryCost, couponDiscount = 0 } = input;
+  const { productSubtotal, deliveryCost, couponDiscount = 0, feeConfig } = input;
 
   const amountBeforeFees = Math.max(0, productSubtotal + deliveryCost - couponDiscount);
 
-  const customerTransactionFee = calculateCustomerFee(amountBeforeFees, 0);
+  const customerTransactionFee = calculateCustomerFee(amountBeforeFees, 0, feeConfig);
   const totalCustomerPays = amountBeforeFees + customerTransactionFee;
 
   const wholesalerPlatformFee = calculatePlatformFee(amountBeforeFees);
@@ -55,6 +59,9 @@ export function calculateCheckoutTotals(input: CheckoutInput): CheckoutCalculati
 
   const stripeAmountPence = Math.round(totalCustomerPays * 100);
   const stripeApplicationFeePence = Math.round(wholesalerPlatformFee * 100);
+
+  // Resolve the effective config (for snapshotting)
+  const effectiveConfig: CustomerFeeConfig = feeConfig ?? { percentage: 0.055, fixed: 0.50 };
 
   return {
     productSubtotal,
@@ -67,5 +74,6 @@ export function calculateCheckoutTotals(input: CheckoutInput): CheckoutCalculati
     wholesalerReceives,
     stripeAmountPence,
     stripeApplicationFeePence,
+    feeConfig: effectiveConfig,
   };
 }

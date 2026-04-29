@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import { getProductLimit } from "../utils/plan-tier";
+import { getCurrentFeeConfig, saveFeeConfig, getFeeConfigHistory } from "../utils/fee-config";
 import {
   ADMIN_EMAILS, and, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient, gte, inArray, isNull, lte, or, orders,
   requireAuth, storage, subscriptionPlans, userSubscriptions, users, products, orderItems,
@@ -2401,6 +2402,46 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin invalid-units-per-pallet error:', error);
       res.status(500).json({ error: 'Failed to query products.' });
+    }
+  });
+
+  // ── Customer transaction fee configuration ──────────────────────────────────
+
+  // GET /api/admin/fee-config — returns current config + history (last 20)
+  app.get('/api/admin/fee-config', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const [current, history] = await Promise.all([
+        getCurrentFeeConfig(),
+        getFeeConfigHistory(20),
+      ]);
+      res.json({ current, history });
+    } catch (error) {
+      console.error('Admin fee-config GET error:', error);
+      res.status(500).json({ error: 'Failed to fetch fee configuration.' });
+    }
+  });
+
+  // POST /api/admin/fee-config — save a new fee config version
+  app.post('/api/admin/fee-config', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { percentage, fixed, notes } = req.body as { percentage: number; fixed: number; notes?: string };
+      if (typeof percentage !== 'number' || typeof fixed !== 'number') {
+        return res.status(400).json({ error: 'percentage and fixed must be numbers.' });
+      }
+      if (percentage < 0 || percentage > 1) {
+        return res.status(400).json({ error: 'percentage must be between 0 and 1 (e.g. 0.055 for 5.5%).' });
+      }
+      if (fixed < 0) {
+        return res.status(400).json({ error: 'fixed must be >= 0.' });
+      }
+      const adminEmail = getAdminEmail(req) || 'unknown';
+      const saved = await saveFeeConfig({ percentage, fixed, notes, changedBy: adminEmail });
+      res.json({ ok: true, config: saved });
+    } catch (error) {
+      console.error('Admin fee-config POST error:', error);
+      res.status(500).json({ error: 'Failed to save fee configuration.' });
     }
   });
 

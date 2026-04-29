@@ -1,0 +1,104 @@
+🔧 Prompt: Pay Later Setting + Conditional Checkout UI
+
+Objective:
+Introduce a wholesaler-level setting to enable/disable “Pay Later” as a payment option in the customer portal. Default should be OFF. When enabled, it should appear in checkout and be clearly distinguished from “Pay Now”.
+
+1. Backend – Settings Model
+
+Add new field to wholesaler/business settings:
+
+allowPayLater: boolean // default: false
+
+Where:
+
+shared schema (types)
+database migration (default false)
+settings API (GET + UPDATE)
+2. Backend – Order Logic
+
+If allowPayLater = false:
+
+Reject any order attempts with paymentMethod = 'pay_later'
+
+If allowPayLater = true:
+
+Allow orders with:
+paymentMethod: 'pay_later'
+paymentStatus: 'unpaid'
+Skip Stripe payment intent creation
+Ensure order flows into:
+unpaid state
+visible in wholesaler dashboard
+eligible for “Send Payment Link” later
+3. Wholesaler Settings UI
+
+Location:
+Settings → Payments / Checkout section
+
+Add toggle:
+
+Label:
+
+Allow customers to pay later
+
+Description:
+
+Let customers place orders without immediate payment. You can request payment later via invoice or payment link.
+
+UI behaviour:
+
+Toggle switch (OFF by default)
+
+When ON, show subtext:
+
+Customers will see a “Pay Later” option at checkout
+
+4. Customer Portal – Checkout UI
+
+Modify payment method section:
+
+Current:
+Pay Now
+Pay Later (always visible ❌)
+New behaviour:
+Only show Pay Later if allowPayLater === true
+Updated UI Structure:
+
+Primary toggle buttons:
+
+Pay Now (default selected)
+Pay Later (only if enabled)
+UX improvements:
+
+If Pay Later is visible, add helper text:
+
+Under the toggle:
+
+Pay later and complete your order. The wholesaler may send you a payment link after confirmation.
+
+Visual hierarchy:
+Pay Now → primary (green, emphasized)
+Pay Later → secondary (neutral / outlined)
+5. Order Summary Messaging (Customer)
+
+If Pay Later selected:
+
+Show confirmation note before placing order:
+
+You won’t be charged now. The wholesaler will confirm your order and may send a payment request.
+
+6. Wholesaler Order View
+
+For Pay Later orders:
+
+Payment Status → Unpaid
+Show CTA:
+“Send Payment Link”
+“Mark as Paid (offline)”
+7. Safeguards
+Prevent switching from Pay Later → Pay Now mid-processing without re-init
+Ensure no Stripe intent is accidentally created
+Ensure totals remain consistent (fees still calculated if applicable)
+8. Defaults
+allowPayLater = false for all existing and new wholesalers
+No UI changes for customers unless explicitly enabled

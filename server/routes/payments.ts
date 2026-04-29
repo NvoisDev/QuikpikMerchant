@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { calculateCustomerFee } from "../../shared/utils/fees";
+import { getCurrentFeeConfig } from "../utils/fee-config";
 import { formatDateTime } from "../../shared/utils/date";
 import {
   InventoryCalculator, SubscriptionService, and, db,
@@ -2016,7 +2017,8 @@ export function registerPaymentRoutes(app: Express): void {
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
-      const customerTransactionFee = isOffline ? 0 : calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 — always fixed
+      const feeConfig = await getCurrentFeeConfig();
+      const customerTransactionFee = isOffline ? 0 : calculateCustomerFee(subtotal, 0, feeConfig);
       const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee
 
@@ -2071,6 +2073,8 @@ export function registerPaymentRoutes(app: Express): void {
         subtotal: productSubtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
+        feePercentageUsed: isOffline ? '0.0000' : feeConfig.percentage.toFixed(4),
+        fixedFeeUsed: isOffline ? '0.00' : feeConfig.fixed.toFixed(2),
         deliveryCost: quoteDeliveryCharge.toFixed(2),
         vatAmount: quoteVatAmount.toFixed(2),
         ...(quoteVatRateApplied !== null ? { vatRateApplied: quoteVatRateApplied.toFixed(4) } : {}),
@@ -2627,7 +2631,8 @@ export function registerPaymentRoutes(app: Express): void {
       const depositPercentage = existingOrder.depositPercentage || 100;
       const isPayLaterEdit = depositPercentage === 0;
       const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
-      const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0);
+      const feeConfigEdit = await getCurrentFeeConfig();
+      const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0, feeConfigEdit);
       const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate;
 
@@ -2872,6 +2877,8 @@ export function registerPaymentRoutes(app: Express): void {
           subtotal: productSubtotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
           customerTransactionFee: customerTransactionFee.toFixed(2),
+          feePercentageUsed: isOfflineEdit ? '0.0000' : feeConfigEdit.percentage.toFixed(4),
+          fixedFeeUsed: isOfflineEdit ? '0.00' : feeConfigEdit.fixed.toFixed(2),
           vatAmount: editVatAmount.toFixed(2),
           ...(editVatRateApplied !== null ? { vatRateApplied: editVatRateApplied.toFixed(4) } : { vatRateApplied: null }),
           total: total.toFixed(2),

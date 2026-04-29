@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { calculateCustomerFee } from "../../shared/utils/fees";
+import { getCurrentFeeConfig } from "../utils/fee-config";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
@@ -1196,7 +1197,8 @@ export function registerOrderRoutes(app: Express): void {
         });
       }
 
-      const customerTransactionFee = calculateCustomerFee(subtotal, 0); // 5.5% + £0.50 (customer pays) — always fixed
+      const feeConfig = await getCurrentFeeConfig();
+      const customerTransactionFee = calculateCustomerFee(subtotal, 0, feeConfig); // configurable % + fixed (customer pays)
 
       // Get wholesaler from first product (needed for per-wholesaler fee rate and VAT)
       const firstProduct = await storage.getProduct(items[0].productId);
@@ -1235,6 +1237,8 @@ export function registerOrderRoutes(app: Express): void {
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
+        feePercentageUsed: feeConfig.percentage.toFixed(4),
+        fixedFeeUsed: feeConfig.fixed.toFixed(2),
         vatAmount: vatAmount.toFixed(2),
         ...(vatRateApplied !== null ? { vatRateApplied: vatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),

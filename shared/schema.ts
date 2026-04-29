@@ -620,6 +620,8 @@ export const orders = pgTable("orders", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
   customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
+  feePercentageUsed: decimal("fee_percentage_used", { precision: 5, scale: 4 }), // Rate snapshot at order creation (e.g. 0.0550)
+  fixedFeeUsed: decimal("fixed_fee_used", { precision: 6, scale: 2 }), // Fixed fee snapshot at order creation (e.g. 0.50)
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00"), // VAT charged on the order (subtotal × vatRate when wholesaler has VAT enabled)
   vatRateApplied: decimal("vat_rate_applied", { precision: 5, scale: 4 }), // The exact VAT rate used at order creation time (e.g. 0.2000 for 20%)
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
@@ -1788,6 +1790,25 @@ export const insertCollectionAddressSchema = createInsertSchema(collectionAddres
 });
 export type InsertCollectionAddress = z.infer<typeof insertCollectionAddressSchema>;
 export type CollectionAddress = typeof collectionAddresses.$inferSelect;
+
+// Platform Fee Configuration — append-only audit log of customer fee changes
+export const platformFeeConfigs = pgTable("platform_fee_configs", {
+  id: serial("id").primaryKey(),
+  customerPercentageFee: decimal("customer_percentage_fee", { precision: 5, scale: 4 }).notNull(), // e.g. 0.0550 for 5.5%
+  customerFixedFee: decimal("customer_fixed_fee", { precision: 6, scale: 2 }).notNull(), // e.g. 0.50 for £0.50
+  notes: varchar("notes"), // optional admin note explaining the change
+  effectiveFrom: timestamp("effective_from").defaultNow().notNull(),
+  createdBy: varchar("created_by").notNull(), // admin identifier
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPlatformFeeConfigSchema = createInsertSchema(platformFeeConfigs).omit({
+  id: true,
+  effectiveFrom: true,
+  createdAt: true,
+});
+export type InsertPlatformFeeConfig = z.infer<typeof insertPlatformFeeConfigSchema>;
+export type PlatformFeeConfig = typeof platformFeeConfigs.$inferSelect;
 
 // Customer-Wholesaler Relationships types
 export const insertCustomerWholesalerRelationshipSchema = createInsertSchema(customerWholesalerRelationships).omit({

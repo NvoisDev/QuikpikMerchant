@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import type { Express } from "express";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
+import { getCurrentFeeConfig } from "../utils/fee-config";
 import { calculateCheckoutTotals } from "./checkout-fee-calculations";
 import {
   InventoryCalculator, PreciseShippingCalculator, and, buildInvoicePdf, count, db, desc,
@@ -807,7 +808,8 @@ export function registerMarketplaceRoutes(app: Express): void {
         ? parseFloat(shippingInfo.flatDeliveryRate) || 0
         : parseFloat(shippingInfo?.service?.price || '0') || 0;
 
-      const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost });
+      const feeConfig = await getCurrentFeeConfig();
+      const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost, feeConfig });
       const {
         amountBeforeFees,
         customerTransactionFee,
@@ -942,6 +944,8 @@ export function registerMarketplaceRoutes(app: Express): void {
           productSubtotal: productSubtotal.toFixed(2),
           shippingCost: deliveryCost.toString(),
           customerTransactionFee: customerTransactionFee.toFixed(2),
+          feePercentageUsed: feeConfig.percentage.toFixed(4),
+          fixedFeeUsed: feeConfig.fixed.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
           wholesalerReceives: wholesalerReceivesWithVat.toFixed(2),
           totalCustomerPays: totalCustomerPaysFinal.toFixed(2),
@@ -990,6 +994,8 @@ export function registerMarketplaceRoutes(app: Express): void {
                 productSubtotal: productSubtotal.toFixed(2),
                 shippingCost: deliveryCost.toString(),
                 customerTransactionFee: customerTransactionFee.toFixed(2),
+                feePercentageUsed: feeConfig.percentage.toFixed(4),
+                fixedFeeUsed: feeConfig.fixed.toFixed(2),
                 wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
                 wholesalerReceives: wholesalerReceivesWithVat.toFixed(2),
                 totalCustomerPays: totalCustomerPaysFinal.toFixed(2),
@@ -1099,7 +1105,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         selectedDeliveryAddress: selectedDeliveryAddressJson,
         shippingCost: metadataShippingCost,
         vatAmount: metadataVatAmount,
-        vatRateApplied: metadataVatRateApplied
+        vatRateApplied: metadataVatRateApplied,
+        feePercentageUsed: metadataFeePercentageUsed,
+        fixedFeeUsed: metadataFixedFeeUsed
       } = paymentIntent.metadata;
 
       // Parse shipping info from payment metadata
@@ -1352,7 +1360,9 @@ export function registerMarketplaceRoutes(app: Express): void {
               customerPhone, // Store customer phone
               subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 4.6% platform fee
-              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
+              feePercentageUsed: metadataFeePercentageUsed ? parseFloat(metadataFeePercentageUsed).toFixed(4) : '0.0550',
+              fixedFeeUsed: metadataFixedFeeUsed ? parseFloat(metadataFixedFeeUsed).toFixed(2) : '0.50',
               vatAmount: webhookVatAmount.toFixed(2),
               ...(webhookVatRateAppliedStr !== null ? { vatRateApplied: webhookVatRateAppliedStr } : {}),
               total: correctTotal, // VAT-inclusive total (Stripe charged totalCustomerPaysFinal)
@@ -3104,7 +3114,8 @@ Please contact the customer to confirm this order.
 
       const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
       const platformFee = calculatePlatformFee(subtotal);
-      const customerTransactionFee = calculateCustomerFee(subtotal, 0);
+      const reorderFeeConfig = await getCurrentFeeConfig();
+      const customerTransactionFee = calculateCustomerFee(subtotal, 0, reorderFeeConfig);
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
 
@@ -3126,6 +3137,8 @@ Please contact the customer to confirm this order.
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
+        feePercentageUsed: reorderFeeConfig.percentage.toFixed(4),
+        fixedFeeUsed: reorderFeeConfig.fixed.toFixed(2),
         vatAmount: reorderVatAmount.toFixed(2),
         ...(reorderVatRateApplied !== null ? { vatRateApplied: reorderVatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),
