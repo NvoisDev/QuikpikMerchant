@@ -249,9 +249,6 @@ export const isQuoteEdited = (order: Order): boolean =>
 
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const { toast } = useToast();
-
   const storedLink = order.isQuote ? order.stripePaymentLinkUrl : undefined;
 
   const handlePayNow = async () => {
@@ -285,17 +282,6 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
     }
   };
 
-  const handleCopyLink = () => {
-    if (!storedLink) return;
-    navigator.clipboard.writeText(storedLink).then(() => {
-      setCopiedLink(true);
-      toast({ title: 'Link copied!' });
-      setTimeout(() => setCopiedLink(false), 2000);
-    }).catch(() => {
-      toast({ title: 'Could not copy link', variant: 'destructive' });
-    });
-  };
-
   return (
     <div className="mt-2 space-y-2">
       <button
@@ -312,19 +298,6 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
           <>💳 Pay Now</>
         )}
       </button>
-      {storedLink && (
-        <div className="bg-white border border-gray-200 rounded p-2">
-          <p className="text-xs text-gray-500 mb-1">Payment link{isQuoteEdited(order) ? ' (updated)' : ''}:</p>
-          <div
-            className="text-xs text-blue-600 break-all cursor-pointer hover:bg-blue-50 p-1 rounded flex items-start gap-1"
-            onClick={handleCopyLink}
-            title="Tap to copy"
-          >
-            <span className="flex-1 break-all">{storedLink}</span>
-            <span className="flex-shrink-0 text-gray-400">{copiedLink ? '✓' : '⎘'}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
