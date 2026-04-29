@@ -2203,7 +2203,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
           {paginatedOrders.map((order: Order, index: number) => {
             console.log(`Rendering order ${index}:`, order);
             return (
-            <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+            <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedOrder(order)}>
               <CardContent className="p-3 sm:p-4">
                 <div className="space-y-3">
                   {/* Order header with badges */}
@@ -2259,7 +2259,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                       <OrderActionsDropdown
                         order={order}
                         onViewDetails={() => setSelectedOrder(order)}
