@@ -1953,6 +1953,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         shippingTotal: shippingCost.toFixed(2),
         feePercentageUsed: payLaterFeeConfig.percentage.toFixed(4),
         fixedFeeUsed: payLaterFeeConfig.fixed.toFixed(2),
+        paymentMethod: 'pay_later',
       };
 
       const order = await db.transaction(async (trx) => {
