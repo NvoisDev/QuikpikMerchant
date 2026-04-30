@@ -864,6 +864,11 @@ export class SubscriptionService {
     } else {
       console.log(`✅ Monthly price switch complete (${changed} plan(s) updated)`);
     }
+
+    // Ensure all Standard subscribers have the raised product limit (idempotent — safe to repeat)
+    await db.execute(
+      sql`UPDATE users SET product_limit = 20 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 20)`
+    );
   }
 
   /**
