@@ -1636,32 +1636,27 @@ export default function ProductManagement() {
   const downloadProductList = () => {
     if (!products || products.length === 0) return;
     const today = new Date().toISOString().substring(0, 10);
-    const rows = (products as any[]).map((p) => {
-      const row: Record<string, string | number> = {
-        "Name": p.name ?? "",
-        "Category": p.category ?? "",
-        "Description": p.description ?? "",
-        "Price": p.price ?? "",
-        "Currency": p.currency ?? "GBP",
-        "MOQ": p.moq ?? "",
-        "Stock": p.stock ?? "",
-        "Status": p.status ?? "",
-        "Selling Format": p.sellingFormat ?? "",
-        "Pack Qty": p.packQuantity ?? "",
-        "Unit of Measure": p.unitOfMeasure ?? "",
-        "Unit Size": p.unitSize ?? "",
-        "Units per Pallet": p.unitsPerPallet ?? "",
-        "Pallet Price": p.palletPrice ?? "",
-        "Pallet MOQ": p.palletMoq ?? "",
-        "Low Stock Threshold": p.lowStockThreshold ?? "",
-        "Expiry Date": p.expiryDate ? String(p.expiryDate).substring(0, 10) : "",
-        "Temperature": p.temperatureRequirement ?? "",
-      };
-      if (!isViewer) {
-        row["Cost Price"] = p.costPrice ?? "";
-      }
-      return row;
-    });
+    const rows = products.map((p: Product) => ({
+      "Name": p.name ?? "",
+      "Category": p.category ?? "",
+      "Description": p.description ?? "",
+      "Price": p.price ?? "",
+      "Currency": p.currency ?? "GBP",
+      "MOQ": p.moq ?? "",
+      "Stock": p.stock ?? "",
+      "Status": p.status ?? "",
+      "Selling Format": p.sellingFormat ?? "",
+      "Pack Qty": p.packQuantity ?? "",
+      "Unit of Measure": p.unitOfMeasure ?? "",
+      "Unit Size": p.unitSize ?? "",
+      "Units per Pallet": p.unitsPerPallet ?? "",
+      "Pallet Price": p.palletPrice ?? "",
+      "Pallet MOQ": p.palletMoq ?? "",
+      ...(isViewer ? {} : { "Cost Price": p.costPrice ?? "" }),
+      "Low Stock Threshold": p.lowStockThreshold ?? "",
+      "Expiry Date": p.expiryDate ? String(p.expiryDate).substring(0, 10) : "",
+      "Temperature Requirement": p.temperatureRequirement ?? "",
+    }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Products");
@@ -1780,14 +1775,14 @@ export default function ProductManagement() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem onClick={downloadTemplate}>
+                      <Download className="h-4 w-4 mr-2" /> CSV Template
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={downloadProductList}
                       disabled={!products || products.length === 0}
                     >
-                      <Download className="h-4 w-4 mr-2" /> Export Product List
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={downloadTemplate}>
-                      <Download className="h-4 w-4 mr-2" /> CSV Template
+                      <Download className="h-4 w-4 mr-2" /> Download Product List
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsBulkUploadDialogOpen(true)}>
                       <Upload className="h-4 w-4 mr-2" /> Bulk Upload
