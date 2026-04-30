@@ -5,10 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 import { formatPhoneToInternational } from "@shared/phone-utils";
+
+interface PreviewProduct {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  images?: string[] | null;
+  category?: string | null;
+}
 
 const COUNTRY_CODE_STORAGE_KEY = "customerPreferredCountryCode";
 
@@ -71,6 +79,8 @@ export default function WelcomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
+
   const phoneRef = useRef<HTMLInputElement>(null);
 
   // Check for existing session — redirect if already authenticated
@@ -103,6 +113,19 @@ export default function WelcomePage() {
         setLoadingWholesaler(false);
       })
       .catch(() => setLoadingWholesaler(false));
+  }, [wholesalerId]);
+
+  // Fetch product preview (guest-safe, no prices)
+  useEffect(() => {
+    if (!wholesalerId) return;
+    fetch(`/api/customer-products/${wholesalerId}?guest=true`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: PreviewProduct[]) => {
+        if (Array.isArray(data)) {
+          setPreviewProducts(data.slice(0, 8));
+        }
+      })
+      .catch(() => {});
   }, [wholesalerId]);
 
   const fullPhone = formatPhoneToInternational(
@@ -241,6 +264,47 @@ export default function WelcomePage() {
           </div>
         </div>
       </div>
+
+      {/* Product Preview */}
+      {previewProducts.length > 0 && (
+        <div className="px-4 py-6 bg-gray-50">
+          <div className="max-w-md mx-auto">
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+              <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
+              <p className="text-sm font-medium text-green-800">Sign up to see prices and place orders.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {previewProducts.map((product) => {
+                const thumb = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || null;
+                return (
+                  <div key={product.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <Store className="h-10 w-10" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-medium text-gray-900 truncate leading-snug">{product.name}</p>
+                      {product.category && (
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{product.category}</p>
+                      )}
+                      <p className="text-xs text-green-600 font-semibold mt-1">Sign up to see price</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       <div className="flex-1 px-4 py-6">
