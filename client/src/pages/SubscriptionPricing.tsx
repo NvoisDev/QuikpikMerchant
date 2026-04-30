@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSidebarPermissions } from '@/hooks/useSidebarPermissions';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckIcon, X, StarIcon, CrownIcon, AlertTriangleIcon } from 'lucide-react';
+import { CheckIcon, AlertTriangleIcon } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -299,21 +299,32 @@ export default function SubscriptionPricing() {
   const getPlanBaseTier = (planId: string) => getBaseTier(planId);
 
   const getPlanIcon = (planId: string) => {
-    switch (getPlanBaseTier(planId)) {
-      case 'free': return <CheckIcon className="w-6 h-6" />;
-      case 'standard': return <StarIcon className="w-6 h-6" />;
-      case 'premium': return <CrownIcon className="w-6 h-6" />;
-      default: return <CheckIcon className="w-6 h-6" />;
-    }
-  };
-
-  const getPlanColor = (planId: string) => {
-    switch (getPlanBaseTier(planId)) {
-      case 'free': return 'bg-gray-50 border-gray-200';
-      case 'standard': return 'bg-blue-50 border-blue-200';
-      case 'premium': return 'bg-purple-50 border-purple-200';
-      default: return 'bg-gray-50 border-gray-200';
-    }
+    const tier = getPlanBaseTier(planId);
+    if (tier === 'free') return (
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M24 38V22" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M24 22C24 22 18 18 18 12C18 12 24 10 28 16C28 16 30 12 34 13C34 13 34 18 28 20" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M24 28C24 28 20 25 16 26" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    );
+    if (tier === 'standard') return (
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M24 38V18" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M24 18C24 18 16 13 15 7C15 7 22 5 26 12" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M24 26C24 26 30 22 35 24" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M24 22C24 22 19 18 14 20" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M24 18C24 18 29 14 33 10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    );
+    return (
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M14 32H34" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M14 32L11 18L19 23L24 12L29 23L37 18L34 32" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="11" cy="18" r="2" fill="#f59e0b"/>
+        <circle cx="24" cy="12" r="2" fill="#f59e0b"/>
+        <circle cx="37" cy="18" r="2" fill="#f59e0b"/>
+      </svg>
+    );
   };
 
   // Annual savings vs monthly equivalent
@@ -581,176 +592,165 @@ export default function SubscriptionPricing() {
       </div>
 
       {/* Pricing Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        {visiblePlans.map((plan: SubscriptionPlan) => (
-          <Card 
-            key={plan.id} 
-            className={clsx(
-              'relative transition-all duration-200',
-              getPlanColor(plan.planId),
-              {
-                // Current plan styling - prominent green highlighting
-                'ring-4 ring-green-500 bg-green-50 scale-[1.02] shadow-lg border-green-200': isCurrentPlan(plan.planId),
-                // Standard plan gets special treatment when not current plan
-                'scale-105 shadow-lg hover:scale-[1.07]': !isCurrentPlan(plan.planId) && plan.planId === 'standard',
-                // Default hover effect for non-current plans
-                'hover:scale-[1.02]': !isCurrentPlan(plan.planId) && plan.planId !== 'standard'
-              }
-            )}
-          >
-            {isCurrentPlan(plan.planId) && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-green-600 text-white px-3 py-1 text-sm font-semibold">
-                  ✅ Current Plan
-                </Badge>
-              </div>
-            )}
-            {!isCurrentPlan(plan.planId) && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro') && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
-              </div>
-            )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 items-start">
+        {visiblePlans.map((plan: SubscriptionPlan) => {
+          const savings = getAnnualSavings(plan);
+          const isAnnual = plan.billingInterval === 'yearly';
+          const price = parseFloat(plan.monthlyPrice);
+          const tier = getPlanBaseTier(plan.planId);
+          const isCurrent = isCurrentPlan(plan.planId);
+          const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro');
+          const isIntro = (
+            ((plan.planId === 'standard' || plan.planId === 'premium') && !plan.billingInterval) ||
+            plan.planId === 'standard_annual_intro' ||
+            plan.planId === 'premium_annual_intro'
+          ) && new Date() < new Date('2027-05-01T00:00:00Z');
 
-            <CardHeader className="text-center">
-              <div className={`mx-auto mb-4 p-3 rounded-full ${
-                getPlanBaseTier(plan.planId) === 'free' ? 'bg-gray-200 text-gray-600' :
-                getPlanBaseTier(plan.planId) === 'standard' ? 'bg-blue-200 text-blue-600' :
-                'bg-purple-200 text-purple-600'
-              }`}>
-                {getPlanIcon(plan.planId)}
-              </div>
-              <CardTitle className="text-2xl">{plan.name}</CardTitle>
-              <CardDescription className="text-base">
-                {plan.description}
-              </CardDescription>
-              <div className="mt-4">
-                {(() => {
-                  const savings = getAnnualSavings(plan);
-                  const isAnnual = plan.billingInterval === 'yearly';
-                  const price = parseFloat(plan.monthlyPrice);
-                  return (
-                    <>
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="text-4xl font-bold">
-                          {price.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
-                        </div>
-                        {savings && (
-                          <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">
-                            Save {savings.pct}%
-                          </span>
+          return (
+            <Card
+              key={plan.id}
+              className={clsx(
+                'relative flex flex-col border transition-all duration-200 overflow-hidden',
+                {
+                  'border-green-400 shadow-md': isCurrent,
+                  'border-gray-200 hover:shadow-md': !isCurrent,
+                }
+              )}
+            >
+              {/* Coloured top accent bar */}
+              <div className={clsx('h-1 w-full', {
+                'bg-green-500': isCurrent,
+                'bg-green-400': !isCurrent && tier === 'standard',
+                'bg-amber-400': !isCurrent && tier === 'premium',
+                'bg-gray-200': !isCurrent && tier === 'free',
+              })} />
+
+              {/* Status / popularity ribbon */}
+              {(isCurrent || isMostPopular) && (
+                <div className="flex justify-center pt-3">
+                  {isCurrent ? (
+                    <Badge className="bg-green-600 text-white px-3 py-0.5 text-xs font-semibold">
+                      ✅ Current Plan
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-green-100 text-green-800 border border-green-300 px-3 py-0.5 text-xs font-semibold">
+                      Most Popular
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              <CardContent className={clsx('flex flex-col flex-1 px-6 pb-6', isCurrent || isMostPopular ? 'pt-3' : 'pt-6')}>
+                {/* 1. Illustrated icon */}
+                <div className="mb-4">
+                  {getPlanIcon(plan.planId)}
+                </div>
+
+                {/* 2. Plan name + description */}
+                <div className="mb-5">
+                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                  <p className="text-sm text-gray-500 mt-0.5 leading-snug">{plan.description}</p>
+                </div>
+
+                {/* 3. Price */}
+                <div className="mb-5">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold text-gray-900">
+                      {price === 0 ? '£0' : `£${price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </span>
+                    <span className="text-gray-400 text-sm ml-1">
+                      {price === 0 ? '' : isAnnual ? '/ year' : '/ month'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {price === 0
+                      ? 'Free forever'
+                      : isAnnual && savings
+                        ? `Billed annually — save £${savings.amount.toFixed(0)} vs monthly`
+                        : 'Billed monthly, cancel anytime'}
+                  </p>
+                </div>
+
+                {/* 4. Introductory notice */}
+                {isIntro && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    <strong>Introductory Price</strong> — valid until 30 April 2027
+                  </div>
+                )}
+
+                {/* 5. CTA Button */}
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => handlePlanSelection(plan)}
+                    disabled={processingPlanId === plan.planId || isCurrent}
+                    className={clsx('w-full whitespace-normal h-auto py-2 font-medium', {
+                      'bg-green-600 hover:bg-green-700 text-white': !isCurrent && tier !== 'free',
+                      'bg-gray-100 hover:bg-gray-200 text-gray-700': !isCurrent && tier === 'free',
+                    })}
+                    variant={isCurrent ? 'outline' : 'default'}
+                  >
+                    {isCurrent
+                      ? 'Current Plan'
+                      : processingPlanId === plan.planId
+                        ? 'Processing...'
+                        : tier === 'free'
+                          ? 'Get Started Free'
+                          : `Upgrade to ${plan.name}`}
+                  </Button>
+
+                  {/* Cancel/Downgrade — only shown on the current paid plan card */}
+                  {isCurrent && plan.planId !== 'free' && (
+                    isCancellationScheduled ? (
+                      <div className="space-y-1.5">
+                        <Button
+                          disabled
+                          variant="outline"
+                          className="w-full text-amber-700 border-amber-300 bg-amber-50 cursor-not-allowed opacity-100"
+                        >
+                          ✓ Cancellation Scheduled
+                        </Button>
+                        {cancellationEndDate && (
+                          <p className="text-xs text-center text-amber-700 leading-snug">
+                            Free plan begins{' '}
+                            <strong>
+                              {cancellationEndDate.toLocaleDateString('en-GB', {
+                                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                              })}
+                            </strong>
+                          </p>
                         )}
                       </div>
-                      <div className="text-gray-600">{isAnnual ? 'per year' : price === 0 ? 'free' : 'per month'}</div>
-                      {isAnnual && savings && (
-                        <div className="text-xs text-green-600 mt-1 font-medium">
-                          Save £{savings.amount.toFixed(2)} vs monthly
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <ul className="space-y-3 mb-6">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <CheckIcon className="w-4 h-4 text-green-500 mt-1 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{formatPlanFeature(feature)}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="space-y-2 mb-6 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>Products:</span>
-                  <span className="font-medium">{formatLimit(plan.limits.products)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Price Lists:</span>
-                  <span className="font-medium">{formatLimit(plan.limits.priceLists ?? plan.limits.products)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Team Members:</span>
-                  <span className="font-medium">{formatLimit(plan.limits.teamMembers)}</span>
-                </div>
-              </div>
-
-              {(plan.planId === 'standard' || plan.planId === 'premium') && !plan.billingInterval && new Date() < new Date('2027-05-01T00:00:00Z') && (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                  <strong>Introductory Price</strong> — valid until 30 April 2027
-                </div>
-              )}
-              {(plan.planId === 'standard_annual_intro' || plan.planId === 'premium_annual_intro') && new Date() < new Date('2027-05-01T00:00:00Z') && (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                  <strong>Introductory Price</strong> — valid until 30 April 2027
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Button
-                  onClick={() => handlePlanSelection(plan)}
-                  disabled={processingPlanId === plan.planId || isCurrentPlan(plan.planId)}
-                  className={`w-full whitespace-normal h-auto py-2 ${
-                    getPlanBaseTier(plan.planId) === 'standard' ? 'bg-blue-600 hover:bg-blue-700' :
-                    getPlanBaseTier(plan.planId) === 'premium' ? 'bg-purple-600 hover:bg-purple-700' :
-                    'bg-gray-600 hover:bg-gray-700'
-                  }`}
-                  variant={isCurrentPlan(plan.planId) ? "outline" : "default"}
-                >
-                  {isCurrentPlan(plan.planId) ? (
-                    'Current Plan'
-                  ) : processingPlanId === plan.planId ? (
-                    'Processing...'
-                  ) : plan.planId === 'free' ? (
-                    'Get Started Free'
-                  ) : (
-                    `Upgrade to ${plan.name}`
-                  )}
-                </Button>
-
-
-                {/* Cancel/Downgrade Button - Only show for current paid plans */}
-                {isCurrentPlan(plan.planId) && plan.planId !== 'free' && (
-                  isCancellationScheduled ? (
-                    <div className="space-y-1.5">
+                    ) : (
                       <Button
-                        disabled
+                        onClick={() => {
+                          setTargetDowngradePlan('free');
+                          setShowDowngradeModal(true);
+                        }}
+                        disabled={cancelSubscriptionMutation.isPending}
                         variant="outline"
-                        className="w-full text-amber-700 border-amber-300 bg-amber-50 cursor-not-allowed opacity-100"
+                        className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                       >
-                        ✓ Cancellation Scheduled
+                        {cancelSubscriptionMutation.isPending ? 'Processing...' : 'Cancel Subscription'}
                       </Button>
-                      {cancellationEndDate && (
-                        <p className="text-xs text-center text-amber-700 leading-snug">
-                          Free plan begins{' '}
-                          <strong>
-                            {cancellationEndDate.toLocaleDateString('en-GB', {
-                              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-                            })}
-                          </strong>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        setTargetDowngradePlan('free');
-                        setShowDowngradeModal(true);
-                      }}
-                      disabled={cancelSubscriptionMutation.isPending}
-                      variant="outline"
-                      className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                    >
-                      {cancelSubscriptionMutation.isPending ? 'Processing...' : 'Cancel Subscription'}
-                    </Button>
-                  )
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                    )
+                  )}
+                </div>
+
+                {/* 6. Feature list */}
+                <ul className="mt-6 space-y-2.5">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2.5">
+                      <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M3 8L6.5 11.5L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-sm text-gray-600 leading-snug">{formatPlanFeature(feature)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* FAQ Section */}
