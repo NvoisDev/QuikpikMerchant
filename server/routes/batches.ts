@@ -34,6 +34,33 @@ export function registerBatchRoutes(app: Express): void {
     return batch ?? null;
   }
 
+  // GET /api/products/batches/all
+  // Returns all batches for all products owned by the authenticated wholesaler (for export)
+  app.get('/api/products/batches/all', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const rows = await db
+        .select({
+          productId: productBatches.productId,
+          productName: products.name,
+          batchNumber: productBatches.batchNumber,
+          quantity: productBatches.quantity,
+          expiryDate: productBatches.expiryDate,
+          createdAt: productBatches.createdAt,
+          costPrice: productBatches.costPrice,
+          status: productBatches.status,
+        })
+        .from(productBatches)
+        .innerJoin(products, eq(productBatches.productId, products.id))
+        .where(eq(products.wholesalerId, wholesalerId))
+        .orderBy(products.name, productBatches.expiryDate);
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching all batches:', error);
+      res.status(500).json({ error: 'Failed to fetch batches' });
+    }
+  });
+
   // GET /api/products/:id/batches
   // Returns all batches (active, depleted, expired) sorted FEFO — active first
   app.get('/api/products/:id/batches', requireAuth, async (req: any, res) => {

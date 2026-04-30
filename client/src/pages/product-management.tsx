@@ -172,6 +172,11 @@ export default function ProductManagement() {
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [downloadExportType, setDownloadExportType] = useState<'summary' | 'batch'>('summary');
+  const [downloadFormat, setDownloadFormat] = useState<'xlsx' | 'csv'>('xlsx');
+  const [downloadIncludeOutOfStock, setDownloadIncludeOutOfStock] = useState(true);
+  const [isDownloadingBatches, setIsDownloadingBatches] = useState(false);
   
   // Subscription system removed - defaulting to premium access
   const canCreateProduct = true;
@@ -1633,34 +1638,96 @@ export default function ProductManagement() {
     window.URL.revokeObjectURL(url);
   };
 
-  const downloadProductList = () => {
+  const fmtExportDate = (val: string | null | undefined): string => {
+    if (!val) return "";
+    return new Date(val).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const humanStatus = (s: string): string =>
+    s === "active" ? "In Stock" : s === "out_of_stock" ? "Out of Stock" : "Inactive";
+
+  const triggerFileDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadProductList = async () => {
     if (!products || products.length === 0) return;
     const today = new Date().toISOString().substring(0, 10);
-    const rows = products.map((p: Product) => ({
-      "Name": p.name ?? "",
-      "Category": p.category ?? "",
-      "Description": p.description ?? "",
-      "Price": p.price ?? "",
-      "Currency": p.currency ?? "GBP",
-      "MOQ": p.moq ?? "",
-      "Stock": p.stock ?? "",
-      "Status": p.status ?? "",
-      "Selling Format": p.sellingFormat ?? "",
-      "Pack Qty": p.packQuantity ?? "",
-      "Unit of Measure": p.unitOfMeasure ?? "",
-      "Unit Size": p.unitSize ?? "",
-      "Units per Pallet": p.unitsPerPallet ?? "",
-      "Pallet Price": p.palletPrice ?? "",
-      "Pallet MOQ": p.palletMoq ?? "",
-      ...(isViewer ? {} : { "Cost Price": p.costPrice ?? "" }),
-      "Low Stock Threshold": p.lowStockThreshold ?? "",
-      "Expiry Date": p.expiryDate ? String(p.expiryDate).substring(0, 10) : "",
-      "Temperature Requirement": p.temperatureRequirement ?? "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Products");
-    XLSX.writeFile(wb, `products_${today}.xlsx`);
+
+    const filtered = (downloadIncludeOutOfStock
+      ? products
+      : products.filter((p: Product) => p.status === "active")
+    ) as Product[];
+
+    if (downloadExportType === "summary") {
+      const rows = filtered.map((p: Product) => ({
+        "Product Name": p.name ?? "",
+        "Category": p.category ?? "",
+        "Total Stock": p.stock ?? "",
+        "Unit Price": p.price ?? "",
+        "Currency": p.currency ?? "GBP",
+        "Status": humanStatus(p.status ?? ""),
+        "Selling Format": p.sellingFormat ?? "",
+        "Low Stock Threshold": p.lowStockThreshold ?? "",
+      }));
+
+      if (downloadFormat === "xlsx") {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Stock Summary");
+        XLSX.writeFile(wb, `stock_summary_${today}.xlsx`);
+      } else {
+        const csv = Papa.unparse(rows);
+        triggerFileDownload(new Blob([csv], { type: "text/csv" }), `stock_summary_${today}.csv`);
+      }
+      setIsDownloadModalOpen(false);
+      return;
+    }
+
+    // Batch detail — fetch from server
+    setIsDownloadingBatches(true);
+    try {
+      const res = await fetch("/api/products/batches/all");
+      if (!res.ok) throw new Error("Server error");
+      const allBatches: Array<{
+        productId: number; productName: string; batchNumber: string | null;
+        quantity: number; expiryDate: string | null; createdAt: string | null;
+        costPrice: string | null; status: string;
+      }> = await res.json();
+
+      const filteredIds = new Set(filtered.map((p: Product) => p.id));
+      const batchRows = allBatches
+        .filter((b) => filteredIds.has(b.productId))
+        .map((b) => ({
+          "Product Name": b.productName ?? "",
+          "Batch ID": b.batchNumber || `#${b.productId}`,
+          "Quantity": b.quantity ?? "",
+          "Expiry Date": b.expiryDate ? fmtExportDate(b.expiryDate) : "No expiry",
+          "Received Date": fmtExportDate(b.createdAt),
+          "Status": b.status ?? "",
+          ...(isViewer ? {} : { "Cost Price": b.costPrice ?? "" }),
+        }));
+
+      if (downloadFormat === "xlsx") {
+        const ws = XLSX.utils.json_to_sheet(batchRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Batch Details");
+        XLSX.writeFile(wb, `batch_details_${today}.xlsx`);
+      } else {
+        const csv = Papa.unparse(batchRows);
+        triggerFileDownload(new Blob([csv], { type: "text/csv" }), `batch_details_${today}.csv`);
+      }
+      setIsDownloadModalOpen(false);
+    } catch {
+      toast({ title: "Download failed", description: "Could not fetch batch data.", variant: "destructive" });
+    } finally {
+      setIsDownloadingBatches(false);
+    }
   };
 
   const filteredProducts = (products?.filter((product: any) => {
@@ -1779,10 +1846,10 @@ export default function ProductManagement() {
                       <Download className="h-4 w-4 mr-2" /> CSV Template
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={downloadProductList}
+                      onClick={() => setIsDownloadModalOpen(true)}
                       disabled={!products || products.length === 0}
                     >
-                      <Download className="h-4 w-4 mr-2" /> Download Product List
+                      <Download className="h-4 w-4 mr-2" /> Download Products
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsBulkUploadDialogOpen(true)}>
                       <Upload className="h-4 w-4 mr-2" /> Bulk Upload
@@ -1817,6 +1884,123 @@ export default function ProductManagement() {
                 </div>
               )}
             </div>
+
+            {/* Download Products Modal */}
+            <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Download Products</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5 pt-1">
+                  {/* Export type selection */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Export type</p>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setDownloadExportType('summary')}
+                        className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                          downloadExportType === 'summary'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`h-3.5 w-3.5 rounded-full border-2 flex-shrink-0 ${
+                            downloadExportType === 'summary' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                          }`} />
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">
+                              Stock Summary <span className="text-xs text-green-600 font-normal">(recommended)</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">One row per product — clean, finance-friendly</p>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDownloadExportType('batch')}
+                        className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                          downloadExportType === 'batch'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`h-3.5 w-3.5 rounded-full border-2 flex-shrink-0 ${
+                            downloadExportType === 'batch' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                          }`} />
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Batch-Level Detail</p>
+                            <p className="text-xs text-gray-500 mt-0.5">One row per batch — expiry tracking &amp; audits</p>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Format */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Format</p>
+                    <div className="flex gap-2">
+                      {(['xlsx', 'csv'] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setDownloadFormat(fmt)}
+                          className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                            downloadFormat === fmt
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          {fmt === 'xlsx' ? 'Excel (.xlsx)' : 'CSV'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Toggle */}
+                  <div className="flex items-center justify-between py-1">
+                    <div>
+                      <p className="text-sm text-gray-700">Include out-of-stock products</p>
+                    </div>
+                    <Switch
+                      checked={downloadIncludeOutOfStock}
+                      onCheckedChange={setDownloadIncludeOutOfStock}
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setIsDownloadModalOpen(false)}
+                      disabled={isDownloadingBatches}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={downloadProductList}
+                      disabled={isDownloadingBatches || !products || products.length === 0}
+                    >
+                      {isDownloadingBatches ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Preparing…
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <Download className="h-4 w-4" /> Download
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Bulk Upload Dialog — controlled via state */}
                 <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
