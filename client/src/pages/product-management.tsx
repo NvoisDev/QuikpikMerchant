@@ -1664,16 +1664,32 @@ export default function ProductManagement() {
     ) as Product[];
 
     if (downloadExportType === "summary") {
-      const rows = filtered.map((p: Product) => ({
-        "Product Name": p.name ?? "",
-        "Category": p.category ?? "",
-        "Total Stock": p.stock ?? "",
-        "Unit Price": p.price ?? "",
-        "Currency": p.currency ?? "GBP",
-        "Status": humanStatus(p.status ?? ""),
-        "Selling Format": p.sellingFormat ?? "",
-        "Low Stock Threshold": p.lowStockThreshold ?? "",
-      }));
+      const rows = filtered.map((p: Product) => {
+        const row: Record<string, unknown> = {
+          "Name": p.name ?? "",
+          "Category": p.category ?? "",
+          "Description": p.description ?? "",
+          "Price": p.price ?? "",
+          "Currency": p.currency ?? "GBP",
+          "MOQ": p.moq ?? "",
+          "Stock": p.stock ?? "",
+          "Status": humanStatus(p.status ?? ""),
+          "Selling Format": p.sellingFormat ?? "",
+          "Pack Qty": p.quantityInPack ?? "",
+          "Unit of Measure": p.unitOfMeasure ?? "",
+          "Unit Size": p.unitSize ?? "",
+          "Units per Pallet": p.unitsPerPallet ?? "",
+          "Pallet Price": p.palletPrice ?? "",
+          "Pallet MOQ": p.palletMoq ?? "",
+        };
+        if (!isViewer) {
+          row["Cost Price"] = p.costPrice ?? "";
+        }
+        row["Low Stock Threshold"] = p.lowStockThreshold ?? "";
+        row["Expiry Date"] = p.expiryDate ? fmtExportDate(p.expiryDate) : "";
+        row["Temperature Requirement"] = p.temperatureRequirement ?? "";
+        return row;
+      });
 
       if (downloadFormat === "xlsx") {
         const ws = XLSX.utils.json_to_sheet(rows);
