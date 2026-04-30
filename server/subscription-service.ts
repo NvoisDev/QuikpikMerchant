@@ -634,23 +634,23 @@ export class SubscriptionService {
       {
         planId: 'standard_annual_intro',
         name: 'Standard Annual (Intro)',
-        price: 199.99,
+        price: 499.99,
         description: 'Annual plan — introductory rate until May 2027',
         features: [
-          'Up to 5 products',
+          'Up to 20 products',
           'Up to 5 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
           'Save vs monthly billing',
         ],
-        limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        limits: { products: 20, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
         sortOrder: 10,
       },
       {
         planId: 'premium_annual_intro',
         name: 'Premium Annual (Intro)',
-        price: 499.99,
+        price: 899.99,
         description: 'Annual plan — introductory rate until May 2027',
         features: [
           'Unlimited products',
@@ -666,23 +666,23 @@ export class SubscriptionService {
       {
         planId: 'standard_annual',
         name: 'Standard Annual',
-        price: 239.88,
+        price: 599.99,
         description: 'Full-rate annual Standard plan (from May 2027)',
         features: [
-          'Up to 5 products',
+          'Up to 20 products',
           'Up to 5 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
         ],
-        limits: { products: 5, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        limits: { products: 20, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
         sortOrder: 12,
         isPubliclyVisible: false,
       },
       {
         planId: 'premium_annual',
         name: 'Premium Annual',
-        price: 599.88,
+        price: 999.99,
         description: 'Full-rate annual Premium plan (from May 2027)',
         features: [
           'Unlimited products',
@@ -704,10 +704,6 @@ export class SubscriptionService {
     const existingIds = new Set(existingRows.map(r => r.planId));
 
     const missing = annualPlanDefs.filter(p => !existingIds.has(p.planId));
-    if (missing.length === 0) {
-      console.log('ℹ️ Annual plans already exist — skipping initialization');
-      return;
-    }
 
     let platformStripe: ReturnType<typeof getStripeClient> | null = null;
     try { platformStripe = getStripeClient(); } catch { /* no Stripe key configured */ }
@@ -753,6 +749,26 @@ export class SubscriptionService {
       });
       console.log(`✅ Created annual plan: ${plan.planId} (£${plan.price}/yr, active=${plan.isPubliclyVisible !== false})`);
     }
+
+    // Always sync price, features, and limits for existing plans so code changes take effect on restart.
+    // (Same pattern as initializePlans — insert loop above handles only missing plans.)
+    for (const plan of annualPlanDefs) {
+      if (!existingIds.has(plan.planId)) continue; // just inserted above
+      await db.update(subscriptionPlans)
+        .set({
+          monthlyPrice: plan.price.toFixed(2),
+          description: plan.description,
+          features: plan.features,
+          limits: plan.limits,
+          sortOrder: plan.sortOrder,
+        })
+        .where(eq(subscriptionPlans.planId, plan.planId));
+    }
+
+    if (missing.length > 0) {
+      console.log(`✅ Annual plans created: ${missing.map(p => p.planId).join(', ')}`);
+    }
+    console.log('✅ Annual plan data synced');
   }
 
   /**

@@ -227,6 +227,29 @@ async function runStartupMigrations() {
      WHERE plan_id IN ('standard_annual', 'premium_annual')
        AND is_active = true
        AND NOW() < '2027-05-01 00:00:00+00'::timestamptz`,
+    // Task #852: Sync annual intro plan prices and product limits.
+    // initializeAnnualPlans() now updates existing rows too, but this SQL runs first
+    // so the DB is correct from the very first request even before that function fires.
+    `UPDATE subscription_plans
+     SET monthly_price = '499.99',
+         features = '["Up to 20 products","Up to 5 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support","Save vs monthly billing"]',
+         limits = '{"products":20,"broadcasts":25,"teamMembers":2,"customGroups":5,"priceLists":5}'
+     WHERE plan_id = 'standard_annual_intro'
+       AND monthly_price != '499.99'`,
+    `UPDATE subscription_plans
+     SET monthly_price = '899.99'
+     WHERE plan_id = 'premium_annual_intro'
+       AND monthly_price != '899.99'`,
+    `UPDATE subscription_plans
+     SET monthly_price = '599.99',
+         features = '["Up to 20 products","Up to 5 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support"]',
+         limits = '{"products":20,"broadcasts":25,"teamMembers":2,"customGroups":5,"priceLists":5}'
+     WHERE plan_id = 'standard_annual'
+       AND monthly_price != '599.99'`,
+    `UPDATE subscription_plans
+     SET monthly_price = '999.99'
+     WHERE plan_id = 'premium_annual'
+       AND monthly_price != '999.99'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
@@ -260,7 +283,7 @@ async function fixStripePricesIfNeeded() {
     monthlyPrice: subscriptionPlans.monthlyPrice,
     currency: subscriptionPlans.currency,
     billingInterval: subscriptionPlans.billingInterval,
-  }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium']));
+  }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium', 'standard_annual_intro', 'premium_annual_intro']));
 
   let checked = 0, fixed = 0;
   for (const plan of plans) {
