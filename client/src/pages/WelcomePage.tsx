@@ -352,7 +352,7 @@ export default function WelcomePage() {
         <div className="max-w-md mx-auto">
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center gap-4 px-5 py-4">
             <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-              <LogIn className="h-4.5 w-4.5 text-green-600 h-[18px] w-[18px]" />
+              <LogIn className="h-[18px] w-[18px] text-green-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 leading-tight">Already have an account?</p>
