@@ -1304,9 +1304,10 @@ export class CustomerStorage extends OrderStorage {
       console.log('Getting wholesaler profile for ID:', id);
       
       // Use raw SQL to bypass Drizzle ORM issues
+      // Try by primary ID first, then fall back to store_slug
       const wholesalerResult = await db.execute(sql`
         SELECT * FROM users 
-        WHERE id = ${id} AND role = 'wholesaler'
+        WHERE (id = ${id} OR store_slug = ${id}) AND role = 'wholesaler'
         LIMIT 1
       `);
 
@@ -1318,10 +1319,13 @@ export class CustomerStorage extends OrderStorage {
       const wholesaler = wholesalerResult.rows[0] as any;
       console.log('Wholesaler found:', wholesaler.business_name);
 
+      // Use the resolved internal ID for related queries (not the slug param)
+      const resolvedId = wholesaler.id as string;
+
       // Get products for this wholesaler using raw SQL
       const productsResult = await db.execute(sql`
         SELECT * FROM products 
-        WHERE wholesaler_id = ${id} AND status = 'active'
+        WHERE wholesaler_id = ${resolvedId} AND status = 'active'
       `);
 
       const wholesalerProducts = (productsResult.rows || []).map(row => {
@@ -1427,6 +1431,7 @@ export class CustomerStorage extends OrderStorage {
         completedAchievements: wholesaler.completed_achievements,
         onboardingProgress: wholesaler.onboarding_progress,
         allowPayLater: wholesaler.allow_pay_later || false,
+        storeSlug: wholesaler.store_slug || null,
       };
 
       return {

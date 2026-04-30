@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2 } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -525,7 +525,7 @@ export default function Settings() {
     const canvas = qrRef.current;
     if (!canvas) return;
     const url = canvas.toDataURL('image/png');
-    const storeUrl = `https://quikpik.app/customer/${(user as any)?.id}`;
+    const storeUrl = storeShareUrl;
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.tagline{font-size:14px;font-weight:600;color:#374151;margin-top:8px;text-align:center}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${(user as any)?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="tagline">Scan to sign up for my store</div><div class="url">${storeUrl}</div></body></html>`);
@@ -551,6 +551,47 @@ export default function Settings() {
     ctx.fillText(initials, 40, 40);
     return canvas.toDataURL();
   };
+
+  // Custom store URL (slug) state
+  const [slugInput, setSlugInput] = useState('');
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const slugCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Initialise slug input from user data
+  useEffect(() => {
+    if ((user as any)?.storeSlug) setSlugInput((user as any).storeSlug);
+  }, [(user as any)?.storeSlug]);
+
+  const storeIdentifier = (user as any)?.storeSlug || (user as any)?.id || '';
+  const storeShareUrl = `https://quikpik.app/customer/${storeIdentifier}`;
+
+  const checkSlugAvailability = useCallback((value: string) => {
+    if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+    const trimmed = value.toLowerCase().trim();
+    if (!trimmed || trimmed === (user as any)?.storeSlug) { setSlugStatus('idle'); return; }
+    if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(trimmed)) { setSlugStatus('invalid'); return; }
+    setSlugStatus('checking');
+    slugCheckTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/marketplace/check-slug/${encodeURIComponent(trimmed)}`);
+        const data = await res.json();
+        setSlugStatus(data.available ? 'available' : 'taken');
+      } catch { setSlugStatus('idle'); }
+    }, 400);
+  }, [(user as any)?.storeSlug]);
+
+  const saveSlugMutation = useMutation({
+    mutationFn: async (slug: string) => apiRequest('PUT', '/api/user/profile', { storeSlug: slug || null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setSlugStatus('idle');
+      toast({ title: 'Store URL saved', description: `Your store link is now quikpik.app/customer/${slugInput.trim() || (user as any)?.id}` });
+    },
+    onError: (err: any) => {
+      const msg = err?.message || 'Failed to save store URL.';
+      toast({ title: 'Could not save', description: msg, variant: 'destructive' });
+    },
+  });
 
   const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number }>({
     queryKey: ["/api/auth/user"],
@@ -1702,6 +1743,72 @@ export default function Settings() {
                     </div>
                   </div>
 
+                  {/* Custom Store URL Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Link2 className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Custom Store URL</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Give your store a short, memorable link instead of the auto-generated one. Only lowercase letters, numbers, and hyphens allowed.
+                    </p>
+
+                    {/* Current live URL */}
+                    <div className="flex items-center gap-2 mb-4 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      <ExternalLink className="h-3.5 w-3.5 text-green-700 flex-shrink-0" />
+                      <span className="text-xs text-green-800 font-mono break-all">{storeShareUrl}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto h-6 px-2 text-xs text-green-700 hover:text-green-900"
+                        onClick={() => { navigator.clipboard.writeText(storeShareUrl); toast({ title: 'Copied!', description: 'Store link copied to clipboard.' }); }}
+                      >
+                        Copy
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-600">Your custom URL slug</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none select-none">quikpik.app/customer/</span>
+                          <Input
+                            className="pl-[172px] pr-8 text-sm font-mono"
+                            placeholder="my-store"
+                            value={slugInput}
+                            onChange={e => {
+                              const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                              setSlugInput(val);
+                              checkSlugAvailability(val);
+                            }}
+                            maxLength={60}
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2">
+                            {slugStatus === 'checking' && <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />}
+                            {slugStatus === 'available' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                            {slugStatus === 'taken' && <XCircle className="h-4 w-4 text-red-500" />}
+                            {slugStatus === 'invalid' && <XCircle className="h-4 w-4 text-amber-500" />}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={saveSlugMutation.isPending || slugStatus === 'checking' || slugStatus === 'taken' || slugStatus === 'invalid'}
+                          onClick={() => saveSlugMutation.mutate(slugInput.trim())}
+                        >
+                          {saveSlugMutation.isPending ? 'Saving…' : 'Save'}
+                        </Button>
+                      </div>
+                      {slugStatus === 'taken' && <p className="text-xs text-red-600">That URL is already taken — try another one.</p>}
+                      {slugStatus === 'invalid' && <p className="text-xs text-amber-600">Must be at least 3 characters, letters/numbers/hyphens only, no leading or trailing hyphens.</p>}
+                      {slugStatus === 'available' && <p className="text-xs text-green-600">Available! Hit Save to use this URL.</p>}
+                      {(user as any)?.storeSlug && (
+                        <p className="text-xs text-gray-400">
+                          Old link still works: quikpik.app/customer/{(user as any)?.id}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Store QR Code Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
@@ -1724,7 +1831,7 @@ export default function Settings() {
                           return (
                             <QRCodeCanvas
                               ref={qrRef}
-                              value={`https://quikpik.app/customer/${(user as any)?.id}`}
+                              value={storeShareUrl}
                               size={200}
                               level="H"
                               includeMargin={true}
@@ -1737,7 +1844,7 @@ export default function Settings() {
                         </p>
                       </div>
                       <p className="text-xs text-gray-400 text-center break-all max-w-xs">
-                        quikpik.app/customer/{(user as any)?.id}
+                        quikpik.app/customer/{storeIdentifier}
                       </p>
                       <div className="flex gap-3">
                         <Button variant="outline" onClick={downloadQR} className="flex items-center gap-2">

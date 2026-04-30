@@ -16,7 +16,7 @@
  */
 import type { Express } from "express";
 import {
-  db, getUserPlanLimits, inArray, sql, storage, priceListItems,
+  db, getUserPlanLimits, inArray, sql, storage, priceListItems, requireAuth,
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
 import {
@@ -360,6 +360,25 @@ export function registerBrowsingRoutes(app: Express): void {
     } catch (error) {
       console.error("Error looking up wholesaler:", error);
       res.status(500).json({ message: "Failed to lookup wholesaler" });
+    }
+  });
+
+  // GET /api/marketplace/check-slug/:slug — check if a store slug is available (auth required)
+  app.get('/api/marketplace/check-slug/:slug', requireAuth, async (req: any, res) => {
+    try {
+      const slug = req.params.slug.toLowerCase().trim();
+      const userId = req.user.id;
+      const reserved = ['admin', 'api', 'customer', 'store', 'welcome', 'super-admin', 'login', 'signup', 'dashboard'];
+      if (reserved.includes(slug)) {
+        return res.json({ available: false, reason: 'reserved' });
+      }
+      if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug)) {
+        return res.json({ available: false, reason: 'format' });
+      }
+      const result = await db.execute(sql`SELECT id FROM users WHERE store_slug = ${slug} AND id != ${userId} LIMIT 1`);
+      res.json({ available: result.rows.length === 0 });
+    } catch (error) {
+      res.status(500).json({ available: false, reason: 'error' });
     }
   });
 

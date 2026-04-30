@@ -271,6 +271,9 @@ export const users = pgTable("users", {
   vatEnabled: boolean("vat_enabled").default(false),
   vatRate: decimal("vat_rate", { precision: 5, scale: 4 }).default("0.2000"),
 
+  // Custom store URL slug (e.g. "my-store" → quikpik.app/customer/my-store)
+  storeSlug: varchar("store_slug", { length: 60 }),
+
   // Pay Later — wholesaler-controlled
   allowPayLater: boolean("allow_pay_later").default(false),
 

@@ -75,6 +75,29 @@ export function registerAuthRoutes(app: Express): void {
         updates.vatRate = rate.toFixed(4);
       }
 
+      if (updates.storeSlug !== undefined) {
+        if (updates.storeSlug === null || updates.storeSlug === '') {
+          updates.storeSlug = null;
+        } else {
+          const slug = String(updates.storeSlug).toLowerCase().trim();
+          if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug)) {
+            return res.status(400).json({ success: false, message: "Store URL must be 3–60 characters using only lowercase letters, numbers and hyphens, and cannot start or end with a hyphen." });
+          }
+          // Reserved words that can't be used as slugs
+          const reserved = ['admin', 'api', 'customer', 'store', 'welcome', 'super-admin', 'login', 'signup', 'dashboard'];
+          if (reserved.includes(slug)) {
+            return res.status(400).json({ success: false, message: "That URL is reserved and cannot be used. Please choose a different one." });
+          }
+          // Check uniqueness
+          const { db, sql: dbSql } = await import('../db.js');
+          const existing = await db.execute(dbSql`SELECT id FROM users WHERE store_slug = ${slug} AND id != ${user.id} LIMIT 1`);
+          if (existing.rows.length > 0) {
+            return res.status(409).json({ success: false, message: "That store URL is already taken. Please choose a different one." });
+          }
+          updates.storeSlug = slug;
+        }
+      }
+
       if (updates.storeTagline !== undefined) {
         const trimmedTagline = updates.storeTagline == null ? '' : String(updates.storeTagline).trim();
         if (!trimmedTagline) {
