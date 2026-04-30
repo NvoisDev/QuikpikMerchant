@@ -601,7 +601,7 @@ export default function SubscriptionPricing() {
           const isCurrent = isCurrentPlan(plan.planId);
           const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro');
           const isIntro = (
-            ((plan.planId === 'standard' || plan.planId === 'premium') && !plan.billingInterval) ||
+            ((plan.planId === 'standard' || plan.planId === 'premium') && plan.billingInterval !== 'yearly') ||
             plan.planId === 'standard_annual_intro' ||
             plan.planId === 'premium_annual_intro'
           ) && new Date() < new Date('2027-05-01T00:00:00Z');
@@ -682,15 +682,19 @@ export default function SubscriptionPricing() {
                 </div>
 
                 {/* 4. Introductory notice */}
-                {isIntro && futureFullPrice && (
+                {isIntro && (
                   <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                     <strong>Introductory Price</strong> — valid until 30 April 2027
-                    <div className="mt-1.5 text-amber-700">
-                      From 1 May 2027: £{futureFullPrice.amount.toFixed(2)}/{futureFullPrice.per}
-                    </div>
-                    <div className="mt-0.5 font-medium text-amber-700">
-                      You're saving {savingPct}%
-                    </div>
+                    {futureFullPrice && (
+                      <>
+                        <div className="mt-1.5 text-amber-700">
+                          From 1 May 2027: £{futureFullPrice.amount.toFixed(2)}/{futureFullPrice.per}
+                        </div>
+                        <div className="mt-0.5 font-medium text-amber-700">
+                          You're saving {savingPct}%
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
