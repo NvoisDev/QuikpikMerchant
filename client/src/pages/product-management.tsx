@@ -1633,6 +1633,41 @@ export default function ProductManagement() {
     window.URL.revokeObjectURL(url);
   };
 
+  const downloadProductList = () => {
+    if (!products || products.length === 0) return;
+    const today = new Date().toISOString().substring(0, 10);
+    const rows = (products as any[]).map((p) => {
+      const row: Record<string, string | number> = {
+        "Name": p.name ?? "",
+        "Category": p.category ?? "",
+        "Description": p.description ?? "",
+        "Price": p.price ?? "",
+        "Currency": p.currency ?? "GBP",
+        "MOQ": p.moq ?? "",
+        "Stock": p.stock ?? "",
+        "Status": p.status ?? "",
+        "Selling Format": p.sellingFormat ?? "",
+        "Pack Qty": p.packQuantity ?? "",
+        "Unit of Measure": p.unitOfMeasure ?? "",
+        "Unit Size": p.unitSize ?? "",
+        "Units per Pallet": p.unitsPerPallet ?? "",
+        "Pallet Price": p.palletPrice ?? "",
+        "Pallet MOQ": p.palletMoq ?? "",
+        "Low Stock Threshold": p.lowStockThreshold ?? "",
+        "Expiry Date": p.expiryDate ? String(p.expiryDate).substring(0, 10) : "",
+        "Temperature": p.temperatureRequirement ?? "",
+      };
+      if (!isViewer) {
+        row["Cost Price"] = p.costPrice ?? "";
+      }
+      return row;
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Products");
+    XLSX.writeFile(wb, `products_${today}.xlsx`);
+  };
+
   const filteredProducts = (products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1744,7 +1779,13 @@ export default function ProductManagement() {
                       <span className="hidden sm:inline">More</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-44">
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem
+                      onClick={downloadProductList}
+                      disabled={!products || products.length === 0}
+                    >
+                      <Download className="h-4 w-4 mr-2" /> Export Product List
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={downloadTemplate}>
                       <Download className="h-4 w-4 mr-2" /> CSV Template
                     </DropdownMenuItem>
