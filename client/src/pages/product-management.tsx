@@ -1670,7 +1670,7 @@ export default function ProductManagement() {
           "Category": p.category ?? "",
           "Description": p.description ?? "",
           "Price": p.price ?? "",
-          "Currency": p.currency ?? "GBP",
+          "Currency": p.currency ?? "",
           "MOQ": p.moq ?? "",
           "Stock": p.stock ?? "",
           "Status": humanStatus(p.status ?? ""),
