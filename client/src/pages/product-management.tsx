@@ -1695,7 +1695,7 @@ export default function ProductManagement() {
       const res = await fetch("/api/products/batches/all");
       if (!res.ok) throw new Error("Server error");
       const allBatches: Array<{
-        productId: number; productName: string; batchNumber: string | null;
+        id: number; productId: number; productName: string; batchNumber: string | null;
         quantity: number; expiryDate: string | null; createdAt: string | null;
         costPrice: string | null; status: string;
       }> = await res.json();
@@ -1705,7 +1705,7 @@ export default function ProductManagement() {
         .filter((b) => filteredIds.has(b.productId))
         .map((b) => ({
           "Product Name": b.productName ?? "",
-          "Batch ID": b.batchNumber || `#${b.productId}`,
+          "Batch ID": b.batchNumber || `#${b.id}`,
           "Quantity": b.quantity ?? "",
           "Expiry Date": b.expiryDate ? fmtExportDate(b.expiryDate) : "No expiry",
           "Received Date": fmtExportDate(b.createdAt),

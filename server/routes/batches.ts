@@ -44,6 +44,7 @@ export function registerBatchRoutes(app: Express): void {
 
       const rows = await db
         .select({
+          id: productBatches.id,
           productId: productBatches.productId,
           productName: products.name,
           batchNumber: productBatches.batchNumber,
