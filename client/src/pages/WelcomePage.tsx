@@ -233,11 +233,11 @@ export default function WelcomePage() {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <ShieldCheck className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-            <span>Secure ordering</span>
+            <span>Secure ordering &amp; payments</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <MessageCircle className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-            <span>SMS updates</span>
+            <span>You'll receive updates via SMS</span>
           </div>
         </div>
       </div>
