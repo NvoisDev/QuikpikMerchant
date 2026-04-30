@@ -17,6 +17,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
@@ -144,6 +147,16 @@ export default function ProductDetail() {
   const [costPriceEditBatchId, setCostPriceEditBatchId] = useState<number | null>(null);
   const [costPriceInputValue, setCostPriceInputValue] = useState<string>("");
   const costPricePopoverRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -608,7 +621,7 @@ export default function ProductDetail() {
                                         <span className="text-gray-400 cursor-pointer hover:text-green-600 transition-colors">— <span className="text-xs">(add)</span></span>
                                       )}
                                     </button>
-                                    {costPriceEditBatchId === batch.id && (
+                                    {!isMobile && costPriceEditBatchId === batch.id && (
                                       <div
                                         ref={costPricePopoverRef}
                                         className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[180px]"
@@ -695,7 +708,7 @@ export default function ProductDetail() {
                                       )}
                                     </button>
 
-                                    {isThisPopoverOpen && (
+                                    {!isMobile && isThisPopoverOpen && (
                                       <div
                                         ref={expiryPopoverRef}
                                         className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px]"
@@ -953,6 +966,112 @@ export default function ProductDetail() {
 
         </div>
       </div>
+
+      {/* ── Mobile bottom-sheet: Cost Price ── */}
+      <Sheet
+        open={isMobile && costPriceEditBatchId !== null}
+        onOpenChange={(open) => { if (!open) setCostPriceEditBatchId(null); }}
+      >
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Set cost price</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              autoFocus
+              value={costPriceInputValue}
+              disabled={updateCostPriceMutation.isPending}
+              onChange={(e) => setCostPriceInputValue(e.target.value)}
+              placeholder="0.00"
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+            />
+            <div className="flex gap-3">
+              {costPriceEditBatchId !== null && batches.find(b => b.id === costPriceEditBatchId)?.costPrice != null &&
+               batches.find(b => b.id === costPriceEditBatchId)?.costPrice !== "" && (
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 text-red-600 border-red-200 hover:bg-red-50"
+                  disabled={updateCostPriceMutation.isPending}
+                  onClick={() => updateCostPriceMutation.mutate({ batchId: costPriceEditBatchId!, costPrice: null })}
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={() => setCostPriceEditBatchId(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                disabled={updateCostPriceMutation.isPending || costPriceInputValue.trim() === ""}
+                onClick={() => {
+                  const val = costPriceInputValue.trim();
+                  if (val === "" || costPriceEditBatchId === null) return;
+                  updateCostPriceMutation.mutate({ batchId: costPriceEditBatchId, costPrice: val });
+                }}
+              >
+                {updateCostPriceMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Mobile bottom-sheet: Expiry Date ── */}
+      <Sheet
+        open={isMobile && expiryPopoverBatchId !== null}
+        onOpenChange={(open) => { if (!open) setExpiryPopoverBatchId(null); }}
+      >
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Set expiry date</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <input
+              type="date"
+              autoFocus
+              value={expiryInputValue}
+              onChange={(e) => setExpiryInputValue(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="flex gap-3">
+              {expiryPopoverBatchId !== null && batches.find(b => b.id === expiryPopoverBatchId)?.expiryDate && (
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 text-red-600 border-red-200 hover:bg-red-50"
+                  disabled={updateExpiryMutation.isPending}
+                  onClick={() => updateExpiryMutation.mutate({ batchId: expiryPopoverBatchId!, expiryDate: null })}
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={() => setExpiryPopoverBatchId(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
+                disabled={updateExpiryMutation.isPending || !expiryInputValue}
+                onClick={() => {
+                  if (!expiryInputValue || expiryPopoverBatchId === null) return;
+                  updateExpiryMutation.mutate({ batchId: expiryPopoverBatchId, expiryDate: expiryInputValue });
+                }}
+              >
+                {updateExpiryMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ── Delete confirmation ── */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
