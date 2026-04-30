@@ -606,6 +606,16 @@ export default function SubscriptionPricing() {
             plan.planId === 'premium_annual_intro'
           ) && new Date() < new Date('2027-05-01T00:00:00Z');
 
+          const futureFullPrice = (() => {
+            if (!isIntro) return null;
+            if (tier === 'standard') return isAnnual ? { amount: 599.99, per: 'year' } : { amount: 49.99, per: 'month' };
+            if (tier === 'premium') return isAnnual ? { amount: 999.99, per: 'year' } : { amount: 99.99, per: 'month' };
+            return null;
+          })();
+          const savingPct = futureFullPrice
+            ? Math.round((futureFullPrice.amount - price) / futureFullPrice.amount * 100)
+            : 0;
+
           return (
             <Card
               key={plan.id}
@@ -672,9 +682,15 @@ export default function SubscriptionPricing() {
                 </div>
 
                 {/* 4. Introductory notice */}
-                {isIntro && (
+                {isIntro && futureFullPrice && (
                   <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                     <strong>Introductory Price</strong> — valid until 30 April 2027
+                    <div className="mt-1.5 text-amber-700">
+                      From 1 May 2027: £{futureFullPrice.amount.toFixed(2)}/{futureFullPrice.per}
+                    </div>
+                    <div className="mt-0.5 font-medium text-amber-700">
+                      You're saving {savingPct}%
+                    </div>
                   </div>
                 )}
 
