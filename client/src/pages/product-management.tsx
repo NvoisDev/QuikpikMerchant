@@ -21,8 +21,7 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, MoreHorizontal, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen, Tag } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell, Pencil, Copy, Trash2, PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, ToggleLeft, ToggleRight, Lock, LockOpen, Tag } from "lucide-react";
 import type { Product, PromotionalOffer } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -1833,29 +1832,42 @@ export default function ProductManagement() {
                   Preview Store
                 </Button>
 
-                {/* More dropdown — CSV + Bulk Upload only (desktop and mobile) */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="hidden sm:inline">More</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem onClick={downloadTemplate}>
-                      <Download className="h-4 w-4 mr-2" /> CSV Template
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setIsDownloadModalOpen(true)}
-                      disabled={!products || products.length === 0}
-                    >
-                      <Download className="h-4 w-4 mr-2" /> Download Products
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsBulkUploadDialogOpen(true)}>
-                      <Upload className="h-4 w-4 mr-2" /> Bulk Upload
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* CSV Template */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={downloadTemplate}
+                  title="Download CSV Template"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">CSV Template</span>
+                </Button>
+
+                {/* Download Products */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setIsDownloadModalOpen(true)}
+                  disabled={!products || products.length === 0}
+                  title="Download Products"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </Button>
+
+                {/* Bulk Upload */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setIsBulkUploadDialogOpen(true)}
+                  title="Bulk Upload"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline">Bulk Upload</span>
+                </Button>
               </div>
 
               {/* Primary action + usage counter */}
