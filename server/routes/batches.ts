@@ -35,10 +35,13 @@ export function registerBatchRoutes(app: Express): void {
   }
 
   // GET /api/products/batches/all
-  // Returns all batches for all products owned by the authenticated wholesaler (for export)
+  // Returns all batches for all products owned by the authenticated wholesaler (for export).
+  // costPrice is omitted from the response for viewer-role team members.
   app.get('/api/products/batches/all', requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = getWholesalerId(req);
+      const isViewer = req.user.teamMemberRole === 'viewer';
+
       const rows = await db
         .select({
           productId: productBatches.productId,
@@ -54,7 +57,12 @@ export function registerBatchRoutes(app: Express): void {
         .innerJoin(products, eq(productBatches.productId, products.id))
         .where(eq(products.wholesalerId, wholesalerId))
         .orderBy(products.name, productBatches.expiryDate);
-      res.json(rows);
+
+      const response = isViewer
+        ? rows.map(({ costPrice: _cp, ...rest }) => rest)
+        : rows;
+
+      res.json(response);
     } catch (error) {
       console.error('Error fetching all batches:', error);
       res.status(500).json({ error: 'Failed to fetch batches' });
