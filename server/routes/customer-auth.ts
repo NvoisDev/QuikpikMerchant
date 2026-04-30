@@ -949,6 +949,30 @@ export function registerCustomerAuthRoutes(app: Express): void {
     }
   });
 
+  function getBusinessTypeLabel(businessType: string | null | undefined): string | null {
+    if (!businessType) return null;
+    const map: Record<string, string> = {
+      retailer: 'Retailer (Shop / Store)',
+      wholesaler: 'Wholesaler / Distributor',
+      business: 'Business (Restaurant, Salon, etc.)',
+      individual: 'Individual / Sole Trader',
+    };
+    return map[businessType] ?? businessType;
+  }
+
+  function buildSubmissionSummaryCard(requestData: {
+    businessName?: string | null;
+    businessType?: string | null;
+    customerPhone: string;
+    customerEmail?: string | null;
+    productsInterested?: string | null;
+    orderFrequency?: string | null;
+    requestMessage?: string | null;
+  }): string {
+    const businessTypeLabel = getBusinessTypeLabel(requestData.businessType);
+    return `${emailHeading('Your Submitted Details', { size: '16px' })}${requestData.businessName ? `<p style="margin:0 0 6px"><strong>Business Name:</strong> ${requestData.businessName}</p>` : ''}${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${businessTypeLabel}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${requestData.customerPhone}</p>${requestData.customerEmail ? `<p style="margin:0 0 6px"><strong>Email:</strong> ${requestData.customerEmail}</p>` : ''}${requestData.productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${requestData.productsInterested}</p>` : ''}${requestData.orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${requestData.orderFrequency}</p>` : ''}${requestData.requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestData.requestMessage}</p>` : ''}`;
+  }
+
   // POST /api/registration-requests/:requestId/respond
   app.post('/api/registration-requests/:requestId/respond', requireAuth, requireNotViewer, async (req, res) => {
     try {
@@ -1112,7 +1136,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
             
-            const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${requestData.customerPhone}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${businessName}:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.app/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
+            const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${requestData.customerPhone}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${businessName}:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.app/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,
@@ -1132,7 +1156,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
             
-            const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
+            const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,
