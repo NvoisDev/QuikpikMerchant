@@ -320,9 +320,9 @@ export default function SubscriptionPricing() {
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M14 32H34" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
         <path d="M14 32L11 18L19 23L24 12L29 23L37 18L34 32" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="11" cy="18" r="2" fill="#f59e0b"/>
-        <circle cx="24" cy="12" r="2" fill="#f59e0b"/>
-        <circle cx="37" cy="18" r="2" fill="#f59e0b"/>
+        <circle cx="11" cy="18" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="24" cy="12" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="37" cy="18" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
       </svg>
     );
   };
@@ -612,7 +612,7 @@ export default function SubscriptionPricing() {
               className={clsx(
                 'relative flex flex-col border transition-all duration-200 overflow-hidden',
                 {
-                  'border-green-400 shadow-md': isCurrent,
+                  'border-green-400 shadow-md bg-green-50': isCurrent,
                   'border-gray-200 hover:shadow-md': !isCurrent,
                 }
               )}
@@ -667,7 +667,7 @@ export default function SubscriptionPricing() {
                       ? 'Free forever'
                       : isAnnual && savings
                         ? `Billed annually — save £${savings.amount.toFixed(0)} vs monthly`
-                        : 'Billed monthly, cancel anytime'}
+                        : 'Billed monthly'}
                   </p>
                 </div>
 
