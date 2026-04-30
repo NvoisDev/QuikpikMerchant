@@ -51,18 +51,18 @@ export class SubscriptionService {
           planId: "standard", 
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "19.99",
+          monthlyPrice: "49.99",
           currency: "GBP",
           description: "Perfect for growing wholesale businesses",
           features: [
-            "Up to 5 products",
+            "Up to 20 products",
             "Up to 5 price lists",
             "Broadcast tools coming soon",
             "Basic dashboard analytics",
             "Priority email support"
           ],
           limits: {
-            products: 5,
+            products: 20,
             broadcasts: 25,
             teamMembers: 2,
             customGroups: 5,
@@ -75,7 +75,7 @@ export class SubscriptionService {
           planId: "premium",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "49.99",
+          monthlyPrice: "99.99",
           currency: "GBP", 
           description: "Everything you need to scale your wholesale business",
           features: [

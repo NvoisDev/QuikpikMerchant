@@ -48,6 +48,10 @@ async function runStartupMigrations() {
     // This corrects any stale values from old defaults.
     `UPDATE users SET product_limit = 2 WHERE subscription_tier = 'free'`,
     `UPDATE users SET product_limit = 5 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 5)`,
+    // Task #848: Intro pricing — raise Standard product limit to 20, update plan prices.
+    `UPDATE users SET product_limit = 20 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 20)`,
+    `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'standard' AND monthly_price != '49.99'`,
+    `UPDATE subscription_plans SET monthly_price = '99.99' WHERE plan_id = 'premium' AND monthly_price != '99.99'`,
     // Task #305: Add is_locked column to price_lists for plan enforcement
     `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE`,
     // Task #72: Add phone number to team members for SMS stock alerts

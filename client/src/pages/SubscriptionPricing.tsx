@@ -320,7 +320,7 @@ export default function SubscriptionPricing() {
   const getAnnualSavings = (plan: SubscriptionPlan): { pct: number; amount: number } | null => {
     if (plan.billingInterval !== 'yearly') return null;
     const tier = getPlanBaseTier(plan.planId);
-    const monthlyEquiv = tier === 'standard' ? 19.99 : tier === 'premium' ? 49.99 : null;
+    const monthlyEquiv = tier === 'standard' ? 49.99 : tier === 'premium' ? 99.99 : null;
     if (!monthlyEquiv) return null;
     const monthlyTotal = monthlyEquiv * 12;
     const annualPrice = parseFloat(plan.monthlyPrice);
@@ -677,6 +677,11 @@ export default function SubscriptionPricing() {
                 </div>
               </div>
 
+              {(plan.planId === 'standard' || plan.planId === 'premium') && !plan.billingInterval && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  <strong>Introductory price</strong> — valid until 30 April 2027
+                </div>
+              )}
               {(plan.planId === 'standard_annual_intro' || plan.planId === 'premium_annual_intro') && (
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                   <strong>Introductory rate</strong> — full annual price applies from May 2027
