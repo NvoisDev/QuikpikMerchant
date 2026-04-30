@@ -9,6 +9,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 
 ## System Architecture
 ### Frontend
+- **Landing Page**: Fully redesigned (modern high-converting SaaS style) — Hero → Problem → Benefits (6 cards) → How It Works (3 steps) → Pricing → Comparison table → Trust section → Final CTA. All "marketplace" and "coming soon" language removed. Outcome-focused copy throughout.
 - **Framework**: React 18 with TypeScript, Vite, Tailwind CSS with shadcn/ui.
 - **State Management**: TanStack Query (React Query).
 - **Routing**: Wouter.

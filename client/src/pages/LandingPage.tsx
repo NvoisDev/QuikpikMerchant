@@ -1,604 +1,352 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-// Logo removed during cleanup
-import { 
-  ArrowRight, 
-  MessageSquare, 
-  TrendingUp, 
-  Users, 
-  Shield, 
-  Smartphone,
+import { Card } from "@/components/ui/card";
+import {
+  ArrowRight,
+  MessageSquare,
+  Users,
+  Shield,
   CheckCircle,
-  Star,
-  Globe,
   Zap,
-  Clock,
-  BarChart3,
   CreditCard,
   Package,
-  Calendar,
-  Users2,
   Phone,
-  Video,
-  Search
+  Lock,
+  ShoppingBag,
+  FileText,
 } from "lucide-react";
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
-
-  const handleGetStarted = () => {
-    window.location.href = "/signup";
-  };
-
-  const handleWholesaleLogin = () => {
-    window.location.href = "/login";
-  };
-
-  const handleCustomerLogin = () => {
-    // For customer login, we'll create a simple page to enter wholesaler ID
-    window.location.href = "/customer-login";
-  };
-
-  const handleWaitlist = (e: React.FormEvent) => {
-    e.preventDefault();
-    // For now, redirect to sign up
-    handleGetStarted();
-  };
+  const handleGetStarted = () => { window.location.href = "/signup"; };
+  const handleLogin = () => { window.location.href = "/login"; };
+  const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
-              <span className="hidden sm:inline text-lg sm:text-2xl font-bold text-primary">Quikpik</span>
-            </div>
-            <div className="flex items-center space-x-1 sm:space-x-3">
-              <Button 
-                variant="ghost" 
-                onClick={handleCustomerLogin}
-                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm sm:text-base px-2 sm:px-4"
-              >
-                <span className="hidden sm:inline">Customer Login</span>
-                <span className="sm:hidden">Customer</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={handleWholesaleLogin}
-                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm sm:text-base px-2 sm:px-4"
-              >
-                <span className="hidden sm:inline">Wholesale Login</span>
-                <span className="sm:hidden">Business</span>
-              </Button>
-              <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm sm:text-base px-3 sm:px-4">
-                <span className="hidden sm:inline">Sign Up Free</span>
-                <span className="sm:hidden">Sign Up</span>
-                <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-            </div>
+    <div className="min-h-screen bg-white text-gray-900">
+
+      {/* ── NAV ── */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
+            <span className="text-xl font-bold text-primary">Quikpik</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={handleCustomerLogin} className="text-sm text-gray-600 hidden sm:inline-flex">
+              Customer Login
+            </Button>
+            <Button variant="ghost" onClick={handleLogin} className="text-sm text-gray-600">
+              <span className="hidden sm:inline">Wholesaler Login</span>
+              <span className="sm:hidden">Login</span>
+            </Button>
+            <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-4">
+              Start Free <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-12 sm:pt-20 pb-12 sm:pb-16 bg-gradient-to-br from-primary/5 via-white to-green-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs sm:text-sm px-3 sm:px-4 py-2">
-                🚀 Built for Modern Businesses
-              </Badge>
-              
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                Connect
-                <span className="block text-primary">Wholesalers</span>
-                with Retailers
-              </h1>
-              
-              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
-                The modern B2B marketplace designed for wholesale businesses. 
-                Streamline your operations, reach more retailers, and grow your business 
-                with automated communication and secure online payments.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-6 text-sm text-gray-600">
-                <span className="flex items-center justify-center lg:justify-start">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Free plan available
-                </span>
-                <span className="flex items-center justify-center lg:justify-start">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">Small fee on online card orders</span>
-                  <span className="sm:hidden">Card order fees</span>
-                </span>
-                <span className="flex items-center justify-center lg:justify-start">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Cancel anytime
-                </span>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <Button 
-                  onClick={handleGetStarted}
-                  size="lg" 
-                  className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 bg-primary hover:bg-primary/90 w-full sm:w-auto"
-                >
-                  Start Selling Today
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={handleWholesaleLogin}
-                  className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 border-2 w-full sm:w-auto"
-                >
-                  <span className="hidden sm:inline">Already have an account? Log In</span>
-                  <span className="sm:hidden">Log In</span>
-                </Button>
-              </div>
-              
-              <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 text-xs sm:text-sm">
-                <div className="flex items-center bg-gradient-to-r from-emerald-50 to-emerald-100 px-3 sm:px-4 py-2 rounded-full border border-emerald-200">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-2" />
-                  <span className="font-semibold text-emerald-700">Easy setup</span>
-                </div>
-                <div className="flex items-center bg-gradient-to-r from-sky-50 to-sky-100 px-3 sm:px-4 py-2 rounded-full border border-sky-200">
-                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500 mr-2" />
-                  <span className="font-semibold text-sky-700">WhatsApp integrated</span>
-                </div>
-                <div className="flex items-center bg-gradient-to-r from-yellow-50 to-yellow-100 px-3 sm:px-4 py-2 rounded-full border border-yellow-200">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mr-2" />
-                  <span className="font-semibold text-yellow-700">Secure card payments</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="relative mt-12 lg:mt-0">
-              <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border mx-auto max-w-sm lg:max-w-none">
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Metro Wholesale Hub</h3>
-                    <Badge className="bg-green-100 text-green-800 text-xs">Online</Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 sm:p-4 rounded-lg border border-emerald-200">
-                      <div className="flex items-center mb-2">
-                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-1 sm:mr-2" />
-                        <span className="text-xs sm:text-sm font-medium text-emerald-700">Revenue</span>
-                      </div>
-                      <div className="text-lg sm:text-2xl font-bold text-emerald-800">£24K</div>
-                      <div className="text-xs sm:text-sm text-emerald-600">This month</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-sky-50 to-sky-100 p-3 sm:p-4 rounded-lg border border-sky-200">
-                      <div className="flex items-center mb-2">
-                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500 mr-1 sm:mr-2" />
-                        <span className="text-xs sm:text-sm font-medium text-sky-700">Customer Lists</span>
-                      </div>
-                      <div className="text-lg sm:text-2xl font-bold text-sky-800">Organised</div>
-                      <div className="text-xs sm:text-sm text-sky-600">Approved retailers</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-3 sm:p-4 rounded-lg border border-yellow-200">
-                      <div className="flex items-center">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mr-2 flex-shrink-0" />
-                          <span className="text-yellow-700 font-medium text-xs sm:text-sm truncate">New stock alert sent</span>
-                        </div>
-                        <span className="ml-2 text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full whitespace-nowrap">2m ago</span>
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-3 sm:p-4 rounded-lg border border-emerald-200">
-                      <div className="flex items-center">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <Package className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-2 flex-shrink-0" />
-                          <span className="text-emerald-700 font-medium text-xs sm:text-sm truncate">Order from Kano received</span>
-                        </div>
-                        <span className="ml-2 text-xs text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full whitespace-nowrap">5m ago</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Floating stats */}
-              <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 bg-white rounded-lg shadow-lg p-2 sm:p-4 border">
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-current" />
-                  <span className="font-semibold text-sm sm:text-base">Store</span>
-                  <span className="text-xs sm:text-sm text-gray-600">preview</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-12 sm:py-16 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              How the Marketplace Works
-            </h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Quikpik connects multiple wholesalers with their retail customers in one platform
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 mb-12">
-            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-blue-800">1. Wholesalers Set Up Stores</h3>
-              <p className="text-blue-700 text-sm">
-                Each wholesaler creates their own store with products, pricing, and customer lists
-              </p>
-            </Card>
-            
-            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Search className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-green-800">2. Customers Find Sellers</h3>
-              <p className="text-green-700 text-sm">
-                Customers can browse and discover multiple wholesaler stores using the "Find Seller" feature
-              </p>
-            </Card>
-            
-            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-purple-800">3. Registration Required</h3>
-              <p className="text-purple-700 text-sm">
-                Customers must be registered with each wholesaler before they can purchase from that store
-              </p>
-            </Card>
-          </div>
-          
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8">
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-white text-sm font-bold">!</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-amber-800 mb-2">Important: Customer Registration Requirements</h4>
-                <div className="text-amber-700 text-sm space-y-2">
-                  <p><strong>Browsing is free:</strong> Guests can browse products where enabled, but prices and ordering stay locked until the seller approves them</p>
-                  <p><strong>Purchasing requires registration:</strong> Each wholesaler maintains their own customer database. Customers must be approved by each wholesaler before making purchases</p>
-                  <p><strong>Why this approach?</strong> This maintains B2B relationships where wholesalers control credit terms, pricing agreements, and business compliance requirements</p>
-                </div>
-              </div>
-            </div>
+      {/* ── HERO ── */}
+      <section className="pt-16 sm:pt-24 pb-16 sm:pb-20 bg-gradient-to-b from-green-50/60 to-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 text-xs font-semibold px-4 py-2 rounded-full mb-8">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+            Built for wholesale businesses
           </div>
 
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Everything You Need to Scale
-            </h2>
-          </div>
-          
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-sky-50 to-sky-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-sky-400 to-sky-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-                <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-sky-800">Broadcasting Coming Soon</h3>
-              <p className="text-sky-700 text-sm font-medium">
-                WhatsApp broadcast tools are on the roadmap for future customer updates
-              </p>
-            </Card>
-            
-            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-                <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-yellow-800">Secure Payments</h3>
-              <p className="text-yellow-700 text-sm font-medium">
-                Take secure card payments with integrated payment processing
-              </p>
-            </Card>
-            
-            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-rose-50 to-rose-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-rose-400 to-rose-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-                <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-rose-800">Smart Analytics</h3>
-              <p className="text-rose-700 text-sm font-medium">
-                Track sales and inventory with detailed insights
-              </p>
-            </Card>
-          </div>
-        </div>
-      </section>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
+            Run your wholesale business<br className="hidden sm:block" />
+            <span className="text-primary"> without the chaos</span>
+          </h1>
 
-      {/* Comparison Section */}
-      <section className="py-12 sm:py-16 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-14">
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs sm:text-sm px-3 sm:px-4 py-2 mb-4">
-              🔄 Why Wholesalers Are Switching
-            </Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Why Wholesalers Are Switching to Quikpik
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Everything you need to run your wholesale business — without the unnecessary fees.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 items-start">
-
-            {/* Left card — Traditional Wholesale Platform */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-6 sm:p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Traditional Wholesale Platform</h3>
-                <div className="space-y-0 divide-y divide-gray-100">
-                  {[
-                    { title: "£200–£500+/month fees", sub: "Just to list your products" },
-                    { title: "Annual contracts", sub: "Locked in, no flexibility" },
-                    { title: "No customer messaging", sub: "Can't reach your buyers directly" },
-                    { title: "Manual order tracking", sub: "Spreadsheets and chasing payments" },
-                    { title: "High setup costs", sub: "Fees before you've sold a thing" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-4 py-4">
-                      <span className="text-red-500 font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">—</span>
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{item.sub}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-red-50 border-t border-red-100 px-6 sm:px-8 py-5">
-                <p className="text-sm text-red-700 font-medium mb-1">Traditional Platform Cost:</p>
-                <p className="text-2xl font-bold text-red-600 line-through">£200–£500+/month</p>
-              </div>
-            </div>
-
-            {/* Right card — Quikpik */}
-            <div className="bg-white rounded-2xl border-2 border-primary shadow-lg">
-              <div className="p-6 sm:p-8 pt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Quikpik</h3>
-                <div className="space-y-0 divide-y divide-gray-100">
-                  {[
-                    { title: "Free plan available", sub: "Start selling with £0/month" },
-                    { title: "Cancel anytime, 1 click", sub: "Zero risk, full control" },
-                    { title: "WhatsApp messaging built in", sub: "Reach customers where they already are", comingSoon: true },
-                    { title: "Automated order management", sub: "Orders, payments and tracking in one place" },
-                    { title: "Low fees on card orders only", sub: "Cash/offline orders: you keep 100%" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-4 py-4">
-                      <span className="text-primary font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-5">✓</span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
-                          {item.comingSoon && (
-                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Coming soon</span>
-                          )}
-                        </div>
-                        <p className="text-gray-500 text-xs mt-0.5">{item.sub}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-green-50 border-t border-green-100 px-6 sm:px-8 py-5">
-                <p className="text-sm text-green-700 font-medium mb-1">Quikpik Cost:</p>
-                <p className="text-2xl font-bold text-primary">Start free</p>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="text-center mt-8">
-            <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-white px-10 py-3 text-base font-semibold rounded-xl shadow-md">
-              Get Started Free
-            </Button>
-            <p className="text-xs text-gray-400 mt-3">No credit card required · Cancel anytime</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Free Support Section */}
-      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 via-white to-green-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 sm:mb-16">
-            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-xs sm:text-sm px-3 sm:px-4 py-2 mb-4 sm:mb-6">
-              Support Available
-            </Badge>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
-              Support & Training Options
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-              Get help with setup, product uploads, customer groups, and day-to-day questions 
-              as you start running your wholesale store.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex items-start space-x-3 sm:space-x-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Video className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Guided Setup Help</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Support to help you configure your account, upload products, and set up customer groups.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 sm:space-x-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Email & Call Support</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Contact the support team for account questions, setup guidance, and technical assistance.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 sm:space-x-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Team Training Guidance</h3>
-                  <p className="text-gray-600 text-sm sm:text-base">Help your team understand the main workflows for products, customers, orders, and payments.</p>
-                </div>
-              </div>
-              
-              <div className="bg-emerald-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
-                <div className="flex items-center mb-3">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 mr-2" />
-                  <span className="font-semibold text-emerald-800 text-sm sm:text-base">Included Support</span>
-                </div>
-                <p className="text-emerald-700 text-xs sm:text-sm">
-                  Basic setup and account support is available to help you get started and keep moving.
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-100 mt-8 md:mt-0">
-              <div className="text-center mb-4 sm:mb-6">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Get Support</h3>
-                <p className="text-gray-600 text-sm sm:text-base">Tell us what you need help with</p>
-              </div>
-              
-              <div className="space-y-3 sm:space-y-4">
-                <Button 
-                  onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Setup support request'; }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-4 text-base sm:text-lg font-medium"
-                >
-                  <Calendar className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Request Setup Help
-                </Button>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Team training support'; }}
-                    className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                  >
-                    <Users2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    Team Training
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => { window.location.href = 'mailto:hello@quikpik.co?subject=Quick support request'; }}
-                    className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                  >
-                    <Phone className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    Quick Help
-                  </Button>
-                </div>
-                
-                <div className="text-center pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-500 mb-2">Support availability:</p>
-                  <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-                    <span>Business hours</span>
-                    <span>•</span>
-                    <span>Response times may vary</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-16 text-center">
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 inline-block">
-              <p className="text-lg font-semibold text-gray-900 mb-2">
-                Need immediate help?
-              </p>
-              <p className="text-gray-600 mb-4">
-                Email us at <a href="mailto:hello@quikpik.co" className="text-emerald-600 hover:text-emerald-700 font-medium">hello@quikpik.co</a>
-              </p>
-              <p className="text-sm text-gray-500">
-                We will get back to you as soon as possible during business hours
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-white to-green-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Ready to Transform Your Wholesale Business?
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Start building a simpler wholesale ordering experience for your customers
+          <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Orders, payments, stock, and customers — all in one simple platform built for modern wholesalers.
+            No calls. No spreadsheets. No chasing payments.
           </p>
-          
-          <form onSubmit={handleWaitlist} className="max-w-md mx-auto mb-8">
-            <div className="flex gap-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                required
-              />
-              <Button type="submit" size="lg" className="px-8">
-                Get Started
-              </Button>
-            </div>
-          </form>
-          
-          <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Easy setup
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              No credit card required
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Guided setup
-            </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+            <Button
+              onClick={handleGetStarted}
+              size="lg"
+              className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
+            >
+              Start Free <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleLogin}
+              className="text-base px-8 py-6 rounded-xl border-2"
+            >
+              Log in to your account
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
+            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> No monthly fees to start</span>
+            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> Only pay on card orders</span>
+            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime</span>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center space-x-3 mb-8">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
-              Q
-            </div>
-            <h3 className="text-2xl font-bold">Quikpik Merchant</h3>
+      {/* ── PROBLEM ── */}
+      <section className="py-16 sm:py-20 bg-gray-950 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
+            Still running your wholesale business like this?
+          </h2>
+          <p className="text-gray-400 text-lg mb-12">Sound familiar? You're not alone.</p>
+
+          <div className="grid sm:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
+            {[
+              { icon: MessageSquare, text: "Taking orders over WhatsApp and writing them down manually" },
+              { icon: CreditCard,    text: "Chasing payments long after goods have left the door" },
+              { icon: Package,       text: "Managing stock levels in a spreadsheet (that's always out of date)" },
+              { icon: Users,         text: "Sending individual price lists to every single customer" },
+            ].map(({ icon: Icon, text }, i) => (
+              <div key={i} className="flex items-start gap-4 bg-white/5 border border-white/10 rounded-2xl p-5">
+                <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-5 w-5 text-red-400" />
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed">{text}</p>
+              </div>
+            ))}
           </div>
-          
-          <div className="text-center text-gray-400">
-            <p className="mb-4">
-              Empowering wholesale businesses to reach more customers and grow faster.
+
+          <p className="mt-12 text-gray-400 text-base">
+            There's a better way. <span className="text-white font-semibold">Quikpik handles all of it for you.</span>
+          </p>
+        </div>
+      </section>
+
+      {/* ── BENEFITS ── */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Everything you need to run your wholesale business
+            </h2>
+            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+              One platform replaces the calls, the spreadsheets, and the back-and-forth.
             </p>
-            <p className="mb-2">
-              © 2025 Quikpik Merchant. Built with ❤️ for entrepreneurs worldwide.
-            </p>
-            <p>
-              Questions? Contact us at <a href="mailto:hello@quikpik.co" className="text-primary hover:text-primary/80 transition-colors">hello@quikpik.co</a>
-            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: ShoppingBag,
+                color: "bg-blue-50 text-blue-600",
+                title: "Instant Online Ordering",
+                desc: "Customers browse your live catalogue and place orders any time — no calls, no messages, no manual entry.",
+              },
+              {
+                icon: CreditCard,
+                color: "bg-green-50 text-green-600",
+                title: "Custom Pricing Per Customer",
+                desc: "Set different price lists for different customers. Each buyer sees their own personalised rates automatically.",
+              },
+              {
+                icon: FileText,
+                color: "bg-purple-50 text-purple-600",
+                title: "Quotes → Payment in One Flow",
+                desc: "Create a quote, send a payment link, and get paid instantly. No follow-up calls needed.",
+              },
+              {
+                icon: Package,
+                color: "bg-orange-50 text-orange-600",
+                title: "Real-Time Stock Control",
+                desc: "Inventory updates automatically with every order. Low-stock alerts stop you overselling.",
+              },
+              {
+                icon: Lock,
+                color: "bg-rose-50 text-rose-600",
+                title: "Pay Now or Pay Later",
+                desc: "Offer trusted customers the option to buy on account while everyone else pays by card.",
+              },
+              {
+                icon: Phone,
+                color: "bg-teal-50 text-teal-600",
+                title: "SMS & WhatsApp Ready",
+                desc: "Send order confirmations and payment links via SMS and WhatsApp — the channels your customers already use.",
+              },
+            ].map(({ icon: Icon, color, title, desc }, i) => (
+              <Card key={i} className="p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${color}`}>
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-16 sm:py-24 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            Up and running in minutes
+          </h2>
+          <p className="text-gray-500 text-lg mb-14">Three steps. No technical setup required.</p>
+
+          <div className="grid sm:grid-cols-3 gap-8 relative">
+            <div className="hidden sm:block absolute top-8 left-1/4 right-1/4 h-0.5 bg-green-200 z-0"></div>
+            {[
+              { step: "1", title: "Set up your store", desc: "Add your products, pricing, and delivery options in minutes." },
+              { step: "2", title: "Share your link", desc: "Send your store link to customers via WhatsApp, SMS, or email." },
+              { step: "3", title: "Receive orders and get paid", desc: "Customers order online. Payments land directly in your account." },
+            ].map(({ step, title, desc }, i) => (
+              <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-primary text-white text-2xl font-extrabold rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-primary/20">
+                  {step}
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ── */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            Start free. Only pay when you get paid.
+          </h2>
+          <p className="text-gray-500 text-lg mb-12">Simple, honest pricing with no surprises.</p>
+
+          <div className="grid sm:grid-cols-3 gap-6 mb-10">
+            {[
+              {
+                icon: CheckCircle,
+                color: "text-green-500",
+                bg: "bg-green-50",
+                title: "£0/month to start",
+                desc: "Full access on the free plan. No credit card needed.",
+              },
+              {
+                icon: CreditCard,
+                color: "text-blue-500",
+                bg: "bg-blue-50",
+                title: "Small fee on card payments",
+                desc: "Only charged when a customer pays by card online.",
+              },
+              {
+                icon: Shield,
+                color: "text-purple-500",
+                bg: "bg-purple-50",
+                title: "Offline orders are 100% yours",
+                desc: "Cash, Pay Later, and offline orders have no platform fee.",
+              },
+            ].map(({ icon: Icon, color, bg, title, desc }, i) => (
+              <div key={i} className={`${bg} rounded-2xl p-6 text-left`}>
+                <Icon className={`h-8 w-8 ${color} mb-4`} />
+                <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-gray-500 text-sm">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-base px-10 py-6 rounded-xl shadow-lg shadow-primary/20">
+            Start Free Today <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          <p className="text-xs text-gray-400 mt-4">No credit card required · Cancel anytime</p>
+        </div>
+      </section>
+
+      {/* ── COMPARISON ── */}
+      <section className="py-16 sm:py-24 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Stop paying for tools that don't work
+            </h2>
+            <p className="text-gray-500 text-lg">See how Quikpik stacks up against the old way.</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="grid grid-cols-3 text-sm font-semibold border-b border-gray-100">
+              <div className="col-span-1 p-4 text-gray-500"></div>
+              <div className="p-4 text-center text-gray-500 border-l border-gray-100">Traditional</div>
+              <div className="p-4 text-center text-primary border-l border-gray-100">Quikpik</div>
+            </div>
+            {[
+              { label: "Monthly cost",     old: "£200–£500+",     new: "Free to start" },
+              { label: "Taking orders",    old: "Manual",         new: "Automated online" },
+              { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
+              { label: "Stock tracking",   old: "Spreadsheets",   new: "Real-time, automatic" },
+              { label: "Customer pricing", old: "Sent manually",  new: "Custom price lists" },
+              { label: "Contracts",        old: "Annual lock-in", new: "Cancel anytime" },
+            ].map(({ label, old, new: newVal }, i) => (
+              <div key={i} className={`grid grid-cols-3 text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                <div className="p-4 font-medium text-gray-700">{label}</div>
+                <div className="p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
+                <div className="p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1">
+                  <CheckCircle className="h-4 w-4" /> {newVal}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST ── */}
+      <section className="py-14 sm:py-20 bg-white border-y border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="grid sm:grid-cols-3 gap-8 text-center">
+            {[
+              { icon: Shield,       color: "text-green-500", title: "Secure payments",          desc: "Powered by Stripe — the same payments infrastructure used by the world's fastest-growing companies." },
+              { icon: Zap,          color: "text-blue-500",  title: "Built for wholesalers",    desc: "Designed specifically for B2B wholesale businesses, not generic e-commerce." },
+              { icon: CheckCircle,  color: "text-purple-500", title: "Used by growing businesses", desc: "Wholesalers use Quikpik to take orders, manage stock, and get paid — all in one place." },
+            ].map(({ icon: Icon, color, title, desc }, i) => (
+              <div key={i} className="flex flex-col items-center text-center px-4">
+                <Icon className={`h-10 w-10 ${color} mb-4`} />
+                <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ── */}
+      <section className="py-20 sm:py-28 bg-gradient-to-br from-primary to-green-600 text-white text-center">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
+            Start taking orders today
+          </h2>
+          <p className="text-green-100 text-lg mb-10">
+            Join wholesalers already using Quikpik to run their business smarter.
+          </p>
+          <Button
+            onClick={handleGetStarted}
+            size="lg"
+            className="bg-white text-primary hover:bg-gray-50 text-base font-semibold px-10 py-6 rounded-xl shadow-xl"
+          >
+            Start Free <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          <p className="text-green-200 text-sm mt-5">No credit card required · Free plan available · Cancel anytime</p>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className="py-8 bg-gray-950 text-gray-500 text-center text-sm">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img src="/quikpik-logo.png" alt="Quikpik" className="h-6 w-6 object-contain" />
+            <span className="text-white font-bold">Quikpik</span>
+          </div>
+          <p>© {new Date().getFullYear()} Quikpik. All rights reserved.</p>
+          <div className="flex gap-4">
+            <button onClick={handleCustomerLogin} className="hover:text-white transition-colors">Customer Login</button>
+            <button onClick={handleLogin} className="hover:text-white transition-colors">Wholesaler Login</button>
+            <button onClick={handleGetStarted} className="hover:text-white transition-colors">Sign Up Free</button>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }

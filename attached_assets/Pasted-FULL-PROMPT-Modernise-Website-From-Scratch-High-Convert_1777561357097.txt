@@ -1,0 +1,158 @@
+FULL PROMPT: Modernise Website From Scratch (High-Converting SaaS)
+
+You can give this directly to your agent 👇
+
+🧾 Prompt: Full Website Redesign (Modern, High-Converting, B2B SaaS)
+🎯 Objective
+
+Redesign the entire Quikpik website to:
+
+Clearly communicate value in under 5 seconds
+Focus on outcomes, not features
+Increase conversion (visitors → signups)
+Position Quikpik as the default platform for wholesalers
+Be clean, modern, and mobile-first
+🧠 1. Positioning Shift (CRITICAL)
+❌ Current:
+
+“B2B marketplace connecting wholesalers and retailers”
+
+✅ New:
+
+Run your wholesale business without calls, spreadsheets, or chasing payments
+
+🏗️ 2. New Page Structure
+🔝 HERO SECTION
+Headline:
+
+Run your wholesale business without calls, spreadsheets, or chasing payments
+
+Subtext:
+
+Orders, payments, stock, and customers — all in one simple platform built for modern wholesalers.
+
+CTA:
+Start Free
+Secondary: Watch Demo (optional)
+Trust bullets:
+No monthly fees to start
+Only pay on card orders
+Cancel anytime
+💥 3. PROBLEM SECTION (NEW — VERY IMPORTANT)
+Title:
+
+Still running your wholesale business like this?
+
+Pain points:
+Taking orders on WhatsApp
+Chasing payments manually
+Managing stock in spreadsheets
+Sending price lists individually
+
+👉 This creates emotional buy-in
+
+⚡ 4. SOLUTION / BENEFITS SECTION
+Title:
+
+Everything you need to run your wholesale business
+
+6 Key Cards:
+Instant Online Ordering
+Customers order from your live catalogue anytime
+Custom Pricing Per Customer
+Each customer sees their own pricing automatically
+Quotes → Payment in One Flow
+Send a quote, get paid instantly
+Real-Time Stock Control
+Never oversell again
+Pay Now or Pay Later
+Flexible payment options for different customers
+SMS & WhatsApp Ready
+Send orders and payment links instantly
+🖥️ 5. HOW IT WORKS (SIMPLIFIED)
+
+Replace current 3-step with:
+
+Set up your store
+Share your link with customers
+Receive orders and get paid
+
+👉 Keep it simple — no “marketplace” language
+
+📱 6. PRODUCT PREVIEW (IMPORTANT)
+
+Show:
+
+Dashboard
+Orders
+Customer portal
+Mobile view
+
+👉 Real UI, not abstract illustrations
+
+💸 7. PRICING (SIMPLIFIED)
+Title:
+
+Start free. Only pay when you get paid.
+
+£0/month to start
+Small fee on online payments only
+Offline orders = 100% yours
+
+👉 Remove clutter, focus on simplicity
+
+🆚 8. COMPARISON SECTION (KEEP BUT IMPROVE)
+
+Rename:
+
+❌ “Why Wholesalers Are Switching”
+✅ “Stop paying for tools that don’t work”
+
+Make it sharper:
+
+Traditional Way	Quikpik
+£200–£500/month	Free to start
+Manual orders	Automated
+Chasing payments	Instant payments
+Spreadsheets	Real-time stock
+🛡️ 9. TRUST SECTION (ADD THIS)
+Secure payments
+Built for wholesalers
+Used by growing businesses
+🚀 10. FINAL CTA
+Title:
+
+Start taking orders today
+
+CTA:
+
+Start Free
+No credit card required
+🧹 11. REMOVE / FIX
+Remove or reduce:
+“Marketplace” language (confusing)
+“Coming soon” features
+Over-explanation about registration rules
+
+👉 Too much friction and confusion
+
+🎨 12. DESIGN DIRECTION
+Minimal, modern SaaS (Stripe / Shopify style)
+Large fonts
+Clean spacing
+Soft shadows
+Rounded cards (12–16px)
+📱 13. MOBILE FIRST
+Stack sections cleanly
+Large CTAs
+Fast load
+No clutter
+⚡ 14. PERFORMANCE
+Fast loading
+Optimised images
+Lightweight animations
+✅ SUCCESS CRITERIA
+User understands value in 5 seconds
+Clear path to signup
+Reduced confusion
+Higher conversion rate
