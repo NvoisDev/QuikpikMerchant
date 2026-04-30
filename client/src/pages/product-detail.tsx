@@ -560,7 +560,7 @@ export default function ProductDetail() {
                       </button>
                     )}
                   </div>
-                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="rounded-lg border border-gray-200 overflow-visible">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
@@ -568,7 +568,7 @@ export default function ProductDetail() {
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Qty</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Cost</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Expiry</th>
-                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Status</th>
+                          <th className="hidden md:table-cell text-right px-3 py-2 text-gray-500 font-medium">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -750,7 +750,7 @@ export default function ProductDetail() {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="hidden md:table-cell px-3 py-2 text-right">
                                 <span className={`inline-block px-1.5 py-0.5 rounded-full text-xs capitalize ${
                                   isExpiredBatch && batch.status !== "depleted"
                                     ? "bg-red-100 text-red-600"
