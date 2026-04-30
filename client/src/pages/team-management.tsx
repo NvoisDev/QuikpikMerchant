@@ -53,7 +53,7 @@ import { SubscriptionUpgradeModal } from "@/components/subscription/Subscription
 
 const teamMemberSchema = z.object({
   email: z.string().email("Invalid email address"),
-  firstName: z.string().min(1, "First name is required"),
+  firstName: z.string().optional().or(z.literal("")),
   lastName: z.string().optional(),
   phoneNumber: z.string().optional(),
   role: z.enum(["admin", "member", "viewer"]),
@@ -508,7 +508,7 @@ export default function TeamManagement() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>First Name <span className="text-gray-400 font-normal">(optional)</span></FormLabel>
                       <FormControl>
                         <Input placeholder="John" {...field} />
                       </FormControl>
