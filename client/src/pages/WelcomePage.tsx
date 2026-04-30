@@ -80,6 +80,7 @@ export default function WelcomePage() {
   const [submitted, setSubmitted] = useState(false);
 
   const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const phoneRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +119,7 @@ export default function WelcomePage() {
   // Fetch product preview (guest-safe, no prices)
   useEffect(() => {
     if (!wholesalerId) return;
+    setSelectedCategory(null);
     fetch(`/api/customer-products/${wholesalerId}?guest=true`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data: PreviewProduct[]) => {
@@ -273,8 +275,47 @@ export default function WelcomePage() {
               <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
               <p className="text-sm font-medium text-green-800">Sign up to see prices and place orders.</p>
             </div>
+
+            {/* Category filter chips */}
+            {(() => {
+              const categories = Array.from(
+                new Set(previewProducts.map((p) => p.category).filter((c): c is string => Boolean(c)))
+              );
+              if (categories.length < 2) return null;
+              return (
+                <div className="flex gap-2 flex-wrap mb-4">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selectedCategory === null
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selectedCategory === cat
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-2 gap-3">
-              {previewProducts.map((product) => {
+              {(selectedCategory
+                ? previewProducts.filter((p) => p.category === selectedCategory)
+                : previewProducts
+              ).map((product) => {
                 const thumb = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || null;
                 return (
                   <div key={product.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
