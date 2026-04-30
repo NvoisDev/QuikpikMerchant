@@ -10,6 +10,15 @@ function requireStripe(isTestAccount: boolean | null | undefined) {
   return getStripeClient(isTestAccount);
 }
 
+/**
+ * Returns true while we are within the introductory pricing window
+ * (now → 30 April 2027 inclusive). On 1 May 2027 UTC this returns false
+ * and the system reverts to the original prices automatically.
+ */
+export function isIntroPricingPeriod(): boolean {
+  return new Date() < new Date('2027-05-01T00:00:00Z');
+}
+
 export class SubscriptionService {
   
   /**
