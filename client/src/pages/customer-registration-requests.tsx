@@ -63,6 +63,7 @@ interface RegistrationRequest {
   customerPhone: string;
   customerEmail?: string;
   businessName?: string;
+  businessType?: string;
   requestMessage?: string;
   productsInterested?: string;
   orderFrequency?: string;
@@ -596,6 +597,31 @@ export default function CustomerRegistrationRequests() {
                 </div>
               )}
 
+              {viewingRequest.businessName && (
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Business Name</p>
+                    <p className="text-sm font-medium">{viewingRequest.businessName}</p>
+                  </div>
+                </div>
+              )}
+
+              {viewingRequest.businessType && (
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Business Type</p>
+                    <p className="text-sm font-medium capitalize">{
+                      viewingRequest.businessType === 'retailer' ? 'Retailer (Shop / Store)' :
+                      viewingRequest.businessType === 'wholesaler' ? 'Wholesaler / Distributor' :
+                      viewingRequest.businessType === 'business' ? 'Business (Restaurant, Salon, etc.)' :
+                      viewingRequest.businessType === 'individual' ? 'Individual / Sole Trader' :
+                      viewingRequest.businessType
+                    }</p>
+                  </div>
+                </div>
+              )}
 
               {viewingRequest.requestMessage && (
                 <div className="flex items-start gap-3">

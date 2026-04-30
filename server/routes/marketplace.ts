@@ -362,7 +362,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   // POST /api/customer/request-wholesaler-access
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {
-      const { wholesalerId, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType } = req.body;
+      const { wholesalerId, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType, businessType } = req.body;
       // Normalise to E.164 immediately so all formats of the same number are treated identically
       const customerPhone = formatPhoneToInternational(req.body.customerPhone || '');
       
@@ -403,6 +403,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         customerEmail,
         businessName: req.body.businessName || null,
         customerType: customerType || null,
+        businessType: businessType || null,
         requestMessage,
         productsInterested: productsInterested || null,
         orderFrequency: orderFrequency || null,

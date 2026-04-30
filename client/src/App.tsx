@@ -53,6 +53,7 @@ const Promotions = lazy(() => import("@/pages/promotions"));
 const Integrations = lazy(() => import("@/pages/integrations"));
 const OrderDetail = lazy(() => import("@/pages/order-detail"));
 const ProductDetail = lazy(() => import("@/pages/product-detail"));
+const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -82,7 +83,8 @@ function PublicRoutes() {
         <Route path="/marketplace/product/:id" component={ProductOrderPage} />
         <Route path="/product/:slug" component={PublicProductPage} />
         <Route path="/customer/payment-success" component={PaymentSuccess} />
-        <Route path="/customer/:id" component={({ params }) => { const [, setLocation] = useLocation(); useEffect(() => { setLocation(`/store/${params.id}`, { replace: true }); }, [params.id]); return null; }} />
+        <Route path="/customer/:id" component={({ params }) => { const [, setLocation] = useLocation(); useEffect(() => { setLocation(`/welcome/${params.id}`, { replace: true }); }, [params.id]); return null; }} />
+        <Route path="/welcome/:wholesalerId" component={WelcomePage} />
         <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
         <Route path="/store/:id" component={CustomerPortal} />
         <Route path="/team-invitation" component={TeamInvitation} />
@@ -192,6 +194,7 @@ function Router() {
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
     location.startsWith('/store/') ||
+    location.startsWith('/welcome/') ||
     publicRoutes.includes(location);
 
   if (location === '/landing') {

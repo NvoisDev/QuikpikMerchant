@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +69,7 @@ function formatCountdown(secs: number) {
 }
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequestAccess = false }: CustomerAuthProps) {
+  const [, navigate] = useLocation();
   const [step, setStep] = useState<AuthStep>('phone');
   const [countryCode, setCountryCode] = useState(getSavedCountryCode); // localStorage preference, falls back to auto-detected timezone
   const [phoneLocal, setPhoneLocal] = useState('');          // digits after country code
@@ -597,7 +599,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
                 Your number isn't linked to any wholesale account. Ask your wholesaler to add you, or submit a registration request below.
               </p>
               <Button
-                onClick={() => setShowRegistrationForm(true)}
+                onClick={() => wholesalerId ? navigate(`/welcome/${wholesalerId}`) : setShowRegistrationForm(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm"
               >
                 <User className="h-4 w-4 mr-2" /> Request Access

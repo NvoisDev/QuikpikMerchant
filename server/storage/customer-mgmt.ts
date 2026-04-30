@@ -392,6 +392,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     customerEmail?: string;
     businessName?: string;
     customerType?: string | null;
+    businessType?: string | null;
     requestMessage?: string;
     productsInterested?: string | null;
     orderFrequency?: string | null;

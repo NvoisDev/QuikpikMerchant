@@ -779,6 +779,7 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   customerEmail: varchar("customer_email", { length: 255 }),
   businessName: varchar("business_name", { length: 255 }),
   customerType: varchar("customer_type", { length: 20 }), // 'retail' | 'wholesale' | 'individual'
+  businessType: varchar("business_type", { length: 20 }), // 'retailer' | 'wholesaler' | 'business' | 'individual'
   requestMessage: text("request_message"),
   productsInterested: text("products_interested"),
   orderFrequency: varchar("order_frequency", { length: 255 }),
