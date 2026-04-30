@@ -679,7 +679,7 @@ export default function SubscriptionPricing() {
 
               {(plan.planId === 'standard' || plan.planId === 'premium') && !plan.billingInterval && (
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                  <strong>Introductory price</strong> — valid until 30 April 2027
+                  <strong>Introductory Price</strong> — valid until 30 April 2027
                 </div>
               )}
               {(plan.planId === 'standard_annual_intro' || plan.planId === 'premium_annual_intro') && (

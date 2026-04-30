@@ -44,11 +44,11 @@ async function runStartupMigrations() {
     // Task #46: Security — clear stale google_id from team_member records so they cannot
     // match in the googleId-first lookup and leak another wholesaler's data.
     `UPDATE users SET google_id = NULL WHERE role = 'team_member' AND google_id IS NOT NULL`,
-    // Task #49/#305: Align product_limit for all tiers to new limits (Free=2, Standard=5, Premium=-1).
-    // This corrects any stale values from old defaults.
+    // Task #49/#305: Align product_limit for all tiers to new limits (Free=2, Premium=-1).
+    // Task #848 raised Standard to 20; the update below is the authoritative value.
     `UPDATE users SET product_limit = 2 WHERE subscription_tier = 'free'`,
     `UPDATE users SET product_limit = 5 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 5)`,
-    // Task #848: Intro pricing — raise Standard product limit to 20, update plan prices.
+    // Task #848: Intro pricing — raise Standard product limit from 5 → 20, update plan prices.
     `UPDATE users SET product_limit = 20 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 20)`,
     `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'standard' AND monthly_price != '49.99'`,
     `UPDATE subscription_plans SET monthly_price = '99.99' WHERE plan_id = 'premium' AND monthly_price != '99.99'`,
