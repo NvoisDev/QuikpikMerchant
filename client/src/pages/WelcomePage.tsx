@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2, Tag } from "lucide-react";
+import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2, Tag, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 import { formatPhoneToInternational } from "@shared/phone-utils";
@@ -347,6 +347,29 @@ export default function WelcomePage() {
         </div>
       )}
 
+      {/* Sign-in prompt for existing customers */}
+      <div className="px-4 pt-6 pb-2">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center gap-4 px-5 py-4">
+            <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+              <LogIn className="h-4.5 w-4.5 text-green-600 h-[18px] w-[18px]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 leading-tight">Already have an account?</p>
+              <p className="text-xs text-gray-500 mt-0.5">Sign in to see prices and place orders.</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0 border-green-600 text-green-700 hover:bg-green-50 font-semibold rounded-xl"
+              onClick={() => setLocation(`/store/${wholesalerId}`)}
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Form */}
       <div className="flex-1 px-4 py-6">
         <div className="max-w-md mx-auto">
@@ -482,14 +505,6 @@ export default function WelcomePage() {
                 )}
               </Button>
 
-              {/* Cancel / Already have an account */}
-              <button
-                type="button"
-                onClick={() => setLocation(`/store/${wholesalerId}`)}
-                className="w-full text-center text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
-              >
-                Already have an account? Sign in
-              </button>
             </form>
           </div>
         </div>
