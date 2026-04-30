@@ -483,7 +483,7 @@ export default function TeamManagement() {
 
       {/* Invite Team Member Dialog — rendered at top level so it works on mobile too */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
           </DialogHeader>
@@ -552,7 +552,11 @@ export default function TeamManagement() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
+                          <SelectValue placeholder="Select role">
+                            {field.value
+                              ? ({ admin: 'Admin', member: 'Member', viewer: 'Viewer' } as Record<string, string>)[field.value] ?? 'Select role'
+                              : 'Select role'}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
