@@ -48,10 +48,8 @@ async function runStartupMigrations() {
     // Task #848 raised Standard to 20; the update below is the authoritative value.
     `UPDATE users SET product_limit = 2 WHERE subscription_tier = 'free'`,
     `UPDATE users SET product_limit = 5 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 5)`,
-    // Task #848: Intro pricing — raise Standard product limit from 5 → 20, update plan prices.
+    // Task #848/#850: Raise Standard product limit to 20 for all existing subscribers.
     `UPDATE users SET product_limit = 20 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 20)`,
-    `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'standard' AND monthly_price != '49.99'`,
-    `UPDATE subscription_plans SET monthly_price = '99.99' WHERE plan_id = 'premium' AND monthly_price != '99.99'`,
     // Task #305: Add is_locked column to price_lists for plan enforcement
     `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE`,
     // Task #72: Add phone number to team members for SMS stock alerts
@@ -495,17 +493,21 @@ app.use((req, res, next) => {
     });
     console.log(`🎯 Promotion notification system enabled (daily at 10 AM)`);
 
-    // Annual plan migration: runs daily at 11 AM — no-op until 1 May 2027,
-    // then migrates intro annual subscribers to full-rate plans.
+    // Daily pricing & plan maintenance at 11 AM:
+    //   1. Switch monthly Standard/Premium to full rates on 1 May 2027 (no-op before that)
+    //   2. Migrate intro annual subscribers to full-rate annual plans on 1 May 2027 (no-op before that)
+    //   3. Re-run Stripe price fix so any DB price change made above is reflected in Stripe same day
     cron.schedule('0 11 * * *', async () => {
       try {
         const { SubscriptionService: SS } = await import("./subscription-service");
+        await SS.runMonthlyPriceSwitchIfDue();
         await SS.runAnnualPlanMigrationIfDue();
+        await fixStripePricesIfNeeded();
       } catch (error) {
-        console.error('❌ Annual plan migration check failed:', error);
+        console.error('❌ Daily pricing/plan maintenance check failed:', error);
       }
     });
-    console.log(`📅 Annual plan migration scheduler enabled (daily at 11 AM)`);
+    console.log(`📅 Daily pricing & plan migration scheduler enabled (daily at 11 AM)`);
 
     log(`serving on port ${port}`);
   });

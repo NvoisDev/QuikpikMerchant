@@ -60,7 +60,7 @@ export class SubscriptionService {
           planId: "standard", 
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "49.99",
+          monthlyPrice: isIntroPricingPeriod() ? "19.99" : "49.99",
           currency: "GBP",
           description: "Perfect for growing wholesale businesses",
           features: [
@@ -84,7 +84,7 @@ export class SubscriptionService {
           planId: "premium",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "99.99",
+          monthlyPrice: isIntroPricingPeriod() ? "49.99" : "99.99",
           currency: "GBP", 
           description: "Everything you need to scale your wholesale business",
           features: [
@@ -826,6 +826,44 @@ export class SubscriptionService {
       .where(inArray(subscriptionPlans.planId, ['standard_annual_intro', 'premium_annual_intro']));
 
     console.log('✅ Annual plan migration complete — full-rate plans activated, intro plans archived');
+  }
+
+  /**
+   * Switch monthly Standard/Premium prices from intro to full rates on 1 May 2027.
+   * No-op before that date. Safe to run daily — idempotent.
+   * After updating the DB, fixStripePricesIfNeeded() (called by the same cron job in index.ts)
+   * will detect the mismatch and create the correct Stripe prices automatically.
+   */
+  static async runMonthlyPriceSwitchIfDue(): Promise<void> {
+    if (isIntroPricingPeriod()) return;
+
+    console.log('💰 Running monthly price switch (intro period ended 30 April 2027)...');
+
+    const updates: Array<{ planId: string; price: string }> = [
+      { planId: 'standard', price: '49.99' },
+      { planId: 'premium',  price: '99.99' },
+    ];
+
+    let changed = 0;
+    for (const { planId, price } of updates) {
+      const [current] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, planId));
+
+      if (!current || current.monthlyPrice === price) continue;
+
+      await db.update(subscriptionPlans)
+        .set({ monthlyPrice: price })
+        .where(eq(subscriptionPlans.planId, planId));
+      console.log(`✅ Updated ${planId} monthly price → £${price}`);
+      changed++;
+    }
+
+    if (changed === 0) {
+      console.log('ℹ️ Monthly prices already at full rates — nothing to do');
+    } else {
+      console.log(`✅ Monthly price switch complete (${changed} plan(s) updated)`);
+    }
   }
 
   /**
