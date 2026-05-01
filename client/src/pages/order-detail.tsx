@@ -543,6 +543,35 @@ export default function OrderDetail() {
     }
   };
 
+  const sendInvoiceNativeShare = async () => {
+    if (!order) return;
+    setIsSendingWhatsApp(true);
+    try {
+      const orderRef = order.orderNumber || `#${order.id}`;
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareMessage = buildShareMessage(order);
+        try {
+          await navigator.share({ title: `Invoice ${orderRef}`, text: shareMessage });
+          return;
+        } catch (shareErr: unknown) {
+          if (shareErr instanceof DOMException &&
+              (shareErr.name === 'AbortError' || shareErr.name === 'NotAllowedError')) return;
+        }
+      }
+      await apiRequest('POST', `/api/orders/${order.id}/share-invoice-whatsapp`);
+      toast({ title: 'SMS sent', description: 'The invoice has been sent to the customer via SMS.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('400')) {
+        toast({ title: 'No phone number on file', description: 'This customer has no phone number on record.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Error', description: 'Could not share the invoice. Please try again.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
   const cancelOrder = async () => {
     if (!order) return;
     setIsCancelling(true);
@@ -1829,12 +1858,12 @@ export default function OrderDetail() {
                           size="sm"
                           variant="outline"
                           className="w-full border-green-500 text-green-700 hover:bg-green-50 min-h-[44px]"
-                          onClick={sendInvoiceWhatsApp}
+                          onClick={sendInvoiceNativeShare}
                           disabled={isSendingWhatsApp}
                         >
                           {isSendingWhatsApp
-                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
-                            : <><MessageCircle className="h-4 w-4 mr-2" />Send Invoice via SMS</>}
+                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sharing...</>
+                            : <><Share2 className="h-4 w-4 mr-2" />Share Invoice</>}
                         </Button>
                       )}
                       {order.stripePaymentLinkUrl && (
