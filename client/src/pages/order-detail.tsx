@@ -247,10 +247,16 @@ const getPaymentMethodLabel = (method: string): string => {
   return labels[method] || method;
 };
 
-const isStripePayment = (order: Order): boolean =>
-  order.paymentMethod === 'payment_link' ||
-  !!order.stripePaymentIntentId ||
-  !!order.stripePaymentLinkUrl;
+const OFFLINE_PAYMENT_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
+
+const isStripePayment = (order: Order): boolean => {
+  if (OFFLINE_PAYMENT_METHODS.includes(order.paymentMethod || '')) return false;
+  return (
+    order.paymentMethod === 'payment_link' ||
+    !!order.stripePaymentIntentId ||
+    !!order.stripePaymentLinkUrl
+  );
+};
 
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
@@ -363,8 +369,7 @@ export default function OrderDetail() {
     queryKey: ['/api/stripe/connect/status'],
   });
   const stripeReady = stripeConnectStatus?.isConnected === true;
-  const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
-  const isOfflinePayment = OFFLINE_METHODS.includes(order?.paymentMethod || '');
+  const isOfflinePayment = OFFLINE_PAYMENT_METHODS.includes(order?.paymentMethod || '');
   const canUsePaymentLink = !isOfflinePayment && stripeReady;
 
   useEffect(() => {
