@@ -113,7 +113,7 @@ interface Order {
   stripePaymentIntentId?: string;
   notes?: string;
   cancelledAt?: string;
-  retailer?: { phoneNumber?: string | null; businessName?: string | null };
+  retailer?: { phoneNumber?: string | null; businessName?: string | null; firstName?: string | null; lastName?: string | null; name?: string | null };
   stockRestored?: boolean;
   stockRestoredCount?: number;
   readyToCollectAt?: string;
@@ -1551,22 +1551,25 @@ export default function OrderDetail() {
             <h2 className="text-sm font-semibold text-gray-900">Customer</h2>
             <div className="space-y-1 text-xs text-gray-700">
               {(() => {
-                const retailer = order.retailer as any;
-                const businessName = retailer?.businessName || '';
-                const fullName = retailer
-                  ? `${retailer.firstName || ''} ${retailer.lastName || ''}`.trim()
+                const r = order.retailer;
+                const businessName = r?.businessName || '';
+                // Person name: first+last from live retailer, or legacy "name" field, never fall back to customerName when retailer exists
+                const personName = r
+                  ? (`${r.firstName || ''} ${r.lastName || ''}`.trim() || r.name || '')
                   : (order.customerName || '');
-                const displayName = fullName || order.customerName || '';
                 return (
                   <>
                     {businessName && <div className="font-medium text-sm text-gray-900">{businessName}</div>}
-                    {displayName && <div className={businessName ? 'text-xs text-gray-600' : 'font-medium text-sm text-gray-900'}>{displayName}</div>}
+                    {personName && <div className={businessName ? 'text-xs text-gray-600' : 'font-medium text-sm text-gray-900'}>{personName}</div>}
+                    {!businessName && !personName && order.customerName && (
+                      <div className="font-medium text-sm text-gray-900">{order.customerName}</div>
+                    )}
                   </>
                 );
               })()}
               {order.customerEmail && <div>{order.customerEmail}</div>}
-              {(order.customerPhone || (order.retailer as any)?.phoneNumber) && (
-                <div>{order.customerPhone || (order.retailer as any)?.phoneNumber}</div>
+              {(order.customerPhone || order.retailer?.phoneNumber) && (
+                <div>{order.customerPhone || order.retailer?.phoneNumber}</div>
               )}
             </div>
 
