@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
@@ -194,13 +194,15 @@ export default function QuickQuote() {
   });
   const stripeReady = stripeConnectStatus?.isConnected === true;
 
+  const paymentMethodInitialized = useRef(false);
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
-    setQuotePaymentMethod(prev => {
-      if (stripeReady && prev === 'bank_transfer') return 'payment_link';
-      if (!stripeReady && prev === 'payment_link') return 'bank_transfer';
-      return prev;
-    });
+    if (!paymentMethodInitialized.current) {
+      paymentMethodInitialized.current = true;
+      setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
+    } else if (!stripeReady) {
+      setQuotePaymentMethod(prev => prev === 'payment_link' ? 'bank_transfer' : prev);
+    }
   }, [stripeConnectStatus, stripeReady]);
 
   useEffect(() => {
