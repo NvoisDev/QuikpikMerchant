@@ -2589,6 +2589,12 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(400).json({ error: 'At least one item is required' });
       }
 
+      const ALLOWED_PAYMENT_METHODS = ['cash', 'bank_transfer', 'payment_link', 'pay_later', 'card', 'cheque', 'other'];
+      const newPaymentMethod: string | undefined = req.body.paymentMethod;
+      if (newPaymentMethod !== undefined && !ALLOWED_PAYMENT_METHODS.includes(newPaymentMethod)) {
+        return res.status(400).json({ error: 'Invalid paymentMethod value', errorType: 'VALIDATION_ERROR' });
+      }
+
       // Server-side input validation for each item
       for (const item of items) {
         if (!Number.isInteger(item.productId) || item.productId <= 0) {
@@ -2901,6 +2907,7 @@ export function registerPaymentRoutes(app: Express): void {
           notes: updatedNotes,
           lastEditedAt: new Date(),
           updatedAt: new Date(),
+          ...(newPaymentMethod !== undefined ? { paymentMethod: newPaymentMethod } : {}),
         }).where(eq(orders.id, quoteId));
       });
 

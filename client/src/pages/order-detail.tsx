@@ -298,6 +298,7 @@ export default function OrderDetail() {
 
   const [showEditMode, setShowEditMode] = useState(false);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>('bank_transfer');
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isSavingQuote, setIsSavingQuote] = useState(false);
@@ -902,6 +903,7 @@ export default function OrderDetail() {
               quantity: item.quantity,
               sellingType: item.sellingType,
             })),
+            paymentMethod: editPaymentMethod,
           }),
         });
         const data = await response.json();
@@ -1016,6 +1018,23 @@ export default function OrderDetail() {
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Method of Payment</label>
+              <select
+                value={editPaymentMethod}
+                onChange={(e) => setEditPaymentMethod(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cash">Cash</option>
+                <option value="cheque">Cheque</option>
+                <option value="payment_link">Payment Link</option>
+                <option value="card">Card Payment</option>
+                <option value="pay_later">Pay Later</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
 
             <div className="bg-gray-50 rounded-lg p-3 space-y-1">
               <div className="flex justify-between text-sm">
@@ -1389,6 +1408,8 @@ export default function OrderDetail() {
                     imageUrl: item.product?.imageUrl,
                   }));
                   setEditItems(items);
+                  const defaultMethod = order.paymentMethod || (stripeReady ? 'payment_link' : 'bank_transfer');
+                  setEditPaymentMethod(defaultMethod);
                   setShowEditMode(true);
                 }}
               >
