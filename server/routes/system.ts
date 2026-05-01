@@ -272,7 +272,7 @@ export function registerSystemRoutes(app: Express): void {
         .filter(order => order.shippingOrderId || order.deliveryTrackingNumber || order.status === 'processing' || order.status === 'shipped' || order.status === 'completed')
         .map(order => ({
           id: order.id,
-          customerName: order.retailer ? `${order.retailer.firstName} ${order.retailer.lastName}` : order.customerName || 'Unknown Customer',
+          customerName: order.retailer ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || order.customerName || 'Unknown Customer') : order.customerName || 'Unknown Customer',
           customerEmail: order.retailer?.email || order.customerEmail || '',
           trackingNumber: order.deliveryTrackingNumber || `TRK${order.id}${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
           carrier: order.deliveryCarrier || (['Royal Mail', 'DPD', 'Evri', 'UPS', 'FedEx'][Math.floor(Math.random() * 5)]),

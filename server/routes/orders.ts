@@ -290,7 +290,7 @@ export function registerOrderRoutes(app: Express): void {
           }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: updated.orderNumber,
-            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: emailCollAddr,
@@ -468,7 +468,7 @@ export function registerOrderRoutes(app: Express): void {
           }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: order.orderNumber,
-            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: resendCollAddr,
@@ -731,7 +731,7 @@ export function registerOrderRoutes(app: Express): void {
             orderId: updated.id,
             orderNumber: updated.orderNumber,
             status: 'items_prepared',
-            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             customerPhone: customer.phoneNumber || '',
             customerEmail: customer.email || undefined,
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
@@ -1317,7 +1317,7 @@ export function registerOrderRoutes(app: Express): void {
               orderId: updatedOrder.id,
               orderNumber: updatedOrder.orderNumber,
               status: updatedOrder.status,
-              customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+              customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
               customerPhone: customer.phoneNumber || '',
               customerEmail: customer.email || undefined,
               wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),

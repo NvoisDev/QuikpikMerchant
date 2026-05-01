@@ -1,0 +1,250 @@
+🧠 Prompt: Xero-Style Customer Creation + Portal Logic (Safe, Non-Breaking)
+
+Redesign the customer selection and creation flow in invoice creation to a modern, search-first UX (similar to Xero), while ensuring zero regression to existing invoice, payment, and order logic, and properly handling customer portal access based on phone number presence.
+
+⸻
+
+🎯 Objective
+
+* Enable fast, frictionless customer selection and creation
+* Allow invoice creation with minimal required data (name only)
+* Support two customer states:
+    * Draft (no phone)
+    * Active (with phone)
+* Maintain full compatibility with:
+    * Stripe payments
+    * Payment links
+    * Order lifecycle
+* Clearly define customer portal access rules
+
+⸻
+
+⚠️ Core Constraint (CRITICAL)
+
+This is a UI/UX enhancement only.
+
+Do NOT:
+
+* Rewrite invoice or order logic
+* Modify Stripe/payment flows
+* Break existing APIs or database schema
+* Change how totals, fees, or statuses are calculated
+
+⸻
+
+🧩 1. Customer Selection (Search-First UX)
+
+Replace dropdown with:
+
+* Searchable input field
+* Shows matching customers (name, business, phone)
+* Supports keyboard navigation (↑ ↓ Enter)
+
+If no match:
+
+👉 Show:
+“➕ Create new customer: {input}”
+
+⸻
+
+🧩 2. Inline Customer Creation (Xero-style)
+
+On create:
+
+Show inline panel (not full modal):
+
+Fields:
+
+* Name (required, pre-filled)
+* Phone (optional)
+* Business name (optional)
+
+Actions:
+
+* ✅ Save & Continue
+* ⏭ Skip for now
+
+⸻
+
+🧩 3. Customer Types (Non-Breaking Model)
+
+Extend existing model safely:
+
+* Draft Customer
+    * name only
+    * phone = null
+    * status = “draft”
+* Active Customer
+    * has phone
+    * status = “active”
+
+Rules:
+
+* Existing customers default to "active"
+* Do NOT remove or rename any existing fields
+
+⸻
+
+🧩 4. Invoice Integrity (Must Always Hold)
+
+* Every invoice MUST have a valid customerId
+* Even draft customers must be saved in the database
+* No temporary or frontend-only customers
+* No orphan invoices
+
+⸻
+
+🧩 5. Payment Flow (DO NOT BREAK)
+
+Must remain unchanged:
+
+* Stripe payment intents
+* Payment link generation
+* Fee calculations
+* Order totals
+
+Only add:
+
+* If no phone → disable auto-send SMS
+* Payment links must still work manually
+
+⸻
+
+🧩 6. Customer Portal Access Rules (CRITICAL)
+
+🔹 Draft Customer (No Phone)
+
+* Cannot log into customer portal
+* Cannot receive SMS login
+* Cannot receive automated payment links
+
+Allowed:
+
+* Invoice creation
+* Manual sharing (WhatsApp, copy link, PDF)
+
+UI message:
+
+“Add a phone number to enable customer login and payment links”
+
+⸻
+
+🔹 Active Customer (With Phone)
+
+* Can log in via SMS OTP
+* Can:
+    * View orders
+    * Pay invoices
+    * Access portal
+* Can receive:
+    * Payment links
+    * Notifications
+
+⸻
+
+🧩 7. Upgrade Flow (Very Important)
+
+If phone number is added later:
+
+* Convert customer from "draft" → "active"
+* Link ALL previous orders/invoices automatically
+* Enable portal access instantly
+
+Do NOT create duplicate customers
+
+⸻
+
+🧩 8. Invoice Link Behaviour
+
+For customers without phone:
+
+* Payment link should:
+    * Open checkout page without login
+    * Allow payment normally
+
+Optional (recommended):
+
+* After payment, prompt:
+    “Save your phone number to track your orders”
+
+⸻
+
+🧩 9. Login Behaviour (Edge Case)
+
+When a user logs in via phone:
+
+* Find matching customer(s)
+* If linked to multiple wholesalers:
+    * Show wholesaler selection screen
+
+If no match:
+
+* Show:
+    “You don’t have access to any stores yet”
+
+⸻
+
+🧩 10. Validation Rules
+
+* Prevent duplicate customers with same phone
+* Allow duplicate names
+* Soft warning for similar names
+
+⸻
+
+🧩 11. UI Details (Modern UX)
+
+* Highlight matched text
+* Show recent customers when empty
+* Keep input focused
+* Fast, responsive dropdown
+* Clean inline creation panel
+
+⸻
+
+🧩 12. Regression Checklist (MANDATORY)
+
+Before release, verify:
+
+Invoice Flow
+
+* Create invoice (existing customer)
+* Create invoice (new with phone)
+* Create invoice (name only)
+* Edit invoice still works
+
+Payment
+
+* Stripe payments work
+* Payment links generate
+* Fees calculated correctly
+
+Customer
+
+* Existing customers unaffected
+* Draft → Active upgrade works
+* No duplicate customers
+
+Portal
+
+* Login works with phone
+* No access without phone
+* Multi-wholesaler selection works
+
+⸻
+
+🧩 13. Safe Rollout (Recommended)
+
+* Keep old component as fallback
+* New component: CustomerSelectV2
+* Optional feature flag for rollout
+
+⸻
+
+🚀 Outcome
+
+* Faster invoice creation
+* Cleaner, modern UX
+* Supports real-world workflows
+* No disruption to payments or existing data
+* Smooth transition from offline → portal customers

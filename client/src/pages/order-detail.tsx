@@ -1547,7 +1547,13 @@ export default function OrderDetail() {
           <CardContent className="p-4 space-y-3">
             <h2 className="text-sm font-semibold text-gray-900">Customer</h2>
             <div className="space-y-1 text-xs text-gray-700">
-              {order.customerName && <div className="font-medium text-sm text-gray-900">{order.customerName}</div>}
+              {(() => {
+                const liveRetailerName = order.retailer
+                  ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || (order.retailer as any).name || (order.retailer as any).businessName || '')
+                  : '';
+                const displayName = liveRetailerName || order.customerName || '';
+                return displayName ? <div className="font-medium text-sm text-gray-900">{displayName}</div> : null;
+              })()}
               {order.customerEmail && <div>{order.customerEmail}</div>}
               {order.customerPhone && <div>{order.customerPhone}</div>}
             </div>

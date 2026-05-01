@@ -736,7 +736,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const fullCustomerData = await storage.getUser(customerAuth.customerId);
       
       // Use fresh data from database instead of cached session data
-      const customerName = fullCustomerData ? `${fullCustomerData.firstName} ${fullCustomerData.lastName}`.trim() : customerAuth.name;
+      const customerName = fullCustomerData ? `${fullCustomerData.firstName || ''} ${fullCustomerData.lastName || ''}`.trim() || fullCustomerData.businessName || customerAuth.name : customerAuth.name;
       
       res.json({
         authenticated: true,
@@ -921,7 +921,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         success: true,
         customer: {
           id: updatedCustomer.id,
-          name: `${updatedCustomer.firstName} ${updatedCustomer.lastName}`.trim(),
+          name: `${updatedCustomer.firstName || ''} ${updatedCustomer.lastName || ''}`.trim() || updatedCustomer.businessName || '',
           email: updatedCustomer.email,
           phone: updatedCustomer.phoneNumber,
           businessName: updatedCustomer.businessName

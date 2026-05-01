@@ -26,7 +26,7 @@ export function registerCustomerRoutes(app: Express): void {
           const customer = await storage.getUser(notification.customerId);
           return {
             ...notification,
-            customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown Customer',
+            customerName: customer ? (`${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Unknown Customer') : 'Unknown Customer',
             customerEmail: customer?.email,
             customerPhone: customer?.phoneNumber
           };
