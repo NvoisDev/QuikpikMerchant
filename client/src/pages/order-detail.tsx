@@ -356,6 +356,11 @@ export default function OrderDetail() {
     enabled: showEditMode,
   });
 
+  const { data: stripeConnectStatus } = useQuery<{ isConnected: boolean }>({
+    queryKey: ['/api/stripe/connect/status'],
+  });
+  const stripeReady = stripeConnectStatus?.isConnected === true;
+
   useEffect(() => {
     if (!id) return;
     const orderId = parseInt(id, 10);
@@ -437,7 +442,7 @@ export default function OrderDetail() {
     if (outstanding > 0) {
       lines.push('');
       lines.push(`💳 Balance due: ${formatMoney(outstanding)}`);
-      if (o.stripePaymentLinkUrl) {
+      if (o.stripePaymentLinkUrl && stripeReady) {
         lines.push(`Pay here → ${o.stripePaymentLinkUrl}`);
       }
     }

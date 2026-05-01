@@ -4,6 +4,7 @@ import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
 import { sendPaymentReminderEmail } from './sendgrid-service';
 import { sendWhatsAppMessage } from './services/whatsappService';
 import { getStripeClient } from './stripeConfig';
+import { isConnectAccountReady } from './utils/stripe-connect-ready';
 
 interface OrderWithPaymentTerms {
   id: number;
@@ -86,9 +87,16 @@ export async function checkAndSendPaymentReminders() {
 async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: string): Promise<string> {
   try {
     const [wholesalerUser] = await db
-      .select({ isTestAccount: users.isTestAccount })
+      .select({ isTestAccount: users.isTestAccount, stripeAccountId: users.stripeAccountId })
       .from(users)
       .where(eq(users.id, order.wholesalerId));
+
+    const connectReady = await isConnectAccountReady(wholesalerUser?.stripeAccountId, Boolean(wholesalerUser?.isTestAccount));
+    if (!connectReady) {
+      console.log(`⚠️ Skipping fresh payment link for order ${order.orderNumber}: wholesaler Connect account not active`);
+      return order.stripePaymentLinkUrl || '';
+    }
+
     const stripe = getStripeClient(Boolean(wholesalerUser?.isTestAccount));
 
     const outstandingAmount = parseFloat(order.amountOutstanding || '0');

@@ -16,6 +16,7 @@ import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLive
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
+import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -2162,11 +2163,16 @@ export function registerPaymentRoutes(app: Express): void {
         }
       }
 
-      // Create Stripe Payment Link (skip for pay-later and offline payment methods)
+      // Create Stripe Payment Link (skip for pay-later, offline payment methods, or inactive Connect accounts)
       let paymentLinkUrl = '';
       let paymentLinkId = '';
-      
-      if (validDepositPercentage > 0 && !isOffline) {
+
+      const wholesalerConnectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
+      if (!wholesalerConnectReady && validDepositPercentage > 0 && !isOffline) {
+        console.log(`⚠️ Skipping payment link creation for order — wholesaler Connect account not active (wholesalerId: ${wholesalerId})`);
+      }
+
+      if (validDepositPercentage > 0 && !isOffline && wholesalerConnectReady) {
         try {
           // Create line items for Stripe
           // Deposits: single line item for the deposit amount (% of total including transaction fee)
@@ -2546,6 +2552,9 @@ export function registerPaymentRoutes(app: Express): void {
         orderNumber: quoteOrder.orderNumber,
         paymentLink: paymentLinkUrl,
         total: total.toFixed(2),
+        // Signals to the frontend that no payment link was generated because
+        // the wholesaler's Stripe Connect account is not yet fully active.
+        connectNotReady: !wholesalerConnectReady && validDepositPercentage > 0 && !isOffline,
       });
 
     } catch (error) {
@@ -2712,9 +2721,13 @@ export function registerPaymentRoutes(app: Express): void {
       // link is cleared rather than preserved.
       let newPaymentLinkUrl = '';
       let newPaymentLinkId = '';
-      // Need a new session whenever the quote is online, not offline, and hasn't been fully paid.
-      // This covers both 'unpaid' (standard deposit or full) and 'part_paid' (remaining balance).
-      const needsNewStripeSession = !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0;
+      // Need a new session whenever the quote is online, not offline, and hasn't been fully paid,
+      // and the wholesaler's Connect account is fully active.
+      const editConnectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
+      if (!editConnectReady && !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0) {
+        console.log(`⚠️ Skipping payment link update for quote edit — wholesaler Connect account not active (wholesalerId: ${wholesalerId})`);
+      }
+      const needsNewStripeSession = !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0 && editConnectReady;
       const packDescLinesForStripe: string[] = [];
 
       let customerForEmail: Awaited<ReturnType<typeof storage.getUser>> | null = null;
@@ -3045,6 +3058,9 @@ export function registerPaymentRoutes(app: Express): void {
         total: total.toFixed(2),
         paymentLink: newPaymentLinkUrl,
         order: updatedOrder,
+        // Signals to the frontend that no payment link was generated because
+        // the wholesaler's Stripe Connect account is not yet fully active.
+        connectNotReady: !editConnectReady && !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0,
         ...(restoredProductWarnings.length > 0 ? { warnings: restoredProductWarnings } : {}),
       });
     } catch (error: any) {

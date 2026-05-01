@@ -19,6 +19,7 @@ import {
 import { productBatches, businessProfiles } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
 import { logQuoteActivity } from "../utils/quote-activity";
+import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 
 /**
  * Batch-aware unit stock restock helper.
@@ -2793,10 +2794,26 @@ export function registerOrderRoutes(app: Express): void {
       const logoUrl = getEmailLogoUrl(effectiveWholesaler.id, effectiveWholesaler.logoType, effectiveWholesaler.logoUrl);
       const branding = { businessName, logoUrl };
 
+      // Build optional payment section — only show payment link when Connect account is active
+      const amountOutstanding = parseFloat(order.amountOutstanding || '0');
+      let paymentSection = '';
+      if (amountOutstanding > 0.009) {
+        const connectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
+        if (connectReady && order.stripePaymentLinkUrl) {
+          paymentSection =
+            `<p style="margin:16px 0 8px;color:#374151;font-size:15px">💳 <strong>Amount due: £${amountOutstanding.toFixed(2)}</strong></p>` +
+            emailButton('Pay Now', order.stripePaymentLinkUrl);
+        } else {
+          paymentSection =
+            `<p style="margin:16px 0 0;color:#374151;font-size:14px">💳 <strong>Amount due: £${amountOutstanding.toFixed(2)}</strong> — Please contact us to arrange payment.</p>`;
+        }
+      }
+
       const body = emailCard(
         `<p style="margin:0 0 12px;color:#374151;font-size:15px">Hi ${customerName},</p>` +
         `<p style="margin:0 0 16px;color:#374151;font-size:15px">${businessName} is sharing your invoice <strong>${orderRef}</strong> with you. Please find it attached to this email.</p>` +
-        `<p style="margin:0;color:#6b7280;font-size:13px">If you have any questions about this invoice, please get in touch with us directly.</p>`
+        paymentSection +
+        `<p style="margin:${paymentSection ? '16px' : '0'} 0 0;color:#6b7280;font-size:13px">If you have any questions about this invoice, please get in touch with us directly.</p>`
       );
 
       const html = wrapCustomerEmail(body, branding, { preheader: `Invoice ${orderRef} from ${businessName}` });
