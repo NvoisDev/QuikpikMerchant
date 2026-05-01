@@ -2608,6 +2608,17 @@ export function registerPaymentRoutes(app: Express): void {
 
     } catch (error) {
       console.error('❌ Error creating quote:', error);
+      const msg = (error as Error).message || '';
+      if (msg.startsWith('Insufficient stock')) {
+        const reqMatch = msg.match(/Requested:\s*(\d+)/);
+        const availMatch = msg.match(/Available:\s*(\d+)/);
+        return res.status(400).json({
+          error: msg,
+          errorType: 'OUT_OF_STOCK',
+          requested: reqMatch ? parseInt(reqMatch[1]) : undefined,
+          available: availMatch ? parseInt(availMatch[1]) : undefined,
+        });
+      }
       res.status(500).json({ error: 'Failed to create invoice' });
     }
   });
