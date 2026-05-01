@@ -1362,7 +1362,7 @@ export default function OrderDetail() {
                 Edit
               </Button>
             )}
-            {order.status !== 'cancelled' && !isViewer && (
+            {order.status !== 'cancelled' && order.status !== 'fulfilled' && !isViewer && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
