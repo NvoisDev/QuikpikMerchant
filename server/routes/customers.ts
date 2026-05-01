@@ -1061,8 +1061,14 @@ export function registerCustomerRoutes(app: Express): void {
           ));
       }
 
-      // Write remaining (non-name) fields to the shared user record
-      const updatedCustomer = await storage.updateCustomer(customerId, nonNameUpdates);
+      // Also write name directly to the user record so orders, invoices,
+      // and any live joins always reflect the current name.
+      const nameUpdates: Record<string, string | null> = {};
+      if (firstName !== undefined) nameUpdates.firstName = firstName || null;
+      if (lastName !== undefined) nameUpdates.lastName = lastName || null;
+
+      // Write all fields (name + any other updates) to the shared user record
+      const updatedCustomer = await storage.updateCustomer(customerId, { ...nonNameUpdates, ...nameUpdates });
       console.log('Customer updated successfully:', updatedCustomer);
 
       // Merge the name back into the response so the caller sees the correct values
