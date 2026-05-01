@@ -2176,13 +2176,22 @@ export function registerPaymentRoutes(app: Express): void {
           console.log(`📦 QUOTE STOCK: Decrementing ${quantity} ${sellingType} of ${product.name} at quote creation`);
           
           // Use InventoryCalculator for proper stock tracking
-          const orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
-            stock: product.stock,
-            palletStock: product.palletStock,
-            quantityInPack: product.quantityInPack,
-            unitsPerPallet: product.unitsPerPallet
-          });
-          
+          let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
+          try {
+            orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
+              stock: product.stock,
+              palletStock: product.palletStock,
+              quantityInPack: product.quantityInPack,
+              unitsPerPallet: product.unitsPerPallet
+            });
+          } catch (stockErr: unknown) {
+            const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
+            e.productName = product.name;
+            e.available = sellingType === 'pallets' ? (product.palletStock ?? 0) : (product.stock ?? 0);
+            e.requested = quantity;
+            throw e;
+          }
+
           const { newUnitStock, newPalletStock } = orderResult;
           
           // Update stock fields
@@ -2610,13 +2619,15 @@ export function registerPaymentRoutes(app: Express): void {
       console.error('❌ Error creating quote:', error);
       const msg = (error as Error).message || '';
       if (msg.startsWith('Insufficient stock')) {
+        const stockErr = error as Error & { productName?: string; available?: number; requested?: number };
         const reqMatch = msg.match(/Requested:\s*(\d+)/);
         const availMatch = msg.match(/Available:\s*(\d+)/);
         return res.status(400).json({
           error: msg,
           errorType: 'OUT_OF_STOCK',
-          requested: reqMatch ? parseInt(reqMatch[1]) : undefined,
-          available: availMatch ? parseInt(availMatch[1]) : undefined,
+          productName: stockErr.productName,
+          requested: stockErr.requested ?? (reqMatch ? parseInt(reqMatch[1]) : undefined),
+          available: stockErr.available ?? (availMatch ? parseInt(availMatch[1]) : undefined),
         });
       }
       res.status(500).json({ error: 'Failed to create invoice' });

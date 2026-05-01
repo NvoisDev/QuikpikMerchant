@@ -284,7 +284,8 @@ export default function QuickQuote() {
       const response = await apiRequest('POST', '/api/quotes', data);
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
-        const thrownError: any = new Error(err.error || 'Failed to create invoice');
+        type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number };
+        const thrownError = new Error(err.error || 'Failed to create invoice') as StockError;
         if (err.errorType) {
           thrownError.errorType = err.errorType;
           thrownError.productName = err.productName;
