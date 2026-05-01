@@ -490,10 +490,10 @@ export function registerCustomerRoutes(app: Express): void {
       
       res.json({
         success: true,
-        message: `${customer.firstName} ${customer.lastName || ''} added to ${group.name} successfully`,
+        message: `${customer.firstName || ''} ${customer.lastName || ''} added to ${group.name} successfully`,
         customer: {
           id: customer.id,
-          name: `${customer.firstName} ${customer.lastName || ''}`.trim(),
+          name: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
           phoneNumber: customer.phoneNumber,
         }
       });
@@ -598,7 +598,7 @@ export function registerCustomerRoutes(app: Express): void {
 
       // Write the name to the per-wholesaler relationship so this wholesaler's view
       // is updated without overwriting another wholesaler's label for the same customer.
-      const displayNameValue = `${firstName} ${lastName || ''}`.trim() || null;
+      const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
       await db.update(wholesalerCustomerRelationships)
         .set({ displayName: displayNameValue })
         .where(and(
@@ -719,7 +719,7 @@ export function registerCustomerRoutes(app: Express): void {
           .limit(1);
           
         // Per-wholesaler display name so each wholesaler sees the name they entered
-        const displayNameValue = `${firstName} ${lastName || ''}`.trim() || null;
+        const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
 
         if (existingRelationship.length === 0) {
           // Create new relationship with the name this wholesaler knows the customer by
@@ -786,12 +786,12 @@ export function registerCustomerRoutes(app: Express): void {
 
       // Get wholesaler details for welcome messages
       const wholesaler = await storage.getUser(targetUserId);
-      console.log('Wholesaler found for welcome messages:', wholesaler ? `${wholesaler.firstName} ${wholesaler.lastName} (${wholesaler.email})` : 'No wholesaler found');
+      console.log('Wholesaler found for welcome messages:', wholesaler ? `${wholesaler.firstName || ''} ${wholesaler.lastName || ''} (${wholesaler.email})` : 'No wholesaler found');
       
       if (wholesaler) {
-        const customerName = `${firstName} ${lastName || ''}`.trim();
+        const customerName = `${firstName || ''} ${lastName || ''}`.trim();
         const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
-        const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+        const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
         
         console.log('Sending welcome messages with params:', {
           customerName,
@@ -821,7 +821,7 @@ export function registerCustomerRoutes(app: Express): void {
             wholesalerName,
             wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
             wholesalerPhone: wholesaler.phoneNumber,
-            wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
+            wholesalerAccountName: `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'IBK',
             portalUrl,
             wholesalerId: wholesaler.id,
             wholesalerLogoType: wholesaler.logoType,
@@ -892,9 +892,9 @@ export function registerCustomerRoutes(app: Express): void {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
       
-      const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
+      const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
       const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
-      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       
       console.log('🔄 Manual welcome message request for customer:', customerName);
       

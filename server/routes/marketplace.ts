@@ -182,7 +182,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         const wholesalerUser = await storage.getUser(order.wholesalerId);
         const wholesalerDetails = wholesalerUser ? {
           wholesalerId: order.wholesalerId,
-          wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName || ''}`.trim(),
+          wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName || ''} ${wholesalerUser.lastName || ''}`.trim(),
           wholesalerEmail: wholesalerUser.email || '',
           wholesalerPhone: wholesalerUser.businessPhone || '',
           deliveryNote: (wholesalerUser as any).deliveryNote || null,
@@ -1172,16 +1172,16 @@ export function registerMarketplaceRoutes(app: Express): void {
         let customer = await storage.getUserByPhone(customerPhone);
         const { firstName, lastName } = parseCustomerName(customerName);
         
-        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName} ${customer.lastName || ''}`.trim()})` : 'Not found');
+        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})` : 'Not found');
         
         // If phone lookup fails, try email lookup
         if (!customer && customerEmail) {
           customer = await storage.getUserByEmail(customerEmail);
-          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName} ${customer.lastName || ''}`.trim()})` : 'Not found');
+          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})` : 'Not found');
         }
         
         if (!customer) {
-          console.log(`📝 Creating new customer: ${firstName} ${lastName || ''} (${customerPhone})`);
+          console.log(`📝 Creating new customer: ${firstName || ''} ${lastName || ''} (${customerPhone})`);
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
             firstName,
@@ -1190,15 +1190,15 @@ export function registerMarketplaceRoutes(app: Express): void {
             email: customerEmail,
             wholesalerId: wholesalerId
           });
-          console.log(`✅ New customer created: ${customer.id} (${`${customer.firstName} ${customer.lastName || ''}`.trim()}) linked to wholesaler: ${wholesalerId}`);
+          console.log(`✅ New customer created: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}) linked to wholesaler: ${wholesalerId}`);
           
           // Send welcome messages to new customer (Payment Processing)
           try {
             const wholesaler = await storage.getUser(wholesalerId);
             if (wholesaler) {
-              const customerName = `${firstName} ${lastName || ''}`.trim();
+              const customerName = `${firstName || ''} ${lastName || ''}`.trim();
               const portalUrl = `https://quikpik.app/customer/${userId}`;
-              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               
@@ -1209,7 +1209,7 @@ export function registerMarketplaceRoutes(app: Express): void {
                 wholesalerName,
                 wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
                 wholesalerPhone: wholesaler.phoneNumber || '',
-                wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
+                wholesalerAccountName: `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'IBK',
                 portalUrl,
                 wholesalerId: wholesaler.id,
                 wholesalerLogoType: wholesaler.logoType,
@@ -1240,7 +1240,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             (customerEmail && customer.email !== customerEmail && !emailConflict);
             
           if (needsUpdate) {
-            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName || ''} (${customerPhone})`);
+            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName || ''} ${lastName || ''} (${customerPhone})`);
             
             // Only update email if there's no conflict
             const updateData = {
@@ -1262,11 +1262,11 @@ export function registerMarketplaceRoutes(app: Express): void {
               customer.phoneNumber = customerPhone; // Update local copy
             }
             
-            console.log(`✅ Customer updated: ${customer.id} (${`${customer.firstName} ${customer.lastName || ''}`.trim()}) (${customer.phoneNumber})`);
+            console.log(`✅ Customer updated: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}) (${customer.phoneNumber})`);
           }
         }
         
-        console.log(`👤 Using customer for order: ${customer.id} (${`${customer.firstName} ${customer.lastName || ''}`.trim()})`);;
+        console.log(`👤 Using customer for order: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})`);;
 
         // 🚚 SHIPPING INFO: Already parsed above for debug logging - use existing shippingInfo variable
         
@@ -1286,7 +1286,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         
         console.log('🚚 MARKETPLACE ROUTE: Using actual order shipping choice:', {
           customerId: customer.id,
-          customerName: `${customer.firstName} ${customer.lastName || ''}`.trim(),
+          customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
           orderShippingOption: shippingInfo.option,
           finalFulfillmentType: fulfillmentType,
           willCreateDeliveryOrder: fulfillmentType === 'delivery'
@@ -1671,7 +1671,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               items: enrichedItemsForEmail,
               wholesaler: {
                 id: wholesaler.id,
-                businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim(),
+                businessName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
                 firstName: wholesaler.firstName || '',
                 lastName: wholesaler.lastName || '',
                 email: wholesaler.email,
@@ -1777,15 +1777,15 @@ export function registerMarketplaceRoutes(app: Express): void {
           const ws = await storage.getUser(wholesalerId);
           if (ws) {
             const portalUrl = `https://quikpik.app/customer/${wholesalerId}`;
-            const wsName = ws.businessName || `${ws.firstName} ${ws.lastName || ''}`.trim() || 'Your Wholesale Partner';
+            const wsName = ws.businessName || `${ws.firstName || ''} ${ws.lastName || ''}`.trim() || 'Your Wholesale Partner';
             await sendWelcomeMessages({
-              customerName: `${firstName} ${lastName || ''}`.trim(),
+              customerName: `${firstName || ''} ${lastName || ''}`.trim(),
               customerEmail: customerEmail || '',
               customerPhone,
               wholesalerName: wsName,
               wholesalerEmail: ws.email || 'hello@quikpik.co',
               wholesalerPhone: ws.phoneNumber || '',
-              wholesalerAccountName: `${ws.firstName} ${ws.lastName || ''}`.trim() || 'IBK',
+              wholesalerAccountName: `${ws.firstName || ''} ${ws.lastName || ''}`.trim() || 'IBK',
               portalUrl,
               wholesalerId: ws.id,
               wholesalerLogoType: ws.logoType,
@@ -2097,7 +2097,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             items: enrichedForEmail,
             wholesaler: {
               id: wholesalerProfile.id,
-              businessName: wholesalerProfile.businessName || `${wholesalerProfile.firstName} ${wholesalerProfile.lastName || ''}`.trim(),
+              businessName: wholesalerProfile.businessName || `${wholesalerProfile.firstName || ''} ${wholesalerProfile.lastName || ''}`.trim(),
               firstName: wholesalerProfile.firstName || '',
               lastName: wholesalerProfile.lastName || '',
               email: wholesalerProfile.email,
@@ -2447,9 +2447,9 @@ export function registerMarketplaceRoutes(app: Express): void {
         try {
           const wholesaler = await storage.getUser(product.wholesalerId);
           if (wholesaler) {
-            const customerName = `${firstName} ${lastName || ''}`.trim();
+            const customerName = `${firstName || ''} ${lastName || ''}`.trim();
             const portalUrl = `https://quikpik.app/customer/${userId}`;
-            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
             
@@ -2634,9 +2634,9 @@ Please contact the customer to confirm this order.
           try {
             const wholesaler = await storage.getUser(firstProduct.wholesalerId);
             if (wholesaler) {
-              const customerName = `${firstName} ${lastName || ''}`.trim();
+              const customerName = `${firstName || ''} ${lastName || ''}`.trim();
               const portalUrl = `https://quikpik.app/customer/${userId}`;
-              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               

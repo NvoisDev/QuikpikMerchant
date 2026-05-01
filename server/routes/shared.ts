@@ -975,7 +975,7 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
     console.log(`✅ Confirmation email sent to ${customer.email} for order #${order.id}`);
     if (wholesaler.email) {
       try {
-        const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
+        const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
         const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : 'New Order Received';
         const wholesalerBodyLabel = isDeposit
           ? `Deposit of ${currencySymbol}${amountPaid !== null ? amountPaid.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. Outstanding balance: ${currencySymbol}${amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?'}. Invoice attached as PDF.`

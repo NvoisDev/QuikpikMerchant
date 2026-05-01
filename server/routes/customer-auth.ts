@@ -1044,7 +1044,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         let newCustomer: any;
         if (existingUsers.length > 0) {
           newCustomer = existingUsers[0];
-          console.log(`♻️ Reusing existing user ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName}) for phone ${requestData.customerPhone}`);
+          console.log(`♻️ Reusing existing user ${newCustomer.id} (${newCustomer.firstName || ''} ${newCustomer.lastName || ''}) for phone ${requestData.customerPhone}`);
         } else {
           newCustomer = await storage.createCustomer({
             phoneNumber: requestData.customerPhone,
@@ -1055,7 +1055,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             wholesalerId: userId,
             customerType: requestData.customerType || undefined,
           });
-          console.log(`✅ Created new customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
+          console.log(`✅ Created new customer account: ${newCustomer.id} (${newCustomer.firstName || ''} ${newCustomer.lastName || ''})`);
         }
 
         // Create wholesaler-customer relationship (guard against duplicates)
@@ -1104,7 +1104,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         try {
           const wholesaler = await storage.getUser(userId);
           if (wholesaler) {
-            const customerName = `${firstName} ${lastName}`.trim();
+            const customerName = `${firstName || ''} ${lastName || ''}`.trim();
             const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
