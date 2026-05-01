@@ -1891,10 +1891,10 @@ export default function OrderDetail() {
                           size="sm"
                           variant="outline"
                           className="w-full border-green-500 text-green-700 hover:bg-green-50 min-h-[44px]"
-                          onClick={sendInvoiceNativeShare}
-                          disabled={isSendingWhatsApp}
+                          onClick={shareInvoice}
+                          disabled={isSharingInvoice}
                         >
-                          {isSendingWhatsApp
+                          {isSharingInvoice
                             ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sharing...</>
                             : <><Share2 className="h-4 w-4 mr-2" />Share Invoice</>}
                         </Button>
