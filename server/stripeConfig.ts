@@ -47,6 +47,11 @@ if (isLiveMode() && !stripeLive) {
 if (isLiveMode() && !LIVE_WEBHOOK) {
   console.error("🚨 CRITICAL: STRIPE_ENVIRONMENT=live but STRIPE_LIVE_WEBHOOK_SECRET is not set — every live webhook will fail signature verification and return 400, causing Stripe to disable the endpoint. Set STRIPE_LIVE_WEBHOOK_SECRET immediately.");
 }
+// Without a test webhook secret, every test-mode webhook will fail signature
+// verification and return 400 — Stripe will eventually disable the endpoint.
+if (!isLiveMode() && !TEST_WEBHOOK) {
+  console.error("🚨 CRITICAL: STRIPE_WEBHOOK_SECRET is not set — every test-mode webhook will fail signature verification and return 400, causing Stripe to disable the endpoint. Set STRIPE_WEBHOOK_SECRET immediately.");
+}
 
 /**
  * Returns the appropriate Stripe client.
