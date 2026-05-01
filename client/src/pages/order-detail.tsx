@@ -361,6 +361,9 @@ export default function OrderDetail() {
     queryKey: ['/api/stripe/connect/status'],
   });
   const stripeReady = stripeConnectStatus?.isConnected === true;
+  const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
+  const isOfflinePayment = OFFLINE_METHODS.includes(order.paymentMethod || '');
+  const canUsePaymentLink = !isOfflinePayment && stripeReady;
 
   useEffect(() => {
     if (!id) return;
@@ -1315,7 +1318,7 @@ export default function OrderDetail() {
   const getPrimaryAction = (): PrimaryAction => {
     if (isViewer || isCancelled || isFulfilled) return null;
     if (!isPaid) {
-      return order.isQuote ? 'send_payment_link' : 'record_payment';
+      return (order.isQuote && canUsePaymentLink) ? 'send_payment_link' : 'record_payment';
     }
     if (isPickup && !isReadyForCollection) return 'ready_for_collection';
     return 'mark_fulfilled';
@@ -1864,16 +1867,18 @@ export default function OrderDetail() {
 
                   {wholesalerOutstanding > 0.01 && !isViewer && (
                     <div className="space-y-2">
-                      <Button
-                        size="sm"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px]"
-                        onClick={generateAndCopyPaymentLink}
-                        disabled={isGeneratingPaymentLink}
-                      >
-                        {isGeneratingPaymentLink
-                          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
-                          : <><Copy className="h-4 w-4 mr-2" />Copy Payment Link</>}
-                      </Button>
+                      {canUsePaymentLink && (
+                        <Button
+                          size="sm"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px]"
+                          onClick={generateAndCopyPaymentLink}
+                          disabled={isGeneratingPaymentLink}
+                        >
+                          {isGeneratingPaymentLink
+                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+                            : <><Copy className="h-4 w-4 mr-2" />Copy Payment Link</>}
+                        </Button>
+                      )}
                       {(order.customerPhone || order.retailer?.phoneNumber) && (
                         <Button
                           size="sm"
@@ -1887,7 +1892,7 @@ export default function OrderDetail() {
                             : <><Share2 className="h-4 w-4 mr-2" />Share Invoice</>}
                         </Button>
                       )}
-                      {order.stripePaymentLinkUrl && (
+                      {canUsePaymentLink && order.stripePaymentLinkUrl && (
                         <div
                           className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => {
