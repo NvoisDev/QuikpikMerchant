@@ -1370,18 +1370,6 @@ export default function OrderDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={downloadInvoice} disabled={isDownloadingInvoice}>
-                    {isDownloadingInvoice
-                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      : <FileText className="h-4 w-4 mr-2" />}
-                    Download Invoice
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={shareInvoice} disabled={isSharingInvoice}>
-                    {isSharingInvoice
-                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      : <Share2 className="h-4 w-4 mr-2" />}
-                    Share Invoice
-                  </DropdownMenuItem>
                   {order.status !== 'fulfilled' && (
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"
@@ -1415,7 +1403,8 @@ export default function OrderDetail() {
         {/* ── Status badges ──────────────────────────────────────────────── */}
         <Card className="border shadow-sm">
           <CardContent className="p-3">
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-2 flex-wrap items-center">
               {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
                 <Badge className="bg-green-100 text-green-800 border-0 text-xs">Paid</Badge>
               ) : (order.paymentStatus || '').toLowerCase() === 'part_paid' ? (
@@ -1449,6 +1438,31 @@ export default function OrderDetail() {
                     ? <><Truck className="w-3 h-3 mr-1" />Delivery</>
                     : <><MapPin className="w-3 h-3 mr-1" />Collection</>}
                 </Badge>
+              )}
+              </div>
+              {!isViewer && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                    onClick={downloadInvoice}
+                    disabled={isDownloadingInvoice}
+                    title="Download Invoice"
+                  >
+                    {isDownloadingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                    onClick={shareInvoice}
+                    disabled={isSharingInvoice}
+                    title="Share Invoice"
+                  >
+                    {isSharingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                  </Button>
+                </div>
               )}
             </div>
             {order.businessProfileName && (
