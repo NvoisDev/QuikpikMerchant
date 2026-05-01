@@ -88,7 +88,7 @@ export class StockAlertService {
           currentStock: product.stock || 0,
           minimumThreshold: threshold,
           wholesalerId: product.wholesalerId,
-          wholesalerName: wholesalerData.businessName || `${wholesalerData.firstName} ${wholesalerData.lastName}`.trim(),
+          wholesalerName: wholesalerData.businessName || `${wholesalerData.firstName || ''} ${wholesalerData.lastName || ''}`.trim(),
           wholesalerEmail: wholesalerData.email || undefined,
           wholesalerPhone: wholesalerData.phoneNumber || undefined,
           wholesalerLogoUrl: logoUrl,

@@ -1106,7 +1106,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
           if (wholesaler) {
             const customerName = `${firstName} ${lastName}`.trim();
             const portalUrl = `https://quikpik.app/customer/${userId}`;
-            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
+            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for approved customer ${customerName}`);
             
@@ -1117,7 +1117,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
               wholesalerName,
               wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
               wholesalerPhone: wholesaler.phoneNumber || '',
-              wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
+              wholesalerAccountName: `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'IBK',
               portalUrl,
               wholesalerId: wholesaler.id,
               wholesalerLogoType: wholesaler.logoType,
@@ -1134,7 +1134,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         if (requestData.customerEmail) {
           try {
             const wholesaler = await storage.getUser(userId);
-            const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
+            const businessName = wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Wholesaler';
             
             const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${requestData.customerPhone}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${businessName}:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.app/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
 
@@ -1154,7 +1154,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         if (requestData.customerEmail) {
           try {
             const wholesaler = await storage.getUser(userId);
-            const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
+            const businessName = wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Wholesaler';
             
             const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
 

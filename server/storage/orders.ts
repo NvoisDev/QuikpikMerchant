@@ -170,7 +170,7 @@ export class OrderStorage extends ProductStorage {
           retailer.businessName?.toLowerCase().includes(searchValue) ||
           retailer.firstName?.toLowerCase().includes(searchValue) ||
           retailer.lastName?.toLowerCase().includes(searchValue) ||
-          `${retailer.firstName} ${retailer.lastName}`.toLowerCase().includes(searchValue)
+          `${retailer.firstName || ''} ${retailer.lastName || ''}`.trim().toLowerCase().includes(searchValue)
         )) {
           return true;
         }
@@ -180,7 +180,7 @@ export class OrderStorage extends ProductStorage {
           wholesaler.businessName?.toLowerCase().includes(searchValue) ||
           wholesaler.firstName?.toLowerCase().includes(searchValue) ||
           wholesaler.lastName?.toLowerCase().includes(searchValue) ||
-          `${wholesaler.firstName} ${wholesaler.lastName}`.toLowerCase().includes(searchValue)
+          `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim().toLowerCase().includes(searchValue)
         )) {
           return true;
         }

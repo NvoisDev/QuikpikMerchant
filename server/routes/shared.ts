@@ -251,7 +251,7 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
 }
 
 export function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {
-  const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
+  const businessName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim();
   const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
 
   let message = `📢 *Stock Update Alert*\n\n`;
@@ -890,7 +890,7 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
   try {
     const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
     const customerName = customer.name ||
-      (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) ||
+      `${customer.firstName || ''} ${customer.lastName || ''}`.trim() ||
       'Valued Customer';
     let addressComponents = { line1: '', line2: '', city: '', state: '', postalCode: '', country: '' };
     if (order.deliveryAddressId) {

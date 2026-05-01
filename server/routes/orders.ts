@@ -291,7 +291,7 @@ export function registerOrderRoutes(app: Express): void {
           const emailData = generateReadyForCollectionEmail({
             orderNumber: updated.orderNumber,
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
-            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: emailCollAddr,
             collectionAddressName: emailCollAddrName,
@@ -469,7 +469,7 @@ export function registerOrderRoutes(app: Express): void {
           const emailData = generateReadyForCollectionEmail({
             orderNumber: order.orderNumber,
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
-            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: resendCollAddr,
             collectionAddressName: resendCollAddrName,
@@ -583,7 +583,7 @@ export function registerOrderRoutes(app: Express): void {
 
         if (customer && wholesaler) {
           const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
-          const businessName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Supplier';
+          const businessName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Supplier';
           const customerName = customer.firstName || 'there';
           const subtotalBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
           const netAmount = subtotalBase; // Offline = full subtotal, no platform fee
@@ -734,7 +734,7 @@ export function registerOrderRoutes(app: Express): void {
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             customerPhone: customer.phoneNumber || '',
             customerEmail: customer.email || undefined,
-            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
             trackingNumber: updated.deliveryTrackingNumber || undefined,
             estimatedDelivery: undefined
           });
@@ -1320,7 +1320,7 @@ export function registerOrderRoutes(app: Express): void {
               customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
               customerPhone: customer.phoneNumber || '',
               customerEmail: customer.email || undefined,
-              wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+              wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
               trackingNumber: updatedOrder.deliveryTrackingNumber || undefined,
               estimatedDelivery: undefined
             });
@@ -2349,9 +2349,7 @@ export function registerOrderRoutes(app: Express): void {
         if (customer?.email && wholesaler) {
           const { sendOrderPhotoNotificationEmail } = await import('../sendgrid-service.js');
           
-          const customerName = customer.firstName && customer.lastName 
-            ? `${customer.firstName} ${customer.lastName}` 
-            : customer.firstName || customer.businessName || 'Customer';
+          const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer';
             
           const wholesalerName = wholesaler.businessName || wholesaler.firstName || 'Your Wholesaler';
           const orderNumber = order.orderNumber || `#${order.id}`;
@@ -2441,9 +2439,7 @@ export function registerOrderRoutes(app: Express): void {
         const wholesaler = await storage.getUser(order.wholesalerId);
         if (customer?.email && wholesaler) {
           const { sendOrderPhotoNotificationEmail } = await import('../sendgrid-service.js');
-          const customerName = customer.firstName && customer.lastName
-            ? `${customer.firstName} ${customer.lastName}`
-            : customer.firstName || customer.businessName || 'Customer';
+          const customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer';
           const wholesalerName = wholesaler.businessName || wholesaler.firstName || 'Your Wholesaler';
           await sendOrderPhotoNotificationEmail({
             customerEmail: customer.email,
@@ -3068,7 +3064,7 @@ export function registerOrderRoutes(app: Express): void {
 
       // Build collection address from user's business information
       const collectionAddress = {
-        contactName: user.businessName || `${user.firstName} ${user.lastName}`,
+        contactName: user.businessName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         organisation: user.businessName || '',
         property: user.streetAddress || '1',
         street: user.streetAddress || 'Business Street',
@@ -3099,9 +3095,7 @@ export function registerOrderRoutes(app: Express): void {
             Weight: parcel.weight,
             EstimatedValue: parcel.value,
             DeliveryAddress: {
-              contactName: order.retailer?.firstName && order.retailer?.lastName 
-                ? `${order.retailer.firstName} ${order.retailer.lastName}`
-                : 'Customer',
+              contactName: `${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim() || 'Customer',
               email: order.retailer?.email || '',
               phone: order.retailer?.phoneNumber || '',
               property: parsedDeliveryAddress.street || deliveryAddress,
