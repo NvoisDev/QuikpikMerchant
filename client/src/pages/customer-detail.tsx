@@ -490,10 +490,14 @@ export default function CustomerDetail() {
 
   const getInitials = () => {
     if (!customer) return "?";
-    return `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase() || "C";
+    const nameInitials = `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase();
+    if (nameInitials) return nameInitials;
+    if ((customer as any).businessName) return (customer as any).businessName.slice(0, 2).toUpperCase();
+    return "C";
   };
 
   const fullName = customer ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim() : "Loading...";
+  const displayName = (customer as any)?.businessName || fullName || "Unknown";
 
   if (!match) return null;
 
@@ -663,7 +667,10 @@ export default function CustomerDetail() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-xl font-bold">{fullName}</h1>
+          <h1 className="text-xl font-bold">{displayName}</h1>
+          {(customer as any).businessName && fullName && (
+            <p className="text-sm text-gray-600">{fullName}</p>
+          )}
           <p className="text-sm text-muted-foreground">
             Since {formatDate(customer.createdAt)}
             {customer.city && ` · ${customer.city}${customer.country ? `, ${customer.country}` : ""}`}
@@ -672,9 +679,6 @@ export default function CustomerDetail() {
             {customer.groupNames?.map((g, i) => (
               <Badge key={i} variant="outline" className="text-xs">{g}</Badge>
             ))}
-            {customer.businessName && (
-              <Badge variant="secondary" className="text-xs">{customer.businessName}</Badge>
-            )}
           </div>
         </div>
       </div>

@@ -1021,10 +1021,14 @@ export default function Customers() {
     });
   };
 
-  const getInitials = (firstName: string, lastName?: string) => {
-    if (!firstName) return 'U';
-    return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
+  const getInitials = (firstName: string, lastName?: string, businessName?: string) => {
+    if (firstName) return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
+    if (businessName) return businessName.slice(0, 2).toUpperCase();
+    return 'U';
   };
+
+  const getDisplayName = (c: any) =>
+    c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || 'Unknown';
 
   const sortedCustomers = [...(searchResults || [])].sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
 
@@ -1807,14 +1811,14 @@ export default function Customers() {
                 <div key={customer?.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
                   <Avatar className="h-9 w-9 flex-shrink-0">
                     <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                      {getInitials(customer?.firstName || '', customer?.lastName)}
+                      {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-semibold text-gray-900 truncate max-w-full">
-                        {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
+                        {getDisplayName(customer)}
                       </h3>
                       {customer?.groupNames && customer.groupNames.length > 0 && (
                         <div className="hidden sm:flex gap-1">
@@ -1959,12 +1963,12 @@ export default function Customers() {
                           <div className="flex items-center space-x-4">
                             <Avatar className="h-12 w-12">
                               <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                                {customer?.firstName?.charAt(0) || '?'}{customer?.lastName?.charAt(0) || ''}
+                                {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <h4 className="text-base font-semibold">
-                                {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
+                                {getDisplayName(customer)}
                               </h4>
                               <div className="flex items-center space-x-4 text-sm text-gray-600">
                                 <div className="flex items-center space-x-1">
@@ -3421,10 +3425,10 @@ export default function Customers() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-600">
-                        {customer?.firstName?.[0]?.toUpperCase() || '?'}
+                        {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</p>
+                        <p className="font-medium text-sm">{getDisplayName(customer)}</p>
                         <p className="text-xs text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
                         {customer?.email && (
                           <p className="text-xs text-gray-500">{customer.email}</p>
@@ -3494,7 +3498,7 @@ export default function Customers() {
                       {selectedCustomersForMerge.map(customer => (
                         <div key={customer?.id} className="flex items-center justify-between bg-white rounded p-2">
                           <div>
-                            <span className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</span>
+                            <span className="font-medium">{getDisplayName(customer)}</span>
                             <span className="text-sm text-gray-500 ml-2">({customer?.totalOrders || 0} orders)</span>
                           </div>
                           <Button
@@ -3549,11 +3553,11 @@ export default function Customers() {
                               />
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                                  {getInitials(customer?.firstName || '', customer?.lastName)}
+                                  {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <h5 className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</h5>
+                                <h5 className="font-medium">{getDisplayName(customer)}</h5>
                                 <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
                                 {customer?.email && <p className="text-xs text-gray-500">{customer.email}</p>}
                               </div>
@@ -3621,7 +3625,7 @@ export default function Customers() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h5 className="font-medium">
-                          {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
+                          {getDisplayName(customer)}
                           {index === 0 && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">PRIMARY</span>}
                         </h5>
                         <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>

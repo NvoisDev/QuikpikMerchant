@@ -1147,7 +1147,7 @@ export default function WholesalerDashboard() {
                       <div key={order.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                         <div>
                           <p className="font-medium text-blue-600">{order.orderNumber || `#${order.id}`}</p>
-                          <p className="text-sm text-gray-600">{order.customerName}</p>
+                          <p className="text-sm text-gray-600">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</p>
                           <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                         </div>
                         <div className="flex items-center gap-2">

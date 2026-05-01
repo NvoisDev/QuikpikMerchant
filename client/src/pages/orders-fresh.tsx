@@ -1194,7 +1194,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div>
-                          <div className="font-medium">{order.customerName || 'Unknown'}</div>
+                          <div className="font-medium">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
                           <div className="text-xs text-gray-500">{order.customerEmail}</div>
                         </div>
                       </TableCell>
@@ -1363,7 +1363,7 @@ export default function OrdersFresh() {
                       </div>
 
                       <div className="mb-2">
-                        <div className="font-medium text-sm">{order.customerName || 'Unknown'}</div>
+                        <div className="font-medium text-sm">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
                         <div className="text-xs text-gray-500">{order.customerEmail}</div>
                       </div>
 
