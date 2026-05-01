@@ -25,6 +25,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 import { QuoteActivityLog } from "@/components/orders/QuoteActivityLog";
+import { useSidebarContext } from "@/contexts/sidebar-context";
 
 interface OrderItem {
   id: number;
@@ -267,6 +268,7 @@ export default function OrderDetail() {
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { formatMoney } = useCurrency();
   const { toast } = useToast();
+  const { isDesktopCollapsed } = useSidebarContext();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -2213,7 +2215,7 @@ export default function OrderDetail() {
 
       {/* ── Sticky action bar ─────────────────────────────────────────────── */}
       {primaryAction && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50">
+        <div className={`fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
           <div className="max-w-lg mx-auto">
             <Button
               className={`w-full text-white min-h-[48px] rounded-xl text-sm font-semibold ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
