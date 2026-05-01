@@ -146,7 +146,7 @@ export default function QuickQuote() {
   });
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
-  const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('payment_link');
+  const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('bank_transfer');
   const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
   const [collectionAddressId, setCollectionAddressId] = useState<number | null>(null);
   const [deliveryCharge, setDeliveryCharge] = useState<string>('');
@@ -188,6 +188,17 @@ export default function QuickQuote() {
     queryKey: ['/api/collection-addresses'],
   });
   const activeCollectionAddresses = collectionAddresses.filter((a: CollectionAddress) => a.isActive !== false);
+
+  const { data: stripeConnectStatus } = useQuery<{ isConnected: boolean }>({
+    queryKey: ['/api/stripe/connect/status'],
+  });
+  const stripeReady = stripeConnectStatus?.isConnected === true;
+
+  useEffect(() => {
+    if (!stripeReady && quotePaymentMethod === 'payment_link') {
+      setQuotePaymentMethod('bank_transfer');
+    }
+  }, [stripeReady]);
 
   useEffect(() => {
     if (businessProfiles.length > 0 && selectedProfileId === null) {
@@ -548,7 +559,7 @@ export default function QuickQuote() {
     setSendMethod('sms');
     setDepositPercentage(100);
     setBalanceDueDays(0);
-    setQuotePaymentMethod('payment_link');
+    setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
     setFulfillmentType('pickup');
     setDeliveryAddressId(null);
     setDeliveryAddressText('');
@@ -1523,7 +1534,7 @@ export default function QuickQuote() {
                       { value: 'cash', label: '💵 Cash' },
                       { value: 'bank_transfer', label: '🏦 Bank Transfer' },
                       { value: 'cheque', label: '📄 Cheque' },
-                    ] as const).map(({ value, label }) => (
+                    ] as const).filter(o => o.value !== 'payment_link' || stripeReady).map(({ value, label }) => (
                       <Button
                         key={value}
                         type="button"
