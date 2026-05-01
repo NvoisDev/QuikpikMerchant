@@ -1030,7 +1030,11 @@ export default function Customers() {
   const getDisplayName = (c: any) =>
     c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || 'Unknown';
 
-  const sortedCustomers = [...(searchResults || [])].sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+  const sortedCustomers = [...(searchResults || [])].sort((a, b) => {
+    const nameA = a.businessName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '';
+    const nameB = b.businessName || `${b.firstName || ''} ${b.lastName || ''}`.trim() || '';
+    return nameA.localeCompare(nameB);
+  });
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {
