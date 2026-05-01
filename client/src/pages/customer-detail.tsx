@@ -295,6 +295,10 @@ export default function CustomerDetail() {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!contactFormData.firstName?.trim() && !contactFormData.lastName?.trim() && !contactFormData.businessName?.trim()) {
+      toast({ title: "Name required", description: "Please provide at least a first name, last name, or business name.", variant: "destructive" });
+      return;
+    }
     updateCustomerMutation.mutate(contactFormData);
   };
 
@@ -1002,11 +1006,10 @@ export default function CustomerDetail() {
           <form onSubmit={handleContactSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">First name *</Label>
+                <Label className="text-xs">First name</Label>
                 <Input
                   value={contactFormData.firstName}
                   onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
-                  required
                   className="h-9"
                 />
               </div>
