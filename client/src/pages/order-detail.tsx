@@ -1403,7 +1403,7 @@ export default function OrderDetail() {
         {/* ── Status badges ──────────────────────────────────────────────── */}
         <Card className="border shadow-sm">
           <CardContent className="p-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-2">
               <div className="flex gap-2 flex-wrap items-center">
               {(order.paymentStatus || '').toLowerCase() === 'paid' ? (
                 <Badge className="bg-green-100 text-green-800 border-0 text-xs">Paid</Badge>
@@ -1441,26 +1441,26 @@ export default function OrderDetail() {
               )}
               </div>
               {!isViewer && order.status !== 'cancelled' && (
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                    className="h-8 px-2.5 text-xs gap-1.5 text-gray-600 border-gray-300"
                     onClick={downloadInvoice}
                     disabled={isDownloadingInvoice}
-                    title="Download Invoice"
                   >
-                    {isDownloadingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    {isDownloadingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                    Download
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                    className="h-8 px-2.5 text-xs gap-1.5 text-gray-600 border-gray-300"
                     onClick={shareInvoice}
                     disabled={isSharingInvoice}
-                    title="Share Invoice"
                   >
-                    {isSharingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                    {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+                    Share
                   </Button>
                 </div>
               )}
