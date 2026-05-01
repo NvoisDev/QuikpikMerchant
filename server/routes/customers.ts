@@ -606,11 +606,13 @@ export function registerCustomerRoutes(app: Express): void {
           eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
         ));
 
-      // Non-name fields (phone, email, businessName) are shared identity — update globally.
-      // Name fields are intentionally NOT written to users here; they live in displayName above.
+      // Update the shared user record — name fields included so orders, invoices,
+      // and live joins always reflect the current name regardless of how it was edited.
       const sharedUpdates: Record<string, string | null | undefined> = { phoneNumber };
       if (email !== undefined) sharedUpdates.email = email || null;
       if (businessName !== undefined) sharedUpdates.businessName = businessName || null;
+      if (firstName !== undefined) sharedUpdates.firstName = firstName || null;
+      if (lastName !== undefined) sharedUpdates.lastName = lastName || null;
       await db.update(users).set(sharedUpdates).where(eq(users.id, customerId));
       
       res.json({
