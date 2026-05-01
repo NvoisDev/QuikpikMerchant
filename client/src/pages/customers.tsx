@@ -716,11 +716,11 @@ export default function Customers() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       queryClient.invalidateQueries({ queryKey: [`/api/customer-groups/${selectedGroup?.id}/members`] });
-      const prevName = selectedMember
-        ? (`${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim() || selectedMember.name || '')
-        : '';
-      const newName = (`${variables.data.firstName || ''} ${variables.data.lastName || ''}`.trim() || variables.data.name || '');
-      const nameChanged = newName !== prevName;
+      const nameChanged = selectedMember && (
+        (variables.data.firstName || '') !== (selectedMember.firstName || '') ||
+        (variables.data.lastName || '') !== (selectedMember.lastName || '') ||
+        (variables.data.name || '') !== (selectedMember.name || '')
+      );
       if (nameChanged) {
         toast({ title: "Customer name updated", description: "All future invoices will reflect this change." });
       } else {
