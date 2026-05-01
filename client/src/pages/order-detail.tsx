@@ -362,7 +362,7 @@ export default function OrderDetail() {
   });
   const stripeReady = stripeConnectStatus?.isConnected === true;
   const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
-  const isOfflinePayment = OFFLINE_METHODS.includes(order.paymentMethod || '');
+  const isOfflinePayment = OFFLINE_METHODS.includes(order?.paymentMethod || '');
   const canUsePaymentLink = !isOfflinePayment && stripeReady;
 
   useEffect(() => {
