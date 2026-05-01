@@ -2775,7 +2775,9 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(400).json({ message: 'No customer email on record for this order' });
       }
 
-      const customerName = order.customerName || order.retailer?.businessName || 'Customer';
+      const customerName = order.retailer
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.name || order.customerName || 'Customer')
+        : (order.customerName || 'Customer');
       const businessName = effectiveWholesaler.businessName || 'Your Supplier';
       const orderRef = order.orderNumber || `#${order.id}`;
       const invoiceFilename = `invoice-${order.orderNumber || order.id}.pdf`;
@@ -2856,7 +2858,9 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(400).json({ message: 'No customer phone number on record for this order' });
       }
 
-      const customerName = order.customerName || order.retailer?.businessName || 'there';
+      const customerName = order.retailer
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.name || order.customerName || 'there')
+        : (order.customerName || 'there');
       const businessName = effectiveWholesaler.businessName || wholesaler.businessName || 'Your Supplier';
       const portalLink = `https://quikpik.app/store/${order.wholesalerId}?tab=orders`;
 

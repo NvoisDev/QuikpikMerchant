@@ -183,9 +183,16 @@ export default function CustomerDetail() {
       if (!response.ok) throw new Error("Failed to update customer");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, updates) => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({ title: "Customer updated" });
+      const nameChanged =
+        (updates.firstName !== undefined && updates.firstName !== (customer?.firstName || '')) ||
+        (updates.lastName !== undefined && updates.lastName !== (customer?.lastName || ''));
+      if (nameChanged) {
+        toast({ title: "Customer name updated", description: "All future invoices will reflect this change." });
+      } else {
+        toast({ title: "Customer updated" });
+      }
       setIsEditContactOpen(false);
     },
     onError: () => {

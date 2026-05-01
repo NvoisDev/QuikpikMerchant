@@ -483,9 +483,17 @@ export default function Customers() {
   const updateCustomerMutation = useMutation({
     mutationFn: ({ customerId, data }: { customerId: string; data: EditCustomerFormData }) =>
       apiRequest('PATCH', `/api/customers/${customerId}`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      toast({ title: "Success", description: "Customer updated successfully!" });
+      const nameChanged = selectedCustomer && (
+        variables.data.firstName !== selectedCustomer.firstName ||
+        variables.data.lastName !== (selectedCustomer.lastName || '')
+      );
+      if (nameChanged) {
+        toast({ title: "Customer name updated", description: "All future invoices will reflect this change." });
+      } else {
+        toast({ title: "Success", description: "Customer updated successfully!" });
+      }
       setIsEditCustomerDialogOpen(false);
     },
     onError: (error: any) => {
