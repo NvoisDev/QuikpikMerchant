@@ -133,8 +133,8 @@ const bulkAddFormSchema = z.object({
 });
 
 const editMemberFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().optional().or(z.literal("")),
+  lastName: z.string().optional().or(z.literal("")),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
@@ -143,8 +143,8 @@ const editMemberFormSchema = z.object({
 });
 
 const editCustomerFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().optional().or(z.literal("")),
+  lastName: z.string().optional().or(z.literal("")),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
@@ -153,7 +153,10 @@ const editCustomerFormSchema = z.object({
     z.literal("")
   ]).optional(),
   businessName: z.string().optional(),
-});
+}).refine(
+  (data) => !!(data.firstName?.trim() || data.lastName?.trim() || data.businessName?.trim()),
+  { message: "Please provide at least a first name, last name, or business name", path: ["firstName"] }
+);
 
 const editGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required"),
