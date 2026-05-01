@@ -84,6 +84,7 @@ export default function Checkout() {
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState<number | null>(null);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
+  const [wholesalerIdForFee, setWholesalerIdForFee] = useState<string | null>(null);
 
   useEffect(() => {
     setStripePromise(fetchStripePromise());
@@ -117,6 +118,23 @@ export default function Checkout() {
       return response.json();
     },
   });
+
+  useEffect(() => {
+    if (order?.wholesalerId) setWholesalerIdForFee(order.wholesalerId);
+  }, [order]);
+
+  const { data: feeConfigData } = useQuery<{ percentage: number; fixed: number; feesEnabled: boolean }>({
+    queryKey: ["/api/config/customer-fee", wholesalerIdForFee],
+    queryFn: async () => {
+      const params = wholesalerIdForFee ? `?wholesalerId=${encodeURIComponent(wholesalerIdForFee)}` : "";
+      const r = await fetch(`/api/config/customer-fee${params}`);
+      if (!r.ok) return { percentage: 0.055, fixed: 0.50, feesEnabled: false };
+      return r.json();
+    },
+    enabled: !!wholesalerIdForFee,
+    staleTime: 0,
+  });
+  const feesEnabled = feeConfigData?.feesEnabled ?? false;
 
   useEffect(() => {
     if (orderId && !clientSecret) {
@@ -214,17 +232,24 @@ export default function Checkout() {
                       {formatCurrency(order.subtotal, order?.currency || 'GBP')}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Service Fee:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatCurrency(6.00, order?.currency || 'GBP')}
-                    </span>
-                  </div>
+                  {feesEnabled && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Service Fee:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatCurrency(6.00, order?.currency || 'GBP')}
+                      </span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between items-center text-lg font-semibold">
                     <span className="text-gray-900">Total:</span>
                     <span className="text-gray-900">
-                      {formatCurrency(order.total, order?.currency || 'GBP')}
+                      {feesEnabled
+                        ? formatCurrency(order.total, order?.currency || 'GBP')
+                        : formatCurrency(
+                            parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0'),
+                            order?.currency || 'GBP'
+                          )}
                     </span>
                   </div>
                 </div>

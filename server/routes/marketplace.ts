@@ -82,13 +82,33 @@ export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/config/customer-fee — public, no auth required
   // Returns the live customer transaction fee config so the checkout dialog
   // can display the correct fee instead of using hardcoded defaults.
-  app.get('/api/config/customer-fee', async (_req, res) => {
+  // Optional ?wholesalerId= query param — when provided, also returns feesEnabled
+  // (true only when the wholesaler's Stripe account has charges_enabled && payouts_enabled).
+  app.get('/api/config/customer-fee', async (req: any, res) => {
     try {
       const config = await getCurrentFeeConfig();
-      res.json({ percentage: config.percentage, fixed: config.fixed });
+      const { wholesalerId } = req.query as { wholesalerId?: string };
+
+      let feesEnabled = false;
+
+      if (wholesalerId) {
+        try {
+          const wholesaler = await storage.getUser(wholesalerId);
+          if (wholesaler?.stripeAccountId) {
+            const stripeClient = getStripeClient(Boolean(wholesaler.isTestAccount));
+            const account = await stripeClient.accounts.retrieve(wholesaler.stripeAccountId);
+            feesEnabled = account.charges_enabled && account.payouts_enabled;
+          }
+        } catch (stripeErr) {
+          console.warn('[/api/config/customer-fee] Could not determine Stripe status — defaulting feesEnabled=false:', stripeErr);
+          feesEnabled = false;
+        }
+      }
+
+      res.json({ percentage: config.percentage, fixed: config.fixed, feesEnabled });
     } catch (err) {
       console.error('[/api/config/customer-fee] error:', err);
-      res.status(500).json({ percentage: 0.055, fixed: 0.50 });
+      res.status(500).json({ percentage: 0.055, fixed: 0.50, feesEnabled: false });
     }
   });
 

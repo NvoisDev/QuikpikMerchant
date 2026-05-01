@@ -97,16 +97,18 @@ export function CheckoutDialog({
     staleTime: 60000,
   });
 
-  const { data: liveFeeConfig } = useQuery<{ percentage: number; fixed: number }>({
-    queryKey: ["/api/config/customer-fee"],
+  const { data: liveFeeConfig } = useQuery<{ percentage: number; fixed: number; feesEnabled: boolean }>({
+    queryKey: ["/api/config/customer-fee", wholesalerId],
     queryFn: async () => {
-      const r = await fetch("/api/config/customer-fee");
-      if (!r.ok) return { percentage: 0.055, fixed: 0.50 };
+      const params = wholesalerId ? `?wholesalerId=${encodeURIComponent(wholesalerId)}` : "";
+      const r = await fetch(`/api/config/customer-fee${params}`);
+      if (!r.ok) return { percentage: 0.055, fixed: 0.50, feesEnabled: false };
       return r.json();
     },
     staleTime: 0,
   });
-  const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50 };
+  const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50, feesEnabled: false };
+  const feesEnabled = liveFeeConfig?.feesEnabled ?? false;
 
   const defaultCollectionAddress = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
 
@@ -342,19 +344,21 @@ export function CheckoutDialog({
                     </div>
                   )}
 
-                  <div className="flex justify-between text-gray-600">
-                    <span>Service Fee</span>
-                    <PriceDisplay
-                      price={calculateCustomerFee(
-                        cartStats.subtotal,
-                        customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
-                        feeConfig
-                      )}
-                      currency={wholesaler?.defaultCurrency || 'GBP'}
-                      isGuestMode={false}
-                      size="small"
-                    />
-                  </div>
+                  {feesEnabled && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Service Fee</span>
+                      <PriceDisplay
+                        price={calculateCustomerFee(
+                          cartStats.subtotal,
+                          customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
+                          feeConfig
+                        )}
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
+                        isGuestMode={false}
+                        size="small"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -363,7 +367,8 @@ export function CheckoutDialog({
                   <PriceDisplay
                     price={(() => {
                       const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                      return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig);
+                      const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
+                      return cartStats.subtotal + shipping + fee;
                     })()}
                     currency={wholesaler?.defaultCurrency || 'GBP'}
                     isGuestMode={false}
@@ -372,17 +377,19 @@ export function CheckoutDialog({
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start">
-                  <svg className="w-4 h-4 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium">Payment Processing Fee</p>
-                    <p>A service fee is applied to cover secure payment processing and platform services.</p>
+              {feesEnabled && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-4 h-4 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Payment Processing Fee</p>
+                      <p>A service fee is applied to cover secure payment processing and platform services.</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {wholesaler?.deliveryNote && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -705,7 +712,8 @@ export function CheckoutDialog({
                         {(() => {
                           const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                             ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                          return formatCurrency(cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig));
+                          const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
+                          return formatCurrency(cartStats.subtotal + shipping + fee);
                         })()}
                       </strong>{' '}
                       will be due on invoice. The supplier will be notified of your order.
@@ -762,7 +770,7 @@ export function CheckoutDialog({
                         const computedShipping = currentShippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                         const computedBeforeFees = computedSubtotal + computedShipping;
-                        const computedTransactionFee = calculateCustomerFee(computedSubtotal, computedShipping, feeConfig);
+                        const computedTransactionFee = feesEnabled ? calculateCustomerFee(computedSubtotal, computedShipping, feeConfig) : 0;
                         const computedTotal = computedBeforeFees + computedTransactionFee;
                         setCompletedOrder({
                           orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
@@ -835,15 +843,16 @@ export function CheckoutDialog({
                       publishableKey={publishableKey}
                       subtotal={cartStats.subtotal}
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
-                      customerTransactionFee={calculateCustomerFee(
+                      customerTransactionFee={feesEnabled ? calculateCustomerFee(
                         cartStats.subtotal,
                         customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
                         feeConfig
-                      )}
+                      ) : 0}
                       totalAmount={(() => {
                         const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                           ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                        return cartStats.subtotal + shipping + calculateCustomerFee(cartStats.subtotal, shipping, feeConfig);
+                        const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
+                        return cartStats.subtotal + shipping + fee;
                       })()}
                       onSuccess={(orderData) => {
                         const orderItems = cart.map(cartItem => {
