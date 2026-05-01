@@ -3,7 +3,7 @@ import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
 import { formatDateTime } from "../../shared/utils/date";
 import {
-  InventoryCalculator, SubscriptionService, and, db,
+  ADMIN_EMAILS, InventoryCalculator, SubscriptionService, and, db,
   emailBadge, emailButton, emailCard, emailHeading, enforceNewPlanLimits, eq,
   formatPackDescriptor, sendCustomerInvoiceEmail,
   generateDowngradeEffectiveEmail, generateDowngradeScheduledEmail, generateOrderNumber,
@@ -12,7 +12,7 @@ import {
   sql, stockMovements, storage, subscriptionPlans, sum, unlockForUpgrade, userSubscriptions,
   users, wrapCustomerEmail, z, systemErrorLogs, getWholesalerFeeRate, desc, quoteActivityLogs,
 } from "./shared";
-import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode } from "../stripeConfig";
+import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode, STRIPE_ENVIRONMENT } from "../stripeConfig";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
@@ -245,6 +245,29 @@ export function registerPaymentRoutes(app: Express): void {
     const publishableKey = getPublishableKey(forceTest);
     const environment = (forceTest || !isLiveMode()) ? 'test' : 'live';
     res.json({ publishableKey, environment });
+  });
+
+  // GET /api/webhooks/stripe/health — admin-only endpoint so monitoring can confirm the webhook is live
+  app.get('/api/webhooks/stripe/health', requireAuth, (req: any, res) => {
+    const adminEmail = req._adminEmail || req.user?.email;
+    if (!ADMIN_EMAILS.includes(adminEmail || "")) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const testSecretPresent = !!process.env.STRIPE_WEBHOOK_SECRET;
+    const liveSecretPresent = !!process.env.STRIPE_LIVE_WEBHOOK_SECRET;
+    const configuredSecrets: string[] = [];
+    if (testSecretPresent) configuredSecrets.push('test');
+    if (liveSecretPresent) configuredSecrets.push('live');
+
+    return res.json({
+      status: 'ok',
+      stripeEnvironment: STRIPE_ENVIRONMENT,
+      expectingLiveEvents: isLiveMode(),
+      configuredWebhookSecrets: configuredSecrets.length > 0 ? configuredSecrets : ['none'],
+      testWebhookSecretPresent: testSecretPresent,
+      liveWebhookSecretPresent: liveSecretPresent,
+    });
   });
 
   // POST /api/webhooks/stripe
