@@ -2736,7 +2736,9 @@ export function registerPaymentRoutes(app: Express): void {
       const quoteDeliveryCharge = parseFloat(existingOrder.deliveryCost || '0');
       const subtotal = productSubtotal + quoteDeliveryCharge;
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
-      const isOfflinePayment = existingOrder.paymentMethod ? OFFLINE_METHODS.includes(existingOrder.paymentMethod) : false;
+      // Use the incoming payment method (if changed) to determine offline status — not the old one
+      const effectivePaymentMethod = newPaymentMethod ?? existingOrder.paymentMethod;
+      const isOfflinePayment = effectivePaymentMethod ? OFFLINE_METHODS.includes(effectivePaymentMethod) : false;
       const depositPercentage = existingOrder.depositPercentage || 100;
       const isPayLaterEdit = depositPercentage === 0;
       const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
