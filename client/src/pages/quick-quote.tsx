@@ -288,7 +288,7 @@ export default function QuickQuote() {
     },
     onSuccess: (data) => {
       setCreatedQuote({
-        id: data.id,
+        id: data.orderId,
         orderNumber: data.orderNumber,
         paymentLink: data.paymentLink
       });
