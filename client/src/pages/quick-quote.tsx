@@ -856,7 +856,7 @@ export default function QuickQuote() {
                       const filtered = customers.filter((c) => {
                         if (!customerSearch) return true;
                         const q = customerSearch.toLowerCase();
-                        const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                        const name = ((c as any).businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
                         const phone = (c.phoneNumber || '').toLowerCase();
                         return name.includes(q) || phone.includes(q);
                       });
@@ -882,7 +882,7 @@ export default function QuickQuote() {
                             className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
                           />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-medium truncate">{customer.firstName} {customer.lastName || ''}</span>
+                            <span className="font-medium truncate">{(customer as any).businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown'}</span>
                             <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
                           </div>
                         </button>
@@ -895,7 +895,7 @@ export default function QuickQuote() {
               {selectedCustomer && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="font-medium">
-                    {selectedCustomer.firstName} {selectedCustomer.lastName || ''}
+                    {(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || 'Unknown'}
                   </div>
                   {selectedCustomer.email && (
                     <div className="text-sm text-gray-600 flex items-center gap-1">
