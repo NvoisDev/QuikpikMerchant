@@ -46,7 +46,9 @@ import {
   Truck,
   MapPin,
   Search,
-  Building2
+  Building2,
+  Share2,
+  Loader2
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -134,9 +136,11 @@ export default function QuickQuote() {
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
   const [copiedLink, setCopiedLink] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<{
+    id: number;
     orderNumber: string;
     paymentLink: string;
   } | null>(null);
+  const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -284,6 +288,7 @@ export default function QuickQuote() {
     },
     onSuccess: (data) => {
       setCreatedQuote({
+        id: data.id,
         orderNumber: data.orderNumber,
         paymentLink: data.paymentLink
       });
@@ -559,6 +564,48 @@ export default function QuickQuote() {
     }
   };
 
+  const shareInvoice = async () => {
+    if (!createdQuote) return;
+    setIsSharingInvoice(true);
+    try {
+      const filename = `invoice-${createdQuote.orderNumber || createdQuote.id}.pdf`;
+      const orderRef = createdQuote.orderNumber || `#${createdQuote.id}`;
+
+      let nativeShareSucceeded = false;
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          const response = await fetch(`/api/orders/${createdQuote.id}/invoice/customer`, { credentials: 'include' });
+          if (response.ok) {
+            const blob = await response.blob();
+            const file = new File([blob], filename, { type: 'application/pdf' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ title: `Invoice ${orderRef}`, text: `Here's your invoice ${orderRef}`, files: [file] });
+              nativeShareSucceeded = true;
+              return;
+            }
+          }
+        } catch (shareErr: unknown) {
+          if (shareErr instanceof DOMException && (shareErr.name === 'AbortError' || shareErr.name === 'NotAllowedError')) return;
+        }
+      }
+
+      if (!nativeShareSucceeded) {
+        await apiRequest('POST', `/api/orders/${createdQuote.id}/share-invoice`);
+        toast({ title: 'Invoice sent', description: 'The invoice has been emailed to the customer.' });
+      }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('400')) {
+        toast({ title: 'No email on file', description: 'This customer has no email address on record.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Error', description: 'Could not share the invoice. Please try again.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSharingInvoice(false);
+    }
+  };
+
   const resetQuote = () => {
     setSelectedCustomer(null);
     setQuoteItems([]);
@@ -633,6 +680,19 @@ export default function QuickQuote() {
                 onClick={resetQuote}
               >
                 New Invoice
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={shareInvoice}
+                disabled={isSharingInvoice}
+              >
+                {isSharingInvoice ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4 mr-2" />
+                )}
+                Share Invoice
               </Button>
               <Link href="/orders" className="flex-1">
                 <Button className="w-full bg-green-600 hover:bg-green-700">
