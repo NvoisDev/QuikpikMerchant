@@ -856,7 +856,7 @@ export default function QuickQuote() {
                       const filtered = customers.filter((c) => {
                         if (!customerSearch) return true;
                         const q = customerSearch.toLowerCase();
-                        const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
+                        const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
                         const phone = (c.phoneNumber || '').toLowerCase();
                         return name.includes(q) || phone.includes(q);
                       });

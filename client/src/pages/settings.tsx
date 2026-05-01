@@ -1010,10 +1010,7 @@ export default function Settings() {
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Name</dt>
                           <dd className="mt-1 text-sm text-gray-900">
-                            {user.firstName && user.lastName 
-                              ? `${user.firstName} ${user.lastName}` 
-                              : user.firstName || user.lastName || 'Not set'
-                            }
+                            {`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Not set'}
                           </dd>
                         </div>
                         <div>

@@ -927,7 +927,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
                     <TableRow key={w.id} className={`hover:bg-green-50/30 cursor-pointer ${w.isTestAccount ? "opacity-60" : ""}`} onClick={() => openDrawer(w)}>
                       <TableCell>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName} ${w.lastName}`}</p>
+                          <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim()}</p>
                           {w.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium">Test</span>}
                         </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
@@ -1000,7 +1000,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-sm font-semibold">{selectedWholesaler?.businessName || `${selectedWholesaler?.firstName} ${selectedWholesaler?.lastName}`}</SheetTitle>
+            <SheetTitle className="text-sm font-semibold">{selectedWholesaler?.businessName || `${selectedWholesaler?.firstName || ''} ${selectedWholesaler?.lastName || ''}`.trim()}</SheetTitle>
           </SheetHeader>
           {selectedWholesaler && (
             <div className="space-y-4">
@@ -1426,7 +1426,7 @@ function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }: {
               You are about to view the dashboard as:
             </p>
             <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-              <p className="text-sm font-semibold text-indigo-800">{impersonateTarget?.businessName || `${impersonateTarget?.firstName} ${impersonateTarget?.lastName}`}</p>
+              <p className="text-sm font-semibold text-indigo-800">{impersonateTarget?.businessName || `${impersonateTarget?.firstName || ''} ${impersonateTarget?.lastName || ''}`.trim()}</p>
               <p className="text-xs text-indigo-600 mt-0.5">{impersonateTarget?.email}</p>
             </div>
             <p className="text-xs text-gray-500">This action is fully audited. You will see the wholesaler dashboard exactly as they do. Click "Exit Impersonation" in the banner to return.</p>
@@ -3217,7 +3217,7 @@ function QuickActionsModal({ open, onOpenChange, wholesalers }: {
               {wholesalers.map(w => <option key={w.id} value={w.id}>{w.businessName ?? `${w.firstName ?? ""} ${w.lastName ?? ""}`}</option>)}
             </select>
             {contactWholesaler && (
-              <a href={`mailto:${contactWholesaler.email}?subject=Re: Your Quikpik account&body=Hi ${contactWholesaler.firstName},`}>
+              <a href={`mailto:${contactWholesaler.email}?subject=Re: Your Quikpik account&body=Hi ${contactWholesaler.firstName || ''},`}>
                 <Button size="sm" className="w-full text-xs text-white h-8" style={{ background: BLUE }}>
                   <Mail className="h-3.5 w-3.5 mr-1.5" />Open email to {contactWholesaler.email}
                 </Button>

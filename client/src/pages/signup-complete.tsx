@@ -100,7 +100,7 @@ export default function SignupComplete() {
       form.reset({
         businessName: user.businessName && !user.businessName.includes("'s Business") 
           ? user.businessName 
-          : `${user.firstName} ${user.lastName}'s Business`,
+          : `${`${user.firstName || ''} ${user.lastName || ''}`.trim()}'s Business`,
         businessDescription: user.businessDescription || "",
         businessPhone: user.businessPhone || "",
         businessType: user.businessType || "",

@@ -2256,7 +2256,7 @@ export default function Customers() {
                                 {detail.assignments.map((a, idx) => {
                                   if (a.customerId) {
                                     const c = customers.find(x => x.id === a.customerId);
-                                    const name = c ? `${c.firstName} ${c.lastName || ""}`.trim() : a.customerId;
+                                    const name = c ? `${c.firstName || ''} ${c.lastName || ''}`.trim() : a.customerId;
                                     return <Badge key={idx} variant="secondary" className="text-xs">{name}</Badge>;
                                   }
                                   if (a.customerGroupId) {
@@ -3058,9 +3058,7 @@ export default function Customers() {
                       </Avatar>
                       <div>
                         <p className="font-medium text-xs">
-                          {member.firstName && member.lastName 
-                            ? `${member.firstName} ${member.lastName}` 
-                            : member.name || 'Unknown'}
+                          {`${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">{member.phoneNumber || member.phone_number}</p>
                       </div>
@@ -3074,9 +3072,7 @@ export default function Customers() {
                           e.stopPropagation();
                           setSelectedMember(member);
                           // Pre-populate the form with current member data
-                          const fullName = member.firstName && member.lastName 
-                            ? `${member.firstName} ${member.lastName}` 
-                            : member.name || '';
+                          const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || '';
                           editMemberForm.reset({
                             name: fullName,
                             phoneNumber: member.phoneNumber || member.phone_number || '',
@@ -3174,7 +3170,7 @@ export default function Customers() {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName} - Order History` : 'Order History'}
+              {selectedCustomer ? `${`${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim()} - Order History` : 'Order History'}
             </DialogTitle>
             <DialogDescription>
               Complete order history for this customer

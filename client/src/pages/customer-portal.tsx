@@ -1469,7 +1469,7 @@ export default function CustomerPortal() {
         // If wholesaler is viewing their own store, set them as a mock customer for display purposes
         setAuthenticatedCustomer({
           id: 'preview-customer',
-          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Store Preview',
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Store Preview',
           email: 'preview@store.com',
           phone: '+1234567890',
           businessName: 'Store Preview Mode'
