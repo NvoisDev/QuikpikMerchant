@@ -250,6 +250,24 @@ async function runStartupMigrations() {
      SET monthly_price = '999.99'
      WHERE plan_id = 'premium_annual'
        AND monthly_price != '999.99'`,
+    // Task #875: One-time clean-up — orders where customer_name has a trailing literal ' null'
+    // (e.g. 'Angel meals null') caused by concatenating firstName + NULL lastName.
+    // Re-join the users table and recompute the correct display name.
+    `UPDATE orders o
+     SET customer_name = TRIM(
+       CASE
+         WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL
+           THEN u.first_name || ' ' || u.last_name
+         WHEN u.first_name IS NOT NULL
+           THEN u.first_name
+         WHEN u.business_name IS NOT NULL
+           THEN u.business_name
+         ELSE 'Unknown Customer'
+       END
+     )
+     FROM users u
+     WHERE o.retailer_id = u.id
+       AND o.customer_name LIKE '% null'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
