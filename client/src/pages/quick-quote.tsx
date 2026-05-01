@@ -198,9 +198,13 @@ export default function QuickQuote() {
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
     if (!paymentMethodInitialized.current) {
+      // Set the correct default once, on first status load.
+      // useRef prevents query refetches (window focus etc.) from
+      // overriding the user's subsequent manual selection.
       paymentMethodInitialized.current = true;
       setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
     } else if (!stripeReady) {
+      // Safety: clear payment_link selection if Stripe becomes inactive.
       setQuotePaymentMethod(prev => prev === 'payment_link' ? 'bank_transfer' : prev);
     }
   }, [stripeConnectStatus, stripeReady]);
