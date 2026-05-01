@@ -195,10 +195,13 @@ export default function QuickQuote() {
   const stripeReady = stripeConnectStatus?.isConnected === true;
 
   useEffect(() => {
-    if (!stripeReady && quotePaymentMethod === 'payment_link') {
-      setQuotePaymentMethod('bank_transfer');
-    }
-  }, [stripeReady]);
+    if (stripeConnectStatus === undefined) return;
+    setQuotePaymentMethod(prev => {
+      if (stripeReady && prev === 'bank_transfer') return 'payment_link';
+      if (!stripeReady && prev === 'payment_link') return 'bank_transfer';
+      return prev;
+    });
+  }, [stripeConnectStatus, stripeReady]);
 
   useEffect(() => {
     if (businessProfiles.length > 0 && selectedProfileId === null) {
