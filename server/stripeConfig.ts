@@ -45,7 +45,7 @@ if (isLiveMode() && !stripeLive) {
   console.warn("⚠️  STRIPE_ENVIRONMENT=live but STRIPE_LIVE_SECRET_KEY not set — falling back to test client.");
 }
 if (isLiveMode() && !LIVE_WEBHOOK) {
-  console.warn("⚠️  STRIPE_ENVIRONMENT=live but STRIPE_LIVE_WEBHOOK_SECRET not set — webhook signature verification will fail for live events.");
+  console.error("🚨 CRITICAL: STRIPE_ENVIRONMENT=live but STRIPE_LIVE_WEBHOOK_SECRET is not set — every live webhook will fail signature verification and return 400, causing Stripe to disable the endpoint. Set STRIPE_LIVE_WEBHOOK_SECRET immediately.");
 }
 
 /**

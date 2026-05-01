@@ -250,6 +250,15 @@ export function registerPaymentRoutes(app: Express): void {
   // POST /api/webhooks/stripe
   app.post('/api/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
+
+    // Universal terminal response log — attached at the very top so it fires on
+    // every exit path including early 400s before signature verification.
+    let resolvedEventType = 'unknown';
+    let resolvedEventId = 'unknown';
+    res.on('finish', () => {
+      console.log(`📤 Webhook response sent: status=${res.statusCode} eventType=${resolvedEventType} eventId=${resolvedEventId}`);
+    });
+
     const secretPairs = getWebhookSecretsWithLabels();
 
     if (secretPairs.length === 0) {
@@ -272,6 +281,8 @@ export function registerPaymentRoutes(app: Express): void {
       console.error('❌ Stripe webhook signature verification failed (tried all secrets)');
       return res.status(400).json({ error: 'Invalid signature' });
     }
+    resolvedEventType = event.type;
+    resolvedEventId = event.id;
     console.log(`✅ Stripe webhook received: type=${event.type} livemode=${event.livemode} secret=${matchedLabel} at ${new Date().toISOString()}`);
 
     try {
@@ -301,8 +312,8 @@ export function registerPaymentRoutes(app: Express): void {
             .limit(1);
           
           if (!existingOrder) {
-            console.log(`❌ Order ${orderId} not found in database`);
-            return res.status(404).json({ error: 'Order not found' });
+            console.warn(`⚠️ Order ${orderId} not found in database — skipping webhook, returning 200 to prevent Stripe retry loop`);
+            return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderId} not found` });
           }
           
           // Get actual payment amount from Stripe session
@@ -1050,13 +1061,51 @@ export function registerPaymentRoutes(app: Express): void {
       res.json({ received: true, type: event.type });
       
     } catch (error) {
-      console.error('❌ Webhook error:', error);
-      // Return 500 so Stripe retries transient failures (e.g. DB outage during
-      // checkout.session.completed). Non-retryable error paths (e.g. account.updated
-      // email failure) are already handled inline with a 200 before reaching here.
-      return res.status(500).json({ error: 'Webhook processing failed' });
+      // Classify the error: only return 5xx (triggering Stripe retries) for genuinely
+      // transient infrastructure failures. All business/data/logic errors that escape
+      // inline handling return 200 so Stripe does not keep retrying the event.
+      const isTransient = isTransientError(error);
+      if (isTransient) {
+        console.error('❌ Transient infrastructure error in webhook handler — returning 500 so Stripe retries:', error);
+        return res.status(500).json({ error: 'Webhook processing failed — transient error, please retry' });
+      }
+      console.error('❌ Non-transient error in webhook handler — returning 200 to stop Stripe retry loop (event logged for investigation):', error);
+      return res.status(200).json({ received: true, skipped: true, reason: 'Non-transient processing error — see server logs' });
     }
   });
+
+  /**
+   * Returns true for transient infrastructure errors that warrant a Stripe retry (5xx).
+   * Returns false for business-logic, data, or programming errors that should not
+   * be retried (non-transient — return 200 so Stripe stops delivering the event).
+   */
+  function isTransientError(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false;
+    const e = err as Record<string, unknown>;
+
+    // Node.js network/system error codes that indicate a recoverable outage
+    const transientCodes = new Set([
+      'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'ETIMEDOUT',
+      'EPIPE', 'EHOSTUNREACH', 'ENETDOWN', 'ENETUNREACH',
+    ]);
+    if (typeof e.code === 'string' && transientCodes.has(e.code)) return true;
+
+    // PostgreSQL error class 08 = Connection Exception
+    // PostgreSQL error class 57 = Operator Intervention (e.g. admin shutdown)
+    if (typeof e.code === 'string' && (e.code.startsWith('08') || e.code.startsWith('57'))) return true;
+
+    // Generic message patterns that indicate a connectivity/timeout issue
+    const msg = (typeof e.message === 'string' ? e.message : '').toLowerCase();
+    const transientPatterns = [
+      'connection refused', 'connection terminated', 'connection reset',
+      'timed out', 'etimedout', 'econnrefused', 'econnreset',
+      'could not connect', 'server closed the connection',
+      'too many connections', 'connection pool',
+    ];
+    if (transientPatterns.some(p => msg.includes(p))) return true;
+
+    return false;
+  }
 
   // POST /api/stripe/connect-onboarding
   app.post("/api/stripe/connect-onboarding", requireAuth, async (req: any, res) => {
