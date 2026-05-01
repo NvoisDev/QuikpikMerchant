@@ -713,10 +713,19 @@ export default function Customers() {
   const updateMemberMutation = useMutation({
     mutationFn: ({ groupId, memberId, data }: { groupId: number; memberId: string; data: EditMemberFormData }) =>
       apiRequest('PATCH', `/api/customer-groups/${groupId}/members/${memberId}`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       queryClient.invalidateQueries({ queryKey: [`/api/customer-groups/${selectedGroup?.id}/members`] });
-      toast({ title: "Success", description: "Member updated successfully!" });
+      const prevName = selectedMember
+        ? (`${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim() || selectedMember.name || '')
+        : '';
+      const newName = (`${variables.data.firstName || ''} ${variables.data.lastName || ''}`.trim() || variables.data.name || '');
+      const nameChanged = newName !== prevName;
+      if (nameChanged) {
+        toast({ title: "Customer name updated", description: "All future invoices will reflect this change." });
+      } else {
+        toast({ title: "Success", description: "Member updated successfully!" });
+      }
       setIsEditMemberDialogOpen(false);
       editMemberForm.reset();
     },
