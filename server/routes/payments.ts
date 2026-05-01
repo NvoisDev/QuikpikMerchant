@@ -1090,7 +1090,7 @@ export function registerPaymentRoutes(app: Express): void {
             card_payments: { requested: true }
           },
           business_profile: {
-            name: user.businessName || `${user.firstName} ${user.lastName}`,
+            name: user.businessName || `${user.firstName} ${user.lastName || ''}`.trim(),
             support_email: user.email!,
           },
           metadata: {
@@ -2067,7 +2067,7 @@ export function registerPaymentRoutes(app: Express): void {
         orderNumber,
         wholesalerId,
         retailerId: customerId,
-        customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+        customerName: `${customer.firstName} ${customer.lastName || ''}`.trim(),
         customerEmail: customer.email,
         customerPhone: customer.phoneNumber,
         status: 'pending',
@@ -2518,13 +2518,13 @@ export function registerPaymentRoutes(app: Express): void {
           // Wholesaler sees subtotal (products + delivery) — never the customer transaction fee
           const wholesalerDeposit = isDeposit ? subtotal * (validDepositPercentage / 100) : 0;
           const wholesalerOutstanding = isDeposit ? subtotal - wholesalerDeposit : 0;
-          const quoteEmailBody = `${emailHeading('Invoice Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${customer.firstName} ${customer.lastName}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${wholesalerWeightRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
+          const quoteEmailBody = `${emailHeading('Invoice Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${`${customer.firstName} ${customer.lastName || ''}`.trim()}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${wholesalerWeightRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Invoice ${orderNumber} sent to ${customer.firstName} - £${subtotal.toFixed(2)}` });
           console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
-            subject: `Invoice ${orderNumber} Sent to ${customer.firstName} ${customer.lastName}`,
+            subject: `Invoice ${orderNumber} Sent to ${customer.firstName} ${customer.lastName || ''}`.trim(),
             html: quoteHtml
           });
           console.log(`📧 Quote confirmation email sent to ${wholesaler.email}`);

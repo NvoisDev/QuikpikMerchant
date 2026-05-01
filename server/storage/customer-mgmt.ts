@@ -547,8 +547,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
         notifications.push({
           customerId,
           updateType: 'name',
-          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName}`,
-          newValue: `${updates.firstName} ${updates.lastName || currentCustomer.lastName}`,
+          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName || ''}`.trim(),
+          newValue: `${updates.firstName} ${(updates.lastName || currentCustomer.lastName) || ''}`.trim(),
           changesApplied: { firstName: updates.firstName }
         });
       }
@@ -557,8 +557,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
         notifications.push({
           customerId,
           updateType: 'name', 
-          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName}`,
-          newValue: `${updates.firstName || currentCustomer.firstName} ${updates.lastName}`,
+          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName || ''}`.trim(),
+          newValue: `${updates.firstName || currentCustomer.firstName} ${updates.lastName || ''}`.trim(),
           changesApplied: { lastName: updates.lastName }
         });
       }
