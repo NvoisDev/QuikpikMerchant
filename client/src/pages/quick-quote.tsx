@@ -40,7 +40,6 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  ChevronsUpDown,
   ArrowLeft,
   UserPlus,
   Truck,
@@ -835,17 +834,17 @@ export default function QuickQuote() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={customerDropdownOpen}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-start font-normal gap-2 text-left"
                 >
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                   {selectedCustomer ? (
-                    <span className="flex flex-col items-start text-left">
-                      <span>{selectedCustomer.firstName} {selectedCustomer.lastName || ''}</span>
+                    <span className="flex flex-col items-start min-w-0">
+                      <span className="truncate">{(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || 'Unknown'}</span>
                       <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">Choose a customer...</span>
+                    <span className="text-muted-foreground">Search customers...</span>
                   )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[70vh] flex flex-col p-0">
