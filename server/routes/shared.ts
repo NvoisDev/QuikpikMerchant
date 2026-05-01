@@ -614,7 +614,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   const currencySymbol = getCurrencySymbol(currency);
   const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
   const customerName = order.retailer
-    ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || order.retailer.name || order.customerName || 'Customer')
+    ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || (order.retailer as any).businessName || order.customerName || 'Customer')
     : (order.customerName || 'Customer');
   const businessName = wholesaler.businessName || 'Quikpik Merchant';
   const invoiceRef = order.orderNumber || `#${order.id}`;

@@ -2772,7 +2772,7 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       const customerName = order.retailer
-        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.name || order.customerName || 'Customer')
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || (order.retailer as any).businessName || order.customerName || 'Customer')
         : (order.customerName || 'Customer');
       const businessName = effectiveWholesaler.businessName || 'Your Supplier';
       const orderRef = order.orderNumber || `#${order.id}`;
@@ -2855,7 +2855,7 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       const customerName = order.retailer
-        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.name || order.customerName || 'there')
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || (order.retailer as any).businessName || order.customerName || 'there')
         : (order.customerName || 'there');
       const businessName = effectiveWholesaler.businessName || wholesaler.businessName || 'Your Supplier';
       const portalLink = `https://quikpik.app/store/${order.wholesalerId}?tab=orders`;
