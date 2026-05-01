@@ -1440,7 +1440,7 @@ export default function OrderDetail() {
                 </Badge>
               )}
               </div>
-              {!isViewer && (
+              {!isViewer && order.status !== 'cancelled' && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
                     variant="ghost"
