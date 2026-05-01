@@ -1551,14 +1551,23 @@ export default function OrderDetail() {
             <h2 className="text-sm font-semibold text-gray-900">Customer</h2>
             <div className="space-y-1 text-xs text-gray-700">
               {(() => {
-                const liveRetailerName = order.retailer
-                  ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || (order.retailer as any).name || (order.retailer as any).businessName || '')
-                  : '';
-                const displayName = liveRetailerName || order.customerName || '';
-                return displayName ? <div className="font-medium text-sm text-gray-900">{displayName}</div> : null;
+                const retailer = order.retailer as any;
+                const businessName = retailer?.businessName || '';
+                const fullName = retailer
+                  ? `${retailer.firstName || ''} ${retailer.lastName || ''}`.trim()
+                  : (order.customerName || '');
+                const displayName = fullName || order.customerName || '';
+                return (
+                  <>
+                    {businessName && <div className="font-medium text-sm text-gray-900">{businessName}</div>}
+                    {displayName && <div className={businessName ? 'text-xs text-gray-600' : 'font-medium text-sm text-gray-900'}>{displayName}</div>}
+                  </>
+                );
               })()}
               {order.customerEmail && <div>{order.customerEmail}</div>}
-              {order.customerPhone && <div>{order.customerPhone}</div>}
+              {(order.customerPhone || (order.retailer as any)?.phoneNumber) && (
+                <div>{order.customerPhone || (order.retailer as any)?.phoneNumber}</div>
+              )}
             </div>
 
             {order.fulfillmentType === 'delivery' ? (
