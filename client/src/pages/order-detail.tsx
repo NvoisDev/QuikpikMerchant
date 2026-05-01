@@ -410,7 +410,10 @@ export default function OrderDetail() {
 
   const buildShareMessage = (o: Order): string => {
     const orderRef = o.orderNumber || `#${o.id}`;
-    const customerFirstName = o.customerName?.split(' ')[0] || 'there';
+    const liveRetailerName = o.retailer
+      ? (`${(o.retailer as any).firstName || ''} ${(o.retailer as any).lastName || ''}`.trim() || (o.retailer as any).businessName || '')
+      : '';
+    const customerFirstName = (liveRetailerName || o.customerName || 'there').split(' ')[0] || 'there';
     const businessName =
       (user as AuthUser)?.businessName ||
       o.wholesalerBusinessName ||
