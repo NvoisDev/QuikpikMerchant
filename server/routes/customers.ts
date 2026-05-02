@@ -1047,14 +1047,21 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId
         : req.user.id;
       const customerId = req.params.id;
-      const { firstName, lastName, ...nonNameUpdates } = req.body;
+      const { firstName, lastName, businessName, ...nonNameUpdates } = req.body;
       
       console.log('Updating customer:', customerId, 'with updates:', req.body);
 
-      // Write name to the per-wholesaler relationship so each wholesaler's
-      // label is independent and doesn't overwrite another wholesaler's view.
-      if (firstName !== undefined || lastName !== undefined) {
-        const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
+      // Derive the display name this wholesaler uses for this customer.
+      // Priority: firstName+lastName if provided, else businessName, else keep existing.
+      const hasNameChange = firstName !== undefined || lastName !== undefined || businessName !== undefined;
+      if (hasNameChange) {
+        // Build displayName from firstName+lastName when present, otherwise fall back to businessName
+        let displayNameValue: string | null = null;
+        if (firstName !== undefined || lastName !== undefined) {
+          displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || businessName?.trim() || null;
+        } else if (businessName !== undefined) {
+          displayNameValue = businessName?.trim() || null;
+        }
         await db.update(wholesalerCustomerRelationships)
           .set({ displayName: displayNameValue })
           .where(and(
@@ -1063,21 +1070,41 @@ export function registerCustomerRoutes(app: Express): void {
           ));
       }
 
-      // Also write name directly to the user record so orders, invoices,
-      // and any live joins always reflect the current name.
+      // Write name fields directly to the shared user record so live joins reflect current name.
       const nameUpdates: Record<string, string | null> = {};
       if (firstName !== undefined) nameUpdates.firstName = firstName || null;
       if (lastName !== undefined) nameUpdates.lastName = lastName || null;
+      if (businessName !== undefined) nameUpdates.businessName = businessName || null;
 
       // Write all fields (name + any other updates) to the shared user record
       const updatedCustomer = await storage.updateCustomer(customerId, { ...nonNameUpdates, ...nameUpdates });
       console.log('Customer updated successfully:', updatedCustomer);
+
+      // Backfill customerName on existing orders for this wholesaler so the
+      // order list immediately reflects the new name rather than the stale snapshot.
+      if (hasNameChange) {
+        const newCustomerName = businessName?.trim()
+          || `${firstName || ''} ${lastName || ''}`.trim()
+          || updatedCustomer.businessName
+          || `${updatedCustomer.firstName || ''} ${updatedCustomer.lastName || ''}`.trim()
+          || null;
+        if (newCustomerName) {
+          await db.update(orders)
+            .set({ customerName: newCustomerName })
+            .where(and(
+              eq(orders.retailerId, customerId),
+              eq(orders.wholesalerId, targetUserId)
+            ));
+          console.log(`✅ Backfilled customerName="${newCustomerName}" on orders for customer ${customerId}`);
+        }
+      }
 
       // Merge the name back into the response so the caller sees the correct values
       res.json({
         ...updatedCustomer,
         ...(firstName !== undefined ? { firstName } : {}),
         ...(lastName !== undefined ? { lastName } : {}),
+        ...(businessName !== undefined ? { businessName } : {}),
       });
     } catch (error) {
       console.error('Error updating customer:', error);

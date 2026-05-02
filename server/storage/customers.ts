@@ -694,7 +694,7 @@ export class CustomerStorage extends OrderStorage {
       .where(eq(users.id, customerId));
   }
 
-  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; archived?: boolean; archivedAt?: Date | null }): Promise<User> {
+  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; archived?: boolean; archivedAt?: Date | null; businessName?: string | null }): Promise<User> {
     const updateData: any = {
       updatedAt: new Date()
     };
@@ -705,6 +705,7 @@ export class CustomerStorage extends OrderStorage {
     if (updates.phoneNumber !== undefined) updateData.phoneNumber = updates.phoneNumber;
     if (updates.archived !== undefined) updateData.archived = updates.archived;
     if (updates.archivedAt !== undefined) updateData.archivedAt = updates.archivedAt;
+    if (updates.businessName !== undefined) updateData.businessName = updates.businessName || null;
     
     const [updatedUser] = await db
       .update(users)
