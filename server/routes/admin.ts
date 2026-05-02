@@ -472,7 +472,7 @@ export function registerAdminRoutes(app: Express): void {
 
       const result = customers.map(c => ({
         id: c.id,
-        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
+        name: c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown',
         businessName: c.businessName,
         phoneNumber: c.phoneNumber,
         postalCode: c.postalCode,
@@ -893,7 +893,7 @@ export function registerAdminRoutes(app: Express): void {
 
       const result = customerList.map(c => ({
         id: c.id,
-        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
+        name: c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown',
         businessName: c.businessName,
         email: c.email,
         phoneNumber: c.phoneNumber,
@@ -1885,7 +1885,7 @@ export function registerAdminRoutes(app: Express): void {
         })),
         customers: matchedCustomers.map(c => ({
           id: c.id,
-          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.businessName || 'Unknown',
+          name: c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown',
           phoneNumber: c.phoneNumber,
           email: c.email,
           wholesalerName: c.wholesalerId ? (custWholesalers[c.wholesalerId] || 'Unknown') : 'No wholesaler',
