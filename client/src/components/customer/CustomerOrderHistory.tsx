@@ -114,7 +114,7 @@ const formatAddress = (addressData?: string): string => {
   return cleanedLines.length > 0 ? cleanedLines.join(', ') : 'Address not provided';
 };
 
-const parseDeliveryAddress = (address: string | undefined): any => {
+const parseDeliveryAddress = (address: string | undefined): Record<string, string> | null => {
   if (!address) return null;
   try {
     const parsed = JSON.parse(address);

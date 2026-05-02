@@ -7,6 +7,7 @@ import { formatCurrency } from "@shared/utils/currency";
 import { getPackQuantity } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
+import type { PromotionalOffer } from "@shared/schema";
 // Image removed for production - using icon instead
 
 interface CartItem {
@@ -17,7 +18,7 @@ interface CartItem {
     image?: string;
     promoPrice?: string;
     promoActive?: boolean;
-    promotionalOffers?: any[];
+    promotionalOffers?: PromotionalOffer[];
     palletPrice?: string;
     packQuantity?: number;
     quantityInPack?: number;

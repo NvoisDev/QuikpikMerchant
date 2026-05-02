@@ -120,7 +120,7 @@ export function DeliveryAddressManager({
         description: "Your delivery address has been saved successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error Adding Address",
         description: error.message || "Failed to add delivery address. Please try again.",
@@ -143,7 +143,7 @@ export function DeliveryAddressManager({
         description: "Your delivery address has been updated successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error Updating Address",
         description: error.message || "Failed to update delivery address. Please try again.",
@@ -166,7 +166,7 @@ export function DeliveryAddressManager({
         description: "Your delivery address has been removed successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error Deleting Address",
         description: error.message || "Failed to delete delivery address. Please try again.",
@@ -187,7 +187,7 @@ export function DeliveryAddressManager({
         description: "Your default delivery address has been updated.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error Setting Default",
         description: error.message || "Failed to set default address. Please try again.",

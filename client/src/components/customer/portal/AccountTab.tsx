@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressManager";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { TabQuickActions } from "./TabQuickActions";
-import type { CartItem } from "@/components/customer/portal-types";
+import type { CartItem, WholesalerPortal, CustomerOrderStats } from "@/components/customer/portal-types";
 import { formatCurrency } from "@shared/utils/currency";
 
 interface AccountTabProps {
@@ -24,8 +24,8 @@ interface AccountTabProps {
   handleSaveProfile: () => void;
   updateProfileMutation: { isPending: boolean };
   customerData: { name: string; email: string; phone: string; businessName?: string };
-  wholesaler: any;
-  customerOrderStats: any;
+  wholesaler: WholesalerPortal | null;
+  customerOrderStats: CustomerOrderStats | null;
 }
 
 export function AccountTab({

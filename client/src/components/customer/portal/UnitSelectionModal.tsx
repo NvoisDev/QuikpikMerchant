@@ -5,7 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
-import type { ExtendedProduct, CartItem } from "@/components/customer/portal-types";
+import type { ExtendedProduct, CartItem, PromotionalPricing } from "@/components/customer/portal-types";
 
 interface UnitSelectionModalProps {
   showUnitSelectionModal: boolean;
@@ -18,7 +18,7 @@ interface UnitSelectionModalProps {
   setSelectedModalType: (t: 'units' | 'pallets' | null) => void;
   modalQuantity: number;
   setModalQuantity: (q: number) => void;
-  calculatePromotionalPricing: (product: any, quantity: number) => any;
+  calculatePromotionalPricing: (product: ExtendedProduct, quantity: number) => PromotionalPricing;
   addToCart: (product: ExtendedProduct, quantity: number, sellingType: 'units' | 'pallets') => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   cart: CartItem[];
@@ -69,7 +69,7 @@ export function UnitSelectionModal({
               {/* Individual Units Option */}
               {(() => {
                 const moq = selectedProductForModal.moq || 1;
-                const promoPricing = calculatePromotionalPricing(selectedProductForModal as any, moq);
+                const promoPricing = calculatePromotionalPricing(selectedProductForModal!, moq);
                 const hasDiscount = promoPricing.effectivePrice !== promoPricing.originalPrice;
                 return (
                   <div
@@ -140,8 +140,8 @@ export function UnitSelectionModal({
                 className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-blue-500 bg-blue-50"
                 onClick={() => {
                   setSelectedModalType('pallets');
-                  const availableStock = (selectedProductForModal as any).palletStock || 0;
-                  const minQuantity = (selectedProductForModal as any).palletMoq || 1;
+                  const availableStock = selectedProductForModal?.palletStock || 0;
+                  const minQuantity = selectedProductForModal?.palletMoq || 1;
                   setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                   setModalStep('quantity');
                 }}
@@ -150,12 +150,12 @@ export function UnitSelectionModal({
                   <div>
                     <h4 className="font-medium text-gray-900">Full Pallets</h4>
                     <p className="text-sm text-gray-600">
-                      {formatCurrency((selectedProductForModal as any).palletPrice || 0)} per pallet
+                      {formatCurrency(selectedProductForModal?.palletPrice || 0)} per pallet
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {(selectedProductForModal as any).unitsPerPallet} units per pallet
-                      {(selectedProductForModal as any).palletMoq && (selectedProductForModal as any).palletMoq > 1 &&
-                        ` • Minimum: ${(selectedProductForModal as any).palletMoq} pallets`
+                      {selectedProductForModal?.unitsPerPallet} units per pallet
+                      {selectedProductForModal?.palletMoq && selectedProductForModal?.palletMoq > 1 &&
+                        ` • Minimum: ${selectedProductForModal?.palletMoq} pallets`
                       }
                     </p>
                     {(() => {
@@ -166,10 +166,10 @@ export function UnitSelectionModal({
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold text-blue-600">
-                      {formatCurrency(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * ((selectedProductForModal as any).palletMoq || 1))}
+                      {formatCurrency(parseFloat(selectedProductForModal?.palletPrice?.toString() || '0') * (selectedProductForModal?.palletMoq || 1))}
                     </div>
                     <div className="text-xs text-gray-500">
-                      for {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
+                      for {selectedProductForModal?.palletMoq || 1} pallet{(selectedProductForModal?.palletMoq || 1) > 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
@@ -180,7 +180,7 @@ export function UnitSelectionModal({
                 className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-purple-400 bg-purple-50"
                 onClick={() => {
                   const unitMoq = selectedProductForModal.moq || 1;
-                  const palMoq = (selectedProductForModal as any).palletMoq || 1;
+                  const palMoq = selectedProductForModal?.palletMoq || 1;
                   addToCart(selectedProductForModal, unitMoq, 'units');
                   addToCart(selectedProductForModal, palMoq, 'pallets');
                   closeModal();
@@ -191,7 +191,7 @@ export function UnitSelectionModal({
                     <h4 className="font-medium text-gray-900">Both Units & Pallets</h4>
                     <p className="text-sm text-gray-600">Order individual units and full pallets together</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {selectedProductForModal.moq || 1} units + {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
+                      {selectedProductForModal.moq || 1} units + {selectedProductForModal?.palletMoq || 1} pallet{(selectedProductForModal?.palletMoq || 1) > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="text-purple-600 text-2xl">+</div>
@@ -240,7 +240,7 @@ export function UnitSelectionModal({
                   <p className="text-sm text-gray-600">
                     {selectedModalType === 'units'
                       ? (() => {
-                          const qtyPricing = calculatePromotionalPricing(selectedProductForModal as any, 1);
+                          const qtyPricing = calculatePromotionalPricing(selectedProductForModal!, 1);
                           const hasPromo = qtyPricing.effectivePrice !== qtyPricing.originalPrice;
                           if (hasPromo) {
                             return (
@@ -252,11 +252,11 @@ export function UnitSelectionModal({
                           }
                           return `${formatCurrency(qtyPricing.effectivePrice)} per unit`;
                         })()
-                      : `${formatCurrency((selectedProductForModal as any).palletPrice || 0)} per pallet`
+                      : `${formatCurrency(selectedProductForModal?.palletPrice || 0)} per pallet`
                     }
                   </p>
                   {selectedModalType === 'units' && (() => {
-                    const qtyPricing = calculatePromotionalPricing(selectedProductForModal as any, 1);
+                    const qtyPricing = calculatePromotionalPricing(selectedProductForModal!, 1);
                     if (qtyPricing.promoLabel && qtyPricing.effectivePrice !== qtyPricing.originalPrice) {
                       return (
                         <span className="inline-block text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
@@ -271,12 +271,12 @@ export function UnitSelectionModal({
                   <div className="text-xs text-gray-500 mb-1">
                     Minimum: {selectedModalType === 'units'
                       ? `${selectedProductForModal.moq} units`
-                      : `${(selectedProductForModal as any).palletMoq || 1} pallets`
+                      : `${selectedProductForModal?.palletMoq || 1} pallets`
                     }
                   </div>
                   {selectedModalType === 'pallets' && (
                     <div className="text-xs text-gray-500">
-                      {(selectedProductForModal as any).unitsPerPallet} units per pallet
+                      {selectedProductForModal?.unitsPerPallet} units per pallet
                     </div>
                   )}
                   {(() => {
@@ -301,14 +301,14 @@ export function UnitSelectionModal({
                     onClick={() => {
                       const minQuantity = selectedModalType === 'units'
                         ? (selectedProductForModal.moq || 1)
-                        : ((selectedProductForModal as any).palletMoq || 1);
+                        : (selectedProductForModal?.palletMoq || 1);
                       if (modalQuantity > minQuantity) {
                         setModalQuantity(modalQuantity - 1);
                       }
                     }}
                     disabled={modalQuantity <= (selectedModalType === 'units'
                       ? (selectedProductForModal.moq || 1)
-                      : ((selectedProductForModal as any).palletMoq || 1))}
+                      : (selectedProductForModal?.palletMoq || 1))}
                     className="h-10 w-10 p-0"
                   >
                     <Minus className="w-4 h-4" />
@@ -320,7 +320,7 @@ export function UnitSelectionModal({
                     onClick={() => {
                       const availableStock = selectedModalType === 'units'
                         ? selectedProductForModal.stock
-                        : ((selectedProductForModal as any).palletStock || 0);
+                        : (selectedProductForModal?.palletStock || 0);
                       if (modalQuantity < availableStock) {
                         setModalQuantity(modalQuantity + 1);
                       }
@@ -328,7 +328,7 @@ export function UnitSelectionModal({
                     disabled={(() => {
                       const availableStock = selectedModalType === 'units'
                         ? selectedProductForModal.stock
-                        : ((selectedProductForModal as any).palletStock || 0);
+                        : (selectedProductForModal?.palletStock || 0);
                       return modalQuantity >= availableStock;
                     })()}
                     className="h-10 w-10 p-0"
@@ -350,7 +350,7 @@ export function UnitSelectionModal({
                       const value = parseFloat(e.target.value) || 0;
                       const availableStock = selectedModalType === 'units'
                         ? selectedProductForModal.stock
-                        : ((selectedProductForModal as any).palletStock || 0);
+                        : (selectedProductForModal?.palletStock || 0);
                       if (value >= 0 || e.target.value === '') {
                         setModalQuantity(Math.min(value, availableStock));
                       }
@@ -364,13 +364,13 @@ export function UnitSelectionModal({
                       <span>
                         Minimum: {selectedModalType === 'units'
                           ? `${selectedProductForModal.moq || 1} units`
-                          : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
+                          : `${selectedProductForModal?.palletMoq || 1} pallets`}
                       </span>
                       <span>
                         Available: {(() => {
                           const availableStock = selectedModalType === 'units'
                             ? selectedProductForModal.stock
-                            : ((selectedProductForModal as any).palletStock || 0);
+                            : (selectedProductForModal?.palletStock || 0);
                           return `${availableStock} ${selectedModalType === 'units' ? 'units' : 'pallets'}`;
                         })()}
                       </span>
@@ -379,10 +379,10 @@ export function UnitSelectionModal({
                     {(() => {
                       const minQuantity = selectedModalType === 'units'
                         ? (selectedProductForModal.moq || 1)
-                        : ((selectedProductForModal as any).palletMoq || 1);
+                        : (selectedProductForModal?.palletMoq || 1);
                       const availableStock = selectedModalType === 'units'
                         ? selectedProductForModal.stock
-                        : ((selectedProductForModal as any).palletStock || 0);
+                        : (selectedProductForModal?.palletStock || 0);
 
                       if (availableStock < minQuantity) {
                         return (
@@ -422,7 +422,7 @@ export function UnitSelectionModal({
                 <div className="text-xs text-gray-500 mb-1">Total</div>
                 {(() => {
                   if (selectedModalType === 'units') {
-                    const totalPricing = calculatePromotionalPricing(selectedProductForModal as any, modalQuantity);
+                    const totalPricing = calculatePromotionalPricing(selectedProductForModal!, modalQuantity);
                     const hasPromo = totalPricing.effectivePrice !== totalPricing.originalPrice;
                     return (
                       <>
@@ -444,7 +444,7 @@ export function UnitSelectionModal({
                   }
                   return (
                     <div className="text-2xl font-bold text-emerald-600">
-                      {formatCurrency(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * modalQuantity)}
+                      {formatCurrency(parseFloat(selectedProductForModal?.palletPrice?.toString() || '0') * modalQuantity)}
                     </div>
                   );
                 })()}
@@ -459,10 +459,10 @@ export function UnitSelectionModal({
                   setSelectedModalType(null);
                   const availableStock = selectedModalType === 'units'
                     ? selectedProductForModal.stock
-                    : ((selectedProductForModal as any).palletStock || 0);
+                    : (selectedProductForModal?.palletStock || 0);
                   const minQuantity = selectedModalType === 'units'
                     ? (selectedProductForModal.moq || 1)
-                    : ((selectedProductForModal as any).palletMoq || 1);
+                    : (selectedProductForModal?.palletMoq || 1);
                   setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                 }}
                 className="flex-1"
@@ -473,10 +473,10 @@ export function UnitSelectionModal({
                 onClick={() => {
                   const minQuantity = selectedModalType === 'units'
                     ? (selectedProductForModal.moq || 1)
-                    : ((selectedProductForModal as any).palletMoq || 1);
+                    : (selectedProductForModal?.palletMoq || 1);
                   const availableStock = selectedModalType === 'units'
                     ? selectedProductForModal.stock
-                    : ((selectedProductForModal as any).palletStock || 0);
+                    : (selectedProductForModal?.palletStock || 0);
 
                   const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id && item.sellingType === selectedModalType);
 
@@ -518,7 +518,7 @@ export function UnitSelectionModal({
                 disabled={(() => {
                   const availableStock = selectedModalType === 'units'
                     ? selectedProductForModal.stock
-                    : ((selectedProductForModal as any).palletStock || 0);
+                    : (selectedProductForModal?.palletStock || 0);
                   return availableStock <= 0;
                 })()}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400"
@@ -526,10 +526,10 @@ export function UnitSelectionModal({
                 {(() => {
                   const minQuantity = selectedModalType === 'units'
                     ? (selectedProductForModal.moq || 1)
-                    : ((selectedProductForModal as any).palletMoq || 1);
+                    : (selectedProductForModal?.palletMoq || 1);
                   const availableStock = selectedModalType === 'units'
                     ? selectedProductForModal.stock
-                    : ((selectedProductForModal as any).palletStock || 0);
+                    : (selectedProductForModal?.palletStock || 0);
 
                   const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id && item.sellingType === selectedModalType);
 

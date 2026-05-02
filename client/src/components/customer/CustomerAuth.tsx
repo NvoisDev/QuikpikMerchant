@@ -13,9 +13,11 @@ import { formatPhoneToInternational, isValidMobile } from "@shared/phone-utils";
 import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 
 
+import type { AuthenticatedCustomer } from "@/components/customer/portal-types";
+
 interface CustomerAuthProps {
   wholesalerId?: string;
-  onAuthSuccess: (customerData: any) => void;
+  onAuthSuccess: (customerData: AuthenticatedCustomer) => void;
   onSkipAuth?: () => void;
   openRequestAccess?: boolean;
 }

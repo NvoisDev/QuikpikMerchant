@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CustomerProductCardSkeleton } from "@/components/customer/CustomerPortalSkeletons";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
-import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
+import type { CartItem, ExtendedProduct, Product, WholesalerPortal, CustomerOrderStats, QuantitySuggestion, PromotionalPricing } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatWeight } from "@shared/utils/currency";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
@@ -24,8 +24,8 @@ interface ProductsTabProps {
   isPreviewMode: boolean;
   isTrueGuestMode: boolean;
   cartStats: { totalValue: number };
-  wholesaler: any;
-  customerOrderStats: any;
+  wholesaler: WholesalerPortal | null;
+  customerOrderStats: CustomerOrderStats | null;
   searchTerm: string;
   setSearchTerm: (v: string) => void;
   selectedCategory: string;
@@ -37,7 +37,7 @@ interface ProductsTabProps {
   setProductImageIndexes: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   carouselTouchStartX: React.MutableRefObject<number>;
   productsLoading: boolean;
-  productsError: any;
+  productsError: Error | null;
   refetchProducts: () => void;
   filteredProducts: Product[];
   quantityInputValues: Record<string, string>;
@@ -48,8 +48,8 @@ interface ProductsTabProps {
   setShowQuantityHints: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
   activeQuantityInput: number | null;
   setActiveQuantityInput: (v: number | null) => void;
-  getQuantitySuggestions: (product: ExtendedProduct, currentQuantity?: number) => any[];
-  calculatePromotionalPricing: (product: Product, quantity: number) => any;
+  getQuantitySuggestions: (product: ExtendedProduct, currentQuantity?: number) => QuantitySuggestion[];
+  calculatePromotionalPricing: (product: Product, quantity: number) => PromotionalPricing;
   addToCart: (product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets") => void;
   setSelectedProductForModal: (p: ExtendedProduct | null) => void;
   setModalStep: (s: 'type' | 'quantity') => void;
@@ -288,7 +288,7 @@ export function ProductsTab({
                       {(() => {
                         const allImages = [
                           ...(product.imageUrl ? [product.imageUrl] : []),
-                          ...((product as any).images || []).filter((img: string) => img !== product.imageUrl)
+                          ...(product.images || []).filter((img: string) => img !== product.imageUrl)
                         ].filter(Boolean);
                         const currentImageIndex = productImageIndexes[product.id] || 0;
 
@@ -401,9 +401,9 @@ export function ProductsTab({
                       <div className="space-y-2 mb-3">
                         <div className="flex flex-wrap gap-1 text-xs text-gray-600">
                           {(() => {
-                            const packQuantity = getPackQuantity(product as any) ?? 1;
-                            const unitSize = (product as any).unitSize;
-                            const unitOfMeasure = (product as any).unitOfMeasure;
+                            const packQuantity = getPackQuantity(product) ?? 1;
+                            const unitSize = product.unitSize;
+                            const unitOfMeasure = product.unitOfMeasure;
                             if (unitSize && unitOfMeasure) {
                               return (
                                 <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
@@ -418,20 +418,20 @@ export function ProductsTab({
                           ) : (
                             <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-medium">Individual Units</span>
                           )}
-                          {(product as any).size && (
-                            <span className="bg-gray-100 px-2 py-1 rounded">Size: {(product as any).size}</span>
+                          {product.size && (
+                            <span className="bg-gray-100 px-2 py-1 rounded">Size: {product.size}</span>
                           )}
                           {product.moq && product.moq > 1 && (
                             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
                               Min: {product.moq} units
                             </span>
                           )}
-                          {(product as any).brand && (
-                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{(product as any).brand}</span>
+                          {product.brand && (
+                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{product.brand}</span>
                           )}
                         </div>
                         {(() => {
-                          const pw = computePackWeightKg((product as any).packQuantity, (product as any).unitSize, (product as any).unitOfMeasure)
+                          const pw = computePackWeightKg(product.packQuantity, product.unitSize, product.unitOfMeasure)
                             || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                           const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                           const parts: string[] = [];
@@ -458,7 +458,7 @@ export function ProductsTab({
                             <div className="flex items-center gap-1.5">
                               <div className="w-2 h-2 rounded-full bg-blue-500" />
                               <span className="font-medium text-blue-700 text-xs">
-                                <Package2 className="w-3 h-3 inline mr-1" />{(product as any).palletStock || 0} pallets
+                                <Package2 className="w-3 h-3 inline mr-1" />{product.palletStock || 0} pallets
                               </span>
                             </div>
                           )}
@@ -473,7 +473,7 @@ export function ProductsTab({
                               <div className="flex items-center gap-1.5">
                                 <div className="w-2 h-2 rounded-full bg-blue-500" />
                                 <span className="font-medium text-blue-700 text-xs">
-                                  <Package2 className="w-3 h-3 inline mr-1" />{(product as any).palletStock || 0} pallets
+                                  <Package2 className="w-3 h-3 inline mr-1" />{product.palletStock || 0} pallets
                                 </span>
                               </div>
                             </>
@@ -508,7 +508,7 @@ export function ProductsTab({
                           {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>
                             </p>
                           )}
                         </div>
@@ -619,7 +619,7 @@ export function ProductsTab({
                             {cartItemUnits && <p className="text-xs font-medium text-blue-700 text-center mb-1">🚛 Pallets</p>}
                             <div className="flex items-center justify-center gap-2">
                               <Button size="sm" variant="outline" onClick={() => {
-                                const palMoq = (product as any).palletMoq || 1;
+                                const palMoq = product.palletMoq || 1;
                                 if (cartItemPallets.quantity <= palMoq) {
                                   setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
                                 } else {
@@ -634,11 +634,11 @@ export function ProductsTab({
                                 onBlur={() => {
                                   const v = quantityInputValues[`${product.id}_pal`];
                                   const p = parseInt(v) || 0;
-                                  const palMoq = (product as any).palletMoq || 1;
+                                  const palMoq = product.palletMoq || 1;
                                   if (p === 0) {
                                     setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
                                   } else {
-                                    const palStock = (product as any).palletStock || 0;
+                                    const palStock = product.palletStock || 0;
                                     const qty = Math.min(Math.max(palMoq, p), palStock || p);
                                     setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: qty} : item));
                                   }
@@ -647,19 +647,19 @@ export function ProductsTab({
                                 onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                 min={1}
                                 className="w-14 h-8 text-center rounded-lg text-sm"
-                                placeholder={((product as any).palletMoq || 1).toString()}
+                                placeholder={(product.palletMoq || 1).toString()}
                               />
                               <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={parseFloat((product as any).palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units)</span></div>
+                            <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>
                           </div>
                         )}
 
                         {/* Secondary "Also add" buttons */}
                         {cartItemUnits && !cartItemPallets && hasPalletPricing && (
-                          <button onClick={() => addToCart(product as ExtendedProduct, (product as any).palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
+                          <button onClick={() => addToCart(product as ExtendedProduct, product.palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
                             + Also Add Pallets
                           </button>
                         )}
@@ -684,12 +684,12 @@ export function ProductsTab({
                                   addToCart(product as ExtendedProduct, product.moq, 'units');
                                 }
                               }}
-                              disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
+                              disabled={product.stock === 0 && (product.palletStock || 0) === 0}
                               className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                              style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                              style={{background: (product.stock === 0 && (product.palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                             >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              {(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                              {(product.stock === 0 && (product.palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
                             </Button>
                             {hasPalletPricing && product.stock > 0 && (
                               <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
@@ -710,7 +710,7 @@ export function ProductsTab({
                         {(() => {
                           const allImages = [
                             ...(product.imageUrl ? [product.imageUrl] : []),
-                            ...((product as any).images || []).filter((img: string) => img !== product.imageUrl)
+                            ...(product.images || []).filter((img: string) => img !== product.imageUrl)
                           ].filter(Boolean);
                           const currentImageIndex = productImageIndexes[product.id] || 0;
 
@@ -801,9 +801,9 @@ export function ProductsTab({
                         <div className="mb-2">
                           <div className="flex flex-wrap gap-1 text-xs text-gray-600">
                             {(() => {
-                              const packQuantity = getPackQuantity(product as any) ?? 1;
-                              const unitSize = (product as any).unitSize;
-                              const unitOfMeasure = (product as any).unitOfMeasure;
+                              const packQuantity = getPackQuantity(product) ?? 1;
+                              const unitSize = product.unitSize;
+                              const unitOfMeasure = product.unitOfMeasure;
                               if (unitSize && unitOfMeasure) {
                                 return (
                                   <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-medium">
@@ -818,8 +818,8 @@ export function ProductsTab({
                             ) : (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">Individual Units</span>
                             )}
-                            {(product as any).size && (
-                              <span className="bg-gray-100 px-2 py-0.5 rounded">Size: {(product as any).size}</span>
+                            {product.size && (
+                              <span className="bg-gray-100 px-2 py-0.5 rounded">Size: {product.size}</span>
                             )}
                             {product.moq && product.moq > 1 && (
                               <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
@@ -829,15 +829,15 @@ export function ProductsTab({
                             {product.stock && (
                               <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">Stock: {product.stock}</span>
                             )}
-                            {(product as any).brand && (
-                              <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">{(product as any).brand}</span>
+                            {product.brand && (
+                              <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">{product.brand}</span>
                             )}
                             {product.isExpiringSoon && (
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">Limited availability</span>
                             )}
                           </div>
                           {(() => {
-                            const pw = computePackWeightKg((product as any).packQuantity, (product as any).unitSize, (product as any).unitOfMeasure)
+                            const pw = computePackWeightKg(product.packQuantity, product.unitSize, product.unitOfMeasure)
                               || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                             const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                             const parts: string[] = [];
@@ -862,7 +862,7 @@ export function ProductsTab({
                           {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>
                             </p>
                           )}
                         </div>
@@ -974,7 +974,7 @@ export function ProductsTab({
                               {cartItemUnits && <p className="text-xs font-medium text-blue-700 mb-1">🚛 Pallets</p>}
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={() => {
-                                  const palMoq = (product as any).palletMoq || 1;
+                                  const palMoq = product.palletMoq || 1;
                                   if (cartItemPallets.quantity <= palMoq) {
                                     setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
                                   } else {
@@ -989,11 +989,11 @@ export function ProductsTab({
                                   onBlur={() => {
                                     const v = quantityInputValues[`${product.id}_pal`];
                                     const p = parseInt(v) || 0;
-                                    const palMoq = (product as any).palletMoq || 1;
+                                    const palMoq = product.palletMoq || 1;
                                     if (p === 0) {
                                       setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
                                     } else {
-                                      const palStock = (product as any).palletStock || 0;
+                                      const palStock = product.palletStock || 0;
                                       const qty = Math.min(Math.max(palMoq, p), palStock || p);
                                       setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: qty} : item));
                                     }
@@ -1002,18 +1002,18 @@ export function ProductsTab({
                                   onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                   min={1}
                                   className="w-14 h-8 text-center rounded-lg text-sm"
-                                  placeholder={((product as any).palletMoq || 1).toString()}
+                                  placeholder={(product.palletMoq || 1).toString()}
                                 />
                                 <Button size="sm" variant="outline" onClick={() => setCart(cart.map(item => item.product.id === product.id && item.sellingType === 'pallets' ? {...item, quantity: item.quantity + 1} : item))} className="rounded-full h-8 w-8 p-0">
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={parseFloat((product as any).palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units)</span></div>
+                              <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>
                             </div>
                           )}
 
                           {cartItemUnits && !cartItemPallets && hasPalletPricing && (
-                            <button onClick={() => addToCart(product as ExtendedProduct, (product as any).palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
+                            <button onClick={() => addToCart(product as ExtendedProduct, product.palletMoq || 1, 'pallets')} className="w-full text-xs py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors">
                               + Also Add Pallets
                             </button>
                           )}
@@ -1026,7 +1026,7 @@ export function ProductsTab({
                           {!cartItemUnits && !cartItemPallets && (
                             <div className="flex flex-col items-center gap-1">
                               {(() => {
-                                const isOutOfStock = product.stock === 0 && ((product as any).palletStock || 0) === 0;
+                                const isOutOfStock = product.stock === 0 && (product.palletStock || 0) === 0;
                                 const handleAdd = () => {
                                   if (hasPalletPricing) {
                                     setSelectedProductForModal(product as ExtendedProduct);

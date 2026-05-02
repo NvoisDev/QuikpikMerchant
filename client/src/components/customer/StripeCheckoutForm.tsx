@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ShieldCheck, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
-import type { StripeCheckoutFormProps } from "./portal-types";
+import type { StripeCheckoutFormProps, WholesalerPortal } from "./portal-types";
 
 async function fetchStripePromise(publishableKey?: string, wholesalerId?: string) {
   if (publishableKey) {
@@ -34,12 +34,12 @@ const PaymentFormContent = ({
   shippingCost,
   wholesaler,
 }: {
-  onSuccess: (orderData?: any) => void;
+  onSuccess: (orderData?: Record<string, unknown>) => void;
   totalAmount: number;
   subtotal: number;
   customerTransactionFee: number;
   shippingCost: number;
-  wholesaler: any;
+  wholesaler: WholesalerPortal;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -232,19 +232,20 @@ const PaymentFormContent = ({
           });
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setPaymentSubmitted(false);
       console.error('Unexpected payment error:', error);
 
       let errorMessage = "An unexpected error occurred during payment. Please try again.";
       let errorTitle = "Payment Error";
 
-      if (error.name === 'NetworkError') {
+      const err = error as { name?: string; message?: string };
+      if (err.name === 'NetworkError') {
         errorMessage = "Network connection failed. Please check your internet connection and try again.";
-      } else if (error.name === 'TimeoutError') {
+      } else if (err.name === 'TimeoutError') {
         errorMessage = "Payment request timed out. Please try again.";
-      } else if (error.message) {
-        errorMessage = `Payment error: ${error.message}. Please try again.`;
+      } else if (err.message) {
+        errorMessage = `Payment error: ${err.message}. Please try again.`;
       }
 
       toast({ title: errorTitle, description: errorMessage, variant: "destructive" });

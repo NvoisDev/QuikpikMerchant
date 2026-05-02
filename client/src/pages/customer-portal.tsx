@@ -47,7 +47,7 @@ import { Package2, Hash } from "lucide-react";
 import { getGuestBackTarget, getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
 
 // Customer portal types and shared components (extracted from this file)
-import type { ExtendedProduct, CartItem, Product, CustomerData } from "@/components/customer/portal-types";
+import type { ExtendedProduct, CartItem, Product, CustomerData, AuthenticatedCustomer } from "@/components/customer/portal-types";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { CustomerProductCardSkeleton, CustomerFeaturedProductSkeleton } from "@/components/customer/CustomerPortalSkeletons";
 import { StripeCheckoutForm } from "@/components/customer/StripeCheckoutForm";
@@ -140,7 +140,7 @@ export default function CustomerPortal() {
 
   // Customer authentication state - using server sessions
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
+  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<AuthenticatedCustomer | null>(null);
   const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
   const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
   const [showStoreSwitcher, setShowStoreSwitcher] = useState(false);
@@ -293,7 +293,7 @@ export default function CustomerPortal() {
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
   // Request access handler for new wholesalers — opens message prompt dialog
-  const handleRequestAccess = (wholesaler: any) => {
+  const handleRequestAccess = (wholesaler: { id: string; businessName: string }) => {
     if (!authenticatedCustomer?.phone) return;
     setRequestAccessTarget({ id: wholesaler.id, businessName: wholesaler.businessName });
     setRequestAccessMessage("");
@@ -370,7 +370,7 @@ export default function CustomerPortal() {
         });
         if (!accessibleResponse.ok) throw new Error("Failed to fetch accessible wholesalers");
         const accessibleWholesalers = await accessibleResponse.json();
-        const accessibleIds = accessibleWholesalers.map((w: any) => w.id);
+        const accessibleIds = accessibleWholesalers.map((w) => w.id);
         
         // Then get all marketplace wholesalers for discovery
         const params = new URLSearchParams();
@@ -382,14 +382,14 @@ export default function CustomerPortal() {
         const allWholesalers = await marketplaceResponse.json();
         
         // Combine and mark accessibility status
-        const combinedWholesalers = allWholesalers.map((wholesaler: any) => ({
+        const combinedWholesalers = allWholesalers.map((wholesaler) => ({
           ...wholesaler,
           isAccessible: accessibleIds.includes(wholesaler.id),
           canRequestAccess: !accessibleIds.includes(wholesaler.id)
         }));
         
         // Sort: accessible first, then by business name
-        combinedWholesalers.sort((a: any, b: any) => {
+        combinedWholesalers.sort((a, b) => {
           if (a.isAccessible && !b.isAccessible) return -1;
           if (!a.isAccessible && b.isAccessible) return 1;
           return (a.businessName || '').localeCompare(b.businessName || '');
@@ -406,7 +406,7 @@ export default function CustomerPortal() {
         });
         if (!response.ok) throw new Error("Failed to fetch wholesalers");
         const wholesalers = await response.json();
-        return wholesalers.map((w: any) => ({ ...w, isAccessible: false, canRequestAccess: false }));
+        return wholesalers.map((w) => ({ ...w, isAccessible: false, canRequestAccess: false }));
       }
     },
     enabled: showWholesalerSearch, // Only fetch when search is open
@@ -448,7 +448,7 @@ export default function CustomerPortal() {
   const [completedOrder, setCompletedOrder] = useState<{
     orderNumber: string;
     cart: CartItem[];
-    customerData: any;
+    customerData: CustomerData;
     totalAmount: number;
     subtotal: number;
     customerTransactionFee: number;
@@ -682,7 +682,7 @@ export default function CustomerPortal() {
     // Promotions only apply to customers on standard pricing.
     if (hasCustomPrice) return result;
 
-    const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+    const offers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
     const now = new Date();
 
     for (const offer of offers) {
@@ -794,14 +794,14 @@ export default function CustomerPortal() {
     let totalPromotionalItems = 0; // For calculations - includes free items
     let subtotal = 0;
     let appliedPromotions: string[] = [];
-    let bogoffDetails: any[] = [];
+    let bogoffDetails: { productName: string; freeItems: number }[] = [];
 
     cart.forEach(item => {
       let itemPrice = 0;
       const itemQuantity = Number(item.quantity) || 0;
       
       if (item.sellingType === "pallets") {
-        itemPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
+        itemPrice = parseFloat(item.product.palletPrice || "0") || 0;
         totalItems += itemQuantity;
         totalPromotionalItems += itemQuantity;
         subtotal += itemPrice * itemQuantity;
@@ -878,9 +878,9 @@ export default function CustomerPortal() {
     }
     
     // Validate quantity meets MOQ requirements (unless stock is less than MOQ)
-    const minQuantity = sellingType === "pallets" ? ((product as any).palletMoq || 1) : (product.moq || 1);
+    const minQuantity = sellingType === "pallets" ? (product.palletMoq || 1) : (product.moq || 1);
     const availableStock = sellingType === "pallets" 
-      ? ((product as any).palletStock || 0)
+      ? (product.palletStock || 0)
       : (product.stock || 0);
     
     // Allow purchasing remaining stock if it's less than MOQ
@@ -979,7 +979,7 @@ export default function CustomerPortal() {
       // Calculate total amount for cart using promotional pricing
       const totalAmount = cart.reduce((total, item) => {
         if (item.sellingType === 'pallets') {
-          const palletPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
+          const palletPrice = parseFloat(item.product.palletPrice || "0") || 0;
           return total + (palletPrice * item.quantity);
         } else {
           const pricing = calculatePromotionalPricing(item.product, item.quantity);
@@ -1008,7 +1008,7 @@ export default function CustomerPortal() {
               productId: item.product.id,
               productName: item.product.name,
               quantity: item.quantity || 0,
-              unitPrice: parseFloat((item.product as any).palletPrice || "0") || 0,
+              unitPrice: parseFloat(item.product.palletPrice || "0") || 0,
               sellingType: item.sellingType
             };
           } else {
@@ -1091,7 +1091,7 @@ export default function CustomerPortal() {
       // Calculate total amount for cart using promotional pricing
       const totalAmount = cart.reduce((total, item) => {
         if (item.sellingType === 'pallets') {
-          const palletPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
+          const palletPrice = parseFloat(item.product.palletPrice || "0") || 0;
           return total + (palletPrice * item.quantity);
         } else {
           const pricing = calculatePromotionalPricing(item.product, item.quantity);
@@ -1118,7 +1118,7 @@ export default function CustomerPortal() {
               productId: item.product.id,
               productName: item.product.name,
               quantity: item.quantity || 0,
-              unitPrice: parseFloat((item.product as any).palletPrice || "0") || 0,
+              unitPrice: parseFloat(item.product.palletPrice || "0") || 0,
               sellingType: item.sellingType
             };
           } else {
@@ -1242,7 +1242,7 @@ export default function CustomerPortal() {
     if (!selectedProduct) return;
     
     const minQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
-    const maxQuantity = selectedSellingType === "pallets" ? ((selectedProduct as any).palletStock || 0) : selectedProduct.stock;
+    const maxQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
     
     if (editQuantity >= minQuantity && editQuantity <= maxQuantity) {
       addToCart(selectedProduct, editQuantity, selectedSellingType);
@@ -1298,7 +1298,7 @@ export default function CustomerPortal() {
   };
 
   // Authentication handlers
-  const handleAuthSuccess = (customer: any) => {
+  const handleAuthSuccess = (customer: AuthenticatedCustomer) => {
     clearGuestParam();
     setOpenRequestAccessOnAuth(false);
     setAuthenticatedCustomer(customer);
@@ -1809,11 +1809,11 @@ export default function CustomerPortal() {
                 ))}
               </div>
             ) : (() => {
-              const accessibleSellers = availableWholesalers.filter((w: any) => w.isAccessible);
-              const discoverSellers = availableWholesalers.filter((w: any) => !w.isAccessible);
+              const accessibleSellers = availableWholesalers.filter((w) => w.isAccessible);
+              const discoverSellers = availableWholesalers.filter((w) => !w.isAccessible);
               const isSearching = wholesalerSearchQuery.trim().length > 0;
 
-              const WholesalerCard = ({ wholesalerItem }: { wholesalerItem: any }) => (
+              const WholesalerCard = ({ wholesalerItem }: { wholesalerItem: typeof availableWholesalers[number] }) => (
                 <div
                   key={wholesalerItem.id}
                   className="flex items-center space-x-3 p-3 rounded-xl transition-colors hover:bg-gray-50 cursor-pointer active:bg-gray-100"
@@ -1903,7 +1903,7 @@ export default function CustomerPortal() {
                 return availableWholesalers.length > 0 ? (
                   <div className="mt-2">
                     <p className="text-xs text-gray-400 px-3 mb-2">{availableWholesalers.length} result{availableWholesalers.length !== 1 ? 's' : ''}</p>
-                    {availableWholesalers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)}
+                    {availableWholesalers.map((w) => <WholesalerCard key={w.id} wholesalerItem={w} />)}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center pt-16 text-center px-6">
@@ -1920,7 +1920,7 @@ export default function CustomerPortal() {
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Your Sellers</h3>
                     {accessibleSellers.length > 0 ? (
-                      accessibleSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)
+                      accessibleSellers.map((w) => <WholesalerCard key={w.id} wholesalerItem={w} />)
                     ) : (
                       <p className="text-sm text-gray-400 px-3 py-4">You haven't been added to any stores yet.</p>
                     )}
@@ -1930,7 +1930,7 @@ export default function CustomerPortal() {
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900 px-3 mb-1">Discover New Sellers</h3>
                     {discoverSellers.length > 0 ? (
-                      discoverSellers.map((w: any) => <WholesalerCard key={w.id} wholesalerItem={w} />)
+                      discoverSellers.map((w) => <WholesalerCard key={w.id} wholesalerItem={w} />)
                     ) : (
                       <p className="text-sm text-gray-400 px-3 py-4">
                         No new sellers found. Contact a seller to get registered with their store.

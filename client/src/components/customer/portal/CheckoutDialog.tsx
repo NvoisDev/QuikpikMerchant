@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import { calculateCustomerFee } from "@shared/utils/fees";
 import { getPackQuantity } from "@shared/utils/product";
-import type { CartItem } from "@/components/customer/portal-types";
+import type { CartItem, CustomerData, WholesalerPortal, AuthenticatedCustomer, PromotionalPricing, CollectionAddress, CompletedOrder, ExtendedProduct } from "@/components/customer/portal-types";
 
 interface CheckoutDialogProps {
   showCheckout: boolean;
@@ -25,24 +25,24 @@ interface CheckoutDialogProps {
   setPayLaterMode: (v: boolean) => void;
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-  cartStats: { subtotal: number; [key: string]: any };
+  cartStats: { subtotal: number; totalItems: number; totalPromotionalItems: number; shippingCost: number; totalValue: number; appliedPromotions: string[]; bogoffDetails: { productName: string; freeItems: number }[] };
   editableQuantities: Record<string, string>;
   setEditableQuantities: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  calculatePromotionalPricing: (product: any, quantity: number) => any;
-  customerData: any;
-  setCustomerData: React.Dispatch<React.SetStateAction<any>>;
-  wholesaler: any | null;
+  calculatePromotionalPricing: (product: ExtendedProduct, quantity: number) => PromotionalPricing;
+  customerData: CustomerData;
+  setCustomerData: React.Dispatch<React.SetStateAction<CustomerData>>;
+  wholesaler: WholesalerPortal | null;
   wholesalerId: string;
   clientSecret: string;
   setClientSecret: (v: string) => void;
   publishableKey?: string;
   isCreatingIntent: boolean;
-  authenticatedCustomer: any | null;
+  authenticatedCustomer: AuthenticatedCustomer | null;
   createPaymentIntentForCheckout: (shippingOption: 'pickup' | 'delivery') => Promise<void>;
-  createPaymentIntentWithCustomData: (data: any, option: 'pickup' | 'delivery') => Promise<void>;
+  createPaymentIntentWithCustomData: (data: CustomerData, option: 'pickup' | 'delivery') => Promise<void>;
   isPlacingPayLaterOrder: boolean;
   setIsPlacingPayLaterOrder: (v: boolean) => void;
-  setCompletedOrder: (order: any) => void;
+  setCompletedOrder: (order: CompletedOrder) => void;
   refetchProducts: () => void;
   featuredProductId: number | null;
   refetchFeaturedProduct: () => void;
@@ -86,7 +86,7 @@ export function CheckoutDialog({
   const { toast } = useToast();
   const [selectedCollectionAddressId, setSelectedCollectionAddressId] = useState<number | null>(null);
 
-  const { data: collectionAddresses = [] } = useQuery<any[]>({
+  const { data: collectionAddresses = [] } = useQuery<CollectionAddress[]>({
     queryKey: ["/api/wholesalers", wholesalerId, "collection-addresses"],
     queryFn: async () => {
       const r = await fetch(`/api/wholesalers/${wholesalerId}/collection-addresses`);
@@ -110,17 +110,17 @@ export function CheckoutDialog({
   const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50, feesEnabled: false };
   const feesEnabled = liveFeeConfig?.feesEnabled ?? false;
 
-  const defaultCollectionAddress = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
+  const defaultCollectionAddress = collectionAddresses.find((a) => a.isDefault) || collectionAddresses[0];
 
   useEffect(() => {
     if (collectionAddresses.length > 0 && selectedCollectionAddressId === null) {
-      const def = collectionAddresses.find((a: any) => a.isDefault) || collectionAddresses[0];
+      const def = collectionAddresses.find((a) => a.isDefault) || collectionAddresses[0];
       if (def) setSelectedCollectionAddressId(def.id);
     }
   }, [collectionAddresses, selectedCollectionAddressId]);
 
   const selectedCollectionAddress = selectedCollectionAddressId
-    ? collectionAddresses.find((a: any) => a.id === selectedCollectionAddressId) || defaultCollectionAddress
+    ? collectionAddresses.find((a) => a.id === selectedCollectionAddressId) || defaultCollectionAddress
     : defaultCollectionAddress;
 
   return (
@@ -142,10 +142,10 @@ export function CheckoutDialog({
                 {cart.map((item, index) => {
                   let itemPrice;
                   let totalCost;
-                  let cartPricing: any = null;
+                  let cartPricing: PromotionalPricing | null = null;
 
                   if (item.sellingType === 'pallets') {
-                    itemPrice = parseFloat((item.product as any).palletPrice?.toString() || '0');
+                    itemPrice = parseFloat(item.product.palletPrice?.toString() || '0');
                     totalCost = itemPrice * item.quantity;
                   } else {
                     cartPricing = calculatePromotionalPricing(item.product, item.quantity);
@@ -153,9 +153,9 @@ export function CheckoutDialog({
                     totalCost = cartPricing.totalCost;
                   }
 
-                  const moq = item.sellingType === 'pallets' ? ((item.product as any).palletMoq || 1) : (item.product.moq || 1);
+                  const moq = item.sellingType === 'pallets' ? (item.product.palletMoq || 1) : (item.product.moq || 1);
                   const availableStock = item.sellingType === 'pallets'
-                    ? ((item.product as any).palletStock || 999)
+                    ? (item.product.palletStock || 999)
                     : (item.product.stock || 999);
                   const eqKey = `${item.product.id}_${item.sellingType}`;
                   const currentEditVal = editableQuantities[eqKey] ?? String(item.quantity);
@@ -181,9 +181,9 @@ export function CheckoutDialog({
                     <div key={index} className="bg-white rounded-lg border border-gray-200 p-3">
                       <div className="flex gap-3">
                         <div className="flex-shrink-0">
-                          {(item.product.imageUrl || (item.product as any).images?.[0]) ? (
+                          {(item.product.imageUrl || item.product.images?.[0]) ? (
                             <img
-                              src={item.product.imageUrl || (item.product as any).images?.[0]}
+                              src={item.product.imageUrl || item.product.images?.[0]}
                               alt={item.product.name}
                               className="w-16 h-16 object-cover rounded-md border border-gray-100"
                             />
@@ -199,9 +199,9 @@ export function CheckoutDialog({
                             <div className="min-w-0">
                               <p className="font-semibold text-sm leading-snug">{item.product.name}</p>
                               {(() => {
-                                const pq = getPackQuantity(item.product as any);
-                                const us = (item.product as any).unitSize;
-                                const um = (item.product as any).unitOfMeasure;
+                                const pq = getPackQuantity(item.product);
+                                const us = item.product.unitSize;
+                                const um = item.product.unitOfMeasure;
                                 if (pq && pq > 1 && us && um) return <p className="text-xs text-gray-400 leading-tight">{pq} × {parseFloat(String(us))}{um}</p>;
                                 return null;
                               })()}
@@ -242,7 +242,7 @@ export function CheckoutDialog({
                             )}
                             {item.sellingType === 'pallets' && (
                               <span className="text-xs text-gray-500">
-                                ({item.quantity * ((item.product as any).unitsPerPallet || 1)} units total)
+                                ({item.quantity * (item.product.unitsPerPallet || 1)} units total)
                               </span>
                             )}
                           </div>
@@ -415,7 +415,7 @@ export function CheckoutDialog({
                   <Input
                     id="customer-name"
                     value={customerData.name}
-                    onChange={(e) => setCustomerData((prev: any) => ({...prev, name: e.target.value}))}
+                    onChange={(e) => setCustomerData((prev) => ({...prev, name: e.target.value}))}
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -425,7 +425,7 @@ export function CheckoutDialog({
                     id="customer-email"
                     type="email"
                     value={customerData.email}
-                    onChange={(e) => setCustomerData((prev: any) => ({...prev, email: e.target.value}))}
+                    onChange={(e) => setCustomerData((prev) => ({...prev, email: e.target.value}))}
                     placeholder="Enter your email"
                   />
                 </div>
@@ -434,7 +434,7 @@ export function CheckoutDialog({
                   <Input
                     id="customer-phone"
                     value={customerData.phone}
-                    onChange={(e) => setCustomerData((prev: any) => ({...prev, phone: e.target.value}))}
+                    onChange={(e) => setCustomerData((prev) => ({...prev, phone: e.target.value}))}
                     placeholder="Enter your phone number"
                   />
                 </div>
@@ -459,7 +459,7 @@ export function CheckoutDialog({
                     checked={customerData.shippingOption === 'pickup'}
                     onChange={async () => {
                       try {
-                        setCustomerData((prev: any) => ({...prev, shippingOption: 'pickup'}));
+                        setCustomerData((prev) => ({...prev, shippingOption: 'pickup'}));
                         if (authenticatedCustomer?.id) {
                           const response = await apiRequest("POST", "/api/customer/shipping-choice", {
                             customerId: authenticatedCustomer.id,
@@ -491,7 +491,7 @@ export function CheckoutDialog({
                             <SelectValue placeholder="Choose pickup location" />
                           </SelectTrigger>
                           <SelectContent>
-                            {collectionAddresses.map((a: any) => (
+                            {collectionAddresses.map((a) => (
                               <SelectItem key={a.id} value={String(a.id)}>
                                 {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
                               </SelectItem>
@@ -533,9 +533,9 @@ export function CheckoutDialog({
                       value="delivery"
                       checked={customerData.shippingOption === 'delivery'}
                       onChange={async () => {
-                        setCustomerData((prev: any) => ({
+                        setCustomerData((prev) => ({
                           ...prev,
-                          shippingOption: 'delivery',
+                          shippingOption: 'delivery' as const,
                           clientSecret: null
                         }));
                         setClientSecret('');
@@ -578,9 +578,9 @@ export function CheckoutDialog({
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setCustomerData((prev: any) => ({
+                          setCustomerData((prev) => ({
                             ...prev,
-                            selectedDeliveryAddress: null,
+                            selectedDeliveryAddress: undefined,
                             addressExplicitlyCleared: true
                           }));
                         }}
@@ -596,16 +596,16 @@ export function CheckoutDialog({
                     selectedAddress={customerData.selectedDeliveryAddress}
                     addressExplicitlyCleared={customerData.addressExplicitlyCleared || false}
                     onAddressSelect={(address) => {
-                      setCustomerData((prev: any) => ({
+                      setCustomerData((prev) => ({
                         ...prev,
                         address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
                         city: address?.city || '',
                         postalCode: address?.postalCode || '',
                         state: address?.state || '',
                         country: address?.country || '',
-                        selectedDeliveryAddress: address,
+                        selectedDeliveryAddress: address ?? undefined,
                         addressExplicitlyCleared: false,
-                        shippingOption: 'delivery'
+                        shippingOption: 'delivery' as const
                       }));
 
                       if (address) {
@@ -645,7 +645,7 @@ export function CheckoutDialog({
               <Textarea
                 id="notes"
                 value={customerData.notes}
-                onChange={(e) => setCustomerData((prev: any) => ({...prev, notes: e.target.value}))}
+                onChange={(e) => setCustomerData((prev) => ({...prev, notes: e.target.value}))}
                 placeholder="Add any special instructions for your order"
                 rows={3}
               />
@@ -789,10 +789,10 @@ export function CheckoutDialog({
                         setPayLaterMode(false);
                         setClientSecret('');
                         setLastUsedShippingOption(null);
-                        setCustomerData((prev: any) => ({
+                        setCustomerData((prev) => ({
                           ...prev,
                           shippingOption: undefined,
-                          selectedDeliveryAddress: null,
+                          selectedDeliveryAddress: undefined,
                           addressExplicitlyCleared: false,
                           selectedShippingService: undefined,
                         }));
@@ -854,7 +854,7 @@ export function CheckoutDialog({
                           let computedTotal: number;
                           let promoLabel: string | undefined;
                           if (cartItem.sellingType === 'pallets') {
-                            computedTotal = parseFloat((cartItem.product as any).palletPrice || '0') * cartItem.quantity;
+                            computedTotal = parseFloat(cartItem.product.palletPrice || '0') * cartItem.quantity;
                           } else {
                             const pricing = calculatePromotionalPricing(cartItem.product, cartItem.quantity);
                             computedTotal = pricing.totalCost;
@@ -866,11 +866,11 @@ export function CheckoutDialog({
                               id: cartItem.product.id,
                               name: cartItem.product.name,
                               price: cartItem.product.price,
-                              image: (cartItem.product as any).image,
+                              image: cartItem.product.image,
                               promoPrice: cartItem.product.promoPrice,
                               promoActive: cartItem.product.promoActive,
                               promotionalOffers: cartItem.product.promotionalOffers,
-                              palletPrice: (cartItem.product as any).palletPrice
+                              palletPrice: cartItem.product.palletPrice
                             },
                             quantity: cartItem.quantity,
                             sellingType: cartItem.sellingType,
@@ -898,10 +898,10 @@ export function CheckoutDialog({
                         setPayLaterMode(false);
                         setClientSecret('');
                         setLastUsedShippingOption(null);
-                        setCustomerData((prev: any) => ({
+                        setCustomerData((prev) => ({
                           ...prev,
                           shippingOption: undefined,
-                          selectedDeliveryAddress: null,
+                          selectedDeliveryAddress: undefined,
                           addressExplicitlyCleared: false,
                           selectedShippingService: undefined,
                         }));

@@ -1,4 +1,4 @@
-import { Product as ProductType } from "@shared/schema";
+import type { Product as ProductType, PromotionalOffer } from "@shared/schema";
 
 export type ExtendedProduct = ProductType & {
   wholesaler?: {
@@ -11,6 +11,7 @@ export type ExtendedProduct = ProductType & {
   palletPrice?: string | null;
   unitsPerPallet?: number | null;
   palletWeight?: string | null;
+  image?: string;
 };
 
 export type CartItem = {
@@ -50,7 +51,12 @@ export interface Product {
   unit_weight?: string;
   total_package_weight?: string;
 
-  promotionalOffers?: any[];
+  promotionalOffers?: PromotionalOffer[];
+
+  images?: string[];
+  unitsPerPallet?: number | null;
+  brand?: string | null;
+  size?: string | null;
 
   customPrice?: string;
   standardPrice?: string;
@@ -69,6 +75,103 @@ export interface Product {
   };
 }
 
+export interface WholesalerPortal {
+  id: string;
+  businessName: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  profileImageUrl?: string;
+  defaultCurrency?: string;
+  pickupAddress?: string;
+  pickupInstructions?: string;
+  deliveryFlatRate?: string;
+  deliveryNote?: string;
+  logoType?: string;
+  logoUrl?: string;
+  email?: string;
+  phone?: string;
+  currency?: string;
+  allowPayLater?: boolean;
+}
+
+export interface AuthenticatedCustomer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  phoneNumber?: string;
+  businessName?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface CustomerOrderStats {
+  totalOrders: number;
+  totalSpent: number;
+  lastOrderDate?: string;
+}
+
+export interface PromotionalPricing {
+  originalPrice: number;
+  effectivePrice: number;
+  totalCost: number;
+  totalDiscount: number;
+  discountPercentage: number;
+  appliedOffers: string[];
+  freeItems: number;
+  totalQuantity: number;
+  promoType: string;
+  promoLabel: string;
+}
+
+export interface QuantitySuggestion {
+  quantity: number;
+  label: string;
+  savings?: string;
+  discount?: string;
+}
+
+export interface CollectionAddress {
+  id: number;
+  name?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  postalCode: string;
+  postcode?: string;
+  country?: string;
+  label?: string;
+  isDefault?: boolean;
+}
+
+export interface DeliveryAddressData {
+  id?: number;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state?: string;
+  postalCode: string;
+  country?: string;
+  label?: string;
+  isDefault?: boolean;
+}
+
+export interface ShippingService {
+  serviceName: string;
+  price: number;
+}
+
+export interface CompletedOrder {
+  orderNumber: string;
+  cart: CartItem[];
+  customerData: CustomerData;
+  totalAmount: number;
+  subtotal: number;
+  customerTransactionFee: number;
+  shippingCost: number;
+  payLater?: boolean;
+}
+
 export interface CustomerData {
   name: string;
   email: string;
@@ -81,14 +184,15 @@ export interface CustomerData {
   country: string;
   notes: string;
   shippingOption: "pickup" | "delivery" | undefined;
-  selectedDeliveryAddress?: any;
-  selectedShippingService?: any;
+  selectedDeliveryAddress?: DeliveryAddressData;
+  selectedShippingService?: ShippingService;
+  addressExplicitlyCleared?: boolean;
 }
 
 export interface StripeCheckoutFormProps {
   cart: CartItem[];
   customerData: CustomerData;
-  wholesaler: any;
+  wholesaler: WholesalerPortal;
   totalAmount: number;
   subtotal: number;
   customerTransactionFee: number;
@@ -98,7 +202,7 @@ export interface StripeCheckoutFormProps {
   onSuccess: (orderData: {
     orderNumber: string;
     cart: CartItem[];
-    customerData: any;
+    customerData: CustomerData;
     totalAmount: number;
     subtotal: number;
     customerTransactionFee: number;

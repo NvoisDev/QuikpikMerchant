@@ -3,7 +3,7 @@ import { ShoppingCart, Banknote, History } from "lucide-react";
 import { LazyOrderHistory, ComponentLoader } from "@/components/LazyComponents";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
-import type { CartItem } from "@/components/customer/portal-types";
+import type { CartItem, WholesalerPortal, CustomerOrderStats, AuthenticatedCustomer } from "@/components/customer/portal-types";
 
 interface OrdersTabProps {
   setActiveTab: (tab: string) => void;
@@ -13,9 +13,9 @@ interface OrdersTabProps {
   handleLogout: () => void;
   isPreviewMode: boolean;
   cartStats: { totalValue: number };
-  wholesaler: any;
-  customerOrderStats: any;
-  authenticatedCustomer: any;
+  wholesaler: WholesalerPortal | null;
+  customerOrderStats: CustomerOrderStats | null;
+  authenticatedCustomer: AuthenticatedCustomer | null;
 }
 
 export function OrdersTab({

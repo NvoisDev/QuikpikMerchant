@@ -42,6 +42,54 @@ import { SubscriptionUpgradeModal } from "@/components/subscription/Subscription
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { formatNumber } from "@shared/utils/currency";
 
+interface BulkUploadRow {
+  name: string;
+  description: string;
+  price: string;
+  promoPrice: string;
+  promoActive: boolean;
+  currency: string;
+  moq: string;
+  stock: string;
+  category: string;
+  imageUrl: string;
+  priceVisible: boolean;
+  status: string;
+  unit: string;
+  unitFormat: string;
+  sellingFormat: string;
+  unitsPerPallet: string;
+  palletPrice: string;
+  palletMoq: string;
+  palletStock: string;
+  palletWeight: string;
+  temperatureRequirement: string;
+  contentCategory: string;
+  specialHandling: { fragile: boolean; perishable: boolean; hazardous: boolean };
+  deliveryOptions: { pickup: boolean; delivery: boolean };
+}
+
+interface ProductBatch {
+  id: number;
+  status: string;
+  quantity: number;
+  expiryDate?: string | null;
+  batchNumber?: string | null;
+  costPrice?: number | string | null;
+}
+
+interface StockMovement {
+  id: number;
+  quantity: number;
+  movementType: string;
+  reason?: string | null;
+  createdAt: string;
+  customerName?: string | null;
+  businessProfileName?: string | null;
+  stockBefore: number;
+  stockAfter: number;
+}
+
 const productCategories = [
   "Groceries & Food",
   "Fresh Produce",
@@ -103,7 +151,7 @@ const productFormSchema = z.object({
   }).optional(),
   
   // Promotional offers
-  promotionalOffers: z.array(z.any()).optional(),
+  promotionalOffers: z.array(z.unknown()).optional(),
 
   // Cost price for margin calculations (wholesaler internal)
   costPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
@@ -145,10 +193,10 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [navigateBackTo, setNavigateBackTo] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
-  const [stockProduct, setStockProduct] = useState<any>(null);
+  const [stockProduct, setStockProduct] = useState<Product | null>(null);
   const [stockAdjustmentType, setStockAdjustmentType] = useState<"increase" | "decrease">("increase");
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockReason, setStockReason] = useState("");
@@ -168,7 +216,7 @@ export default function ProductManagement() {
   const [topUpQuantity, setTopUpQuantity] = useState("");
   const [editCostPriceBatchId, setEditCostPriceBatchId] = useState<number | null>(null);
   const [editCostPriceValue, setEditCostPriceValue] = useState("");
-  const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
+  const [uploadedProducts, setUploadedProducts] = useState<BulkUploadRow[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -791,7 +839,7 @@ export default function ProductManagement() {
   }, [products]);
 
   // Fetch stock alerts count
-  const { data: alertsData } = useQuery({
+  const { data: alertsData } = useQuery<{ count: number }>({
     queryKey: ['/api/stock-alerts/count'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -894,7 +942,7 @@ export default function ProductManagement() {
         description: "Product created successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message.includes("403") && error.message.toLowerCase().includes("product limit")) {
         setIsDialogOpen(false);
         setShowUpgradeModal(true);
@@ -948,7 +996,7 @@ export default function ProductManagement() {
         description: "Product updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       let message = "Failed to update product. Please check your inputs and try again.";
       try {
         const parsed = JSON.parse(error.message.replace(/^\d+: /, ''));
@@ -1007,7 +1055,7 @@ export default function ProductManagement() {
     }
   };
 
-  const handleEdit = useCallback((product: any) => {
+  const handleEdit = useCallback((product: Product) => {
     setEditingProduct(product);
     setIsDialogOpen(true);
   }, []);
@@ -1019,7 +1067,7 @@ export default function ProductManagement() {
     }
   }, [deleteProductMutate]);
 
-  const handleDuplicate = useCallback((product: any) => {
+  const handleDuplicate = useCallback((product: Product) => {
     // Reset the form with the product data but clear the ID to create a new product
     setEditingProduct(null); // Set to null so it creates instead of edits
     
@@ -1080,7 +1128,7 @@ export default function ProductManagement() {
     updateProductStatusMutate({ id, status });
   }, [updateProductStatusMutate, toast]);
 
-  const handleManageStock = useCallback((p: any) => {
+  const handleManageStock = useCallback((p: Product) => {
     setStockProduct(p);
     setStockAdjustmentType("increase");
     setStockQuantity("");
@@ -1109,7 +1157,7 @@ export default function ProductManagement() {
       const newStock = variables.adjustmentType === 'increase'
         ? stockProduct.stock + qty
         : Math.max(0, stockProduct.stock - qty);
-      setStockProduct((prev: any) => prev ? { ...prev, stock: newStock } : null);
+      setStockProduct((prev) => prev ? { ...prev, stock: newStock } : null);
       toast({ title: "Stock updated", description: `Stock ${stockAdjustmentType === 'increase' ? 'increased' : 'decreased'} by ${stockQuantity} units` });
       setStockQuantity("");
       setStockReason("");
@@ -1139,7 +1187,7 @@ export default function ProductManagement() {
       // Mirror the same local-state update pattern as stockAdjustmentMutation so the
       // modal header "Current Stock" reflects the change immediately (delta is negative).
       const newStock = Math.max(0, (stockProduct?.stock ?? 0) + variables.delta);
-      setStockProduct((prev: any) => prev ? { ...prev, stock: newStock } : null);
+      setStockProduct((prev) => prev ? { ...prev, stock: newStock } : null);
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/stock-movements`] });
       queryClient.invalidateQueries({ queryKey: [`/api/products/${stockProduct?.id}/batches`] });
@@ -1295,7 +1343,7 @@ export default function ProductManagement() {
       return;
     }
     // Resolve batch against current modalBatches — hard-fail if not found (stale ID guard)
-    const selectedBatch = (modalBatches as any[])?.find((b: any) => b.id === selectedBatchId);
+    const selectedBatch = (modalBatches as ProductBatch[])?.find((b: ProductBatch) => b.id === selectedBatchId);
     if (!selectedBatch) {
       toast({ title: "Please select a batch", description: "Tap a batch from the list above", variant: "destructive" });
       setSelectedBatchId(null);
@@ -1324,7 +1372,7 @@ export default function ProductManagement() {
       { productId: stockProduct.id, batchId: topUpBatchId, delta: qty, reason: 'Manual top-up' },
       {
         onSuccess: () => {
-          setStockProduct((prev: any) => prev ? { ...prev, stock: (prev.stock ?? 0) + qty } : null);
+          setStockProduct((prev) => prev ? { ...prev, stock: (prev.stock ?? 0) + qty } : null);
           setTopUpBatchId(null);
           setTopUpQuantity("");
         },
@@ -1380,9 +1428,9 @@ export default function ProductManagement() {
     }
   };
 
-  const processUploadedData = (data: any[]) => {
+  const processUploadedData = (data: Record<string, string>[]) => {
     const errors: string[] = [];
-    const validProducts: any[] = [];
+    const validProducts: BulkUploadRow[] = [];
 
     data.forEach((row, index) => {
       const rowNumber = index + 1;
@@ -1459,7 +1507,7 @@ export default function ProductManagement() {
   };
 
   const bulkCreateProductsMutation = useMutation({
-    mutationFn: async (products: any[]) => {
+    mutationFn: async (products: BulkUploadRow[]) => {
       const results = [];
       for (const product of products) {
         try {
@@ -1722,7 +1770,7 @@ export default function ProductManagement() {
     }
   };
 
-  const filteredProducts = (products?.filter((product: any) => {
+  const filteredProducts = (products?.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
     if (statusFilter === "expiring") {
@@ -1735,7 +1783,7 @@ export default function ProductManagement() {
     }
     const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
     return matchesSearch && matchesStatus;
-  }) || []).sort((a: any, b: any) => {
+  }) || []).sort((a, b) => {
     if (marginSort === "name_asc" || marginSort === "name_desc") {
       const nameA = (a.name || "").toLowerCase().trim();
       const nameB = (b.name || "").toLowerCase().trim();
@@ -1746,7 +1794,7 @@ export default function ProductManagement() {
       return marginSort === "name_asc" ? cmp : -cmp;
     }
     if (marginSort === "asc" || marginSort === "desc") {
-      const getMargin = (p: any): number | null => {
+      const getMargin = (p: Product): number | null => {
         const price = parseFloat(String(p.price));
         const cost = parseFloat(String(p.costPrice));
         if (!isFinite(price) || !isFinite(cost) || price <= 0 || p.costPrice === null || p.costPrice === undefined || p.costPrice === "") return null;
@@ -1760,7 +1808,7 @@ export default function ProductManagement() {
       return marginSort === "asc" ? ma - mb : mb - ma;
     }
     if (statusFilter === "expiring") {
-      const getExpiryTime = (p: any): number => {
+      const getExpiryTime = (p: Product): number => {
         const fromExpiryDate = p.expiryDate ? new Date(p.expiryDate).getTime() : Infinity;
         const fromNearestExpiry = p.nearestExpiry ? new Date(p.nearestExpiry).getTime() : Infinity;
         return Math.min(fromExpiryDate, fromNearestExpiry);
@@ -1771,7 +1819,7 @@ export default function ProductManagement() {
   });
 
   const hasCostPrice = filteredProducts.some(
-    (p: any) => p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== ""
+    (p) => p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== ""
   );
 
   const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
@@ -1785,11 +1833,11 @@ export default function ProductManagement() {
     <>
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Products" description="Manage your inventory, pricing, and product details.">
-        {(alertsData as any)?.count > 0 && (
+        {alertsData?.count > 0 && (
           <Link href="/stock-alerts">
             <Button variant="outline" size="sm" className="flex items-center gap-2 border-amber-300 text-amber-700 hover:bg-amber-50">
               <AlertTriangle className="h-4 w-4" />
-              {(alertsData as any).count} Stock Alert{(alertsData as any).count !== 1 ? "s" : ""}
+              {alertsData.count} Stock Alert{alertsData.count !== 1 ? "s" : ""}
             </Button>
           </Link>
         )}
@@ -3108,7 +3156,7 @@ export default function ProductManagement() {
             </div>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {filteredProducts.map((product: any) => (
+              {filteredProducts.map((product) => (
                 <div key={product.id} className="space-y-3">
                   <ProductCard
                     product={product}
@@ -3120,7 +3168,7 @@ export default function ProductManagement() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredProducts.map((product: any) => (
+              {filteredProducts.map((product) => (
                 <div key={product.id} className="space-y-3">
                   <Card
                     className={`transition-all duration-200 ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-200 cursor-not-allowed' : 'hover:shadow-md hover:border-slate-300 cursor-pointer'}`}
@@ -3333,7 +3381,7 @@ export default function ProductManagement() {
                       </h5>
                       {isLoadingBatches ? (
                         <p className="text-xs text-gray-500 py-2 text-center">Loading batches...</p>
-                      ) : (productBatches as any[])?.length > 0 ? (
+                      ) : (productBatches as ProductBatch[])?.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
@@ -3347,7 +3395,7 @@ export default function ProductManagement() {
                               </tr>
                             </thead>
                             <tbody>
-                              {(productBatches as any[]).map((batch: any) => {
+                              {(productBatches as ProductBatch[]).map((batch: ProductBatch) => {
                                 const isExpired = batch.expiryDate && new Date(batch.expiryDate) < new Date();
                                 const isDepleted = batch.status === 'depleted';
                                 const expiryFmt = batch.expiryDate
@@ -3542,14 +3590,14 @@ export default function ProductManagement() {
               {(() => {
                 const hasBatches = (stockProduct.batchCount ?? 0) > 0;
                 if (!hasBatches) return null;
-                const sortedBatches = [...((modalBatches as any[]) || [])].sort((a: any, b: any) => {
+                const sortedBatches = [...((modalBatches as ProductBatch[]) || [])].sort((a: ProductBatch, b: ProductBatch) => {
                   if (!a.expiryDate && !b.expiryDate) return 0;
                   if (!a.expiryDate) return 1;
                   if (!b.expiryDate) return -1;
                   return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
                 });
                 const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
-                const activeBatches = sortedBatches.filter((b: any) => b.status !== 'depleted' && b.quantity > 0);
+                const activeBatches = sortedBatches.filter((b: ProductBatch) => b.status !== 'depleted' && b.quantity > 0);
 
                 const fmtExpiry = (d: string | null) =>
                   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'No expiry';
@@ -3567,7 +3615,7 @@ export default function ProductManagement() {
                       <p className="text-xs text-gray-400 py-2 text-center italic">All batches depleted — add a new batch to restock</p>
                     ) : (
                       <div className="space-y-1">
-                        {activeBatches.map((batch: any, idx: number) => {
+                        {activeBatches.map((batch: ProductBatch, idx: number) => {
                           const label = batch.batchNumber || `Batch ${idx + 1}`;
                           const expiry = fmtExpiry(batch.expiryDate);
                           const isSelected = selectedBatchId === batch.id;
@@ -3785,8 +3833,8 @@ export default function ProductManagement() {
                 /* Remove Stock — batch-aware when batches exist, global otherwise */
                 (stockProduct.batchCount ?? 0) > 0 ? (() => {
                   // Resolve against current modalBatches so stale IDs don't slip through
-                  const activeBatchList = (modalBatches as any[]) ?? [];
-                  const selectedBatch = activeBatchList.find((b: any) => b.id === selectedBatchId) ?? null;
+                  const activeBatchList = (modalBatches as ProductBatch[]) ?? [];
+                  const selectedBatch = activeBatchList.find((b: ProductBatch) => b.id === selectedBatchId) ?? null;
                   return (
                     <div className="space-y-3">
                       {!selectedBatch && (
@@ -3898,9 +3946,9 @@ export default function ProductManagement() {
                 </h4>
                 {isLoadingMovements ? (
                   <p className="text-sm text-gray-500 text-center py-4">Loading history...</p>
-                ) : stockMovements && (stockMovements as any[]).length > 0 ? (
+                ) : stockMovements && (stockMovements as StockMovement[]).length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {(stockMovements as any[]).slice(0, 20).map((movement: any) => {
+                    {(stockMovements as StockMovement[]).slice(0, 20).map((movement: StockMovement) => {
                       const isIncrease = movement.quantity > 0;
                       const typeLabel = movement.movementType === 'purchase' ? 'Order'
                         : movement.movementType === 'return' ? 'Return'

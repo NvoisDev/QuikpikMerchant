@@ -217,6 +217,7 @@ interface Customer {
   phoneNumber: string;
   businessName?: string;
   streetAddress?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
   postalCode?: string;
@@ -225,6 +226,7 @@ interface Customer {
   groupIds: number[];
   totalOrders: number;
   totalSpent: number;
+  totalUnpaid?: number;
   lastOrderDate?: Date;
   createdAt: Date;
 }
@@ -235,6 +237,60 @@ interface CustomerStats {
   totalUnpaid: number;
   topCustomers: { customerId: string; name: string; totalSpent: number }[];
 }
+
+interface GroupMember {
+  id?: string;
+  customerId?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  phoneNumber?: string;
+  phone_number?: string;
+  email?: string;
+}
+
+interface DeviceContact {
+  id: string;
+  name: string;
+  phoneNumber: string;
+}
+
+interface CustomerOrder {
+  id: number;
+  retailerId: string;
+  status: string;
+  createdAt: string;
+  totalAmount: number;
+}
+
+interface PriceListFormInput {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
+interface ApiError extends Error {
+  response?: { data?: { error?: string } };
+}
+
+interface WelcomeMessageResult {
+  customerName: string;
+  welcomeMessages?: {
+    emailSent?: boolean;
+    smsSent?: boolean;
+    whatsappSent?: boolean;
+    errors?: string[];
+  };
+}
+
+type NamedEntity = {
+  businessName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+};
 
 export default function Customers() {
   const { formatMoney } = useCurrency();
@@ -259,10 +315,10 @@ export default function Customers() {
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [isImportContactsDialogOpen, setIsImportContactsDialogOpen] = useState(false);
   const [isSearchAndAddDialogOpen, setIsSearchAndAddDialogOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [selectedContacts, setSelectedContacts] = useState<any[]>([]);
-  const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<DeviceContact[]>([]);
+  const [deviceContacts, setDeviceContacts] = useState<DeviceContact[]>([]);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
@@ -413,7 +469,7 @@ export default function Customers() {
     return {
       totalCustomers: customers.length,
       activeCustomers: customers.filter(c => c.totalOrders > 0).length,
-      totalUnpaid: customers.reduce((sum, c) => sum + ((c as any).totalUnpaid || 0), 0),
+      totalUnpaid: customers.reduce((sum, c) => sum + (c.totalUnpaid || 0), 0),
       totalRevenue: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0)
     };
   }, [customers]);
@@ -440,7 +496,7 @@ export default function Customers() {
       setIsCreateDialogOpen(false);
       createGroupForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message?.includes("403") && error.message?.toLowerCase().includes("group")) {
         setIsCreateDialogOpen(false);
         setShowUpgradeModal(true);
@@ -463,7 +519,7 @@ export default function Customers() {
       setIsEditGroupDialogOpen(false);
       editGroupForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update customer group",
@@ -482,7 +538,7 @@ export default function Customers() {
       setIsAddMemberDialogOpen(false);
       addMemberForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to add customer",
@@ -508,7 +564,7 @@ export default function Customers() {
       }
       setIsEditCustomerDialogOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update customer",
@@ -527,7 +583,7 @@ export default function Customers() {
       setIsAddToGroupDialogOpen(false);
       addToGroupForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to add customer to group",
@@ -538,23 +594,23 @@ export default function Customers() {
 
   // Customer merge mutation
   const mergeCustomersMutation = useMutation({
-    mutationFn: ({ primaryCustomerId, duplicateCustomerIds, mergedData }: { 
-      primaryCustomerId: string; 
-      duplicateCustomerIds: string[]; 
-      mergedData?: any 
+    mutationFn: ({ primaryCustomerId, duplicateCustomerIds, mergedData }: {
+      primaryCustomerId: string;
+      duplicateCustomerIds: string[];
+      mergedData?: Record<string, unknown>
     }) =>
       apiRequest('POST', '/api/customers/merge', { primaryCustomerId, duplicateCustomerIds, mergedData }),
-    onSuccess: (data) => {
+    onSuccess: (data: { message?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       toast({ 
         title: "Success", 
-        description: (data as any)?.message || "Successfully merged customer records" 
+        description: data?.message || "Successfully merged customer records" 
       });
       setIsMergeDialogOpen(false);
       setSelectedDuplicates([]);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to merge customers",
@@ -571,7 +627,7 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       toast({ title: "Success", description: "Customer removed from group successfully!" });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to remove customer from group",
@@ -582,7 +638,7 @@ export default function Customers() {
 
   const addCustomerMutation = useMutation({
     mutationFn: (data: AddCustomerFormData) => apiRequest('POST', '/api/customers', data),
-    onSuccess: async (response: any) => {
+    onSuccess: async (response: { welcomeMessages?: { emailSent?: boolean; smsSent?: boolean; whatsappSent?: boolean; errors?: string[] } }) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
       await refetchCustomers(); // Force immediate refresh
@@ -612,7 +668,7 @@ export default function Customers() {
       setIsAddCustomerDialogOpen(false);
       addCustomerForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to add customer",
@@ -623,7 +679,7 @@ export default function Customers() {
 
   const deleteCustomerMutation = useMutation({
     mutationFn: (customerId: string) => apiRequest('DELETE', `/api/customers/${customerId}`),
-    onSuccess: (data: any) => {
+    onSuccess: (data: { archived: boolean; message?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
       
@@ -637,7 +693,7 @@ export default function Customers() {
         toast({ title: "Success", description: "Customer deleted successfully!" });
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete customer",
@@ -648,7 +704,7 @@ export default function Customers() {
 
   const sendWelcomeMessageMutation = useMutation({
     mutationFn: (customerId: string) => apiRequest('POST', `/api/customers/${customerId}/send-welcome`),
-    onSuccess: (data: any) => {
+    onSuccess: (data: WelcomeMessageResult) => {
       const { customerName, welcomeMessages } = data;
       
       // Safely extract welcome message data with defaults
@@ -671,7 +727,7 @@ export default function Customers() {
         variant: emailSent || smsSent || whatsappSent ? "default" : "destructive",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to Send Welcome Message",
         description: error.message || "Could not send welcome message to customer",
@@ -683,7 +739,7 @@ export default function Customers() {
   // Access control mutations
   const removeCustomerAccessMutation = useMutation({
     mutationFn: (customerId: string) => apiRequest('DELETE', `/api/wholesaler/customer/${customerId}`),
-    onSuccess: (data: any) => {
+    onSuccess: (data: { message?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
       toast({ 
@@ -692,7 +748,7 @@ export default function Customers() {
         duration: 5000
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to remove customer access",
@@ -704,7 +760,7 @@ export default function Customers() {
   const allowCustomerAccessMutation = useMutation({
     mutationFn: (customerData: { email: string; phoneNumber?: string; firstName?: string; lastName?: string }) => 
       apiRequest('POST', '/api/wholesaler/invite', customerData),
-    onSuccess: (data: any) => {
+    onSuccess: (data: { message?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
       toast({ 
@@ -713,7 +769,7 @@ export default function Customers() {
         duration: 5000
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to grant customer access",
@@ -741,7 +797,7 @@ export default function Customers() {
       setIsEditMemberDialogOpen(false);
       editMemberForm.reset();
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       console.error('Update member error:', error);
       toast({ 
         title: "Error", 
@@ -758,7 +814,7 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       toast({ title: "Success", description: "Customer group deleted successfully!" });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete customer group",
@@ -802,7 +858,7 @@ export default function Customers() {
   });
 
   const createPriceListMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/price-lists', data),
+    mutationFn: (data: PriceListFormInput) => apiRequest('POST', '/api/price-lists', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
@@ -810,11 +866,11 @@ export default function Customers() {
       setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
       toast({ title: "Created", description: "Price list created successfully!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updatePriceListMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PATCH', `/api/price-lists/${id}`, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<PriceListFormInput> }) => apiRequest('PATCH', `/api/price-lists/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
@@ -822,7 +878,7 @@ export default function Customers() {
       setEditingPriceList(null);
       toast({ title: "Updated", description: "Price list updated!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deletePriceListMutation = useMutation({
@@ -834,7 +890,7 @@ export default function Customers() {
       setExpandedPriceLists(prev => { const next = { ...prev }; delete next[id]; return next; });
       toast({ title: "Deleted", description: "Price list deleted." });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const refreshPriceListDetail = async (id: number) => {
@@ -848,7 +904,7 @@ export default function Customers() {
   };
 
   const savePLItemsMutation = useMutation({
-    mutationFn: ({ id, items }: { id: number; items: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
+    mutationFn: ({ id, items }: { id: number; items: PriceListItemForm[] }) => apiRequest('PUT', `/api/price-lists/${id}/items`, items),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
@@ -858,11 +914,11 @@ export default function Customers() {
       }
       toast({ title: "Saved", description: "Products updated!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const savePLAssignmentsMutation = useMutation({
-    mutationFn: ({ id, assignments }: { id: number; assignments: any[] }) => apiRequest('PUT', `/api/price-lists/${id}/assignments`, assignments),
+    mutationFn: ({ id, assignments }: { id: number; assignments: PriceListAssignmentForm[] }) => apiRequest('PUT', `/api/price-lists/${id}/assignments`, assignments),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
@@ -872,7 +928,7 @@ export default function Customers() {
       }
       toast({ title: "Saved", description: "Assignments updated!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const [sharingListId, setSharingListId] = useState<number | null>(null);
@@ -918,12 +974,12 @@ export default function Customers() {
           url: portalUrl,
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       // AbortError  — user dismissed the share sheet: ignore silently
       // NotAllowedError — desktop Chrome blocks file sharing: fall back to download
-      if (err?.name === "AbortError") {
+      if ((err as { name?: string })?.name === "AbortError") {
         // nothing to do
-      } else if (err?.name === "NotAllowedError") {
+      } else if ((err as { name?: string })?.name === "NotAllowedError") {
         const a = document.createElement("a");
         a.href = `/api/price-lists/${listId}/export`;
         a.download = `${listName} - Price List.xlsx`;
@@ -931,7 +987,7 @@ export default function Customers() {
         a.click();
         document.body.removeChild(a);
       } else {
-        toast({ title: "Could not share", description: err?.message || "Something went wrong.", variant: "destructive" });
+        toast({ title: "Could not share", description: (err as { message?: string })?.message || "Something went wrong.", variant: "destructive" });
       }
     } finally {
       setSharingListId(null);
@@ -955,7 +1011,7 @@ export default function Customers() {
         ...item,
         customPrice: item.customPrice ?? "",
         discountPercentage: item.discountPercentage ?? "",
-        customPalletPrice: (item as any).customPalletPrice ?? "",
+        customPalletPrice: item.customPalletPrice ?? "",
       })));
       setPriceListAssignments(detail.assignments || []);
     } catch {
@@ -1037,7 +1093,7 @@ export default function Customers() {
     return '?';
   };
 
-  const getDisplayName = (c: any) =>
+  const getDisplayName = (c: NamedEntity | null | undefined) =>
     c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || c?.phoneNumber || 'Unknown';
 
   const sortedCustomers = useMemo(() => [...(searchResults || [])].sort((a, b) => {
@@ -1065,7 +1121,7 @@ export default function Customers() {
       email: customer.email || '',
       businessName: customer.businessName || '',
       streetAddress: customer.streetAddress || '',
-      addressLine2: (customer as any).addressLine2 || '',
+      addressLine2: customer.addressLine2 || '',
       city: customer.city || '',
       postalCode: customer.postalCode || '',
       country: customer.country || '',
@@ -1203,7 +1259,7 @@ export default function Customers() {
         
         // @ts-ignore - Contacts API is experimental
         const contacts = await navigator.contacts.select(props, opts);
-        setDeviceContacts(contacts.map((contact: any) => ({
+        setDeviceContacts(contacts.map((contact: { name?: string[]; tel?: string[] }) => ({
           id: Math.random().toString(36).substr(2, 9),
           name: contact.name?.[0] || 'Unknown',
           phoneNumber: contact.tel?.[0] || '',
@@ -1225,7 +1281,7 @@ export default function Customers() {
     }
   };
 
-  const handleSelectContact = (contact: any) => {
+  const handleSelectContact = (contact: DeviceContact) => {
     const isSelected = selectedContacts.find(c => c.id === contact.id);
     if (isSelected) {
       setSelectedContacts(selectedContacts.filter(c => c.id !== contact.id));
@@ -1273,7 +1329,7 @@ export default function Customers() {
   // Filter customers for search and add (exclude already added customers)
   const getAvailableCustomers = () => {
     if (!selectedGroup || !customers) return [];
-    const existingMemberIds = (groupMembers || []).map((member: any) => member?.id || member?.customerId).filter(Boolean);
+    const existingMemberIds = (groupMembers || []).map((member: GroupMember) => member?.id || member?.customerId).filter(Boolean);
     return (customers || []).filter(customer => {
       if (!customer) return false;
       const matchesSearch = customerSearchQuery.length === 0 || 
@@ -2067,7 +2123,7 @@ export default function Customers() {
             <div className="space-y-4">
               {(customers || []).filter(customer => customer?.totalOrders > 0).map((customer) => {
                 const customerOrdersList = Array.isArray(customerOrders) 
-                  ? customerOrders.filter((order: any) => order?.retailerId === customer?.id)
+                  ? customerOrders.filter((order: CustomerOrder) => order?.retailerId === customer?.id)
                   : [];
                 
                 return (
@@ -2118,7 +2174,7 @@ export default function Customers() {
                         <div className="p-6">
                           <h5 className="font-medium mb-4">Recent Orders</h5>
                           <div className="space-y-3">
-                            {customerOrdersList.slice(0, 5).map((order: any) => (
+                            {customerOrdersList.slice(0, 5).map((order: CustomerOrder) => (
                               <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center space-x-3">
                                   <Badge variant={order.status === 'fulfilled' ? 'default' : 'secondary'}>
@@ -3235,7 +3291,7 @@ export default function Customers() {
           <div className="space-y-4">
             {groupMembers.length > 0 ? (
               <div className="space-y-3">
-                {groupMembers.map((member: any, index: number) => (
+                {groupMembers.map((member: GroupMember, index: number) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">

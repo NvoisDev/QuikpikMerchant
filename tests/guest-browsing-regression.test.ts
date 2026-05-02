@@ -108,7 +108,7 @@ describe('guest browsing regression coverage', () => {
     );
     const authSuccessBlock = sourceBetween(
       customerPortalSource,
-      'const handleAuthSuccess = (customer: any) => {',
+      'const handleAuthSuccess = (customer: AuthenticatedCustomer) => {',
       '// Handle guest browse - skip authentication',
     );
     const sessionSuccessBlock = sourceBetween(

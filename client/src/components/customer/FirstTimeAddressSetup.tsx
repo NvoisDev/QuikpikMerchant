@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Home, Building, Truck, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { CollectionAddress } from "@/components/customer/portal-types";
 
 interface FirstTimeAddressSetupProps {
   wholesalerId: string;
@@ -65,7 +66,7 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   });
 
   // Check if user already has addresses
-  const { data: existingAddresses = [], isLoading: addressesLoading } = useQuery<any[]>({
+  const { data: existingAddresses = [], isLoading: addressesLoading } = useQuery<CollectionAddress[]>({
     queryKey: ['/api/customer/delivery-addresses'],
     enabled: isOpen,
   });
@@ -101,7 +102,7 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
         setStep('intro'); // Reset for next time
       }, 1000);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error Adding Address",
         description: error.message || "Failed to add delivery address. Please try again.",

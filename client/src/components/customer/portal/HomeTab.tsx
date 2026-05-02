@@ -7,7 +7,7 @@ import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { RecentOrdersSection } from "@/components/customer/RecentOrdersSection";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
-import type { CartItem, ExtendedProduct, Product } from "@/components/customer/portal-types";
+import type { CartItem, ExtendedProduct, Product, WholesalerPortal, AuthenticatedCustomer, CustomerOrderStats, PromotionalPricing } from "@/components/customer/portal-types";
 import { formatCurrency } from "@shared/utils/currency";
 
 interface HomeTabProps {
@@ -20,13 +20,13 @@ interface HomeTabProps {
   isPreviewMode: boolean;
   isTrueGuestMode: boolean;
   cartStats: { totalValue: number };
-  wholesaler: any;
+  wholesaler: WholesalerPortal | null;
   wholesalerId: string | undefined;
-  customerOrderStats: any;
-  authenticatedCustomer: any;
+  customerOrderStats: CustomerOrderStats | null;
+  authenticatedCustomer: AuthenticatedCustomer | null;
   productsLoading: boolean;
   products: Product[];
-  calculatePromotionalPricing: (product: Product, quantity: number) => any;
+  calculatePromotionalPricing: (product: Product, quantity: number) => PromotionalPricing;
   addToCart: (product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets") => void;
   quantityInputValues: Record<number, string>;
   setQuantityInputValues: React.Dispatch<React.SetStateAction<Record<number, string>>>;
@@ -218,7 +218,7 @@ export function HomeTab({
               const cartItemUnitsHome = cart.find(item => item.product.id === product.id && item.sellingType === 'units');
               const cartItemPalletsHome = cart.find(item => item.product.id === product.id && item.sellingType === 'pallets');
               const cartItem = cartItemUnitsHome || cartItemPalletsHome;
-              const hasPalletPricingHome = !!(product as any).palletPrice && parseFloat((product as any).palletPrice?.toString() || '0') > 0;
+              const hasPalletPricingHome = !!product.palletPrice && parseFloat(product.palletPrice?.toString() || '0') > 0;
               const pricing = calculatePromotionalPricing(product, product.moq);
 
               return (
@@ -271,7 +271,7 @@ export function HomeTab({
                           {hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
-                              <span>Pallet: {formatCurrency((product as any).palletPrice || 0)} / pallet — Min {(product as any).palletMoq || 1}</span>
+                              <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>
                             </p>
                           )}
                         </div>
@@ -292,7 +292,7 @@ export function HomeTab({
                               <div className="w-2 h-2 rounded-full bg-blue-500" />
                               <span className="font-medium text-blue-700 text-xs">
                                 <Package2 className="w-3 h-3 inline mr-1" />
-                                {(product as any).palletStock || 0} pallets
+                                {product.palletStock || 0} pallets
                               </span>
                             </div>
                           )}
@@ -309,7 +309,7 @@ export function HomeTab({
                                 <div className="w-2 h-2 rounded-full bg-blue-500" />
                                 <span className="font-medium text-blue-700 text-xs">
                                   <Package2 className="w-3 h-3 inline mr-1" />
-                                  {(product as any).palletStock || 0} pallets
+                                  {product.palletStock || 0} pallets
                                 </span>
                               </div>
                             </>
