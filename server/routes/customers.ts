@@ -737,7 +737,7 @@ export function registerCustomerRoutes(app: Express): void {
           ...(addressLine2 ? { addressLine2 } : {}),
           ...(city ? { city } : {}),
           ...(postalCode ? { postalCode } : {}),
-          ...(country ? { country } : {}),
+          ...(country !== undefined ? { country: country || null } : {}),
         });
         
         // Create the wholesaler-customer relationship for multi-wholesaler platform

@@ -505,7 +505,7 @@ export class CustomerStorage extends OrderStorage {
         city: customer.city,
         state: customer.state,
         postalCode: customer.postalCode,
-        country: customer.country || "United Kingdom",
+        country: customer.country ?? null,
         wholesalerId: customer.wholesalerId,
         customerType: customer.customerType || null,
       })
@@ -694,7 +694,7 @@ export class CustomerStorage extends OrderStorage {
       .where(eq(users.id, customerId));
   }
 
-  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; archived?: boolean; archivedAt?: Date | null; businessName?: string | null }): Promise<User> {
+  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; archived?: boolean; archivedAt?: Date | null; businessName?: string | null; streetAddress?: string | null; addressLine2?: string | null; city?: string | null; postalCode?: string | null; country?: string | null }): Promise<User> {
     const updateData: any = {
       updatedAt: new Date()
     };
@@ -706,6 +706,11 @@ export class CustomerStorage extends OrderStorage {
     if (updates.archived !== undefined) updateData.archived = updates.archived;
     if (updates.archivedAt !== undefined) updateData.archivedAt = updates.archivedAt;
     if (updates.businessName !== undefined) updateData.businessName = updates.businessName || null;
+    if (updates.streetAddress !== undefined) updateData.streetAddress = updates.streetAddress || null;
+    if (updates.addressLine2 !== undefined) updateData.addressLine2 = updates.addressLine2 || null;
+    if (updates.city !== undefined) updateData.city = updates.city || null;
+    if (updates.postalCode !== undefined) updateData.postalCode = updates.postalCode || null;
+    if (updates.country !== undefined) updateData.country = updates.country || null;
     
     const [updatedUser] = await db
       .update(users)
