@@ -471,10 +471,10 @@ export function registerPaymentRoutes(app: Express): void {
           let periodStart: Date = new Date();
           if (session.subscription) {
             try {
-              // Load user to determine which Stripe environment their subscription lives in
-              const [subUser] = await db.select({ isTestAccount: users.isTestAccount })
-                .from(users).where(eq(users.id, userId));
-              const stripe = getStripeClient(Boolean(subUser?.isTestAccount));
+              // Use event.livemode (ground truth from Stripe) to pick the correct client.
+              // This is more reliable than a DB lookup since the event already knows which
+              // environment it came from.
+              const stripe = getStripeClient(!event.livemode);
               const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
               if (subscription.current_period_end) {
                 subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
@@ -1865,10 +1865,10 @@ export function registerPaymentRoutes(app: Express): void {
 
       // Get wholesaler details
       const wholesaler = await storage.getUser(wholesalerId);
-      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
       if (!wholesaler) {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
+      const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // Validate businessProfileId ownership (prevent cross-tenant assignment)
       const resolvedBusinessProfileId: number | null = businessProfileId ? (typeof businessProfileId === 'number' ? businessProfileId : parseInt(businessProfileId)) : null;

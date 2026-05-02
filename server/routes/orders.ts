@@ -3165,7 +3165,10 @@ export function registerOrderRoutes(app: Express): void {
       // Get customer details
       const customer = await storage.getUser(order.retailerId);
       const wholesaler = await storage.getUser(wholesalerId);
-      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
+      if (!wholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // Calculate the correct payment amount
       // For unpaid quotes with a deposit percentage, charge only the deposit amount

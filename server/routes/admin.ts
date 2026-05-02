@@ -1209,7 +1209,10 @@ export function registerAdminRoutes(app: Express): void {
       // Derive Stripe client from the order's wholesaler so test accounts use the test environment
       const [refundWholesaler] = await db.select({ isTestAccount: users.isTestAccount })
         .from(users).where(eq(users.id, order.wholesalerId)).limit(1);
-      const stripe = getStripeClient(Boolean(refundWholesaler?.isTestAccount));
+      if (!refundWholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found for this order' });
+      }
+      const stripe = getStripeClient(Boolean(refundWholesaler.isTestAccount));
 
       const { amountPounds, reason = 'requested_by_customer' } = req.body;
       const refundAmount = amountPounds ? parseFloat(amountPounds) : parseFloat(order.subtotal || '0');

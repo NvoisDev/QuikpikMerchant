@@ -1427,7 +1427,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             // Re-derive the Stripe client from the wholesaler in the PI metadata
             const piWholesalerId = paymentIntent.metadata?.wholesalerId as string | undefined;
             const piWholesalerObj = piWholesalerId ? await storage.getUser(piWholesalerId) : null;
-            const stripe = getStripeClient(Boolean(piWholesalerObj?.isTestAccount));
+            if (!piWholesalerObj) throw new Error('Wholesaler not found for PI metadata — skipping transfer capture');
+            const stripe = getStripeClient(Boolean(piWholesalerObj.isTestAccount));
             const expandedPi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
               expand: ['latest_charge'],
             });
@@ -2762,8 +2763,11 @@ Please contact the customer to confirm this order.
 
       // Generate a new payment link — derive Stripe client from wholesaler's test mode flag
       const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
       const customer = await storage.getUser(order.retailerId);
-      const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
+      const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // Validate wholesaler's Stripe Connect account for automatic transfer
       let customerBalanceUseConnect = false;
@@ -2996,7 +3000,10 @@ Please contact the customer to confirm this order.
 
       // Derive Stripe client from the order's wholesaler test mode flag
       const reorderWholesalerObj = await storage.getUser(order.wholesalerId);
-      const stripe = getStripeClient(Boolean(reorderWholesalerObj?.isTestAccount));
+      if (!reorderWholesalerObj) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const stripe = getStripeClient(Boolean(reorderWholesalerObj.isTestAccount));
 
       // Fetch current product prices
       const reorderProductIds = originalItems.map(i => i.productId);
