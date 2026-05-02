@@ -295,10 +295,6 @@ export default function CustomerDetail() {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactFormData.firstName?.trim() && !contactFormData.lastName?.trim() && !contactFormData.businessName?.trim()) {
-      toast({ title: "Name required", description: "Please provide at least a first name, last name, or business name.", variant: "destructive" });
-      return;
-    }
     updateCustomerMutation.mutate(contactFormData);
   };
 
@@ -493,11 +489,12 @@ export default function CustomerDetail() {
     const nameInitials = `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase();
     if (nameInitials) return nameInitials;
     if ((customer as any).businessName) return (customer as any).businessName.slice(0, 2).toUpperCase();
-    return "C";
+    if (customer.phoneNumber) return customer.phoneNumber.replace(/\D/g, '').slice(-2);
+    return "?";
   };
 
   const fullName = customer ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim() : "Loading...";
-  const displayName = (customer as any)?.businessName || fullName || "Unknown";
+  const displayName = (customer as any)?.businessName || fullName || customer?.phoneNumber || "Unknown";
 
   if (!match) return null;
 

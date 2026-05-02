@@ -873,7 +873,7 @@ export default function QuickQuote() {
                   <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                   {selectedCustomer ? (
                     <span className="flex flex-col items-start min-w-0">
-                      <span className="truncate">{(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || 'Unknown'}</span>
+                      <span className="truncate">{(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || selectedCustomer.phoneNumber || 'Unknown'}</span>
                       <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
                     </span>
                   ) : (
@@ -923,7 +923,7 @@ export default function QuickQuote() {
                             className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
                           />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-medium truncate">{(customer as any).businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown'}</span>
+                            <span className="font-medium truncate">{(customer as any).businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.phoneNumber || 'Unknown'}</span>
                             <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
                           </div>
                         </button>
@@ -935,7 +935,7 @@ export default function QuickQuote() {
 
               {selectedCustomer && (() => {
                 const hasName = !!(selectedCustomer.businessName?.trim() || selectedCustomer.firstName?.trim() || selectedCustomer.lastName?.trim());
-                const displayName = selectedCustomer.businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim();
+                const displayName = selectedCustomer.businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || selectedCustomer.phoneNumber || '';
                 const editNamePopover = (
                   <Popover open={editNameOpen} onOpenChange={(open) => {
                     setEditNameOpen(open);

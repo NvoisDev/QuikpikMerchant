@@ -1020,14 +1020,15 @@ export default function Customers() {
     });
   };
 
-  const getInitials = (firstName: string, lastName?: string, businessName?: string) => {
+  const getInitials = (firstName: string, lastName?: string, businessName?: string, phoneNumber?: string) => {
     if (firstName) return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
     if (businessName) return businessName.slice(0, 2).toUpperCase();
-    return 'U';
+    if (phoneNumber) return phoneNumber.replace(/\D/g, '').slice(-2);
+    return '?';
   };
 
   const getDisplayName = (c: any) =>
-    c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || 'Unknown';
+    c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || c?.phoneNumber || 'Unknown';
 
   const sortedCustomers = useMemo(() => [...(searchResults || [])].sort((a, b) => {
     const nameA = a.businessName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '';
@@ -1828,7 +1829,7 @@ export default function Customers() {
                 <div key={customer?.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
                   <Avatar className="h-9 w-9 flex-shrink-0">
                     <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                      {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
+                      {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
                     </AvatarFallback>
                   </Avatar>
                   
@@ -1847,9 +1848,13 @@ export default function Customers() {
                         </div>
                       )}
                       {!customer?.businessName?.trim() && !customer?.firstName?.trim() && !customer?.lastName?.trim() && (
-                        <Badge className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-700 border border-amber-300 shrink-0">
+                        <Badge
+                          className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-700 border border-amber-300 shrink-0 cursor-pointer hover:bg-amber-200 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}
+                          title="Click to add a name"
+                        >
                           <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                          Incomplete profile
+                          Add name
                         </Badge>
                       )}
                       {customer?.id && priceListCustomerSummary[customer.id] && (
@@ -1925,7 +1930,7 @@ export default function Customers() {
                           <DropdownMenuItem 
                             className="text-orange-600"
                             onClick={() => {
-                              if (confirm(`Remove portal access for ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
+                              if (confirm(`Remove portal access for ${getDisplayName(customer)}? They will no longer be able to access your customer portal, but their order history will be preserved.`)) {
                                 removeCustomerAccessMutation.mutate(customer?.id);
                               }
                             }}
@@ -1939,7 +1944,7 @@ export default function Customers() {
                           <DropdownMenuItem 
                             className="text-red-600"
                             onClick={() => {
-                              if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
+                              if (confirm(`Are you sure you want to delete ${getDisplayName(customer)}? This action cannot be undone.`)) {
                                 deleteCustomerMutation.mutate(customer?.id);
                               }
                             }}
@@ -1986,7 +1991,7 @@ export default function Customers() {
                           <div className="flex items-center space-x-4">
                             <Avatar className="h-12 w-12">
                               <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                                {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
+                                {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
@@ -3076,12 +3081,12 @@ export default function Customers() {
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
-                          {(member.firstName || member.name)?.charAt(0) || '?'}
+                          {(member.firstName || member.name || (member.phoneNumber || member.phone_number || '').replace(/\D/g, '').slice(-2) || '?').charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-xs">
-                          {`${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || 'Unknown'}
+                          {`${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || member.phoneNumber || member.phone_number || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">{member.phoneNumber || member.phone_number}</p>
                       </div>
@@ -3193,7 +3198,7 @@ export default function Customers() {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedCustomer ? `${`${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim()} - Order History` : 'Order History'}
+              {selectedCustomer ? `${getDisplayName(selectedCustomer)} — Order History` : 'Order History'}
             </DialogTitle>
             <DialogDescription>
               Complete order history for this customer
@@ -3444,7 +3449,7 @@ export default function Customers() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-600">
-                        {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
+                        {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
                       </div>
                       <div>
                         <p className="font-medium text-sm">{getDisplayName(customer)}</p>
@@ -3572,7 +3577,7 @@ export default function Customers() {
                               />
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                                  {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName)}
+                                  {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
