@@ -66,7 +66,6 @@ export function registerCampaignRoutes(app: Express): void {
         whatsappBusinessName: businessName || null
       });
       
-      console.log(`✅ WhatsApp Business API configured for user: ${userId}`);
       res.json({ 
         success: true, 
         message: 'WhatsApp Business API configured successfully!' 
@@ -103,7 +102,6 @@ export function registerCampaignRoutes(app: Express): void {
       const broadcast = await storage.createBroadcast(validatedData);
 
       // Send the broadcast via WhatsApp (simplified)
-      console.log(`📤 WhatsApp broadcast requested for product ${productId} to group ${customerGroupId}`);
       const result = { success: true, recipientCount: 0, messageId: `sim_${Date.now()}` };
 
       // Update broadcast status based on result
@@ -179,14 +177,11 @@ export function registerCampaignRoutes(app: Express): void {
   // POST /api/ai/personalized-message
   app.post('/api/ai/personalized-message', requireAuth, async (req: any, res) => {
     try {
-      console.log("AI personalized message request received");
-      console.log("Request body:", req.body);
       
       const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
-        console.log("User not found for ID:", userId);
         return res.status(404).json({ message: "User not found" });
       }
 
@@ -196,9 +191,7 @@ export function registerCampaignRoutes(app: Express): void {
         ...req.body
       };
 
-      console.log("AI context:", context);
       const personalizedMessage = await generatePersonalizedTagline(context);
-      console.log("Generated message:", personalizedMessage);
       res.json(personalizedMessage);
     } catch (error) {
       console.error("AI personalization error:", error);
@@ -307,7 +300,6 @@ export function registerCampaignRoutes(app: Express): void {
       // User's WhatsApp is only "configured" if they've explicitly activated it
       const isConfigured = userActivated && (platformCapable || directWhatsappConfigured);
       
-      console.log('📞 WhatsApp Status Check:', {
         platformCapable,
         userActivated,
         directWhatsappConfigured,
@@ -562,7 +554,6 @@ export function registerCampaignRoutes(app: Express): void {
 
       // Send WhatsApp messages to all group members
       try {
-        console.log('📤 WhatsApp template message requested for template:', template.id);
       } catch (whatsappError) {
         console.error("WhatsApp sending failed:", whatsappError);
         // Campaign is created but delivery failed - update status
@@ -1069,7 +1060,6 @@ export function registerCampaignRoutes(app: Express): void {
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
-      console.log('Campaign update request body:', { 
         campaignType, 
         productId, 
         products: products ? products.length : 0, 
@@ -1082,7 +1072,6 @@ export function registerCampaignRoutes(app: Express): void {
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
       
-      console.log('Campaign ID parsing:', { campaignId, type, numericId, id });
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid campaign ID format" });
@@ -1115,7 +1104,6 @@ export function registerCampaignRoutes(app: Express): void {
             ...cleanCampaignData,
           };
           
-          console.log('Calling updateMessageTemplate with:', { id, updateData });
           const updatedTemplate = await storage.updateMessageTemplate(id, updateData);
           if (!updatedTemplate) {
             return res.status(404).json({ message: "Campaign not found" });
@@ -1123,14 +1111,12 @@ export function registerCampaignRoutes(app: Express): void {
 
           // Update template products if provided
           if (products && products.length > 0) {
-            console.log('Products array for template update:', JSON.stringify(products, null, 2));
             
             // First delete existing template products
             await storage.deleteTemplateProducts(id);
             
             // Then add new ones
             for (const product of products) {
-              console.log('Creating template product:', {
                 templateId: id,
                 productId: product.productId,
                 quantity: product.quantity,
@@ -1209,7 +1195,6 @@ export function registerCampaignRoutes(app: Express): void {
       // Use parent company data for team members
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignId, customerGroupId, customMessage } = req.body;
-      console.log(`Campaign send request: userId=${targetUserId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
 
       // Check broadcast limits based on subscription tier
       const userAccount = await storage.getUser(targetUserId);
@@ -1242,7 +1227,6 @@ export function registerCampaignRoutes(app: Express): void {
 
       const [type, id] = campaignId.split('_');
       const numericId = parseInt(id);
-      console.log(`Campaign type: ${type}, numericId: ${numericId}`);
 
       if (type === 'broadcast') {
         // Get the broadcast to find the product ID
@@ -1255,7 +1239,6 @@ export function registerCampaignRoutes(app: Express): void {
 
         // Send single product broadcast with custom message if provided
         const messageToSend = customMessage || broadcast.message;
-        console.log(`Broadcasting: userId=${targetUserId}, productId=${broadcast.product.id}, groupId=${customerGroupId}`);
         
         // Parse promotional offers from broadcast data
         let promotionalOffers = [];
@@ -1268,7 +1251,6 @@ export function registerCampaignRoutes(app: Express): void {
           promotionalOffers = [];
         }
         
-        console.log(`📤 WhatsApp broadcast requested for product ${broadcast.product.id} to group ${customerGroupId}`);
         const result = { success: true, recipientCount: 0, messageId: `sim_${Date.now()}` };
 
         if (result.success) {
@@ -1288,7 +1270,6 @@ export function registerCampaignRoutes(app: Express): void {
           message: result.success ? `Broadcast sent to ${result.recipientCount || 0} customers` : result.error
         });
       } else if (type === 'template') {
-        console.log(`🔍 Processing template campaign ${numericId}...`);
         // Send multi-product template
         const template = await storage.getMessageTemplate(numericId);
         if (!template) {
@@ -1314,50 +1295,36 @@ export function registerCampaignRoutes(app: Express): void {
           totalRevenue: '0'
         });
 
-        console.log(`📤 Sending template message to ${members.length} members...`);
-        console.log('📤 WhatsApp template campaign requested for template:', template.id);
         const result = { success: true, recipientCount: 0, messageId: `sim_${Date.now()}` };
-        console.log(`📤 WhatsApp result:`, { success: result.success, error: result.error });
-        console.log(`📤 Template products count:`, template.products?.length || 0);
         
         // Apply promotional offers from template products to actual products
         if (result.success && template.products) {
-          console.log(`🎯 Starting promotional offers application for ${template.products.length} products...`);
           for (const templateProduct of template.products) {
             try {
               // Parse promotional offers from template product
               let promotionalOffers = [];
-              console.log(`📋 Raw promotional offers data for product ${templateProduct.productId}:`, templateProduct.promotionalOffers);
               
               if (templateProduct.promotionalOffers) {
                 try {
                   let dataToparse = templateProduct.promotionalOffers;
-                  console.log(`📋 Initial data type: ${typeof dataToparse}, value:`, dataToparse);
                   
                   if (typeof dataToparse === 'string') {
                     // Handle triple-escaped JSON strings like """[{...}]"""
                     if (dataToparse.startsWith('"""') && dataToparse.endsWith('"""')) {
-                      console.log('📋 Detected triple-escaped JSON, fixing...');
                       dataToparse = dataToparse.slice(3, -3).replace(/\\"/g, '"');
-                      console.log('📋 After triple-escape fix:', dataToparse);
                     }
                     // Handle double-escaped JSON strings
                     else if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
-                      console.log('📋 Detected double-escaped JSON, fixing...');
                       dataToparse = dataToparse.slice(2, -2).replace(/\\"/g, '"');
-                      console.log('📋 After double-escape fix:', dataToparse);
                     }
                     
                     promotionalOffers = JSON.parse(dataToparse);
-                    console.log(`📋 Successfully parsed promotional offers:`, promotionalOffers);
                     
                     if (!Array.isArray(promotionalOffers)) {
-                      console.log('📋 Warning: Parsed data is not an array, converting to empty array');
                       promotionalOffers = [];
                     }
                   } else if (Array.isArray(dataToparse)) {
                     promotionalOffers = dataToparse;
-                    console.log('📋 Data is already an array:', promotionalOffers);
                   }
                 } catch (e) {
                   console.error('❌ Error parsing promotional offers for template product:', templateProduct.productId, e);
@@ -1365,7 +1332,6 @@ export function registerCampaignRoutes(app: Express): void {
                   promotionalOffers = [];
                 }
               } else {
-                console.log(`📋 No promotional offers data for product ${templateProduct.productId}`);
               }
               
             } catch (error) {

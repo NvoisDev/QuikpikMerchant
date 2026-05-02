@@ -30,7 +30,6 @@ export function registerAddressRoutes(app: Express): void {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      console.log(`🎯 Retrieved exact delivery address ${addressId} for order display: ${address.addressLine1}, ${address.city}`);
       res.json(address);
     } catch (error) {
       console.error("❌ Error fetching delivery address:", error);
@@ -58,7 +57,6 @@ export function registerAddressRoutes(app: Express): void {
         return res.status(403).json({ error: "Access denied - address not associated with your customers" });
       }
       
-      console.log(`🎯 Wholesaler ${wholesalerId} retrieved delivery address ${addressId}: ${address.addressLine1}, ${address.city}`);
       res.json(address);
     } catch (error) {
       console.error("❌ Error fetching delivery address for wholesaler:", error);
@@ -82,7 +80,6 @@ export function registerAddressRoutes(app: Express): void {
       }
       
       const addresses = await storage.getDeliveryAddresses(customerId);
-      console.log(`📍 Wholesaler ${wholesalerId} retrieved ${addresses.length} delivery addresses for customer ${customerId}`);
       
       res.json(addresses);
     } catch (error) {
@@ -139,7 +136,6 @@ export function registerAddressRoutes(app: Express): void {
         isDefault: isDefault || false,
       });
 
-      console.log(`📍 Wholesaler ${wholesalerId} added address for customer ${customerId}: ${addressLine1}, ${city}`);
       res.json(address);
     } catch (error) {
       console.error("❌ Error creating customer address:", error);
@@ -168,7 +164,6 @@ export function registerAddressRoutes(app: Express): void {
         addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault,
       });
 
-      console.log(`📍 Wholesaler ${wholesalerId} updated address ${addressId} for customer ${customerId}`);
       res.json(updated);
     } catch (error) {
       console.error("❌ Error updating customer address:", error);
@@ -193,7 +188,6 @@ export function registerAddressRoutes(app: Express): void {
       }
 
       await storage.deleteDeliveryAddress(parseInt(addressId));
-      console.log(`📍 Wholesaler ${wholesalerId} deleted address ${addressId} for customer ${customerId}`);
       res.json({ success: true });
     } catch (error) {
       console.error("❌ Error deleting customer address:", error);
@@ -216,7 +210,6 @@ export function registerAddressRoutes(app: Express): void {
       }
       
       const addresses = await storage.getDeliveryAddresses(customerAuth.customerId);
-      console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerAuth.customerId}`);
       res.json(addresses);
     } catch (error) {
       console.error("❌ Error fetching delivery addresses:", error);
@@ -246,7 +239,6 @@ export function registerAddressRoutes(app: Express): void {
       }
       
       const addresses = await storage.getDeliveryAddresses(customerAuth.customerId);
-      console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerAuth.customerId}`);
       
       res.json(addresses);
     } catch (error) {
@@ -292,7 +284,6 @@ export function registerAddressRoutes(app: Express): void {
         isDefault: isDefault || false
       });
       
-      console.log(`📍 Created new delivery address ${newAddress.id} for customer ${customerAuth.customerId}`);
       
       res.status(201).json(newAddress);
     } catch (error) {
@@ -339,7 +330,6 @@ export function registerAddressRoutes(app: Express): void {
       
       const updatedAddress = await storage.updateDeliveryAddress(parseInt(addressId), updates);
       
-      console.log(`📍 Updated delivery address ${addressId} for customer ${customerAuth.customerId}`);
       
       res.json(updatedAddress);
     } catch (error) {
@@ -371,7 +361,6 @@ export function registerAddressRoutes(app: Express): void {
       
       await storage.deleteDeliveryAddress(parseInt(addressId));
       
-      console.log(`📍 Deleted delivery address ${addressId} for customer ${customerAuth.customerId}`);
       
       res.json({ success: true, message: "Delivery address deleted successfully" });
     } catch (error) {
@@ -403,7 +392,6 @@ export function registerAddressRoutes(app: Express): void {
       
       await storage.setDefaultDeliveryAddress(customerAuth.customerId, parseInt(addressId));
       
-      console.log(`📍 Set address ${addressId} as default for customer ${customerAuth.customerId}`);
       
       res.json({ success: true, message: "Default address updated successfully" });
     } catch (error) {
