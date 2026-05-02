@@ -1,4 +1,43 @@
 import type { Express } from "express";
+import crypto from "crypto";
+
+/**
+ * Derive a stable, time-bucketed idempotency fingerprint for an order creation request.
+ *
+ * Including `timeBucket` (floor of Unix seconds / 60) means the key changes every
+ * 60 seconds, so a customer who legitimately re-orders the same items later will
+ * always get a fresh order.  Only requests that arrive within the same 60-second
+ * bucket — e.g. network retries, double-taps — will resolve to the same key.
+ */
+function computeOrderFingerprint(
+  userId: string,
+  wholesalerId: string,
+  items: Array<{ productId: number; quantity: number; sellingType?: string }>,
+  deliveryAddress?: string | null,
+  notes?: string | null,
+  collectionAddressId?: number | null,
+  timeBucket?: number
+): string {
+  const bucket = timeBucket ?? Math.floor(Date.now() / 60_000);
+  const sortedItems = [...items]
+    .sort((a, b) =>
+      a.productId - b.productId ||
+      a.quantity - b.quantity ||
+      (a.sellingType ?? 'units').localeCompare(b.sellingType ?? 'units'))
+    .map(i => `${i.productId}:${i.quantity}:${i.sellingType ?? 'units'}`)
+    .join('|');
+  const raw = [
+    userId,
+    wholesalerId,
+    sortedItems,
+    deliveryAddress ?? '',
+    notes ?? '',
+    collectionAddressId ?? '',
+    bucket,
+  ].join('\x00');
+  return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 64);
+}
+
 import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
@@ -1155,6 +1194,21 @@ export function registerOrderRoutes(app: Express): void {
       // Get wholesaler from first product (needed for per-wholesaler fee rate and VAT)
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
+
+      // Compute a stable idempotency key covering all order-shaping fields so that
+      // concurrent/retry requests for the exact same order collapse to a single DB row.
+      const orderFingerprint = computeOrderFingerprint(
+        userId, wholesalerId, items, deliveryAddress, notes, collectionAddressId
+      );
+
+      // Pre-flight DB check: if this fingerprint already exists return early, skipping
+      // side effects (email, stock movements) which were already fired for the original request.
+      const existingOrder = await storage.getOrderByIdempotencyKey(orderFingerprint);
+      if (existingOrder) {
+        console.warn(`⚠️  Duplicate order request (key ${orderFingerprint.slice(0, 12)}…) — returning existing order ${existingOrder.id} without side effects`);
+        return res.json(existingOrder);
+      }
+
       const feeRate = await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate; // per-wholesaler platform fee (wholesaler cost)
 
@@ -1198,18 +1252,21 @@ export function registerOrderRoutes(app: Express): void {
         notes,
         status: 'confirmed', // Auto-confirm orders immediately
         ...(validatedCollectionAddressId ? { collectionAddressId: validatedCollectionAddressId } : {}),
+        idempotencyKey: orderFingerprint,
       });
 
       // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
       const order = await db.transaction(async (trx) => {
         return await storage.createOrderWithTransaction(trx, orderData, orderItems);
       });
-      
+
       // Get wholesaler and customer details for confirmation email
+      // Skip email if this order was deduped in the storage layer (concurrent race path)
+      const isDeduped = order._wasDuplicate === true;
       const wholesaler = await storage.getUser(wholesalerId);
       const customer = await storage.getUser(userId);
       
-      if (wholesaler && customer) {
+      if (!isDeduped && wholesaler && customer) {
         try {
           // Send confirmation email to customer
           await sendCustomerInvoiceEmail(customer, order, await Promise.all(orderItems.map(async item => {

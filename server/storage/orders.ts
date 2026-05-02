@@ -768,19 +768,49 @@ export class OrderStorage extends ProductStorage {
     return result[0];
   }
 
-  async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+  async getOrderByIdempotencyKey(key: string): Promise<Order | undefined> {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.idempotencyKey, key))
+      .limit(1);
+    return order;
+  }
+
+  async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order & { _wasDuplicate?: boolean }> {
     console.log(`🔄 TRANSACTION ORDER: Creating order with ${items.length} items`);
     console.log(`📦 ITEMS: ${items.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`).join(', ')}`);
     
-    // Create order within transaction
-    const [newOrder] = await trx
+    // Create order within transaction — ON CONFLICT on idempotency_key handles duplicate
+    // requests atomically; scoping to the specific column avoids masking other unique violations.
+    const inserted = await trx
       .insert(orders)
       .values({
         ...orderData,
         createdAt: new Date(),
         updatedAt: new Date()
       })
+      .onConflictDoNothing({ target: orders.idempotencyKey })
       .returning();
+
+    if (inserted.length === 0 && orderData.idempotencyKey) {
+      // Duplicate detected at the DB level — return the pre-existing order
+      const [existing] = await trx
+        .select()
+        .from(orders)
+        .where(eq(orders.idempotencyKey, orderData.idempotencyKey));
+      if (existing) {
+        console.warn(`⚠️  Duplicate order request suppressed (idempotency_key ${orderData.idempotencyKey.slice(0, 12)}…) — returning existing order ${existing.id}`);
+        // Mark as duplicate so callers can skip side effects (e.g. confirmation email)
+        const deduped: Order & { _wasDuplicate: boolean } = { ...existing, _wasDuplicate: true };
+        return deduped;
+      }
+    }
+
+    const newOrder = inserted[0];
+    if (!newOrder) {
+      throw new Error('Order insert returned no rows and no existing order found for idempotency key');
+    }
       
     console.log(`✅ ORDER CREATED: ID ${newOrder.id}`);
 

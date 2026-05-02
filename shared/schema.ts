@@ -699,6 +699,12 @@ export const orders = pgTable("orders", {
   // Collection address override — which pickup location was used for this order
   collectionAddressId: integer("collection_address_id").references(() => collectionAddresses.id, { onDelete: "set null" }),
 
+  // Task #908: Short-lived idempotency key — prevents duplicate orders from retries / double-taps.
+  // Derived from a SHA-256 hash of (retailerId, wholesalerId, items, deliveryAddress, notes, collectionAddressId, 60s bucket).
+  // A full unique index is used (NULL values never conflict in Postgres, making it equivalent
+  // to a partial index but compatible with Drizzle's onConflictDoNothing target syntax).
+  idempotencyKey: varchar("idempotency_key", { length: 64 }),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

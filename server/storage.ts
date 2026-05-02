@@ -130,8 +130,10 @@ export interface IStorage {
   getStripeOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   getOrderByTransferId(transferId: string): Promise<Order | undefined>;
   getOrderByNetAmountForWholesaler(wholesalerId: string, netAmountPounds: number, aroundTimestampSeconds: number): Promise<Order | undefined>;
+  getOrderByIdempotencyKey(key: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
-  createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
+  /** Order extended with optional deduplication metadata — backward-compatible; callers that only use Order fields need no changes. */
+  createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order & { _wasDuplicate?: boolean }>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   updateOrder(id: number, updates: Partial<Order>): Promise<Order>;

@@ -1148,7 +1148,13 @@ export function registerPaymentRoutes(app: Express): void {
         paymentIntentData.receipt_email = retailer.email;
       }
 
-      const paymentIntent = await stripeClient.paymentIntents.create(paymentIntentData);
+      // Derive a stable idempotency key from the order so retries return the same intent
+      const idempotencyKey = `pi_${order.wholesalerId}_${userId}_${order.id}_${totalAmount}`;
+
+      const paymentIntent = await stripeClient.paymentIntents.create(
+        paymentIntentData,
+        { idempotencyKey }
+      );
 
       if (retailer?.email) {
       }

@@ -270,6 +270,14 @@ async function runStartupMigrations() {
        AND o.customer_name LIKE '% null'`,
     // Customer address field for invoice PDF display
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS address_line2 VARCHAR`,
+    // Task #908: Idempotency key for order creation — prevents duplicate orders from retries/double-taps.
+    // Full unique index (not partial) so ON CONFLICT can infer the constraint. NULL values never
+    // conflict in Postgres, so this is functionally equivalent to a partial index but compatible
+    // with Drizzle's onConflictDoNothing({ target }) syntax.
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(64)`,
+    // One-time migration: drop the old partial index if it exists (idempotent — no-op once converted)
+    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'orders_idempotency_key_idx' AND indexdef LIKE '%WHERE%') THEN DROP INDEX orders_idempotency_key_idx; END IF; END $$`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS orders_idempotency_key_idx ON orders (idempotency_key)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
