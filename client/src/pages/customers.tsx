@@ -168,14 +168,18 @@ const addToGroupFormSchema = z.object({
 });
 
 const addCustomerFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
+  firstName: z.string().optional().or(z.literal("")),
   lastName: z.string().optional(),
+  businessName: z.string().optional(),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
-  groupId: z.number().optional(), // Optional group assignment
-});
+  groupId: z.number().optional(),
+}).refine(
+  (data) => !!(data.firstName?.trim() || data.businessName?.trim()),
+  { message: "Please provide a first name or business name", path: ["firstName"] }
+);
 
 const searchAndAddFormSchema = z.object({
   customerId: z.string().min(1, "Please select a customer"),
@@ -339,7 +343,7 @@ export default function Customers() {
 
   const addCustomerForm = useForm<AddCustomerFormData>({
     resolver: zodResolver(addCustomerFormSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", phoneNumber: "", groupId: undefined },
+    defaultValues: { firstName: "", lastName: "", businessName: "", email: "", phoneNumber: "", groupId: undefined },
   });
 
   const searchAndAddForm = useForm<SearchAndAddFormData>({
@@ -1340,6 +1344,19 @@ export default function Customers() {
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
                           <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Acme Ltd (optional if first name given)" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

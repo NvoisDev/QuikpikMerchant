@@ -674,11 +674,11 @@ export function registerCustomerRoutes(app: Express): void {
       console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       
-      const { firstName, lastName, email, phoneNumber, groupId } = req.body;
-      console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId });
+      const { firstName, lastName, email, phoneNumber, groupId, businessName } = req.body;
+      console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId, businessName });
       
-      if (!firstName || !phoneNumber) {
-        return res.status(400).json({ error: 'First name and phone number are required' });
+      if ((!firstName?.trim() && !businessName?.trim()) || !phoneNumber) {
+        return res.status(400).json({ error: 'A name (or business name) and phone number are required' });
       }
       
       // Format phone number
@@ -720,7 +720,7 @@ export function registerCustomerRoutes(app: Express): void {
           ))
           .limit(1);
           
-        // Per-wholesaler display name so each wholesaler sees the name they entered
+        // Per-wholesaler display name — personal name takes priority; fall back to businessName
         const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
 
         if (existingRelationship.length === 0) {
