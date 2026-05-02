@@ -30,8 +30,6 @@ export function registerPaymentRoutes(app: Express): void {
       
       if (userId) {
         authenticatedUser = await storage.getUser(userId);
-        if (authenticatedUser) {
-        }
       }
     }
 
@@ -40,8 +38,6 @@ export function registerPaymentRoutes(app: Express): void {
       const sessionUser = (req.session as any)?.user;
       if (sessionUser?.id) {
         authenticatedUser = await storage.getUser(sessionUser.id);
-        if (authenticatedUser) {
-        }
       }
     }
 
@@ -50,8 +46,6 @@ export function registerPaymentRoutes(app: Express): void {
       const sessionUserId = (req.session as any)?.userId;
       if (sessionUserId) {
         authenticatedUser = await storage.getUser(sessionUserId);
-        if (authenticatedUser) {
-        }
       }
     }
 
@@ -230,13 +224,6 @@ export function registerPaymentRoutes(app: Express): void {
   app.post('/api/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
 
-    // Universal terminal response log — attached at the very top so it fires on
-    // every exit path including early 400s before signature verification.
-    let resolvedEventType = 'unknown';
-    let resolvedEventId = 'unknown';
-    res.on('finish', () => {
-    });
-
     const secretPairs = getWebhookSecretsWithLabels();
 
     if (secretPairs.length === 0) {
@@ -259,9 +246,6 @@ export function registerPaymentRoutes(app: Express): void {
       console.error('❌ Stripe webhook signature verification failed (tried all secrets)');
       return res.status(400).json({ error: 'Invalid signature' });
     }
-    resolvedEventType = event.type;
-    resolvedEventId = event.id;
-
     try {
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
