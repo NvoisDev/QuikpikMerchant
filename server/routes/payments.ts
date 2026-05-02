@@ -2104,6 +2104,7 @@ export function registerPaymentRoutes(app: Express): void {
             stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
             reason: `Invoice order sale - ${quantity} ${sellingType}`,
             orderId: quoteOrder.id,
+            customerName: quoteOrder.customerName ?? null,
             businessProfileId: quoteOrder.businessProfileId ?? null,
           });
           
@@ -2805,11 +2806,11 @@ export function registerPaymentRoutes(app: Express): void {
           if (sellingType === 'pallets') {
             const newPalletStock = (product.palletStock || 0) + item.quantity;
             await trx.update(products).set({ palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — restoring ${item.quantity} pallets`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — restoring ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           } else {
             const newUnitStock = (product.stock || 0) + item.quantity;
             await trx.update(products).set({ stock: newUnitStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — restoring ${item.quantity} units`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'return', quantity: item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — restoring ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           }
         }
 
@@ -2839,7 +2840,7 @@ export function registerPaymentRoutes(app: Express): void {
           const orderResult = InventoryCalculator.processOrder(item.quantity, sellingType as 'units' | 'pallets', { stock: product.stock, palletStock: product.palletStock, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
           const { newUnitStock, newPalletStock } = orderResult;
           await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-          await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: sellingType === 'pallets' ? 'pallets' : 'units', stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0), stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock, reason: `Invoice edit — allocating ${item.quantity} ${sellingType}`, orderId: quoteId, businessProfileId: existingOrder.businessProfileId ?? null });
+          await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: sellingType === 'pallets' ? 'pallets' : 'units', stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0), stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock, reason: `Invoice edit — allocating ${item.quantity} ${sellingType}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
         }
 
         // 7d. Update order totals and payment link
