@@ -1031,6 +1031,9 @@ export async function sendWelcomeEmail(user: any): Promise<void> {
 
 export const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number }>();
 
+// Rate-limit map for the emergency account-recovery endpoint (3 attempts per IP per hour).
+export const recoveryAttempts = new Map<string, { count: number; lastAttempt: number }>();
+
 export { ADMIN_EMAILS } from '../config';
 
 export async function geocodePostcode(postcode: string): Promise<{ lat: number; lng: number } | null> {

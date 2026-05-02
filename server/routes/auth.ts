@@ -36,7 +36,7 @@ import type { Express } from "express";
 import {
   and, count, createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl,
-  getPlanLimits, hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, products,
+  getPlanLimits, hashPassword, hashResetToken, isInvitationExpired, or, orders, passwordResetAttempts, recoveryAttempts, products,
   requireAuth, requireNotViewer, requireOwner, sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
   sgMail, sql, storage, teamMembers, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail, GoogleAuthBlockedError
@@ -334,28 +334,67 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/recover
+  //
+  // EMERGENCY SUPPORT TOOL — added to allow the Quikpik support team to restore
+  // a session for a locked-out wholesaler account without going through the
+  // standard password-reset flow (e.g. when the recovery email is unreachable).
+  //
+  // Security controls:
+  //   1. Gated behind the RECOVERY_SECRET env-var header — cannot be triggered
+  //      from a browser or by anyone who does not hold the shared secret.
+  //   2. Hard rate limit: 3 attempts per IP per hour.
+  //   3. Every attempt (success or failure) is logged with IP, timestamp,
+  //      the email supplied, and the outcome.
+  //
+  // Do NOT remove without ensuring an alternative support escalation path exists.
   app.post('/api/auth/recover', async (req: any, res) => {
+    const clientIP = req.ip || 'unknown';
+    const { email } = req.body;
+    const timestamp = new Date().toISOString();
+
+    // ── 1. Secret-header gate ────────────────────────────────────────────────
+    const recoverySecret = process.env.RECOVERY_SECRET;
+    const providedSecret = req.headers['x-recovery-secret'];
+    if (!recoverySecret || !providedSecret || providedSecret !== recoverySecret) {
+      console.warn(`[auth/recover] BLOCKED — missing or invalid secret | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
+      return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
+    }
+
+    // ── 2. Rate limit: 3 attempts per IP per hour ────────────────────────────
+    const now = Date.now();
+    const ipKey = `ip:${clientIP}`;
+    const ipEntry = recoveryAttempts.get(ipKey);
+    if (ipEntry) {
+      if (now - ipEntry.lastAttempt > 3_600_000) {
+        ipEntry.count = 0;
+      }
+      if (ipEntry.count >= 3) {
+        console.warn(`[auth/recover] RATE-LIMITED | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
+        return res.status(429).json({ error: 'Too many recovery attempts. Try again later.' });
+      }
+    }
+    recoveryAttempts.set(ipKey, { count: (ipEntry?.count ?? 0) + 1, lastAttempt: now });
+
     try {
-      const { email } = req.body;
-      
-      // Allow recovery for the consolidated wholesaler account
+      // ── 3. Validate email against the allowlist ──────────────────────────
       if (!email || (email !== 'hello@quikpik.co' && email !== 'mogunjemilua@gmail.com')) {
+        console.warn(`[auth/recover] REJECTED — email not on allowlist | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
         return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
       }
-      
-      // Find the wholesaler user by email only - no hardcoded IDs
+
+      // ── 4. Look up the user ──────────────────────────────────────────────
       const user = await storage.getUserByEmail(email);
-      
       if (!user) {
+        console.warn(`[auth/recover] REJECTED — user not found | ip=${clientIP} email=${email} ts=${timestamp}`);
         return res.status(404).json({ error: 'User not found' });
       }
-      
-      // Ensure this is a wholesaler account
+
       if (user.role !== 'wholesaler') {
+        console.warn(`[auth/recover] REJECTED — non-wholesaler role=${user.role} | ip=${clientIP} email=${email} ts=${timestamp}`);
         return res.status(403).json({ error: 'Access denied - Only wholesaler accounts can be recovered' });
       }
-      
-      // Create comprehensive session data
+
+      // ── 5. Establish session ─────────────────────────────────────────────
       const sessionUser = {
         id: user.id,
         email: user.email,
@@ -365,29 +404,25 @@ export function registerAuthRoutes(app: Express): void {
         businessName: user.businessName,
         isTeamMember: false
       };
-      
-      // Recreate session with both formats for compatibility
+
       (req.session as any).userId = user.id;
       (req.session as any).user = sessionUser;
-      
-      // Save session explicitly
+
       req.session.save((err: any) => {
         if (err) {
-          console.error('Session save error:', err);
+          console.error(`[auth/recover] SESSION SAVE ERROR | ip=${clientIP} email=${email} ts=${timestamp}`, err);
           return res.status(500).json({ error: 'Session save failed' });
         }
-        
-        res.json({ 
-          success: true, 
+
+        console.info(`[auth/recover] SUCCESS | ip=${clientIP} email=${email} userId=${user.id} ts=${timestamp}`);
+        res.json({
+          success: true,
           message: 'Authentication recovered',
-          user: {
-            id: user.id,
-            email: user.email,
-          }
+          user: { id: user.id, email: user.email }
         });
       });
     } catch (error) {
-      console.error('Auth recovery error:', error);
+      console.error(`[auth/recover] ERROR | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`, error);
       res.status(500).json({ error: 'Recovery failed' });
     }
   });
