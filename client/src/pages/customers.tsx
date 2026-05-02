@@ -417,6 +417,7 @@ export default function Customers() {
     return customers.filter(c =>
       (c.firstName || '').toLowerCase().includes(q) ||
       (c.lastName || '').toLowerCase().includes(q) ||
+      (c.businessName || '').toLowerCase().includes(q) ||
       (c.email || '').toLowerCase().includes(q) ||
       (c.phoneNumber || '').toLowerCase().includes(q)
     );
@@ -1030,11 +1031,11 @@ export default function Customers() {
   const getDisplayName = (c: any) =>
     c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || 'Unknown';
 
-  const sortedCustomers = [...(searchResults || [])].sort((a, b) => {
+  const sortedCustomers = useMemo(() => [...(searchResults || [])].sort((a, b) => {
     const nameA = a.businessName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '';
     const nameB = b.businessName || `${b.firstName || ''} ${b.lastName || ''}`.trim() || '';
     return nameA.localeCompare(nameB);
-  });
+  }), [searchResults]);
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {

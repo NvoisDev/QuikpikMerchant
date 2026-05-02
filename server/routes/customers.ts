@@ -1051,17 +1051,13 @@ export function registerCustomerRoutes(app: Express): void {
       
       console.log('Updating customer:', customerId, 'with updates:', req.body);
 
-      // Derive the display name this wholesaler uses for this customer.
-      // Priority: firstName+lastName if provided, else businessName, else keep existing.
       const hasNameChange = firstName !== undefined || lastName !== undefined || businessName !== undefined;
-      if (hasNameChange) {
-        // Build displayName from firstName+lastName when present, otherwise fall back to businessName
-        let displayNameValue: string | null = null;
-        if (firstName !== undefined || lastName !== undefined) {
-          displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || businessName?.trim() || null;
-        } else if (businessName !== undefined) {
-          displayNameValue = businessName?.trim() || null;
-        }
+
+      // Only update displayName (per-wholesaler override) when personal name fields change.
+      // businessName must NOT go into displayName because getAllCustomers parses displayName as
+      // "firstName lastName" — storing "Acme Corp" there would corrupt it into firstName="Acme", lastName="Corp".
+      if (firstName !== undefined || lastName !== undefined) {
+        const displayNameValue = `${firstName || ''} ${lastName || ''}`.trim() || null;
         await db.update(wholesalerCustomerRelationships)
           .set({ displayName: displayNameValue })
           .where(and(
@@ -1080,8 +1076,16 @@ export function registerCustomerRoutes(app: Express): void {
       const updatedCustomer = await storage.updateCustomer(customerId, { ...nonNameUpdates, ...nameUpdates });
       console.log('Customer updated successfully:', updatedCustomer);
 
-      // Backfill customerName on existing orders for this wholesaler so the
-      // order list immediately reflects the new name rather than the stale snapshot.
+      // Respond immediately — don't wait for the orders backfill
+      res.json({
+        ...updatedCustomer,
+        ...(firstName !== undefined ? { firstName } : {}),
+        ...(lastName !== undefined ? { lastName } : {}),
+        ...(businessName !== undefined ? { businessName } : {}),
+      });
+
+      // Backfill customerName on existing orders AFTER responding so a customer with many orders
+      // doesn't block the UI.  Fire-and-forget — errors are logged but not surfaced to the caller.
       if (hasNameChange) {
         const newCustomerName = businessName?.trim()
           || `${firstName || ''} ${lastName || ''}`.trim()
@@ -1089,23 +1093,16 @@ export function registerCustomerRoutes(app: Express): void {
           || `${updatedCustomer.firstName || ''} ${updatedCustomer.lastName || ''}`.trim()
           || null;
         if (newCustomerName) {
-          await db.update(orders)
+          db.update(orders)
             .set({ customerName: newCustomerName })
             .where(and(
               eq(orders.retailerId, customerId),
               eq(orders.wholesalerId, targetUserId)
-            ));
-          console.log(`✅ Backfilled customerName="${newCustomerName}" on orders for customer ${customerId}`);
+            ))
+            .then(() => console.log(`✅ Backfilled customerName="${newCustomerName}" on orders for customer ${customerId}`))
+            .catch((err: unknown) => console.error('⚠️ Failed to backfill customerName on orders:', err));
         }
       }
-
-      // Merge the name back into the response so the caller sees the correct values
-      res.json({
-        ...updatedCustomer,
-        ...(firstName !== undefined ? { firstName } : {}),
-        ...(lastName !== undefined ? { lastName } : {}),
-        ...(businessName !== undefined ? { businessName } : {}),
-      });
     } catch (error) {
       console.error('Error updating customer:', error);
       res.status(500).json({ error: 'Failed to update customer' });
