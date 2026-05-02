@@ -3969,6 +3969,9 @@ export default function ProductManagement() {
                                 {isIncrease ? '+' : ''}{movement.quantity} units
                               </span>
                               <span className="text-gray-500 font-medium">· {typeLabel}</span>
+                              {(movement as any).orderNumber && (
+                                <span className="text-gray-400 font-normal">#{(movement as any).orderNumber}</span>
+                              )}
                             </div>
                             <span className="text-gray-400 sm:flex-shrink-0">
                               {new Date(movement.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
@@ -3976,9 +3979,12 @@ export default function ProductManagement() {
                           </div>
                           <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-0.5 sm:gap-0">
                             <span>
-                              {movement.reason || (movement.customerName ? `Customer: ${movement.customerName}` : '')}
-                              {movement.businessProfileName && (
-                                <span className="ml-1 text-blue-600 font-medium">· {movement.businessProfileName}</span>
+                              {movement.reason || ''}
+                              {movement.customerName && (
+                                <span className="text-gray-400 font-normal">{movement.reason ? ' · ' : ''}{movement.customerName}</span>
+                              )}
+                              {(movement as any).businessProfileName && (
+                                <span className="ml-1 text-blue-600 font-medium">· {(movement as any).businessProfileName}</span>
                               )}
                             </span>
                             <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
