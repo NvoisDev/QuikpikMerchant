@@ -914,6 +914,13 @@ export default function QuickQuote() {
                       <Phone className="h-3 w-3" /> {selectedCustomer.phoneNumber}
                     </div>
                   )}
+                  {!selectedCustomer.businessName?.trim() && !selectedCustomer.firstName?.trim() && !selectedCustomer.lastName?.trim() && (
+                    <div className="mt-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                        Add customer name or business name
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
