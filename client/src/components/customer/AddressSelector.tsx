@@ -88,14 +88,6 @@ export function AddressSelector({
 
   // Auto-select default address when available and no address is currently selected
   useEffect(() => {
-      addressesLength: addresses.length,
-      hasDefaultAddress: !!defaultAddress,
-      hasSelectedAddress: !!selectedAddress,
-      userClearedAddress,
-      addressExplicitlyCleared,
-      defaultAddressData: defaultAddress ? defaultAddress.addressLine1 : 'none'
-    });
-    
     // Only auto-select default address if user hasn't explicitly cleared it
     if (defaultAddress && !selectedAddress && addresses.length > 0 && !userClearedAddress && !addressExplicitlyCleared) {
       onAddressSelect(defaultAddress);

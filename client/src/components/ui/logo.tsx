@@ -49,12 +49,6 @@ export default function Logo({
 
   // Determine what to show based on user settings hierarchy
   const renderLogo = () => {
-      user: user?.firstName, 
-      businessName: user?.businessName, 
-      logoType: user?.logoType,
-      logoUrl: user?.logoUrl
-    });
-    
     // 1. Custom uploaded logo (highest priority)
     if (user?.logoType === "custom" && user?.logoUrl) {
       return (

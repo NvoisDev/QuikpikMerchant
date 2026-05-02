@@ -779,13 +779,6 @@ export default function CustomerPortal() {
   }, [products, searchTerm, selectedCategory]);
 
   const otherProducts = useMemo(() => {
-      featuredProduct: featuredProduct?.name || 'none',
-      filteredProductsCount: filteredProducts.length,
-      featuredProductId,
-      showAllProducts,
-      productsLoading,
-      products: products.length
-    });
     if (!featuredProduct) return filteredProducts;
     return filteredProducts.filter(p => p.id !== featuredProduct.id);
   }, [filteredProducts, featuredProduct, featuredProductId]);

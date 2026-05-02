@@ -1957,14 +1957,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
       
       // Ensure we always return an array
       const ordersArray = Array.isArray(data) ? data : [];
-      
-        totalOrders: ordersArray.length,
-        orderIds: ordersArray.map((o: any) => o.id),
-        mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
-        timestamp: new Date().toLocaleTimeString(),
-        isArray: Array.isArray(ordersArray),
-        dataType: typeof data
-      });
       return ordersArray;
     },
     enabled: !!wholesalerId && !!customerPhone,

@@ -1,3 +1,4 @@
+// Used by: client/src/components/OnboardingWrapper.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
