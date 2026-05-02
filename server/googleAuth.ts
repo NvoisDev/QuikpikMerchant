@@ -227,22 +227,12 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 // New auth middleware that allows both wholesalers and retailers (for subscriptions, etc.)
 export const requireAnyAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Enhanced session debugging
     const sessionUser = (req.session as any)?.user;
     const sessionUserId = (req.session as any)?.userId;
-    
-    console.log('🔍 Auth Debug (Any Role):', {
-      sessionExists: !!req.session,
-      sessionId: req.sessionID?.substring(0, 8),
-      sessionUser: sessionUser ? 'present' : 'missing',
-      sessionUserId: sessionUserId ? 'present' : 'missing',
-      url: req.url
-    });
-    
+
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
-        console.log(`✅ Auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
         req.user = user;
         return next();
       }
@@ -252,23 +242,17 @@ export const requireAnyAuth = async (req: Request, res: Response, next: NextFunc
     if (sessionUserId) {
       const user = await storage.getUser(sessionUserId);
       if (user) {
-        console.log(`✅ Legacy auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
-        req.user = user;
-        
         // Update session for consistency
         (req.session as any).user = user;
+        req.user = user;
         return next();
       }
     }
 
     // Check for Replit OAuth session (Passport.js integration)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      const user = req.user as any;
-      console.log(`✅ OAuth auth successful for ${user.email} (${user.role}) (${req.method} ${req.url})`);
       return next();
     }
-
-    console.log('🔄 Session exists but user data missing - session may have expired');
     
     return res.status(401).json({
       error: 'Authentication required',
@@ -287,18 +271,9 @@ export const requireAnyAuth = async (req: Request, res: Response, next: NextFunc
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Enhanced session debugging
     const sessionUser = (req.session as any)?.user;
     const sessionUserId = (req.session as any)?.userId;
-    
-    console.log('🔍 Auth Debug:', {
-      sessionExists: !!req.session,
-      sessionId: req.sessionID?.substring(0, 8),
-      sessionUser: sessionUser ? 'present' : 'missing',
-      sessionUserId: sessionUserId ? 'present' : 'missing',
-      url: req.url
-    });
-    
+
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
@@ -333,7 +308,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           }
         }
         
-        console.log(`✅ Auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
         // Enrich team members with their role from the teamMembers table so
         // downstream endpoints can use req.user.teamMemberRole directly.
@@ -384,7 +358,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           }
         }
         
-        console.log(`✅ Legacy auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
         // Enrich team members with their role from the teamMembers table
         if (user.role === 'team_member' && user.wholesalerId) {
@@ -416,13 +389,11 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         });
       }
       
-      console.log(`✅ Replit OAuth auth successful for user ${user.email || user.claims?.email} (${req.url})`);
       return next();
     }
 
     // Session Recovery: If session exists but user data is missing, provide clear guidance
     if (req.session && req.sessionID && !sessionUser && !sessionUserId) {
-      console.log(`🔄 Session exists but user data missing - session may have expired`);
       return res.status(401).json({ 
         error: 'Authentication required',
         sessionExpired: true,
@@ -431,7 +402,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    console.log('❌ No valid authentication found - proper login required');
     return res.status(401).json({ 
       error: 'Authentication required',
       message: 'Please log in to access this resource.',
