@@ -628,7 +628,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     retailer?.addressLine2,
     retailer?.city,
     retailer?.postalCode,
-    retailer?.country,
+    (retailer?.country && retailer.country !== 'United Kingdom') ? retailer.country : undefined,
   ].filter(isValidAddrLine).map(cleanAddr);
   const isCancelledOrder = order.status === 'cancelled';
   const ps = order.paymentStatus || 'unpaid';

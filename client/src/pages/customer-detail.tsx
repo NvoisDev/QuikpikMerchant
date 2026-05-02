@@ -140,7 +140,7 @@ export default function CustomerDetail() {
     city: "",
     state: "",
     postalCode: "",
-    country: "United Kingdom",
+    country: "",
     label: "",
   });
 
@@ -249,7 +249,7 @@ export default function CustomerDetail() {
   });
 
   const resetAddressForm = () => {
-    setAddressFormData({ addressLine1: "", addressLine2: "", city: "", state: "", postalCode: "", country: "United Kingdom", label: "" });
+    setAddressFormData({ addressLine1: "", addressLine2: "", city: "", state: "", postalCode: "", country: "", label: "" });
     setShowAddForm(false);
     setEditingId(null);
   };
@@ -263,7 +263,7 @@ export default function CustomerDetail() {
       city: addr.city || "",
       state: addr.state || "",
       postalCode: addr.postalCode || "",
-      country: addr.country || "United Kingdom",
+      country: addr.country || "",
       label: addr.label || "",
     });
   };
