@@ -1043,7 +1043,6 @@ export function registerCustomerRoutes(app: Express): void {
               eq(orders.retailerId, customerId),
               eq(orders.wholesalerId, targetUserId)
             ))
-            .then(() => {})
             .catch((err: unknown) => console.error('⚠️ Failed to backfill customerName on orders:', err));
         }
       }
