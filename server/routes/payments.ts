@@ -21,8 +21,6 @@ import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
   app.post('/api/stripe/connect', async (req: any, res) => {
-    console.log('🔗 POST /api/stripe/connect - Starting authentication check...');
-    console.log('📋 Session debug:', {
       sessionExists: !!req.session,
       sessionId: req.sessionID?.substring(0, 10) + '...',
       sessionUser: (req.session as any)?.user ? 'exists' : 'missing',
@@ -40,10 +38,8 @@ export function registerPaymentRoutes(app: Express): void {
       const userId = passportUser.claims?.sub;
       
       if (userId) {
-        console.log('✅ Method 1: Passport authentication found, userId:', userId);
         authenticatedUser = await storage.getUser(userId);
         if (authenticatedUser) {
-          console.log('✅ Method 1: User loaded from database:', authenticatedUser.email);
         }
       }
     }
@@ -52,10 +48,8 @@ export function registerPaymentRoutes(app: Express): void {
     if (!authenticatedUser) {
       const sessionUser = (req.session as any)?.user;
       if (sessionUser?.id) {
-        console.log('✅ Method 2: Session user found, userId:', sessionUser.id);
         authenticatedUser = await storage.getUser(sessionUser.id);
         if (authenticatedUser) {
-          console.log('✅ Method 2: User loaded from database:', authenticatedUser.email);
         }
       }
     }
@@ -64,17 +58,14 @@ export function registerPaymentRoutes(app: Express): void {
     if (!authenticatedUser) {
       const sessionUserId = (req.session as any)?.userId;
       if (sessionUserId) {
-        console.log('✅ Method 3: Legacy session userId found:', sessionUserId);
         authenticatedUser = await storage.getUser(sessionUserId);
         if (authenticatedUser) {
-          console.log('✅ Method 3: User loaded from database:', authenticatedUser.email);
         }
       }
     }
 
     // Final authentication check
     if (!authenticatedUser) {
-      console.log('❌ All authentication methods failed - no valid user found');
       return res.status(401).json({
         error: "Authentication required",
         message: "Please log in to access this resource.",
@@ -83,20 +74,13 @@ export function registerPaymentRoutes(app: Express): void {
     }
 
     req.user = authenticatedUser;
-    console.log('🔗 Stripe Connect proceeding with authenticated user:', authenticatedUser.email);
     try {
       const stripe = getStripeClient(Boolean(authenticatedUser.isTestAccount));
-      console.log('🔗 Stripe Connect request received for user:', req.user?.email);
-      console.log('👤 User role:', req.user?.role);
 
       const user = req.user;
-      console.log('👤 Creating Stripe Connect account for user:', user.id);
-      console.log('📧 User email:', user.email);
-      console.log('🏢 User business name:', user.businessName || user.username);
 
       // Check if user already has a Connect account
       if (user.stripeAccountId) {
-        console.log('🔄 User already has Stripe account:', user.stripeAccountId);
         
         try {
           // Get proper base URL — use production domain when deployed, dev domain otherwise
@@ -109,9 +93,6 @@ export function registerPaymentRoutes(app: Express): void {
           const refreshUrl = `${baseUrl}/settings?tab=integrations`;
           const returnUrl = `${baseUrl}/stripe-success`;
           
-          console.log('🔗 Using Stripe redirect base URL:', baseUrl);
-          console.log('🔗 Stripe refresh URL:', refreshUrl);
-          console.log('🔗 Stripe return URL:', returnUrl);
             
           // Get account link for existing account
           const accountLink = await stripe.accountLinks.create({
@@ -121,7 +102,6 @@ export function registerPaymentRoutes(app: Express): void {
             type: 'account_onboarding',
           });
           
-          console.log('✅ Account link created for existing account');
           return res.json({ url: accountLink.url, accountId: user.stripeAccountId });
         } catch (linkError: any) {
           console.error('❌ Error creating account link:', linkError.message);
@@ -129,7 +109,6 @@ export function registerPaymentRoutes(app: Express): void {
         }
       }
 
-      console.log('🆕 Creating new Stripe Express account');
       
       // Create new Connect Express account
       const account = await stripe.accounts.create({
@@ -145,14 +124,12 @@ export function registerPaymentRoutes(app: Express): void {
         },
       });
 
-      console.log('✅ Stripe account created:', account.id);
 
       // Update user with Connect account ID
       await storage.updateUser(user.id, {
         stripeAccountId: account.id
       });
       
-      console.log('✅ User updated with Stripe account ID');
 
       // Get proper base URL — use production domain when deployed, dev domain otherwise
       const baseUrl = process.env.NODE_ENV === 'production'
@@ -164,9 +141,6 @@ export function registerPaymentRoutes(app: Express): void {
       const refreshUrl = `${baseUrl}/settings?tab=integrations`;
       const returnUrl = `${baseUrl}/stripe-success`;
       
-      console.log('🔗 Using Stripe redirect base URL:', baseUrl);
-      console.log('🔗 Stripe refresh URL:', refreshUrl);
-      console.log('🔗 Stripe return URL:', returnUrl);
         
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
@@ -176,7 +150,6 @@ export function registerPaymentRoutes(app: Express): void {
         type: 'account_onboarding',
       });
 
-      console.log('✅ Onboarding link created');
       
       res.json({ url: accountLink.url, accountId: account.id });
     } catch (error: any) {
@@ -216,7 +189,6 @@ export function registerPaymentRoutes(app: Express): void {
       // Create a login link for the Express dashboard
       const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
       
-      console.log('🔗 Generated Stripe dashboard link for user:', user.id);
       
       res.json({ url: loginLink.url });
     } catch (error: any) {

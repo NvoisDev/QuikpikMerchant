@@ -88,26 +88,21 @@ export function registerBrowsingRoutes(app: Express): void {
     let wholesalerId = '';
     try {
       wholesalerId = req.params.wholesalerId;
-      console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
 
       if (!wholesalerId) {
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
 
       // 🔒 SUBSCRIPTION FEATURE GATING: Check wholesaler's subscription limits
-      console.log('🔍 Checking wholesaler subscription limits...');
       const limits = await getUserPlanLimits(wholesalerId);
       const productLimit = limits.products;
 
-      console.log(`🏷️ Wholesaler ${wholesalerId} subscription limits:`, {
         plan: limits.planName,
         productLimit: productLimit === -1 ? 'unlimited' : productLimit,
         isUnlimited: productLimit === -1
       });
 
       // Use direct SQL query with subscription-based limits
-      console.log('🔍 Executing subscription-limited SQL query...');
       const queryStart = Date.now();
 
       try {
@@ -138,10 +133,8 @@ export function registerBrowsingRoutes(app: Express): void {
 
         const rows = result.rows as any[];
         const queryTime = Date.now() - queryStart;
-        console.log(`📊 SQL query returned ${rows.length} rows in ${queryTime}ms`);
 
         if (rows.length === 0) {
-          console.log(`⚠️ No active products found for wholesaler: ${wholesalerId}`);
           return res.json([]);
         }
 
@@ -220,7 +213,6 @@ export function registerBrowsingRoutes(app: Express): void {
           });
         });
 
-        console.log(`✅ Successfully formatted ${formattedProducts.length} products for customer response`);
 
         // Inject custom prices from price lists if customer is authenticated
         try {
@@ -385,20 +377,14 @@ export function registerBrowsingRoutes(app: Express): void {
   // GET /api/marketplace/wholesaler/:id
   app.get('/api/marketplace/wholesaler/:id', async (req, res) => {
     try {
-      console.log("=== Starting wholesaler profile request ===");
       const { id } = req.params;
-      console.log("Requested wholesaler ID:", id);
 
-      console.log("About to call storage.getWholesalerProfile...");
       const wholesaler = await storage.getWholesalerProfile(id);
-      console.log("getWholesalerProfile completed successfully");
 
       if (!wholesaler) {
-        console.log("Wholesaler not found, returning 404");
         return res.status(404).json({ message: "Wholesaler not found" });
       }
 
-      console.log("Returning wholesaler data:", wholesaler.businessName);
       res.json(wholesaler);
     } catch (error) {
       console.error("=== Error in wholesaler profile route ===");
@@ -426,7 +412,6 @@ export function registerBrowsingRoutes(app: Express): void {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      console.log('STOCK DEBUG - Raw product from database:', {
         productId: product.id,
         name: product.name,
         stock: product.stock,
@@ -435,7 +420,6 @@ export function registerBrowsingRoutes(app: Express): void {
       });
 
       if (product.id === 23) {
-        console.log('BASMATI RICE DEBUG - Product data being returned:', JSON.stringify(product, null, 2));
       }
 
       // Get wholesaler details

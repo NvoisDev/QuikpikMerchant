@@ -174,7 +174,6 @@ export function registerOrderRoutes(app: Express): void {
       // Update the order with new address
       await storage.updateOrderDeliveryAddress(parseInt(orderId), parseInt(deliveryAddressId), formattedAddress);
       
-      console.log(`📍 Updated order ${orderId} delivery address to address ID ${deliveryAddressId} for customer ${customerAuth.customerId}`);
       
       res.json({ 
         success: true, 
@@ -191,10 +190,8 @@ export function registerOrderRoutes(app: Express): void {
   app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
-      console.log(`📦 Ready for collection request for order ID: ${orderId}`);
       
       if (isNaN(orderId)) {
-        console.log(`❌ Invalid order ID: ${req.params.id}`);
         return res.status(400).json({ error: 'Invalid order ID' });
       }
 
@@ -203,7 +200,6 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log(`🔍 Looking up order ${orderId} for wholesaler ${wholesalerId}`);
       
       // Fetch order directly from database
       const [order] = await db
@@ -213,15 +209,12 @@ export function registerOrderRoutes(app: Express): void {
         .limit(1);
 
       if (!order) {
-        console.log(`❌ Order ${orderId} not found in database`);
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      console.log(`📋 Order found: ${order.orderNumber}, status: ${order.status}, wholesaler: ${order.wholesalerId}`);
 
       // Verify the order belongs to this wholesaler
       if (order.wholesalerId !== wholesalerId) {
-        console.log(`❌ Order ${orderId} belongs to ${order.wholesalerId}, not ${wholesalerId}`);
         return res.status(403).json({ error: 'You do not have permission to modify this order' });
       }
 
@@ -233,23 +226,19 @@ export function registerOrderRoutes(app: Express): void {
       const isPickup = order.fulfillmentType === 'pickup';
       
       if (!isValidStatus && !isPaymentComplete && !isPickup) {
-        console.log(`❌ Order status is ${order.status}, paymentStatus is ${order.paymentStatus}, cannot mark as ready`);
         return res.status(400).json({ error: `Order must be paid to mark as ready. Current status: ${order.status}, payment: ${order.paymentStatus}` });
       }
       
       // If payment is complete but status wasn't updated, log it for debugging
       if (isPaymentComplete && order.status !== 'paid') {
-        console.log(`⚠️ Order ${orderId} has complete payment (${order.paymentStatus}) but status is ${order.status} - allowing ready for collection`);
       }
 
       // Check if already marked as ready
       if (order.readyToCollectAt) {
-        console.log(`❌ Order ${orderId} already marked as ready at ${order.readyToCollectAt}`);
         return res.status(400).json({ error: 'Order is already marked as ready for collection' });
       }
 
       const actionType = order.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
-      console.log(`📦 Marking order ${orderId} as ready for ${actionType}`);
 
       // Update order with ready for collection timestamp
       const updated = await storage.markOrderReadyForCollection(orderId);
@@ -310,7 +299,6 @@ export function registerOrderRoutes(app: Express): void {
             text: emailData.text
           });
           
-          console.log(`📧 Ready for collection email sent to ${customer.email}`);
         }
       } catch (emailError) {
         console.error('❌ Failed to send ready for collection email:', emailError);
@@ -389,19 +377,15 @@ export function registerOrderRoutes(app: Express): void {
           });
           
           if (smsSent) {
-            console.log(`📱 Ready for ${actionType} WhatsApp sent to ${customer.phoneNumber}`);
           } else {
-            console.log(`⚠️ WhatsApp not sent (Twilio not configured or failed)`);
           }
         } else {
-          console.log(`⚠️ No phone number available for customer ${updated.retailerId}`);
         }
       } catch (smsError) {
         console.error('❌ Failed to send ready for collection WhatsApp:', smsError);
         // Don't fail the API call if SMS fails
       }
 
-      console.log(`✅ Order ${orderId} marked as ready for collection`);
       res.json({ success: true, order: updated });
     } catch (error) {
       console.error("❌ Error marking order as ready for collection:", error);
@@ -415,7 +399,6 @@ export function registerOrderRoutes(app: Express): void {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
 
-      console.log(`🔄 Resending ready for collection notification for order ${orderId}`);
 
       // Get order details
       const order = await storage.getOrder(orderId);
@@ -433,7 +416,6 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(400).json({ error: 'Order is not ready for collection' });
       }
 
-      console.log(`📦 Resending ready for collection notification for order ${orderId}`);
 
       // Send email notification to customer
       try {
@@ -488,14 +470,12 @@ export function registerOrderRoutes(app: Express): void {
             text: emailData.text
           });
           
-          console.log(`📧 Ready for collection notification resent to ${customer.email}`);
         }
       } catch (emailError) {
         console.error('❌ Failed to resend ready for collection email:', emailError);
         return res.status(500).json({ error: 'Failed to send notification email' });
       }
 
-      console.log(`✅ Ready for collection notification resent for order ${orderId}`);
       res.json({ success: true, message: 'Notification sent successfully' });
     } catch (error) {
       console.error("❌ Error resending ready for collection notification:", error);
@@ -561,7 +541,6 @@ export function registerOrderRoutes(app: Express): void {
         updateData.stripePaymentLinkId = null;
           try {
             await stripe.checkout.sessions.expire(order.stripePaymentLinkId);
-            console.log(`🔒 Stripe checkout session expired for order ${order.orderNumber} (offline full payment)`);
           } catch (stripeErr) {
             // Best-effort — session may already be used or expired
             console.warn(`⚠️ Could not expire Stripe session for order ${order.orderNumber}:`, stripeErr);
@@ -572,7 +551,6 @@ export function registerOrderRoutes(app: Express): void {
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
-      console.log(`✅ Order ${order.orderNumber} marked as ${paymentUpdate.newPaymentStatus} offline — £${parsedAmount.toFixed(2)} via ${method || 'unspecified'}${note ? ` (${note})` : ''}`);
 
       // Task 4: Send payment notifications to customer and wholesaler (best-effort)
       try {
@@ -625,7 +603,6 @@ export function registerOrderRoutes(app: Express): void {
                 }, { preheader: `${currencySymbol}${parsedAmount.toFixed(2)} payment recorded for order ${order.orderNumber}` }),
                 from: `${businessName} via Quikpik <hello@quikpik.co>`,
               });
-              console.log(`📧 Payment notification email sent to customer ${customer.email}`);
             } catch (emailErr) {
               console.error('⚠️ Failed to send customer payment email:', emailErr);
             }
@@ -638,7 +615,6 @@ export function registerOrderRoutes(app: Express): void {
                 ? `Hi ${customerName}! ${businessName} has received your payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Your order is now fully paid. Thank you!`
                 : `Hi ${customerName}! ${businessName} has received a payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Outstanding balance: ${currencySymbol}${outstanding.toFixed(2)}.`;
               await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
-              console.log(`📱 Payment notification WhatsApp sent to customer ${customer.phoneNumber}`);
             } catch (smsErr) {
               console.error('⚠️ Failed to send customer payment WhatsApp:', smsErr);
             }
@@ -672,7 +648,6 @@ export function registerOrderRoutes(app: Express): void {
                 }, { preheader: `${currencySymbol}${parsedAmount.toFixed(2)} recorded for order ${order.orderNumber}` }),
                 from: `Quikpik <hello@quikpik.co>`,
               });
-              console.log(`📧 Payment notification email sent to wholesaler ${wholesaler.email}`);
             } catch (emailErr) {
               console.error('⚠️ Failed to send wholesaler payment email:', emailErr);
             }
@@ -695,7 +670,6 @@ export function registerOrderRoutes(app: Express): void {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
 
-      console.log(`📦 Marking order ${orderId} items as prepared`);
 
       // Get order details
       const order = await storage.getOrder(orderId);
@@ -713,7 +687,6 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(400).json({ error: 'Order must be in paid status to mark items as prepared' });
       }
 
-      console.log(`📦 Updating order ${orderId} status to items_prepared`);
 
       // Update order status using storage method
       const updated = await storage.updateOrderStatus(orderId, 'items_prepared');
@@ -738,14 +711,12 @@ export function registerOrderRoutes(app: Express): void {
             trackingNumber: updated.deliveryTrackingNumber || undefined,
             estimatedDelivery: undefined
           });
-          console.log(`📱 Items prepared notifications sent for order ${orderId}`);
         }
       } catch (notificationError) {
         console.error('❌ Failed to send items prepared notifications:', notificationError);
         // Don't fail the status update if notifications fail
       }
 
-      console.log(`✅ Order ${orderId} items marked as prepared`);
       res.json({ success: true, order: updated });
     } catch (error) {
       console.error("❌ Error marking order items as prepared:", error);
@@ -784,9 +755,7 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log(`📦 Fetching orders for authenticated wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
       const orders = await storage.getOrders(wholesalerId, undefined, search);
-      console.log(`📦 Found ${orders.length} orders for wholesaler ${wholesalerId}`);
       
       res.json(orders);
     } catch (error) {
@@ -889,7 +858,6 @@ export function registerOrderRoutes(app: Express): void {
         .orderBy(desc(orderCancellationRequests.requestedAt))
         .limit(1);
 
-      console.log(`📦 Retrieved order ${orderId} with ${order.items?.length || 0} items`);
       res.json({
         ...order,
         vatEnabled: order.wholesaler?.vatEnabled ?? false,
@@ -930,7 +898,6 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}, customerId: ${customerId || 'none'}, tab: ${archiveTab}`);
       
       // Build search conditions - customerId takes priority over text search
       const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId)];
@@ -1008,7 +975,6 @@ export function registerOrderRoutes(app: Express): void {
       const { paidOrdersCount, pendingOrdersCount, totalRevenue } = tabStatsResult[0];
       const { activeCount, archivedCount } = baseStatsResult[0];
 
-      console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
 
       // Fetch cancellation requests for this page's orders only
       const orderIds = ordersResult.map(o => o.id);
@@ -1097,7 +1063,6 @@ export function registerOrderRoutes(app: Express): void {
         return false;
       };
       
-      console.log(`📊 Fetching order statistics for authenticated wholesaler: ${wholesalerId}, tab: ${archiveTab}`);
 
       // Get all orders to calculate overall statistics
       const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
@@ -1109,7 +1074,6 @@ export function registerOrderRoutes(app: Express): void {
           ? allOrders.filter(order => isArchivedOrder(order))
           : allOrders.filter(order => !isArchivedOrder(order));
       
-      console.log(`📊 Found ${filteredOrders.length} ${archiveTab} orders for statistics`);
 
       // Calculate overall statistics for the filtered set
       const paidOrders = filteredOrders.filter(order => 
@@ -1144,7 +1108,6 @@ export function registerOrderRoutes(app: Express): void {
         archivedCount: archivedCount
       };
 
-      console.log(`📊 Calculated stats:`, stats);
       res.json(stats);
     } catch (error) {
       console.error("❌ Error fetching order statistics:", error);
@@ -1336,7 +1299,6 @@ export function registerOrderRoutes(app: Express): void {
         setTimeout(async () => {
           try {
             await storage.updateOrderStatus(id, 'archived');
-            console.log(`Order ${id} auto-archived after fulfillment`);
           } catch (error) {
             console.error(`Failed to auto-archive order ${id}:`, error);
           }
@@ -1421,7 +1383,6 @@ export function registerOrderRoutes(app: Express): void {
                   await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
                 }
                 stockRestoredCount += returnQty;
-                console.log(`📦 Restored ${returnQty} ${returnItem.sellingType} of product ${product.name} to stock`);
               }
               
               // Calculate refund for this item (always, regardless of restock guard)
@@ -1437,7 +1398,6 @@ export function registerOrderRoutes(app: Express): void {
           if (!allFullyReturned) {
             const deliveryCost = parseFloat(order.deliveryCost || '0');
             refundAmount += deliveryCost;
-            console.log(`🚚 Including delivery charge refund: £${deliveryCost.toFixed(2)}`);
           }
         }
       } else {
@@ -1487,7 +1447,6 @@ export function registerOrderRoutes(app: Express): void {
         });
         if (allItemsFullyReturned && returnedItems.length >= orderItems.length) {
           isFullCancellation = true;
-          console.log('🚫 All items returned at full quantity - treating as full cancellation');
         }
       }
 
@@ -1513,7 +1472,6 @@ export function registerOrderRoutes(app: Express): void {
         const remainingRefundable = Math.max(0, refundCeiling - currentRefunded);
         const effectiveRefundAmount = Math.min(refundAmountToProcess, remainingRefundable);
         if (remainingRefundable <= 0.01) {
-          console.log(`⚠️ Skipping Stripe refund for order ${order.orderNumber} — already refunded up to ceiling (£${currentRefunded.toFixed(2)} of £${refundCeiling.toFixed(2)})`);
         } else if (effectiveRefundAmount > 0 && effectiveRefundAmount <= refundCeiling) {
           const result = await refundAcrossPaymentIntents(
             stripe,
@@ -1685,7 +1643,6 @@ export function registerOrderRoutes(app: Express): void {
             smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}`;
             
             await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
-            console.log(`📱 Cancellation WhatsApp sent to ${customer.phoneNumber}`);
           }
           
           // Email notification with itemised receipt
@@ -1720,7 +1677,6 @@ export function registerOrderRoutes(app: Express): void {
                 html: wrapCustomerEmail(emailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: isFullCancellation ? `Order ${order.orderNumber} has been cancelled` : `Partial return for order ${order.orderNumber}` }),
                 from: `${businessName} via Quikpik <hello@quikpik.co>`
               });
-              console.log(`📧 Itemised cancellation email sent to ${customer.email}`);
             } catch (emailError) {
               console.error('Failed to send cancellation email:', emailError);
             }
@@ -1784,7 +1740,6 @@ export function registerOrderRoutes(app: Express): void {
 
       const refundedAmount = result.totalRefunded;
       const partialNote = result.remaining > 0.01 ? ` (£${result.remaining.toFixed(2)} could not be recovered automatically)` : '';
-      console.log(`💳 Stripe retry refund processed: £${refundedAmount.toFixed(2)} for order ${order.orderNumber}${partialNote}`);
 
       const currentRefunded = parseFloat(order.amountRefunded || '0');
       const newRefunded = Math.min(currentRefunded + result.totalRefunded, parseFloat(order.amountPaid || '0'));
@@ -2007,7 +1962,6 @@ export function registerOrderRoutes(app: Express): void {
           // Idempotency guard: skip Stripe refund if one has already been recorded on this order
           const custAlreadyRefunded = parseFloat(order.amountRefunded || '0') > 0;
           if (custAlreadyRefunded) {
-            console.log(`⚠️ Skipping Stripe refund for order ${order.orderNumber} (customer request) — amountRefunded already recorded (£${order.amountRefunded})`);
           }
           
           if (refundType === 'card' && custCancelAmountPaid > 0 && order.stripePaymentIntentId && !custAlreadyRefunded) {
@@ -2023,7 +1977,6 @@ export function registerOrderRoutes(app: Express): void {
             );
             custCancelStripeRefunded = result.totalRefunded;
             if (result.totalRefunded > 0) {
-              console.log(`💳 Stripe refund processed for customer cancellation: £${result.totalRefunded.toFixed(2)}`);
             }
           }
 
@@ -2053,7 +2006,6 @@ export function registerOrderRoutes(app: Express): void {
             })
             .where(eq(orders.id, order.id));
           
-          console.log(`🚫 Order ${order.orderNumber} cancelled via customer cancellation request`);
         }
       }
       
@@ -2100,7 +2052,6 @@ export function registerOrderRoutes(app: Express): void {
           }
           
           await sendWhatsAppMessage({ to: customerPhone, message });
-          console.log(`📱 Cancellation response WhatsApp sent to ${customerPhone}`);
         }
         
         // Email notification
@@ -2145,7 +2096,6 @@ export function registerOrderRoutes(app: Express): void {
               html: wrapCustomerEmail(rejectedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your cancellation request for order ${order.orderNumber}` }),
             });
           }
-          console.log(`📧 Cancellation response email sent to ${customerEmail}`);
         }
       } catch (error) {
         console.error('Failed to send cancellation response notification:', error);
@@ -2187,7 +2137,6 @@ export function registerOrderRoutes(app: Express): void {
       // Check for payment intent ID 
       const paymentIntentId = order.stripePaymentIntentId;
       if (!paymentIntentId) {
-        console.log('Order payment details:', {
           orderId: id,
           stripePaymentIntentId: order.stripePaymentIntentId,
           status: order.status,
@@ -2255,7 +2204,6 @@ export function registerOrderRoutes(app: Express): void {
         if (customer?.email && wholesaler) {
           await createStripeRefundReceipt(order, null, wholesaler, customer, reason);
           await sendRefundReceipt(customer, order, null, wholesaler, reason);
-          console.log(`Refund receipt sent to ${customer.email} for order ${id}`);
         }
       } catch (error) {
         console.error('Failed to send refund receipt:', error);
@@ -2323,7 +2271,6 @@ export function registerOrderRoutes(app: Express): void {
       const objectStorageService = new ObjectStorageService();
       const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
       
-      console.log(`🔧 Image URL normalization: ${imageUrl} → ${normalizedPath}`);
       
       const imageEntry = {
         id: crypto.randomUUID(),
@@ -2338,7 +2285,6 @@ export function registerOrderRoutes(app: Express): void {
       
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
       
-      console.log(`📸 Added image to order ${orderId}: ${filename}`);
       
       // Send email notification to customer about new photos
       try {
@@ -2364,7 +2310,6 @@ export function registerOrderRoutes(app: Express): void {
             orderPortalUrl: `https://quikpik.app/customer/${order.wholesalerId}`
           });
           
-          console.log(`📧 Photo notification email sent to ${customer.email}`);
         }
       } catch (emailError) {
         console.error('📧 Failed to send photo notification email:', emailError);
@@ -2417,7 +2362,6 @@ export function registerOrderRoutes(app: Express): void {
         req.file.originalname
       );
 
-      console.log(`📸 Server-side upload complete: ${req.file.originalname} → ${normalizedPath}`);
 
       const imageEntry = {
         id: crypto.randomUUID(),
@@ -2431,7 +2375,6 @@ export function registerOrderRoutes(app: Express): void {
       const updatedImages = [...currentImages, imageEntry];
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
 
-      console.log(`✅ Photo saved to order ${orderId}: ${req.file.originalname}`);
 
       // Send email notification to customer (best-effort)
       try {
@@ -2483,7 +2426,6 @@ export function registerOrderRoutes(app: Express): void {
       
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
       
-      console.log(`🗑️ Deleted image ${imageId} from order ${orderId}`);
       
       res.json({ success: true });
     } catch (error) {
@@ -2587,7 +2529,6 @@ export function registerOrderRoutes(app: Express): void {
           .delete(campaignOrders)
           .where(inArray(campaignOrders.orderId, orderIdsToDelete));
       } catch (error) {
-        console.log('No campaign orders to delete or table not found:', error.message);
       }
 
       // 2. Delete order items
@@ -2600,7 +2541,6 @@ export function registerOrderRoutes(app: Express): void {
         .delete(orders)
         .where(and(...whereConditions));
 
-      console.log(`🗑️ Bulk deleted ${orderIdsToDelete.length} orders and related data for wholesaler ${userId}`);
 
       res.json({ 
         message: `Successfully deleted ${orderIdsToDelete.length} orders and related data`,

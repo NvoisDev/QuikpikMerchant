@@ -110,12 +110,10 @@ export function registerAuthRoutes(app: Express): void {
         }
       }
       
-      console.log('👤 Updating profile for user:', user.id, updates);
 
       // Update user profile
       await storage.updateUser(user.id, updates);
 
-      console.log('✅ Profile updated successfully for user:', user.id);
       
       res.json({ 
         success: true, 
@@ -150,7 +148,6 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const { code, error, state } = req.query;
       
-      console.log('🔄 OAuth callback received:', { 
         hasCode: !!code, 
         codeLength: code?.length, 
         error: error || 'none',
@@ -158,16 +155,13 @@ export function registerAuthRoutes(app: Express): void {
       });
       
       if (error) {
-        console.log('❌ OAuth error from Google:', error);
         return res.redirect('/login?error=oauth_denied');
       }
       
       if (!code || typeof code !== 'string') {
-        console.log('❌ No authorization code provided');
         return res.redirect('/login?error=no_code');
       }
 
-      console.log('🔄 Attempting to verify Google token...');
       // Verify Google token and get user info
       const googleUser = await verifyGoogleToken(code);
       
@@ -177,7 +171,6 @@ export function registerAuthRoutes(app: Express): void {
         user = await createOrUpdateUser(googleUser);
       } catch (authErr) {
         if (authErr instanceof GoogleAuthBlockedError) {
-          console.log(`🚫 Google sign-in blocked (${authErr.code}) for ${googleUser.email}`);
           return res.redirect(`/login?error=${authErr.code}`);
         }
         throw authErr;
@@ -200,7 +193,6 @@ export function registerAuthRoutes(app: Express): void {
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
-      console.log(`🔐 Google auth session created for user ${user.email}`, {
         isFirstLogin: user.isFirstLogin,
         hasBusinessName: !!user.businessName,
         hasAddress: !!(user.streetAddress || user.city)
@@ -213,22 +205,18 @@ export function registerAuthRoutes(app: Express): void {
           return res.redirect('/login?error=session_failed');
         }
         
-        console.log(`✅ Session saved successfully for ${user.email}`);
         
         // Use returnTo if set (e.g. from /admin login)
         const returnTo = (req.session as any).returnTo;
         if (returnTo) {
           delete (req.session as any).returnTo;
-          console.log(`↩️ Redirecting to returnTo: ${returnTo}`);
           return res.redirect(returnTo);
         }
 
         // Check if this is a new user who needs to complete signup
         if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
-          console.log(`👋 New user detected, redirecting to complete signup profile`);
           res.redirect('/signup-complete');
         } else {
-          console.log(`✅ Returning user with complete profile, redirecting to dashboard`);
           res.redirect('/dashboard');
         }
       });
@@ -237,13 +225,10 @@ export function registerAuthRoutes(app: Express): void {
       
       // More specific error handling
       if (error?.message?.includes('invalid_grant')) {
-        console.log('❌ Google token expired or invalid - user needs to try again');
         res.redirect('/login?error=token_expired');
       } else if (error?.message?.includes('Failed to verify')) {
-        console.log('❌ Google token verification failed');
         res.redirect('/login?error=verification_failed');
       } else {
-        console.log('❌ Generic auth error');
         res.redirect('/login?error=auth_failed');
       }
     }
@@ -269,7 +254,6 @@ export function registerAuthRoutes(app: Express): void {
         orderNumberPrefix
       } = req.body;
 
-      console.log(`🔄 Completing profile for user ${userId}:`, {
         businessName,
         hasAddress: !!(streetAddress || city),
         currency: preferredCurrency
@@ -307,7 +291,6 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-      console.log(`✅ Profile completed successfully for ${updatedUser.email}`);
 
       // Update session with new user data
       (req.session as any).user = {
@@ -371,7 +354,6 @@ export function registerAuthRoutes(app: Express): void {
           return res.status(500).json({ error: 'Session save failed' });
         }
         
-        console.log(`🔐 Session recovered and saved for wholesaler ${user.email} (${user.businessName})`);
         
         res.json({ 
           success: true, 
@@ -423,7 +405,6 @@ export function registerAuthRoutes(app: Express): void {
         }
       }
       
-      console.log(`👤 Auth endpoint returning fresh user data for ${userId}:`, {
         id: responseUser.id,
         email: responseUser.email,
       });
@@ -500,12 +481,6 @@ export function registerAuthRoutes(app: Express): void {
       const updateData = { ...req.body };
       
       // Debug logging for logo upload
-      console.log("🔧 Settings update request:");
-      console.log("- User ID:", userId);
-      console.log("- Update data keys:", Object.keys(updateData));
-      console.log("- Logo type:", updateData.logoType);
-      console.log("- Logo URL length:", updateData.logoUrl?.length || 0);
-      console.log("- Has logo data:", updateData.logoUrl ? "YES" : "NO");
       
       // Auto-format phone numbers to international format
       if (updateData.businessPhone) {
@@ -516,9 +491,6 @@ export function registerAuthRoutes(app: Express): void {
       }
       
       const updatedUser = await storage.updateUserSettings(userId, updateData);
-      console.log("✅ Settings updated successfully for user:", userId);
-      console.log("- Updated logo type:", updatedUser.logoType);
-      console.log("- Updated logo URL length:", updatedUser.logoUrl?.length || 0);
 
       // Update real-user activity timestamp only when not impersonating
       if (!isImpersonating(req)) {
@@ -654,7 +626,6 @@ export function registerAuthRoutes(app: Express): void {
         .where(eq(users.id, userId))
         .returning();
       
-      console.log(`✅ Updated payment terms for user ${userId}: ${updateData.defaultDepositPercentage ?? 'unchanged'}% deposit, ${updateData.balanceDueDays ?? 'unchanged'} days`);
       res.json({ 
         success: true,
         user: {
@@ -718,7 +689,6 @@ export function registerAuthRoutes(app: Express): void {
       if (user) {
         req.session.userId = user.id;
         req.session.user = user;
-        console.log(`✅ Quick login successful for ${user.email}`);
         res.json({ success: true, user });
       } else {
         res.status(404).json({ error: 'User not found' });
@@ -1262,7 +1232,6 @@ export function registerAuthRoutes(app: Express): void {
             subject: `${fullName} has joined your team`,
             html: wrapCustomerEmail(notifyBody, { businessName: wholesaler.businessName || wholesaler.firstName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${fullName} accepted your invitation and is ready to work` })
           });
-          console.log('✅ Wholesaler notified of new team member:', wholesaler.email);
         }
       } catch (notifyErr) {
         console.error('Warning: failed to notify wholesaler of team member join:', notifyErr);
@@ -1685,7 +1654,6 @@ export function registerAuthRoutes(app: Express): void {
       // Send password reset email with PLAIN token
       await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) });
       
-      console.log(`🔐 Password reset email sent to ${email}`);
       
       res.json({ 
         success: true, 
@@ -1757,7 +1725,6 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: "Invalid or expired reset token" });
       }
       
-      console.log(`🔐 Password successfully reset for ${user.email}`);
       
       res.json({ 
         success: true, 

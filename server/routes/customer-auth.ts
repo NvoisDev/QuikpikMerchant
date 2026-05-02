@@ -96,7 +96,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       await storage.createPhoneVerification(normalised, code, expiresAt, ipAddress);
 
       const smsResult = await ReliableSMSService.sendVerificationSMS(normalised, code, 'Quikpik', '');
-      console.log(`📱 Phone OTP send result for ${normalised}:`, smsResult);
 
       if (smsResult.success || process.env.NODE_ENV === 'development') {
         return res.json({
@@ -180,7 +179,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       // Find all wholesalers linked to this phone
       const wholesalers = await storage.findCustomersByPhone(normalised);
-      console.log(`✅ Phone OTP verified for ${normalised} — ${wholesalers.length} wholesaler(s) found`);
 
       if (wholesalers.length === 0) {
         return res.json({ success: true, noWholesalers: true, wholesalers: [] });
@@ -287,7 +285,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
 
       await buildAndSaveCustomerSession(req, res, customer, wholesalerId);
-      console.log(`🔐 Phone-OTP session created for ${customerName} → wholesaler ${wholesalerId}`);
 
       return res.json({
         success: true,
@@ -316,7 +313,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: 'Name and phone number are required' });
       }
 
-      console.log('📋 General wholesale enquiry received:', { name, phoneNumber: phoneNumber.slice(-4) + '****' });
 
       // Send email notification to platform admin
       try {
@@ -456,7 +452,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         .limit(1);
 
       if (recentCodes.length > 0) {
-        console.log(`🚫 SMS throttling: Recent code exists for ${customer.name}, not sending new SMS`);
         return res.json({ 
           success: true, 
           message: "SMS verification code already sent recently. Please check your messages or wait 2 minutes.",
@@ -464,16 +459,13 @@ export function registerCustomerAuthRoutes(app: Express): void {
         });
       }
 
-      console.log("Customer found for SMS:", customer);
 
       // Get wholesaler info for business name
       const wholesaler = await storage.getWholesalerProfile(wholesalerId);
       
       // Generate and send SMS code
       const code = ReliableSMSService.generateVerificationCode();
-      console.log(`🔄 Generated verification code: ${code}`);
       const result = await ReliableSMSService.sendVerificationSMS(customer.phone, code, wholesaler?.businessName || 'Business', wholesalerId);
-      console.log(`📋 SMS service result:`, result);
       
       // Always store verification code in database, regardless of SMS success
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
@@ -484,10 +476,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
         phoneNumber: customer.phone,
         expiresAt: expiresAt
       };
-      console.log("About to create SMS verification with data:", smsData);
       try {
         await storage.createSMSVerificationCode(smsData);
-        console.log("✅ SMS verification code stored in database");
       } catch (dbError) {
         console.error("❌ Database error storing SMS code:", dbError);
         throw dbError; // Re-throw to maintain existing error handling
@@ -507,7 +497,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       } else {
         // SMS failed but in development mode, provide fallback
         if (process.env.NODE_ENV === 'development') {
-          console.log('🧪 SMS failed, using development fallback');
           res.json({ 
             success: true, 
             message: "SMS verification code sent (development mode)",
@@ -554,7 +543,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(401).json({ error: "Customer not found" });
       }
 
-      console.log('🔧 SMS Verification - Customer data:', {
         id: customer.id || customer.customer_id,
         name: customer.name,
         phone: customer.phone,
@@ -605,7 +593,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
       };
 
-      console.log('🔧 SMS Verification - Session data created:', sessionData);
 
       // Ensure session exists and store customer session
       if (!req.session) {
@@ -616,7 +603,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Set customer authentication data in session
       (req.session as any).customerAuth = sessionData;
       
-      console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 30 days`);
 
       // Force session save using callback method with timeout
       const saveSession = () => {
@@ -632,12 +618,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
                 console.error('❌ Session save error:', err);
                 reject(err);
               } else {
-                console.log('✅ Customer session saved successfully');
                 resolve();
               }
             });
           } else {
-            console.log('⚠️ Session save method not available');
             resolve(); // Continue anyway
           }
         });
@@ -650,7 +634,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         // Continue anyway to avoid blocking the user
       }
       
-      console.log('✅ Sending SMS verification success response');
       
       // Create a signed token as backup for session persistence issues
       // Set a fallback cookie with customer authentication
@@ -704,7 +687,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
             groupName: cookieData.groupName || '',
             expiresAt: new Date(cookieData.expires).toISOString(),
           };
-          console.log('🔓 Using fallback cookie authentication for customer:', cookieData.name);
         }
       }
       
@@ -730,7 +712,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(401).json({ authenticated: false, message: "Session expired" });
       }
       
-      console.log(`✅ Customer session valid for ${customerAuth.name} (expires: ${customerAuth.expiresAt})`);
       
       // Valid session found - get full customer data including business name
       const fullCustomerData = await storage.getUser(customerAuth.customerId);
@@ -819,7 +800,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       res.cookie('customer_auth', signCustomerCookie(cookieData), COOKIE_OPTIONS);
       
-      console.log(`🔄 Customer ${customerAuth.name} switched from wholesaler ${customerAuth.wholesalerId} to ${targetWholesalerId}`);
       
       res.json({
         success: true,
@@ -837,7 +817,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
     try {
       const customerAuth = (req.session as any)?.customerAuth;
       if (customerAuth) {
-        console.log(`🔓 Customer logout: ${customerAuth.name} (${customerAuth.phone})`);
       }
 
       // Clear the customer_auth cookie so check-session cannot auto-resume.
@@ -885,13 +864,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       // SECURITY FIX: Remove hardcoded customer fallback that was causing data leaks
       if (!customerAuth) {
-        console.log('❌ No customer authentication found - login required');
         return res.status(401).json({ error: 'Authentication required - please log in to access your profile' });
       }
       
       const { name, email, phone, businessName } = req.body;
       
-      console.log('🔄 Customer profile update request:', { name, email, phone, businessName });
       
       // Prepare update data
       const updates: any = {};
@@ -915,7 +892,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(404).json({ error: "Customer not found" });
       }
       
-      console.log('✅ Customer profile updated successfully');
       
       res.json({
         success: true,
@@ -937,11 +913,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.get('/api/registration-requests', requireAuth, async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      console.log(`🔍 Fetching pending registration requests for wholesaler: ${userId}`);
       
       const requests = await storage.getAllRegistrationRequests(userId);
       
-      console.log(`✅ Found ${requests.length} pending registration requests`);
       res.json(requests);
     } catch (error) {
       console.error('Error fetching registration requests:', error);
@@ -980,7 +954,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const { action, responseMessage, customerGroupId } = req.body;
       const userId = (req as any).user.id;
       
-      console.log(`📝 Processing registration request ${requestId}: ${action} by user ${userId}`);
       
       if (!['approve', 'reject'].includes(action)) {
         return res.status(400).json({ error: 'Invalid action. Must be approve or reject' });
@@ -1024,7 +997,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
               eq(wholesalerCustomerRelationships.wholesalerId, userId),
               sql`customer_id IN (SELECT id FROM users WHERE phone_number = ${requestData.customerPhone})`
             ));
-          console.log(`✅ Revoked customer access for ${requestData.customerPhone}`);
         } catch (revokeError) {
           console.warn(`⚠️ Could not archive relationship during revoke:`, revokeError);
         }
@@ -1044,7 +1016,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         let newCustomer: any;
         if (existingUsers.length > 0) {
           newCustomer = existingUsers[0];
-          console.log(`♻️ Reusing existing user ${newCustomer.id} (${newCustomer.firstName || ''} ${newCustomer.lastName || ''}) for phone ${requestData.customerPhone}`);
         } else {
           newCustomer = await storage.createCustomer({
             phoneNumber: requestData.customerPhone,
@@ -1055,7 +1026,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
             wholesalerId: userId,
             customerType: requestData.customerType || undefined,
           });
-          console.log(`✅ Created new customer account: ${newCustomer.id} (${newCustomer.firstName || ''} ${newCustomer.lastName || ''})`);
         }
 
         // Create wholesaler-customer relationship (guard against duplicates)
@@ -1078,9 +1048,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
                 eq(wholesalerCustomerRelationships.customerId, newCustomer.id),
                 eq(wholesalerCustomerRelationships.wholesalerId, userId)
               ));
-            console.log(`♻️ Reactivated existing relationship for customer ${newCustomer.id}`);
           } else {
-            console.log(`♻️ Relationship already exists and is active for customer ${newCustomer.id}`);
           }
         } else {
           await db.insert(wholesalerCustomerRelationships).values({
@@ -1088,13 +1056,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
             wholesalerId: userId,
             status: 'active',
           });
-          console.log(`✅ Created wholesaler-customer relationship for ${newCustomer.id}`);
         }
 
         if (customerGroupId && customerGroupId > 0) {
           try {
             await storage.addCustomerToGroup(customerGroupId, newCustomer.id);
-            console.log(`✅ Customer ${newCustomer.id} added to group ${customerGroupId}`);
           } catch (groupError) {
             console.warn(`⚠️ Failed to add customer to group ${customerGroupId}:`, groupError);
           }
@@ -1108,7 +1074,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
-            console.log(`📧 Sending welcome messages for approved customer ${customerName}`);
             
             const welcomeResult = await sendWelcomeMessages({
               customerName,
@@ -1124,7 +1089,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
               wholesalerLogoUrl: wholesaler.logoUrl,
             });
             
-            console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
           }
         } catch (welcomeError) {
           console.error('❌ Error sending welcome messages (Registration Approval):', welcomeError);
@@ -1144,7 +1108,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
               subject: `Registration Approved - Welcome to ${businessName}`,
               html: wrapCustomerEmail(approvedBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your registration with ${businessName} has been approved` })
             });
-            console.log(`📧 Approval notification sent to ${requestData.customerEmail}`);
           } catch (emailError) {
             console.error('Failed to send approval notification:', emailError);
           }
@@ -1164,7 +1127,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
               subject: `Registration Request Update - ${businessName}`,
               html: wrapCustomerEmail(rejectedBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your registration with ${businessName}` })
             });
-            console.log(`📧 Rejection notification sent to ${requestData.customerEmail}`);
           } catch (emailError) {
             console.error('Failed to send rejection notification:', emailError);
           }
@@ -1187,7 +1149,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const { customerId } = req.params;
       const { firstName, lastName, email, phoneNumber, businessName } = req.body;
       
-      console.log(`🔄 Customer profile update request for: ${customerId}`, { firstName, lastName, email, phoneNumber, businessName });
       
       // Validate required fields
       if (!customerId) {
@@ -1208,7 +1169,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Update customer profile with automatic notifications to wholesalers
       const updatedCustomer = await storage.updateCustomerProfileWithNotifications(customerId, updates, true);
       
-      console.log(`✅ Customer profile updated successfully: ${customerId}`);
       
       res.json({
         success: true,
@@ -1330,7 +1290,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       };
 
-      console.log('🔧 Email Verification - Session data created:', sessionData);
 
       // Ensure session exists and store customer session
       if (!req.session) {
@@ -1338,7 +1297,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       }
       (req.session as any).customerAuth = sessionData;
 
-      console.log(`🔐 Customer session created for ${customerName} (email) - expires in 30 days`);
 
       // Force session save
       const saveSession = () => new Promise<void>((resolve, reject) => {
@@ -1347,10 +1305,8 @@ export function registerCustomerAuthRoutes(app: Express): void {
           req.session.save((err) => {
             clearTimeout(timeout);
             if (err) { console.error('❌ Session save error:', err); reject(err); }
-            else { console.log('✅ Customer session saved successfully'); resolve(); }
           });
         } else {
-          console.log('⚠️ Session save method not available');
           resolve();
         }
       });
@@ -1374,7 +1330,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
       }), COOKIE_OPTIONS);
 
-      console.log('✅ Sending email verification success response');
 
       res.json({ 
         success: true, 

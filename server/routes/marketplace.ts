@@ -322,12 +322,10 @@ export function registerMarketplaceRoutes(app: Express): void {
       const decodedPhoneNumber = decodeURIComponent(phoneNumber);
       const lastFourDigits = decodedPhoneNumber.slice(-4);
 
-      console.log('🔍 Finding accessible wholesalers for customer with last 4 digits:', lastFourDigits);
 
       // Get all wholesalers where this customer is registered
       const accessibleWholesalers = await storage.getWholesalersForCustomer(lastFourDigits);
       
-      console.log(`✅ Found ${accessibleWholesalers.length} accessible wholesalers for customer`);
       
       res.json(accessibleWholesalers);
     } catch (error) {
@@ -346,7 +344,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       }
       
       await storage.setCustomerShippingChoice(customerId, shippingChoice);
-      console.log(`🚚 Updated shipping choice for customer ${customerId}: ${shippingChoice}`);
       
       res.json({ success: true, shippingChoice });
     } catch (error) {
@@ -386,7 +383,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       // Normalise to E.164 immediately so all formats of the same number are treated identically
       const customerPhone = formatPhoneToInternational(req.body.customerPhone || '');
       
-      console.log("🔍 Customer registration request:", { wholesalerId, customerPhone: customerPhone?.slice(-4) + "****", customerName });
       
       // Validate required fields
       if (!wholesalerId || !customerPhone || !customerName) {
@@ -412,7 +408,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       // Allow customers to request again after rejection (re-request capability)
       const latestRequest = await storage.getLatestRegistrationRequest(wholesalerId, customerPhone);
       if (latestRequest && latestRequest.status === 'rejected') {
-        console.log("Customer re-requesting access after previous rejection");
       }
       
       // Create the registration request
@@ -429,7 +424,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         orderFrequency: orderFrequency || null,
       });
       
-      console.log("✅ Registration request created with ID:", request.id);
       
       // Send email notification to wholesaler
       const wholesaler = await storage.getUser(wholesalerId);
@@ -444,14 +438,12 @@ export function registerMarketplaceRoutes(app: Express): void {
           const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p>${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${businessTypeLabel}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
           const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
-          console.log(`📏 Registration email size: ${Buffer.byteLength(regHtml, 'utf8')} bytes`);
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: emailSubject,
             html: regHtml
           });
-          console.log(`📧 Registration request notification sent to ${wholesaler.email}`);
         } catch (emailError) {
           console.error('Failed to send registration request notification:', emailError);
         }
@@ -656,7 +648,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                 .limit(1);
               customerIdForPriceList = fallbackRows[0]?.userId ?? null;
               if (customerIdForPriceList) {
-                console.log(`[create-payment] price-list fallback: resolved customer ${customerIdForPriceList} via wholesaler relationship`);
               }
             }
           } catch {
@@ -1172,16 +1163,13 @@ export function registerMarketplaceRoutes(app: Express): void {
         let customer = await storage.getUserByPhone(customerPhone);
         const { firstName, lastName } = parseCustomerName(customerName);
         
-        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})` : 'Not found');
         
         // If phone lookup fails, try email lookup
         if (!customer && customerEmail) {
           customer = await storage.getUserByEmail(customerEmail);
-          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})` : 'Not found');
         }
         
         if (!customer) {
-          console.log(`📝 Creating new customer: ${firstName || ''} ${lastName || ''} (${customerPhone})`);
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
             firstName,
@@ -1190,7 +1178,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             email: customerEmail,
             wholesalerId: wholesalerId
           });
-          console.log(`✅ New customer created: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}) linked to wholesaler: ${wholesalerId}`);
           
           // Send welcome messages to new customer (Payment Processing)
           try {
@@ -1200,7 +1187,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
-              console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               
               const welcomeResult = await sendWelcomeMessages({
                 customerName,
@@ -1216,7 +1202,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                 wholesalerLogoUrl: wholesaler.logoUrl,
               });
               
-              console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
             }
           } catch (welcomeError) {
             console.error('❌ Error sending welcome messages (Payment Processing):', welcomeError);
@@ -1227,7 +1212,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           if (customerEmail && customer.email !== customerEmail) {
             const existingEmailUser = await storage.getUserByEmail(customerEmail);
             if (existingEmailUser && existingEmailUser.id !== customer.id) {
-              console.log(`⚠️ Email ${customerEmail} belongs to different customer ${existingEmailUser.id}, keeping existing email for ${customer.id}`);
               emailConflict = true;
             }
           }
@@ -1240,7 +1224,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             (customerEmail && customer.email !== customerEmail && !emailConflict);
             
           if (needsUpdate) {
-            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName || ''} ${lastName || ''} (${customerPhone})`);
             
             // Only update email if there's no conflict
             const updateData = {
@@ -1257,16 +1240,13 @@ export function registerMarketplaceRoutes(app: Express): void {
             
             // Update phone number separately if needed
             if (customerPhone && customer.phoneNumber !== customerPhone) {
-              console.log(`📱 Updating phone number for customer: ${customer.id} to ${customerPhone}`);
               await storage.updateCustomerPhone(customer.id, customerPhone);
               customer.phoneNumber = customerPhone; // Update local copy
             }
             
-            console.log(`✅ Customer updated: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}) (${customer.phoneNumber})`);
           }
         }
         
-        console.log(`👤 Using customer for order: ${customer.id} (${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()})`);;
 
         // 🚚 SHIPPING INFO: Already parsed above for debug logging - use existing shippingInfo variable
         
@@ -1276,15 +1256,12 @@ export function registerMarketplaceRoutes(app: Express): void {
           console.error(`🚨 CRITICAL: No shippingInfo in payment metadata for ${paymentIntentId}! This will default to pickup.`);
           console.error(`🚨 Payment metadata keys:`, Object.keys(paymentIntent.metadata || {}));
         } else if (shippingInfo.option === 'pickup') {
-          console.log(`📦 Customer explicitly chose pickup for payment ${paymentIntentId}`);
         } else if (shippingInfo.option === 'delivery') {
-          console.log(`🚚 Customer chose delivery for payment ${paymentIntentId} - will create DELIVERY order`);
         }
         
         // Use actual order shipping choice, not saved customer preference
         const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
         
-        console.log('🚚 MARKETPLACE ROUTE: Using actual order shipping choice:', {
           customerId: customer.id,
           customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
           orderShippingOption: shippingInfo.option,
@@ -1295,7 +1272,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         // CRITICAL FIX: Use explicit address ID from payment metadata if available, ALWAYS override metadata address
         if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
           try {
-            console.log(`🎯 MARKETPLACE EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
             
             // CRITICAL FIX: Get the specific address directly by ID since customer already selected it
             const explicitlySelectedAddress = await storage.getDeliveryAddressById(parseInt(selectedDeliveryAddressId));
@@ -1310,7 +1286,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                 postalCode: explicitlySelectedAddress.postal_code || '',
                 country: explicitlySelectedAddress.country || 'United Kingdom'
               };
-              console.log(`🎯 MARKETPLACE CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
             } else {
               console.warn(`⚠️ MARKETPLACE: Customer selected address ID ${selectedDeliveryAddressId} not found in database. Attempting fallback from all customer addresses...`);
               try {
@@ -1326,7 +1301,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                     postalCode: fallbackAddr.postal_code || '',
                     country: fallbackAddr.country || 'United Kingdom'
                   };
-                  console.log(`🔄 MARKETPLACE FALLBACK: Using customer address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
                 } else {
                   console.warn(`⚠️ MARKETPLACE: No addresses found for customer ${customer.id}. Proceeding without address snapshot.`);
                 }
@@ -1348,7 +1322,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Use the correct total from metadata instead of recalculating
         const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || '0')).toFixed(2);
         
-        console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
           hasShippingInfo: !!shippingInfoJson,
           shippingInfoRaw: shippingInfoJson,
           parsedShippingInfo: shippingInfo,
@@ -1362,7 +1335,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         let order, wholesaleRef;
         
         try {
-          console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Starting transaction for payment ${paymentIntentId}`);
           const result = await db.transaction(async (trx) => {
             // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
             const existingOrderResult = await trx
@@ -1373,7 +1345,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             
             if (existingOrderResult.length > 0) {
               const existingOrder = existingOrderResult[0];
-              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
               throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
             }
 
@@ -1385,7 +1356,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               ? parseFloat(productSubtotal).toFixed(2)
               : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
             
-            console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
             // VAT — read from Stripe payment metadata (set at checkout creation time)
             const webhookVatAmount = parseFloat(metadataVatAmount || '0');
@@ -1433,7 +1403,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2)
             };
             
-            console.log('🚚 SIMPLIFIED DELIVERY: Order data with shipping fields:', {
               fulfillmentType: orderData.fulfillmentType,
               deliveryCarrier: orderData.deliveryCarrier,
               isDeliveryOrder: orderData.fulfillmentType === 'delivery',
@@ -1455,14 +1424,10 @@ export function registerMarketplaceRoutes(app: Express): void {
               };
             }));
 
-            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: About to call createOrderWithTransaction`);
-            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Order data:`, orderData);
-            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Items:`, orderItemsData);
             
             // Use transaction-aware storage method with integrity check
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
             
-            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: createOrderWithTransaction completed, order ID: ${createdOrder.id}`);
             
             // 🔒 DATA INTEGRITY: Verify all items were saved correctly
             const savedItems = await trx.select().from(orderItems).where(eq(orderItems.orderId, createdOrder.id));
@@ -1471,7 +1436,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               throw new Error(`Data integrity failure: Expected ${items.length} items, saved ${savedItems.length}`);
             }
             
-            console.log(`✅ Order #${createdOrder.id} created with ${savedItems.length}/${items.length} items verified`);
             return { order: createdOrder, wholesaleRef };
           });
           
@@ -1481,7 +1445,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           // Handle duplicate order errors gracefully
           if (error.message.startsWith('DUPLICATE_ORDER:')) {
             const [, orderId, orderNumber] = error.message.split(':');
-            console.log(`✅ Duplicate order detected and prevented: #${orderId} (${orderNumber})`);
             return res.json({ 
               success: true, 
               orderId: parseInt(orderId), 
@@ -1492,7 +1455,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           throw error; // Re-throw other errors
         }
         
-        console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
         // Capture Stripe Transfer ID for exact payout-to-order reconciliation.
         // This runs outside the transaction so a Stripe API failure never blocks the order.
@@ -1558,7 +1520,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                 })() : 
                 customerAddress
             }, order, enrichedItems, wholesaler);
-            console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
 
             
           } catch (emailError) {
@@ -1694,7 +1655,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               text: emailTemplate.text
             });
 
-            console.log(`📧 Wholesaler email notification sent to ${wholesaler.email} for Order #${order.id}`);
           } catch (error) {
             console.error('Failed to send wholesaler email notification:', error);
           }
@@ -2001,7 +1961,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         return await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
       });
 
-      console.log(`✅ Pay-Later order #${order.id} (${orderNumber}) created for ${customerName}, total: ${total}, status: unpaid`);
 
       // --- Send notifications ---
 
@@ -2266,7 +2225,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         })
         .returning();
       
-      console.log(`📋 Cancellation request created for order ${order.orderNumber} by customer ${customerPhone}`);
       
       // Notify wholesaler about the cancellation request via SMS and email
       try {
@@ -2294,7 +2252,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             subject: `Cancellation Request for Order ${order.orderNumber}`,
             html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
           });
-          console.log(`📧 Cancellation request email sent to ${wholesaler.email} for order ${order.orderNumber}`);
         }
       } catch (error) {
         console.error('Failed to send cancellation request notification:', error);
@@ -2451,7 +2408,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
-            console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
             
             const welcomeResult = await sendWelcomeMessages({
               customerName,
@@ -2466,7 +2422,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               wholesalerLogoUrl: wholesaler.logoUrl,
             });
             
-            console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
           }
         } catch (welcomeError) {
           console.error('❌ Error sending welcome messages (Marketplace Order):', welcomeError);
@@ -2638,7 +2593,6 @@ Please contact the customer to confirm this order.
               const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
-              console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               
               const welcomeResult = await sendWelcomeMessages({
                 customerName,
@@ -2653,7 +2607,6 @@ Please contact the customer to confirm this order.
                 wholesalerLogoUrl: wholesaler.logoUrl,
               });
               
-              console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
             }
           } catch (welcomeError) {
             console.error('❌ Error sending welcome messages (Customer Portal Orders):', welcomeError);
@@ -2849,7 +2802,6 @@ Please contact the customer to confirm this order.
 
       // For balance payments, always generate a fresh Stripe checkout session
       // The original payment link was for the deposit and is now completed/expired
-      console.log(`💳 Generating fresh balance payment link for order ${order.orderNumber}, amount: £${amountOutstanding.toFixed(2)}`);
 
       // Generate a new payment link — derive Stripe client from wholesaler's test mode flag
       const wholesaler = await storage.getUser(order.wholesalerId);
@@ -2928,7 +2880,6 @@ Please contact the customer to confirm this order.
         })
         .where(eq(orders.id, orderId));
 
-      console.log(`✅ Customer-initiated balance payment link generated for order ${order.orderNumber}: ${session.url}`);
 
       res.json({
         success: true,
@@ -3262,7 +3213,6 @@ Please contact the customer to confirm this order.
         })
         .where(eq(orders.id, createdOrder.id));
 
-      console.log(`🔄 Reorder created: ${newOrderNumber} (from ${order.orderNumber}) for customer ${order.customerName} - payment link generated`);
 
       res.json({
         success: true,
