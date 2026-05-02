@@ -24,6 +24,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -47,7 +52,8 @@ import {
   Search,
   Building2,
   Share2,
-  Loader2
+  Loader2,
+  Pencil,
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -169,6 +175,8 @@ export default function QuickQuote() {
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [editNameForm, setEditNameForm] = useState({ firstName: '', lastName: '', businessName: '' });
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
@@ -230,6 +238,10 @@ export default function QuickQuote() {
     }
   }, [customerAddresses]);
 
+  useEffect(() => {
+    setEditNameOpen(false);
+  }, [selectedCustomer?.id]);
+
   const addCustomerMutation = useMutation({
     mutationFn: async (data: typeof newCustomer) => {
       const response = await apiRequest('POST', '/api/customers', data);
@@ -260,6 +272,35 @@ export default function QuickQuote() {
         description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
           ? `Only ${e.available} units of "${e.productName || "this product"}" are in stock — you requested ${e.requested}. Please reduce the quantity.`
           : (error.message || "Failed to add customer"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCustomerNameMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; businessName: string }) => {
+      if (!selectedCustomer) throw new Error('No customer selected');
+      const response = await apiRequest('PATCH', `/api/customers/${selectedCustomer.id}`, data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      setSelectedCustomer(prev => prev ? {
+        ...prev,
+        firstName: data.firstName ?? prev.firstName,
+        lastName: data.lastName ?? prev.lastName,
+        businessName: data.businessName ?? prev.businessName,
+      } : prev);
+      setEditNameOpen(false);
+      toast({
+        title: "Customer Updated",
+        description: "Customer name has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer name",
         variant: "destructive",
       });
     },
@@ -899,30 +940,110 @@ export default function QuickQuote() {
                 </SheetContent>
               </Sheet>
 
-              {selectedCustomer && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="font-medium">
-                    {(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || 'Unknown'}
+              {selectedCustomer && (() => {
+                const hasName = !!(selectedCustomer.businessName?.trim() || selectedCustomer.firstName?.trim() || selectedCustomer.lastName?.trim());
+                const displayName = selectedCustomer.businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim();
+                const editNamePopover = (
+                  <Popover open={editNameOpen} onOpenChange={(open) => {
+                    setEditNameOpen(open);
+                    if (open) {
+                      setEditNameForm({
+                        firstName: selectedCustomer.firstName || '',
+                        lastName: selectedCustomer.lastName || '',
+                        businessName: selectedCustomer.businessName || '',
+                      });
+                    }
+                  }}>
+                    <PopoverTrigger asChild>
+                      {hasName ? (
+                        <button className="ml-1 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Edit customer name">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 transition-colors cursor-pointer">
+                          <Pencil className="h-3 w-3" />
+                          Add customer name or business name
+                        </button>
+                      )}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-4" align="start">
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">{hasName ? 'Edit customer name' : 'Add customer name'}</p>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Business name</Label>
+                          <Input
+                            className="h-8 text-sm"
+                            placeholder="e.g. Acme Ltd"
+                            value={editNameForm.businessName}
+                            onChange={(e) => setEditNameForm(f => ({ ...f, businessName: e.target.value }))}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 space-y-2">
+                            <Label className="text-xs">First name</Label>
+                            <Input
+                              className="h-8 text-sm"
+                              placeholder="First"
+                              value={editNameForm.firstName}
+                              onChange={(e) => setEditNameForm(f => ({ ...f, firstName: e.target.value }))}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <Label className="text-xs">Last name</Label>
+                            <Input
+                              className="h-8 text-sm"
+                              placeholder="Last"
+                              value={editNameForm.lastName}
+                              onChange={(e) => setEditNameForm(f => ({ ...f, lastName: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setEditNameOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={updateCustomerNameMutation.isPending || (!editNameForm.firstName.trim() && !editNameForm.lastName.trim() && !editNameForm.businessName.trim())}
+                            onClick={() => updateCustomerNameMutation.mutate(editNameForm)}
+                          >
+                            {updateCustomerNameMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                );
+                return (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="font-medium flex items-center gap-1">
+                      {displayName || 'Unknown'}
+                      {hasName && editNamePopover}
+                    </div>
+                    {selectedCustomer.email && (
+                      <div className="text-sm text-gray-600 flex items-center gap-1">
+                        <Mail className="h-3 w-3" /> {selectedCustomer.email}
+                      </div>
+                    )}
+                    {selectedCustomer.phoneNumber && (
+                      <div className="text-sm text-gray-600 flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {selectedCustomer.phoneNumber}
+                      </div>
+                    )}
+                    {!hasName && (
+                      <div className="mt-2">
+                        {editNamePopover}
+                      </div>
+                    )}
                   </div>
-                  {selectedCustomer.email && (
-                    <div className="text-sm text-gray-600 flex items-center gap-1">
-                      <Mail className="h-3 w-3" /> {selectedCustomer.email}
-                    </div>
-                  )}
-                  {selectedCustomer.phoneNumber && (
-                    <div className="text-sm text-gray-600 flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {selectedCustomer.phoneNumber}
-                    </div>
-                  )}
-                  {!selectedCustomer.businessName?.trim() && !selectedCustomer.firstName?.trim() && !selectedCustomer.lastName?.trim() && (
-                    <div className="mt-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                        Add customer name or business name
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+                );
+              })()}
             </CardContent>
           </Card>
 
