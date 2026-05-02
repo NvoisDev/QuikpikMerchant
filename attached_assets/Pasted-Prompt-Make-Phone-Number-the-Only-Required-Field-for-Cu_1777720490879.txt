@@ -1,0 +1,115 @@
+Prompt: Make Phone Number the Only Required Field for Customer Creation
+🧠 Prompt: Enforce Phone Number as Primary Required Field for Customer Creation (Global, Non-Breaking)
+
+Update all customer creation flows so that phone number is the only required field, while first name and business name are optional. This must apply consistently across:
+
+Customer tab (manual add / invite)
+Invoice creation flow (inline create)
+Any other customer creation entry points
+🎯 Objective
+Standardise customer creation around phone-first logic
+Reduce friction when adding customers
+Ensure compatibility with SMS login and payment flows
+Maintain full backwards compatibility
+⚠️ Core Constraint
+
+Do NOT:
+
+Break existing customers or records
+Modify payment or order logic
+Introduce duplicate customers by phone
+🧩 1. Validation Rules (Global)
+Required:
+Phone number ✅
+Optional:
+First name
+Business name
+🧩 2. Behaviour by Scenario
+Case A: Phone only
+Create customer with:
+phone = required
+name = null or empty
+businessName = null
+System should:
+Still allow invoice creation
+Still allow sending payment link
+Still allow portal login
+Case B: Phone + Name / Business
+Create full customer as normal
+No change to behaviour
+🧩 3. UI Updates (All Customer Entry Points)
+
+Apply to:
+
+Customer tab → “Add Customer”
+Invoice flow → inline customer creation
+Invite / share flows
+Form changes:
+Phone field:
+Mark as required
+Add validation (format, country code if applicable)
+Name field:
+Mark as optional
+Business name:
+Mark as optional
+Helper text (important for UX):
+
+Under phone field:
+
+“Required for sending payment links and customer login”
+
+🧩 4. Display Logic (Fallbacks)
+
+If name is missing:
+
+Use fallback display:
+
+customerDisplayName = name || businessName || phone;
+
+This ensures:
+
+No blank UI
+Consistent display across:
+Orders
+Invoices
+Customer lists
+🧩 5. Duplicate Prevention
+Phone number must be unique per wholesaler
+If phone already exists:
+Show existing customer instead of creating new one
+🧩 6. Backwards Compatibility
+Existing customers without phone:
+Must still work
+Should be flagged as:
+→ “No portal access”
+Do NOT force migration or breaking updates
+🧩 7. Customer Portal Logic
+Phone present → portal access enabled
+No phone → no portal access
+
+(No change to existing logic, just enforced earlier)
+
+🧩 8. Invoice Flow Protection
+
+Ensure:
+
+Invoice creation still works in all cases
+Payment links generate correctly
+Stripe/payment logic untouched
+🧩 9. Regression Checklist (MANDATORY)
+ Add customer with phone only
+ Add customer with full details
+ Prevent duplicate phone entries
+ Create invoice with phone-only customer
+ Send payment link works
+ Customer login via SMS works
+ Existing customers unaffected
+🧩 10. Optional UX Enhancement (Recommended)
+
+If name is empty:
+
+Show suggestion:
+
+“Add a name to help identify this customer later”
+
+🚀 Outcome

@@ -677,8 +677,8 @@ export function registerCustomerRoutes(app: Express): void {
       const { firstName, lastName, email, phoneNumber, groupId, businessName } = req.body;
       console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId, businessName });
       
-      if ((!firstName?.trim() && !businessName?.trim()) || !phoneNumber) {
-        return res.status(400).json({ error: 'A name (or business name) and phone number are required' });
+      if (!phoneNumber) {
+        return res.status(400).json({ error: 'Phone number is required' });
       }
       
       // Format phone number

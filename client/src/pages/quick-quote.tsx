@@ -153,7 +153,7 @@ export default function QuickQuote() {
     email: '',
     businessName: '',
   });
-  const [addCustomerNameError, setAddCustomerNameError] = useState(false);
+  const [addCustomerNameError] = useState(false);
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('bank_transfer');
@@ -795,20 +795,20 @@ export default function QuickQuote() {
                     <div className="space-y-4 mt-4">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label htmlFor="firstName">First Name</Label>
+                          <Label htmlFor="firstName">First Name <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
                           <Input
                             id="firstName"
                             value={newCustomer.firstName}
-                            onChange={(e) => { setNewCustomer({...newCustomer, firstName: e.target.value}); setAddCustomerNameError(false); }}
+                            onChange={(e) => setNewCustomer({...newCustomer, firstName: e.target.value})}
                             placeholder="John"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="lastName">Last Name</Label>
+                          <Label htmlFor="lastName">Last Name <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
                           <Input
                             id="lastName"
                             value={newCustomer.lastName}
-                            onChange={(e) => { setNewCustomer({...newCustomer, lastName: e.target.value}); setAddCustomerNameError(false); }}
+                            onChange={(e) => setNewCustomer({...newCustomer, lastName: e.target.value})}
                             placeholder="Doe"
                           />
                         </div>
@@ -833,25 +833,18 @@ export default function QuickQuote() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="businessName">Business Name</Label>
+                        <Label htmlFor="businessName">Business Name <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
                         <Input
                           id="businessName"
                           value={newCustomer.businessName}
-                          onChange={(e) => { setNewCustomer({...newCustomer, businessName: e.target.value}); setAddCustomerNameError(false); }}
+                          onChange={(e) => setNewCustomer({...newCustomer, businessName: e.target.value})}
                           placeholder="Acme Ltd"
                         />
                       </div>
-                      {addCustomerNameError && (
-                        <p className="text-xs text-red-500">Please provide at least a first name, last name, or business name</p>
-                      )}
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         disabled={!newCustomer.phoneNumber || addCustomerMutation.isPending}
                         onClick={() => {
-                          if (!(newCustomer.firstName.trim() || newCustomer.lastName.trim() || newCustomer.businessName.trim())) {
-                            setAddCustomerNameError(true);
-                            return;
-                          }
                           addCustomerMutation.mutate(newCustomer);
                         }}
                       >

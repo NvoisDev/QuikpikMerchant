@@ -124,7 +124,7 @@ const addMemberFormSchema = z.object({
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
-  name: z.string().min(1, "Customer name is required"),
+  name: z.string().optional().or(z.literal("")),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
@@ -138,7 +138,7 @@ const editMemberFormSchema = z.object({
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
-  name: z.string().min(1, "Customer name is required"),
+  name: z.string().optional().or(z.literal("")),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
@@ -153,10 +153,7 @@ const editCustomerFormSchema = z.object({
     z.literal("")
   ]).optional(),
   businessName: z.string().optional(),
-}).refine(
-  (data) => !!(data.firstName?.trim() || data.lastName?.trim() || data.businessName?.trim()),
-  { message: "Please provide at least a first name, last name, or business name", path: ["firstName"] }
-);
+});
 
 const editGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required"),
@@ -176,10 +173,7 @@ const addCustomerFormSchema = z.object({
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   groupId: z.number().optional(),
-}).refine(
-  (data) => !!(data.firstName?.trim() || data.businessName?.trim()),
-  { message: "Please provide a first name or business name", path: ["firstName"] }
-);
+});
 
 const searchAndAddFormSchema = z.object({
   customerId: z.string().min(1, "Please select a customer"),
@@ -1328,7 +1322,7 @@ export default function Customers() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabel>First Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                         <FormControl>
                           <Input placeholder="John" {...field} />
                         </FormControl>
@@ -1341,7 +1335,7 @@ export default function Customers() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabel>Last Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                         <FormControl>
                           <Input placeholder="Doe" {...field} />
                         </FormControl>
@@ -1354,9 +1348,9 @@ export default function Customers() {
                     name="businessName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Business Name</FormLabel>
+                        <FormLabel>Business Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                         <FormControl>
-                          <Input placeholder="Acme Ltd (optional if first name given)" {...field} />
+                          <Input placeholder="Acme Ltd" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1367,7 +1361,7 @@ export default function Customers() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                         <FormControl>
                           <Input placeholder="john@example.com" {...field} />
                         </FormControl>
@@ -1380,10 +1374,11 @@ export default function Customers() {
                     name="phoneNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>Phone Number *</FormLabel>
                         <FormControl>
                           <Input placeholder="+447123456789" {...field} />
                         </FormControl>
+                        <p className="text-xs text-muted-foreground">Required for payment links and customer login</p>
                         <FormMessage />
                       </FormItem>
                     )}

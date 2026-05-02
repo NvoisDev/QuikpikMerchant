@@ -1022,7 +1022,8 @@ export async function sendRefundReceipt(customer: any, order: any, refund: any, 
 }
 
 export function generateOrderNotificationMessage(order: any, customer: any, items: any[]): string {
-  let message = `🛒 New Order Received!\n\nOrder #${order.id}\nCustomer: ${customer.firstName}\nPhone: ${customer.phoneNumber}\nEmail: ${customer.email}\n\nItems Ordered:\n`;
+  const customerDisplay = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || customer.phoneNumber || 'Customer';
+  let message = `🛒 New Order Received!\n\nOrder #${order.id}\nCustomer: ${customerDisplay}\nPhone: ${customer.phoneNumber || 'N/A'}\nEmail: ${customer.email || 'N/A'}\n\nItems Ordered:\n`;
   items.forEach((item: any, index: number) => { message += `${index + 1}. Product ID ${item.productId}\n   Quantity: ${item.quantity} units\n   Unit Price: ${item.unitPrice}\n   Total: ${item.total}\n\n`; });
   message += `Order Total: ${order.total}\n\n`;
   if (order.notes) message += `Customer Notes: ${order.notes}\n\n`;
