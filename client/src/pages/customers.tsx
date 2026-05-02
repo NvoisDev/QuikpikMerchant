@@ -1834,6 +1834,12 @@ export default function Customers() {
                           ))}
                         </div>
                       )}
+                      {!customer?.businessName?.trim() && !customer?.firstName?.trim() && !customer?.lastName?.trim() && (
+                        <Badge className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-700 border border-amber-300 shrink-0">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                          Incomplete profile
+                        </Badge>
+                      )}
                       {customer?.id && priceListCustomerSummary[customer.id] && (
                         <Badge
                           variant="secondary"
