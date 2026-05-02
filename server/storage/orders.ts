@@ -436,7 +436,7 @@ export class OrderStorage extends ProductStorage {
       // Pre-fetch customer name once for all items
       const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
       const customerName = customer[0]
-        ? (`${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer')
+        ? (customer[0].businessName || `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || 'Unknown Customer')
         : 'Unknown Customer';
 
       const today = new Date().toISOString().split('T')[0];

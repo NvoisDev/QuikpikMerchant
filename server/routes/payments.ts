@@ -2139,7 +2139,7 @@ export function registerPaymentRoutes(app: Express): void {
         orderNumber,
         wholesalerId,
         retailerId: customerId,
-        customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
+        customerName: customer.businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown Customer',
         customerEmail: customer.email,
         customerPhone: customer.phoneNumber,
         status: 'pending',
