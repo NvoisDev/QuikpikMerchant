@@ -1,0 +1,189 @@
+🔥 First — your core question (important)
+
+If no phone number is included, what should happen?
+
+Here’s the clean, scalable answer:
+
+✅ Recommended behaviour
+
+Allow invoice creation with just a name (no phone)
+BUT treat it as a “light / unlinked customer”
+
+Scenario	Behaviour
+Name only	Create invoice + allow sharing manually
+Name + phone	Create full customer + portal access
+Later phone added	Link past orders automatically
+🧠 Why this is the right move
+Removes friction → faster invoice creation
+Matches real-world behaviour (not every order starts with full details)
+Keeps your system clean (you’re not forcing fake data)
+Lets you upgrade the customer later
+💡 Clean mental model
+
+Think of 2 states:
+
+Draft Customer (Name only)
+No login
+No portal access
+Just used for invoicing + tracking
+Active Customer (Phone added)
+Can log in (SMS OTP)
+Gets order history
+Receives payment links properly
+🔧 UX Flow You Want (This is the magic)
+✨ New Flow
+
+User types in the field:
+
+"Tunde"
+
+System shows:
+
+Existing matches
+OR:
+
+👉 “Create new customer: Tunde”
+
+When clicked:
+
+Instead of forcing full form, show inline quick capture
+
+Create Customer
+
+Name: Tunde
+Phone: [ Optional ]
+Business Name: [ Optional ]
+
+[ Save & Continue ]
+[ Skip for now ]
+🧠 Key UX behaviour (this is important)
+If user clicks "Skip for now"
+Customer saved as:
+name = "Tunde"
+phone = null
+status = draft
+Invoice continues normally
+Show subtle warning later:
+
+“Add a phone number to enable customer login & payment links”
+
+📲 Sharing behaviour (this answers your edge case)
+If NO phone:
+“Share Invoice” → manual options only:
+Copy link
+WhatsApp share
+SMS (manual paste)
+If phone EXISTS:
+“Send Payment Link” works automatically
+🔄 Upgrade flow (very important)
+
+Later, if wholesaler adds phone:
+
+System should:
+Link all past orders
+Enable portal access
+Allow login via SMS
+🚨 What you should NOT do
+
+Avoid this:
+
+❌ Forcing phone number before invoice
+❌ Blocking invoice creation
+❌ Creating fake numbers
+❌ Mixing guest + real customers invisibly
+
+That’s how systems become messy fast.
+
+✍️ Here’s your prompt (clean + dev-ready)
+🧠 Prompt: Improve “Add Customer” Flow in Invoice Creation
+
+Build a modern, inline customer creation flow within the invoice process.
+
+🎯 Goal
+
+Allow wholesalers to:
+
+Type a customer name directly
+Select existing OR create new inline
+Continue invoice creation without friction
+Optionally add phone later
+🧩 Requirements
+1. Smart Customer Input (Autocomplete + Create)
+Replace current “Select Customer” dropdown with:
+Searchable input field
+Shows matching customers
+If no match:
+Show option:
+“Create new customer: [input name]”
+2. Inline Customer Creation (Lightweight)
+
+When creating new customer:
+
+Show inline modal or dropdown form:
+
+Fields:
+
+Name (required)
+Phone number (optional)
+Business name (optional)
+
+Buttons:
+
+Save & Continue
+Skip for now
+3. Customer States
+
+Support two types:
+
+Draft Customer
+
+Name only
+No phone
+No login access
+
+Active Customer
+
+Has phone number
+Can log in via SMS
+Receives payment links
+4. Invoice Behaviour
+
+If customer has:
+
+No phone
+Allow invoice creation
+Allow manual sharing only
+Phone present
+Enable “Send Payment Link”
+Enable SMS communication
+5. Upgrade Flow
+
+If a phone number is later added:
+
+Automatically link all past orders
+Enable portal access
+Allow login via OTP
+6. UI Improvements
+Remove “Add Customer” button as primary flow
+Make typing the default interaction
+Show customer avatar/initials in dropdown
+Highlight “Create new” option clearly
+7. Validation
+Prevent duplicate customers with same phone number
+Allow duplicate names (common in real-world use)
+✨ Outcome
+Faster invoice creation
+Cleaner UX
+Higher adoption
+Better data quality over time
+💬 My honest take
+
+This change is high impact, low complexity.
+
+You’ll feel it immediately:
+
+Less friction
+Faster workflows
+More natural behaviour
+
+And importantly — it aligns perfectly with how wholesalers actually operate.

@@ -584,7 +584,7 @@ export function registerOrderRoutes(app: Express): void {
         if (customer && wholesaler) {
           const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
           const businessName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Supplier';
-          const customerName = customer.firstName || 'there';
+          const customerName = customer.firstName || customer.businessName || 'there';
           const subtotalBase = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
           const netAmount = subtotalBase; // Offline = full subtotal, no platform fee
           const paidSoFar = paymentUpdate.newAmountPaid;
@@ -1666,7 +1666,7 @@ export function registerOrderRoutes(app: Express): void {
             let smsMsg = '';
             const totalReturnedQty = refundLineItems.reduce((sum, i) => sum + i.quantity, 0);
             if (isFullCancellation) {
-              smsMsg = `Hi ${customer.firstName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
+              smsMsg = `Hi ${customer.firstName || customer.businessName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
               if (stripeRefundTotalPounds > 0) {
                 smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${totalReturnedQty} item(s) has been processed. Allow 5-10 business days.`;
               } else if (amountPaid > 0) {
@@ -1675,7 +1675,7 @@ export function registerOrderRoutes(app: Express): void {
                 smsMsg += ` No payment was taken, so no refund is required.`;
               }
             } else {
-              smsMsg = `Hi ${customer.firstName || 'there'}, ${totalReturnedQty} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
+              smsMsg = `Hi ${customer.firstName || customer.businessName || 'there'}, ${totalReturnedQty} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
               if (stripeRefundTotalPounds > 0) {
                 smsMsg += ` Refund of £${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
               } else if (actualRefundAmount > 0) {
@@ -1701,7 +1701,7 @@ export function registerOrderRoutes(app: Express): void {
               const emailRefundStatus = cancellationRefundTypeToEmailStatus(emailRefundType);
 
               const emailBody = buildItemisedRefundEmail({
-                customerName: customer.firstName || 'there',
+                customerName: customer.firstName || customer.businessName || 'there',
                 orderNumber: order.orderNumber,
                 isFullCancellation,
                 returnedItems: refundLineItems,
