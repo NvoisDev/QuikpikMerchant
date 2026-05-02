@@ -86,6 +86,7 @@ interface StockMovement {
   createdAt: string;
   customerName?: string | null;
   businessProfileName?: string | null;
+  orderNumber?: string | null;
   stockBefore: number;
   stockAfter: number;
 }
@@ -3969,8 +3970,8 @@ export default function ProductManagement() {
                                 {isIncrease ? '+' : ''}{movement.quantity} units
                               </span>
                               <span className="text-gray-500 font-medium">· {typeLabel}</span>
-                              {(movement as any).orderNumber && (
-                                <span className="text-gray-400 font-normal">#{(movement as any).orderNumber}</span>
+                              {movement.orderNumber && (
+                                <span className="text-gray-400 font-normal">#{movement.orderNumber}</span>
                               )}
                             </div>
                             <span className="text-gray-400 sm:flex-shrink-0">
@@ -3983,8 +3984,8 @@ export default function ProductManagement() {
                               {movement.customerName && (
                                 <span className="text-gray-400 font-normal">{movement.reason ? ' · ' : ''}{movement.customerName}</span>
                               )}
-                              {(movement as any).businessProfileName && (
-                                <span className="ml-1 text-blue-600 font-medium">· {(movement as any).businessProfileName}</span>
+                              {movement.businessProfileName && (
+                                <span className="ml-1 text-blue-600 font-medium">· {movement.businessProfileName}</span>
                               )}
                             </span>
                             <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
