@@ -791,28 +791,6 @@ export default function ProductManagement() {
     }
   }, [products]);
 
-  // Debug logging
-  console.log('Product management state:', {
-    user: user?.id,
-    productsCount: products?.length,
-    isLoading,
-    error,
-    filteredProductsCount: products?.filter((product: any) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      if (statusFilter === "expiring") {
-        const now = Date.now();
-        const thirtyDaysFromNow = now + 30 * 24 * 60 * 60 * 1000;
-        const hasExpiryDate = !!product.expiryDate;
-        const nearestExpiryTime = product.nearestExpiry ? new Date(product.nearestExpiry).getTime() : null;
-        const hasNearestExpirySoon = nearestExpiryTime !== null && nearestExpiryTime >= now && nearestExpiryTime <= thirtyDaysFromNow;
-        return matchesSearch && (hasExpiryDate || hasNearestExpirySoon);
-      }
-      const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
-      return matchesSearch && matchesStatus;
-    }).length
-  });
-
   // Fetch stock alerts count
   const { data: alertsData } = useQuery({
     queryKey: ['/api/stock-alerts/count'],

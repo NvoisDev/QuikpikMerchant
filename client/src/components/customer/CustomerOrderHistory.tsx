@@ -1936,7 +1936,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
     queryFn: async () => {
       // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
-      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone, timestamp: new Date().toLocaleTimeString() });
       const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?t=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-store', // Force fresh request every time
@@ -1947,7 +1946,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         }
       });
       
-      console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {
         if (response.status === 403) {
@@ -1960,7 +1958,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
       // Ensure we always return an array
       const ordersArray = Array.isArray(data) ? data : [];
       
-      console.log('📦 Customer orders loaded:', { 
         totalOrders: ordersArray.length,
         orderIds: ordersArray.map((o: any) => o.id),
         mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
@@ -1980,16 +1977,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
   });
 
   // Debug logging for orders state
-  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error });
-  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
-  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
-    console.log('🔍 FilteredOrders - input data:', { orders, isArray: Array.isArray(orders), length: orders?.length });
     
     if (!orders || !Array.isArray(orders)) {
-      console.log('❌ FilteredOrders - returning empty array due to invalid orders data');
       return [];
     }
     
@@ -2118,15 +2110,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
     );
   }
 
-  console.log('🎯 CustomerOrderHistory render - orders data:', { orders, isLoading, error });
-  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
-  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
-  console.log('🎯 CustomerOrderHistory render - filteredOrders length:', filteredOrders?.length || 0);
-  console.log('🎯 CustomerOrderHistory render - paginatedOrders length:', paginatedOrders?.length || 0);
-  console.log('🎯 CustomerOrderHistory render - currentPage:', currentPage);
-  console.log('🎯 CustomerOrderHistory render - totalPages:', totalPages);
-  console.log('🎯 CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
-  console.log('🎯 CustomerOrderHistory render - recent orders with delivery info:', Array.isArray(orders) && orders.length > 0 ? orders.slice(0, 3).map(o => ({ id: o.id, orderNumber: o.orderNumber, fulfillmentType: o.fulfillmentType, deliveryCarrier: o.deliveryCarrier, deliveryCost: o.deliveryCost })) : 'No orders');
   
   if (!orders || orders.length === 0) {
     return (
@@ -2201,7 +2184,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         ) : (
         <div className="space-y-2">
           {paginatedOrders.map((order: Order, index: number) => {
-            console.log(`Rendering order ${index}:`, order);
             return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedOrder(order)}>
               <CardContent className="p-3 sm:p-4">

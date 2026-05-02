@@ -354,14 +354,12 @@ export default function WholesalerDashboard() {
     queryFn: async () => {
       try {
         if (!dateRange?.from || !dateRange?.to) {
-          console.log('Missing date range:', { from: dateRange?.from, to: dateRange?.to });
           return [];
         }
         const params = new URLSearchParams({
           fromDate: dateRange.from.toISOString(),
           toDate: dateRange.to.toISOString()
         });
-        console.log('Fetching chart data with params:', params.toString());
         const response = await fetch(`/api/analytics/chart-data?${params}`, {
           credentials: 'include'
         });
@@ -372,7 +370,6 @@ export default function WholesalerDashboard() {
           return [];
         }
         const data = await response.json();
-        console.log('Chart data received:', data);
         return data || [];
       } catch (error) {
         console.error('Chart data query error:', error);
@@ -416,7 +413,6 @@ export default function WholesalerDashboard() {
     // Try native sharing first (works on mobile devices)
     if (navigator.share) {
       try {
-        console.log("🔗 Attempting native share with data:", shareData);
         await navigator.share(shareData);
         toast({
           title: "Store Shared!",
@@ -425,14 +421,12 @@ export default function WholesalerDashboard() {
         return;
       } catch (error) {
         // User cancelled sharing or sharing failed
-        console.log("Native sharing cancelled or failed:", error);
         // Don't show error toast if user just cancelled
         if ((error as any)?.name !== 'AbortError') {
           console.warn("Share API error:", error);
         }
       }
     } else {
-      console.log("🔗 Native sharing not available, falling back to clipboard");
     }
 
     // Fallback to clipboard copying

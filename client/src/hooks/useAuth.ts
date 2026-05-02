@@ -35,7 +35,6 @@ export function useAuth() {
           
           if (isOnDashboard) {
             // User was trying to access dashboard but auth failed - likely session expired
-            console.log('🔄 Authentication expired while on dashboard, redirecting to login');
             window.location.href = '/login?expired=true';
           }
           return null;
@@ -45,7 +44,6 @@ export function useAuth() {
           // Access denied - likely a customer trying to access wholesaler dashboard
           const data = await res.json().catch(() => ({}));
           if (data.userType === 'retailer' || data.userType === 'customer') {
-            console.log('🚫 Customer detected trying to access wholesaler dashboard, redirecting...');
             window.location.href = '/customer-login';
             return null;
           }
@@ -58,7 +56,6 @@ export function useAuth() {
         return await res.json();
       } catch (error) {
         // Don't throw errors for authentication issues - return null instead
-        console.log('Authentication check failed:', error);
         return null;
       }
     },

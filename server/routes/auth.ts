@@ -187,11 +187,6 @@ export function registerAuthRoutes(app: Express): void {
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
-        isFirstLogin: user.isFirstLogin,
-        hasBusinessName: !!user.businessName,
-        hasAddress: !!(user.streetAddress || user.city)
-      });
-      
       // CRITICAL: Save session before redirect to ensure persistence
       req.session.save((err: any) => {
         if (err) {
@@ -247,11 +242,6 @@ export function registerAuthRoutes(app: Express): void {
         isFirstLogin,
         orderNumberPrefix
       } = req.body;
-
-        businessName,
-        hasAddress: !!(streetAddress || city),
-        currency: preferredCurrency
-      });
 
       // Update user profile
       const updateData: any = {
@@ -398,10 +388,6 @@ export function registerAuthRoutes(app: Express): void {
           };
         }
       }
-      
-        id: responseUser.id,
-        email: responseUser.email,
-      });
 
       res.json(responseUser);
     } catch (error) {

@@ -97,11 +97,6 @@ export function registerBrowsingRoutes(app: Express): void {
       const limits = await getUserPlanLimits(wholesalerId);
       const productLimit = limits.products;
 
-        plan: limits.planName,
-        productLimit: productLimit === -1 ? 'unlimited' : productLimit,
-        isUnlimited: productLimit === -1
-      });
-
       // Use direct SQL query with subscription-based limits
       const queryStart = Date.now();
 
@@ -411,13 +406,6 @@ export function registerBrowsingRoutes(app: Express): void {
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-
-        productId: product.id,
-        name: product.name,
-        stock: product.stock,
-        palletStock: product.palletStock,
-        baseUnitStock: (product as any).baseUnitStock
-      });
 
       if (product.id === 23) {
       }

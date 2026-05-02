@@ -1314,15 +1314,6 @@ export function registerMarketplaceRoutes(app: Express): void {
 
         // Use the correct total from metadata instead of recalculating
         const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || '0')).toFixed(2);
-        
-          hasShippingInfo: !!shippingInfoJson,
-          shippingInfoRaw: shippingInfoJson,
-          parsedShippingInfo: shippingInfo,
-          customerChoice: shippingInfo.option,
-          hasService: !!shippingInfo.service,
-          serviceName: shippingInfo.service?.serviceName,
-          servicePrice: shippingInfo.service?.price
-        });
 
         // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering AND duplicate checking
         let order, wholesaleRef;
@@ -1395,13 +1386,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               deliveryCost: parseFloat(metadataShippingCost || '0').toFixed(2),
               shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2)
             };
-            
-              fulfillmentType: orderData.fulfillmentType,
-              deliveryCarrier: orderData.deliveryCarrier,
-              isDeliveryOrder: orderData.fulfillmentType === 'delivery',
-              supplierWillArrangeDelivery: orderData.fulfillmentType === 'delivery'
-            });
-            
 
             // Create order items with orderId for storage, including promo labels
             const orderItemsData = await Promise.all(items.map(async (item: any) => {

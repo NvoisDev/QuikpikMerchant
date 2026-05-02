@@ -299,13 +299,6 @@ export function registerCampaignRoutes(app: Express): void {
       
       // User's WhatsApp is only "configured" if they've explicitly activated it
       const isConfigured = userActivated && (platformCapable || directWhatsappConfigured);
-      
-        platformCapable,
-        userActivated,
-        directWhatsappConfigured,
-        isConfigured,
-        userId: user.id
-      });
 
       const provider = user.whatsappProvider || 'twilio';
       
@@ -1060,14 +1053,6 @@ export function registerCampaignRoutes(app: Express): void {
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
-        campaignType, 
-        productId, 
-        products: products ? products.length : 0, 
-        specialPrice, 
-        promotionalOffers, 
-        campaignData 
-      });
-
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
@@ -1117,14 +1102,6 @@ export function registerCampaignRoutes(app: Express): void {
             
             // Then add new ones
             for (const product of products) {
-                templateId: id,
-                productId: product.productId,
-                quantity: product.quantity,
-                specialPrice: product.specialPrice || null,
-                promotionalOffers: product.promotionalOffers,
-                promotionalOffersStringified: product.promotionalOffers ? JSON.stringify(product.promotionalOffers) : null,
-              });
-              
               await storage.createTemplateProduct({
                 templateId: id,
                 productId: product.productId,

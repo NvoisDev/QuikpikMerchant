@@ -21,15 +21,6 @@ import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
   app.post('/api/stripe/connect', async (req: any, res) => {
-      sessionExists: !!req.session,
-      sessionId: req.sessionID?.substring(0, 10) + '...',
-      sessionUser: (req.session as any)?.user ? 'exists' : 'missing',
-      sessionUserId: (req.session as any)?.userId ? 'exists' : 'missing', 
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : 'no function',
-      reqUser: req.user ? 'exists' : 'missing',
-      cookies: req.headers.cookie ? 'present' : 'missing'
-    });
-
     let authenticatedUser = null;
 
     // Method 1: Check Passport authentication (Google OAuth/Replit auth)

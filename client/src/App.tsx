@@ -177,7 +177,6 @@ function Router() {
   
   // SECURITY: Block customers from accessing wholesaler dashboard
   if (user && (user.role === 'customer' || user.role === 'retailer')) {
-    console.log('🚫 Frontend: Customer detected, redirecting to customer portal');
     window.location.href = '/customer-login';
     return (
       <div className="min-h-screen flex items-center justify-center">

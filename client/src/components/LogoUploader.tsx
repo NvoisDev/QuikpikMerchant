@@ -53,7 +53,6 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
 
     try {
       setUploadProgress(30);
-      console.log('🔧 Using direct base64 upload method for:', file.name);
 
       // Convert file to base64 using FileReader
       const base64Reader = new FileReader();
@@ -73,7 +72,6 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
       setUploadProgress(60);
 
       // Upload using base64 method (bypasses object storage issues)
-      console.log('🔧 Uploading via base64 method...');
       const response = await fetch('/api/upload-logo-base64', {
         method: 'POST',
         credentials: 'include',
@@ -87,7 +85,6 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
         }),
       });
 
-      console.log('🔧 Base64 upload response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -98,7 +95,6 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
       const data = await response.json();
       setUploadProgress(100);
 
-      console.log('🔧 Logo uploaded successfully via base64');
 
       toast({
         title: "Upload successful!",

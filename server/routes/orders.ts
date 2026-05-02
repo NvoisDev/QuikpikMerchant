@@ -2137,11 +2137,6 @@ export function registerOrderRoutes(app: Express): void {
       // Check for payment intent ID 
       const paymentIntentId = order.stripePaymentIntentId;
       if (!paymentIntentId) {
-          orderId: id,
-          stripePaymentIntentId: order.stripePaymentIntentId,
-          status: order.status,
-          total: order.total
-        });
         return res.status(400).json({ message: "No payment information found for this order" });
       }
 

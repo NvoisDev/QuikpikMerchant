@@ -112,7 +112,6 @@ export default function TabPermissionsManager() {
     setUpdating(tabName);
     
     try {
-      console.log('Updating permission:', { tabName, isRestricted });
       
       const result = await updatePermission.mutateAsync({
         tabName,
@@ -120,7 +119,6 @@ export default function TabPermissionsManager() {
         allowedRoles: isRestricted ? ['owner', 'admin'] : ['owner', 'admin', 'member']
       });
       
-      console.log('Permission update result:', result);
       
       toast({
         title: "Permissions Updated",

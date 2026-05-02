@@ -543,14 +543,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(401).json({ error: "Customer not found" });
       }
 
-        id: customer.id || customer.customer_id,
-        name: customer.name,
-        phone: customer.phone,
-        email: customer.email,
-        hasPhone: !!customer.phone,
-        phoneLength: customer.phone?.length
-      });
-
       // Verify SMS code
       const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
       
