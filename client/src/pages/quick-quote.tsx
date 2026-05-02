@@ -153,7 +153,6 @@ export default function QuickQuote() {
     email: '',
     businessName: '',
   });
-  const [addCustomerNameError] = useState(false);
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
   const [quotePaymentMethod, setQuotePaymentMethod] = useState<'payment_link' | 'cash' | 'bank_transfer' | 'cheque'>('bank_transfer');
@@ -258,7 +257,6 @@ export default function QuickQuote() {
         phoneNumber: data.phoneNumber,
       });
       setAddCustomerDialogOpen(false);
-      setAddCustomerNameError(false);
       setNewCustomer({ firstName: '', lastName: '', phoneNumber: '', email: '', businessName: '' });
       toast({
         title: "Customer Added",
@@ -779,7 +777,7 @@ export default function QuickQuote() {
                   <User className="h-5 w-5" />
                   Select Customer
                 </CardTitle>
-                <Dialog open={addCustomerDialogOpen} onOpenChange={(open) => { setAddCustomerDialogOpen(open); if (!open) setAddCustomerNameError(false); }}>
+                <Dialog open={addCustomerDialogOpen} onOpenChange={setAddCustomerDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
                       <UserPlus className="h-4 w-4 mr-1" />
