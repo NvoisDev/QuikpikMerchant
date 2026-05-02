@@ -860,6 +860,7 @@ export function registerAdminRoutes(app: Express): void {
         isTestAccount: users.isTestAccount,
         archived: users.archived,
         createdAt: users.createdAt,
+        lastLoginAt: users.lastLoginAt,
       }).from(users).where(and(
         inArray(users.role, ['customer', 'retailer']),
         searchTerm ? or(
@@ -902,6 +903,7 @@ export function registerAdminRoutes(app: Express): void {
         wholesalerId: c.wholesalerId,
         orderCount: orderCountMap[c.id] || 0,
         createdAt: c.createdAt,
+        lastLoginAt: c.lastLoginAt ?? null,
       }));
 
       res.json({ customers: result });

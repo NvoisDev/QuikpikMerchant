@@ -27,7 +27,7 @@ import {
   BadgeCheck, Percent, FileText, UserPlus, Info,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
+import { format, formatDistanceToNow, subDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import { formatNumber, formatCurrency } from "@shared/utils/currency";
 import { formatDateTime } from "@shared/utils/date";
 import { useToast } from "@/hooks/use-toast";
@@ -128,7 +128,7 @@ interface CustomerRow {
   id: string; name: string; businessName: string | null; email: string | null;
   phoneNumber: string | null; postalCode: string | null; wholesalerName: string | null;
   subscriptionTier: string | null; isSuspicious: boolean | null; isTestAccount: boolean | null;
-  orderCount: number | null; customerType: string | null;
+  orderCount: number | null; customerType: string | null; lastLoginAt: string | null;
 }
 interface ProductRow {
   id: number; name: string; category: string | null; wholesalerName: string | null;
@@ -1614,7 +1614,7 @@ function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highli
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-indigo-50">
-                    {["Customer","Phone","Wholesaler","Orders","Type","Flags",""].map((h, i) => (
+                    {["Customer","Phone","Wholesaler","Orders","Last Login","Type","Flags",""].map((h, i) => (
                       <TableHead key={i} className="text-xs font-semibold text-indigo-700">{h}</TableHead>
                     ))}
                   </TableRow>
@@ -1629,6 +1629,13 @@ function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean; highli
                       <TableCell className="text-xs font-mono text-gray-600">{c.phoneNumber || "—"}</TableCell>
                       <TableCell className="text-xs text-gray-600">{c.wholesalerName}</TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{c.orderCount}</TableCell>
+                      <TableCell className="text-xs text-gray-600">
+                        {c.lastLoginAt ? (
+                          new Date(c.lastLoginAt) > subDays(new Date(), 30)
+                            ? formatDistanceToNow(new Date(c.lastLoginAt), { addSuffix: true })
+                            : format(new Date(c.lastLoginAt), "d MMM yyyy")
+                        ) : <span className="text-gray-300">Never</span>}
+                      </TableCell>
                       <TableCell>
                         {c.customerType ? (
                           <span className="text-xs px-2 py-0.5 rounded border" style={{ background: typeDot(c.customerType) + "22", color: typeColor(c.customerType), borderColor: typeDot(c.customerType) + "55" }}>
