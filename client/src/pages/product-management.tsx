@@ -87,6 +87,7 @@ interface StockMovement {
   customerName?: string | null;
   businessProfileName?: string | null;
   orderNumber?: string | null;
+  orderId?: number | null;
   stockBefore: number;
   stockAfter: number;
 }
@@ -3970,8 +3971,14 @@ export default function ProductManagement() {
                                 {isIncrease ? '+' : ''}{movement.quantity} units
                               </span>
                               <span className="text-gray-500 font-medium">· {typeLabel}</span>
-                              {movement.orderNumber && (
-                                <span className="text-gray-400 font-normal">#{movement.orderNumber}</span>
+                              {movement.orderNumber && movement.orderId && (
+                                <Link
+                                  href={`/orders/${movement.orderId}`}
+                                  className="text-blue-500 hover:text-blue-700 font-normal hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  #{movement.orderNumber}
+                                </Link>
                               )}
                             </div>
                             <span className="text-gray-400 sm:flex-shrink-0">
