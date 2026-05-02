@@ -208,37 +208,46 @@ export function registerAuthRoutes(app: Express): void {
         await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, user.id));
       }
 
-      // Set user session in passport format for compatibility
-      (req.session as any).passport = {
-        user: {
-          sub: user.id,
-          email: user.email,
-          claims: user
-        }
-      };
-      (req.session as any).userId = user.id;
-      (req.session as any).user = user;
-      
-      // CRITICAL: Save session before redirect to ensure persistence
-      req.session.save((err: any) => {
-        if (err) {
-          console.error('❌ Session save failed after Google auth:', err);
+      // Preserve returnTo before regenerating the session
+      const returnTo = (req.session as any).returnTo;
+
+      // Regenerate session ID before writing auth data to prevent session fixation
+      req.session.regenerate((regenErr: any) => {
+        if (regenErr) {
+          console.error('❌ Session regenerate failed after Google auth:', regenErr);
           return res.redirect('/login?error=session_failed');
         }
-        
-        // Use returnTo if set (e.g. from /admin login)
-        const returnTo = (req.session as any).returnTo;
-        if (returnTo) {
-          delete (req.session as any).returnTo;
-          return res.redirect(returnTo);
-        }
 
-        // Check if this is a new user who needs to complete signup
-        if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
-          res.redirect('/signup-complete');
-        } else {
-          res.redirect('/dashboard');
-        }
+        // Set user session in passport format for compatibility
+        (req.session as any).passport = {
+          user: {
+            sub: user.id,
+            email: user.email,
+            claims: user
+          }
+        };
+        (req.session as any).userId = user.id;
+        (req.session as any).user = user;
+
+        // CRITICAL: Save session before redirect to ensure persistence
+        req.session.save((err: any) => {
+          if (err) {
+            console.error('❌ Session save failed after Google auth:', err);
+            return res.redirect('/login?error=session_failed');
+          }
+
+          // Use returnTo if set (e.g. from /admin login)
+          if (returnTo) {
+            return res.redirect(returnTo);
+          }
+
+          // Check if this is a new user who needs to complete signup
+          if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
+            res.redirect('/signup-complete');
+          } else {
+            res.redirect('/dashboard');
+          }
+        });
       });
     } catch (error) {
       console.error('❌ Google auth callback error:', error);
@@ -1257,11 +1266,6 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/team-login
-  // TODO: session fixation hardening — call req.session.regenerate() before writing
-  // session data here and in /api/auth/login so that an attacker who plants a
-  // session cookie before login cannot reuse the same session ID post-authentication.
-  // This requires saving the returnTo / CSRF state first, regenerating, then
-  // re-applying it.  Safe to do but needs testing across all login paths before landing.
   app.post('/api/auth/team-login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
@@ -1315,6 +1319,11 @@ export function registerAuthRoutes(app: Express): void {
         const now = new Date();
         await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, authenticatedUser.id));
       }
+
+      // Regenerate session ID before writing auth data to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err: any) => { if (err) reject(err); else resolve(); });
+      });
 
       // Create session for team member with wholesaler context
       req.session.user = {
@@ -1393,6 +1402,11 @@ export function registerAuthRoutes(app: Express): void {
           await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, user.id));
         }
         
+        // Regenerate session ID before writing auth data to prevent session fixation
+        await new Promise<void>((resolve, reject) => {
+          req.session.regenerate((err: any) => { if (err) reject(err); else resolve(); });
+        });
+
         // Create session for team member with wholesaler context
         req.session.user = {
           id: user.id,
@@ -1436,6 +1450,11 @@ export function registerAuthRoutes(app: Express): void {
         const now = new Date();
         await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, authenticatedUser.id));
       }
+
+      // Regenerate session ID before writing auth data to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err: any) => { if (err) reject(err); else resolve(); });
+      });
 
       // Create session for business owner
       req.session.user = {
