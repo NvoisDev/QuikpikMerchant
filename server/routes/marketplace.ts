@@ -2951,7 +2951,8 @@ Please contact the customer to confirm this order.
       });
 
       const subtotal = previewItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
-      const customerTransactionFee = calculateCustomerFee(subtotal, 0);
+      const previewFeeConfig = await getCurrentFeeConfig();
+      const customerTransactionFee = calculateCustomerFee(subtotal, 0, previewFeeConfig);
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
       const total = subtotal + customerTransactionFee + deliveryCost + shippingTotal;
