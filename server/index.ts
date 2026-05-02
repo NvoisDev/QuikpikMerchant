@@ -268,6 +268,8 @@ async function runStartupMigrations() {
      FROM users u
      WHERE o.retailer_id = u.id
        AND o.customer_name LIKE '% null'`,
+    // Customer address field for invoice PDF display
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS address_line2 VARCHAR`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
