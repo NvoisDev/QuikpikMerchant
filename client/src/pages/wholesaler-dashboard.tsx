@@ -18,7 +18,7 @@ import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle } from "lucide-react";
-import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
+import { subDays, startOfToday, endOfDay, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
 
@@ -65,7 +65,7 @@ interface MarginSummary {
 function MarginOverview() {
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(startOfToday(), 29),
-    to: startOfToday(),
+    to: endOfDay(startOfToday()),
     label: "Last 30 days",
   });
 
@@ -221,7 +221,7 @@ export default function WholesalerDashboard() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(startOfToday(), 29),
-    to: startOfToday(),
+    to: endOfDay(startOfToday()),
     label: "Last 30 days"
   });
 

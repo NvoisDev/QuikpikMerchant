@@ -154,6 +154,17 @@ export function registerAnalyticsRoutes(app: Express): void {
       
       // Calculate time span to determine chart granularity
       const hoursDifference = (actualEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+      // Normalize the label start to a UTC calendar day boundary.
+      // The frontend sends midnight local time as the fromDate. For UTC+ users this
+      // arrives as late-night UTC on the previous calendar day (e.g. BST midnight =
+      // UTC 23:00 yesterday). Snapping forward to UTC midnight when hours >= 12 fixes
+      // the off-by-one day shift for all populated UTC+ timezones.
+      const labelStart = new Date(startDate);
+      labelStart.setUTCHours(0, 0, 0, 0);
+      if (startDate.getUTCHours() >= 12) {
+        labelStart.setUTCDate(labelStart.getUTCDate() + 1);
+      }
       
       let chartData = [];
 
@@ -183,10 +194,10 @@ export function registerAnalyticsRoutes(app: Express): void {
         }
       } else if (hoursDifference <= 168) {
         // Daily with weekday names — 2 to 7 days
-        const daysDiff = Math.ceil(hoursDifference / 24);
+        const daysDiff = Math.round((actualEndDate.getTime() - labelStart.getTime()) / 86_400_000) + 1;
         for (let i = 0; i < daysDiff; i++) {
-          const dayStart = new Date(startDate.getTime() + i * 86_400_000);
-          const dayEnd   = new Date(startDate.getTime() + (i + 1) * 86_400_000 - 1);
+          const dayStart = new Date(labelStart.getTime() + i * 86_400_000);
+          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000 - 1);
 
           if (dayStart > now) break;
 
@@ -203,10 +214,10 @@ export function registerAnalyticsRoutes(app: Express): void {
         }
       } else if (hoursDifference <= 744) {
         // Daily with date labels — 8 to 31 days
-        const daysDiff = Math.ceil(hoursDifference / 24);
+        const daysDiff = Math.round((actualEndDate.getTime() - labelStart.getTime()) / 86_400_000) + 1;
         for (let i = 0; i < daysDiff; i++) {
-          const dayStart = new Date(startDate.getTime() + i * 86_400_000);
-          const dayEnd   = new Date(startDate.getTime() + (i + 1) * 86_400_000 - 1);
+          const dayStart = new Date(labelStart.getTime() + i * 86_400_000);
+          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000 - 1);
 
           if (dayStart > now) break;
 
@@ -223,10 +234,10 @@ export function registerAnalyticsRoutes(app: Express): void {
         }
       } else if (hoursDifference <= 2190) {
         // Weekly buckets with date label — 32 to 90 days
-        const weeks = Math.ceil(hoursDifference / (24 * 7));
+        const weeks = Math.ceil((actualEndDate.getTime() - labelStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
         for (let i = 0; i < weeks; i++) {
-          const weekStart = new Date(startDate.getTime() + i * 7 * 86_400_000);
-          const weekEnd   = new Date(startDate.getTime() + (i + 1) * 7 * 86_400_000 - 1);
+          const weekStart = new Date(labelStart.getTime() + i * 7 * 86_400_000);
+          const weekEnd   = new Date(labelStart.getTime() + (i + 1) * 7 * 86_400_000 - 1);
 
           if (weekStart > now) break;
 
@@ -343,6 +354,9 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       const startDate = new Date(fromDate as string);
       const endDate = new Date(toDate as string);
+      // Ensure the end boundary covers the full day, capped to now
+      const now = new Date();
+      const actualEndDate = endDate > now ? now : endDate;
 
       const ordersInRange = await db
         .select({ id: orders.id, isQuote: orders.isQuote, status: orders.status })
@@ -350,7 +364,7 @@ export function registerAnalyticsRoutes(app: Express): void {
         .where(and(
           eq(orders.wholesalerId, targetUserId),
           gte(orders.createdAt, startDate),
-          lte(orders.createdAt, endDate),
+          lte(orders.createdAt, actualEndDate),
         ));
 
       const validOrders = ordersInRange.filter(o => o.status !== 'cancelled');

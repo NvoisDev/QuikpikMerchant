@@ -1,0 +1,152 @@
+🧠 What you should do right now (low risk, high impact)
+
+These are things that won’t break anything but will massively reduce future stress.
+
+1. 🔒 Lock down your critical flows (biggest win)
+
+You already know what these are:
+
+Checkout
+Payments (Stripe)
+Order creation
+Customer linking
+
+👉 What to do:
+
+Add guardrails, not changes:
+Better error handling
+Clear logs
+Fallback states
+
+Example:
+
+Always reset paymentSubmitted on ANY error (you already spotted this 👀)
+2. 🧪 Introduce a repeatable test routine (you’re close already)
+
+You don’t need full automation yet.
+
+👉 Just make your manual testing:
+
+Structured (like the checklist I gave you)
+Repeatable before releases
+
+This alone catches 80% of real issues
+
+3. 🧹 Clean safely (no behaviour changes)
+
+This is your safest win.
+
+Remove unused code
+Remove excessive console.log
+Delete dead endpoints (only confirmed ones)
+
+👉 No logic changes = no risk
+
+4. 🧱 Add soft boundaries (without refactoring everything)
+
+Don’t rewrite — just start guiding structure.
+
+Example:
+
+Keep Stripe logic in one place
+Keep order logic grouped
+Avoid mixing UI + business logic in the same function
+
+👉 You’re not restructuring, just preventing future mess
+
+5. 🪵 Improve logging (quietly powerful)
+
+Right now logs tell you:
+
+“Stripe client: TEST”
+
+Good.
+
+But you want:
+
+“Stripe client: TEST | wholesalerId: X | orderId: Y”
+
+👉 This makes debugging 10x easier later
+
+No risk, huge upside
+
+6. 🧷 Add idempotency (this is a sleeper risk)
+
+This protects against:
+
+Double charges
+Refresh issues
+Network retries
+
+👉 Especially for:
+
+Payment intent creation
+Order creation
+
+This is invisible to users, but critical for scale
+
+7. 🧩 Fix small bugs before they scale
+
+You already found:
+
+paymentSubmitted bug
+quantity key mismatch
+float comparison issue
+
+👉 These are exactly the kind of bugs that:
+
+Seem small
+Become expensive later
+
+Fixing them now = compounding stability
+
+8. 🧠 Document your “rules of the system”
+
+This is underrated.
+
+Write down:
+
+How Stripe mode is chosen
+What defines a customer
+How orders flow
+What “paid” vs “unpaid” means
+
+👉 Not for now — for future you (or future devs)
+
+9. 🧱 Introduce “don’t touch zones”
+
+Declare certain areas as:
+
+“Only modify with care”
+
+Example:
+
+payments.ts
+Stripe integration
+order creation logic
+
+This prevents accidental breakage
+
+10. 🧭 Set simple coding rules (going forward)
+
+Not heavy process — just guardrails:
+
+No file > 1,500 lines
+No new any types
+No duplicate logic (fees, totals, etc.)
+All new flows must handle errors
+
+👉 This stops problems before they start
+
+🚫 What you should NOT do right now
+
+This is just as important.
+
+Avoid:
+
+❌ Full refactor of large files
+❌ Rewriting architecture
+❌ Changing data models heavily
+❌ Moving everything into “perfect structure”
+
+👉 That’s how stable systems break
