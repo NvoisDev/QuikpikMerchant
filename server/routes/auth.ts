@@ -1,3 +1,37 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WHOLESALER / TEAM-MEMBER AUTH — route summary
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Auth model
+ * ----------
+ * All wholesaler and team-member sessions are stored server-side in the
+ * PostgreSQL `sessions` table (connect-pg-simple).  The browser holds a
+ * signed `connect.sid` cookie.  There is NO JWT in this flow.
+ *
+ * Session lifetime
+ * ----------------
+ * TTL: 7 days (rolling — reset on every request via `rolling: true`).
+ * The session record in `req.session.user` always carries the minimal user
+ * shape; full user data is re-fetched from the DB inside `requireAuth` and
+ * on `GET /api/auth/user`.
+ *
+ * Login paths (three, all write the same session shape)
+ * -------------------------------------------------------
+ * 1. POST /api/auth/login       — password login for wholesalers AND team members
+ * 2. POST /api/auth/team-login  — password login restricted to team_member tier
+ * 3. GET  /api/auth/google/callback — Google OAuth, creates/links wholesaler accounts
+ *
+ * Key assumptions
+ * ---------------
+ * • `requireAuth` blocks customers (role=customer|retailer) — they use a
+ *   separate cookie-based flow in customer-auth.ts.
+ * • Admin impersonation is validated via a server-issued one-time token
+ *   stored in the session (`impersonationToken`).  No token → no impersonation.
+ * • Team members carry a `wholesalerId` in the session so downstream routes
+ *   can scope data to the correct business.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 import type { Express } from "express";
 import {
   and, count, createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
@@ -1223,6 +1257,11 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/team-login
+  // TODO: session fixation hardening — call req.session.regenerate() before writing
+  // session data here and in /api/auth/login so that an attacker who plants a
+  // session cookie before login cannot reuse the same session ID post-authentication.
+  // This requires saving the returnTo / CSRF state first, regenerating, then
+  // re-applying it.  Safe to do but needs testing across all login paths before landing.
   app.post('/api/auth/team-login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
@@ -1330,9 +1369,25 @@ export function registerAuthRoutes(app: Express): void {
       
       // If user is a team member, get wholesaler info and treat as team member login
       if (teamMember) {
+        // Block suspended team members — same check as /api/auth/team-login
+        if (teamMember.status === 'suspended') {
+          return res.status(403).json({ message: "Your account has been suspended. Please contact your team administrator." });
+        }
+
+        // SECURITY: Verify the password before creating any session.
+        // Without this check a caller who knows a team-member email address
+        // could log in without knowing the password.
+        const authenticatedUser = await storage.authenticateUser(email, password);
+        if (!authenticatedUser) {
+          return res.status(401).json({ message: "Invalid email or password" });
+        }
+
         const wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
 
         // Stamp last login time for team member (real login)
+        if (teamMember.id) {
+          await storage.updateTeamMemberLastLogin(teamMember.id);
+        }
         {
           const now = new Date();
           await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, user.id));

@@ -215,6 +215,10 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
     return user;
   } catch (error) {
+    // Re-throw GoogleAuthBlockedError without wrapping so callers can inspect
+    // the specific error code and redirect accordingly (e.g. team_member_use_tab).
+    // Wrapping it would cause instanceof checks in the callback to fail silently.
+    if (error instanceof GoogleAuthBlockedError) throw error;
     console.error('Error creating/updating user:', error);
     throw new Error('Failed to create or update user');
   }

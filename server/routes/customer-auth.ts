@@ -1,3 +1,44 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CUSTOMER AUTH — route summary
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Auth model
+ * ----------
+ * Customers (retailers / buyers) authenticate via phone OTP — there are no
+ * passwords.  Identity is stored in TWO complementary places so the session
+ * survives cookie-store failures:
+ *   1. Server-side session (`req.session.customerAuth`) — 30-day TTL,
+ *      stored in the same PostgreSQL `sessions` table.
+ *   2. Signed HMAC-SHA256 cookie (`customer_auth`) — verified by
+ *      `parseCustomerCookie` before any payload field is read.  If the
+ *      signature is invalid or the cookie has expired the call returns null.
+ *
+ * Session lifetime & rolling renewal
+ * ------------------------------------
+ * Both the session and the cookie are issued with a 30-day TTL.
+ * A global middleware (registered at the top of registerCustomerAuthRoutes)
+ * transparently re-issues a fresh 30-day cookie whenever fewer than 15 days
+ * remain, so active customers are never abruptly logged out.
+ *
+ * OTP login flow (current, 3-step)
+ * ---------------------------------
+ * 1. POST /request-phone-otp  — sends a 6-digit code via SMS
+ * 2. POST /verify-phone-otp   — validates code, stores a 10-min session nonce,
+ *                               returns list of linked wholesalers
+ * 3. POST /complete-phone-login — binds nonce to a wholesaler, creates session
+ *
+ * Key assumptions
+ * ---------------
+ * • Customers CANNOT access wholesaler dashboard routes — `requireAuth` in
+ *   googleAuth.ts blocks role=customer|retailer with HTTP 403.
+ * • The session nonce (verifiedPhone + verifiedCode + verifiedPhoneExpiry)
+ *   prevents cross-session OTP replay: only the session that completed step 2
+ *   can call step 3.
+ * • Legacy endpoints (/verify, /request-sms, /verify-sms) are kept for
+ *   backward compatibility but emit deprecation warnings on every call.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 import type { Express } from "express";
 import {
   ReliableSMSService, and, createEmailVerification, customerRegistrationRequests, db, desc,
@@ -772,7 +813,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Update session
       (req.session as any).customerAuth = updatedSessionData;
       
-      // Update cookie
+      // Update cookie — include timestamp for consistency with buildAndSaveCustomerSession
       const cookieData = {
         customerId: customerAuth.customerId,
         wholesalerId: targetWholesalerId,
@@ -781,6 +822,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
         phone: customerAuth.phone,
         groupId: customerAuth.groupId,
         groupName: customerAuth.groupName,
+        timestamp: Date.now(),
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
       };
       
@@ -1134,6 +1176,15 @@ export function registerCustomerAuthRoutes(app: Express): void {
       if (!customerId) {
         return res.status(400).json({ error: "Customer ID is required" });
       }
+
+      // Require an authenticated customer session and verify the caller owns this customerId.
+      // Without this check any client could modify any customer's profile by guessing an ID.
+      const sessionAuth = (req.session as any)?.customerAuth;
+      const cookieAuth = !sessionAuth ? parseCustomerCookie(req.cookies?.customer_auth) : null;
+      const authedCustomerId = sessionAuth?.customerId || cookieAuth?.customerId;
+      if (!authedCustomerId || authedCustomerId !== customerId) {
+        return res.status(401).json({ error: "Authentication required or customer ID mismatch" });
+      }
       
       const updates: any = {};
       if (firstName) updates.firstName = firstName;
@@ -1282,6 +1333,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
           req.session.save((err) => {
             clearTimeout(timeout);
             if (err) { console.error('❌ Session save error:', err); reject(err); }
+            else { resolve(); }
           });
         } else {
           resolve();
