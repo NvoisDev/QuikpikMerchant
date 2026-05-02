@@ -150,6 +150,11 @@ export default function CustomerDetail() {
     email: "",
     phoneNumber: "",
     businessName: "",
+    streetAddress: "",
+    addressLine2: "",
+    city: "",
+    postalCode: "",
+    country: "",
   });
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -289,6 +294,11 @@ export default function CustomerDetail() {
       email: customer.email || "",
       phoneNumber: customer.phoneNumber || "",
       businessName: customer.businessName || "",
+      streetAddress: customer.streetAddress || "",
+      addressLine2: (customer as any).addressLine2 || "",
+      city: customer.city || "",
+      postalCode: customer.postalCode || "",
+      country: customer.country || "",
     });
     setIsEditContactOpen(true);
   };
@@ -1000,7 +1010,7 @@ export default function CustomerDetail() {
       </div>
 
       <Dialog open={isEditContactOpen} onOpenChange={setIsEditContactOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit contact information</DialogTitle>
           </DialogHeader>
@@ -1048,6 +1058,43 @@ export default function CustomerDetail() {
                 onChange={(e) => setContactFormData({ ...contactFormData, businessName: e.target.value })}
                 className="h-9"
               />
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="Address line 1"
+                  value={contactFormData.streetAddress}
+                  onChange={(e) => setContactFormData({ ...contactFormData, streetAddress: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Address line 2 (optional)"
+                  value={contactFormData.addressLine2}
+                  onChange={(e) => setContactFormData({ ...contactFormData, addressLine2: e.target.value })}
+                  className="h-9"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="City"
+                    value={contactFormData.city}
+                    onChange={(e) => setContactFormData({ ...contactFormData, city: e.target.value })}
+                    className="h-9"
+                  />
+                  <Input
+                    placeholder="Postcode"
+                    value={contactFormData.postalCode}
+                    onChange={(e) => setContactFormData({ ...contactFormData, postalCode: e.target.value })}
+                    className="h-9"
+                  />
+                </div>
+                <Input
+                  placeholder="Country"
+                  value={contactFormData.country}
+                  onChange={(e) => setContactFormData({ ...contactFormData, country: e.target.value })}
+                  className="h-9"
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => setIsEditContactOpen(false)}>Cancel</Button>

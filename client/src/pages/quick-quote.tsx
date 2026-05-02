@@ -152,6 +152,11 @@ export default function QuickQuote() {
     phoneNumber: '',
     email: '',
     businessName: '',
+    streetAddress: '',
+    addressLine2: '',
+    city: '',
+    postalCode: '',
+    country: '',
   });
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
   const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
@@ -257,7 +262,7 @@ export default function QuickQuote() {
         phoneNumber: data.phoneNumber,
       });
       setAddCustomerDialogOpen(false);
-      setNewCustomer({ firstName: '', lastName: '', phoneNumber: '', email: '', businessName: '' });
+      setNewCustomer({ firstName: '', lastName: '', phoneNumber: '', email: '', businessName: '', streetAddress: '', addressLine2: '', city: '', postalCode: '', country: '' });
       toast({
         title: "Customer Added",
         description: "New customer has been added and selected.",
@@ -785,7 +790,7 @@ export default function QuickQuote() {
                       <span className="sm:hidden">Add</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Add New Customer</DialogTitle>
                       <DialogDescription>Add a customer to create an invoice for them.</DialogDescription>
@@ -838,6 +843,38 @@ export default function QuickQuote() {
                           onChange={(e) => setNewCustomer({...newCustomer, businessName: e.target.value})}
                           placeholder="Acme Ltd"
                         />
+                      </div>
+                      <div className="border-t pt-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Address line 1"
+                            value={newCustomer.streetAddress}
+                            onChange={(e) => setNewCustomer({...newCustomer, streetAddress: e.target.value})}
+                          />
+                          <Input
+                            placeholder="Address line 2 (optional)"
+                            value={newCustomer.addressLine2}
+                            onChange={(e) => setNewCustomer({...newCustomer, addressLine2: e.target.value})}
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              placeholder="City"
+                              value={newCustomer.city}
+                              onChange={(e) => setNewCustomer({...newCustomer, city: e.target.value})}
+                            />
+                            <Input
+                              placeholder="Postcode"
+                              value={newCustomer.postalCode}
+                              onChange={(e) => setNewCustomer({...newCustomer, postalCode: e.target.value})}
+                            />
+                          </div>
+                          <Input
+                            placeholder="Country"
+                            value={newCustomer.country}
+                            onChange={(e) => setNewCustomer({...newCustomer, country: e.target.value})}
+                          />
+                        </div>
                       </div>
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"

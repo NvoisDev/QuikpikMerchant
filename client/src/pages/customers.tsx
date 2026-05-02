@@ -153,6 +153,11 @@ const editCustomerFormSchema = z.object({
     z.literal("")
   ]).optional(),
   businessName: z.string().optional(),
+  streetAddress: z.string().optional().or(z.literal("")),
+  addressLine2: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  postalCode: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
 });
 
 const editGroupFormSchema = z.object({
@@ -173,6 +178,11 @@ const addCustomerFormSchema = z.object({
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   groupId: z.number().optional(),
+  streetAddress: z.string().optional().or(z.literal("")),
+  addressLine2: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  postalCode: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
 });
 
 const searchAndAddFormSchema = z.object({
@@ -1054,6 +1064,11 @@ export default function Customers() {
       phoneNumber: customer.phoneNumber || '',
       email: customer.email || '',
       businessName: customer.businessName || '',
+      streetAddress: customer.streetAddress || '',
+      addressLine2: (customer as any).addressLine2 || '',
+      city: customer.city || '',
+      postalCode: customer.postalCode || '',
+      country: customer.country || '',
     });
     setIsEditCustomerDialogOpen(true);
   };
@@ -1309,7 +1324,7 @@ export default function Customers() {
             <DialogTrigger asChild>
               <span />
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Customer</DialogTitle>
                 <DialogDescription>
@@ -1412,6 +1427,78 @@ export default function Customers() {
                       </FormItem>
                     )}
                   />
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+                    <div className="space-y-3">
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="streetAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address Line 1</FormLabel>
+                            <FormControl>
+                              <Input placeholder="123 High Street" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="addressLine2"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address Line 2</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Flat, suite, unit (optional)" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={addCustomerForm.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input placeholder="London" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={addCustomerForm.control}
+                          name="postalCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Postcode</FormLabel>
+                              <FormControl>
+                                <Input placeholder="SW1A 1AA" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input placeholder="United Kingdom" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                   <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>
                       Cancel
@@ -2891,7 +2978,7 @@ export default function Customers() {
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Customer Information</DialogTitle>
             <DialogDescription>
@@ -2965,6 +3052,78 @@ export default function Customers() {
                   </FormItem>
                 )}
               />
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-muted-foreground mb-3">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+                <div className="space-y-3">
+                  <FormField
+                    control={editCustomerForm.control}
+                    name="streetAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 1</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 High Street" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editCustomerForm.control}
+                    name="addressLine2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 2</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Flat, suite, unit (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={editCustomerForm.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input placeholder="London" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editCustomerForm.control}
+                      name="postalCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Postcode</FormLabel>
+                          <FormControl>
+                            <Input placeholder="SW1A 1AA" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editCustomerForm.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input placeholder="United Kingdom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditCustomerDialogOpen(false)}>
                   Cancel

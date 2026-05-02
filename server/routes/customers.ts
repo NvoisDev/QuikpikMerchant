@@ -674,7 +674,7 @@ export function registerCustomerRoutes(app: Express): void {
       console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       
-      const { firstName, lastName, email, phoneNumber, groupId, businessName } = req.body;
+      const { firstName, lastName, email, phoneNumber, groupId, businessName, streetAddress, addressLine2, city, postalCode, country } = req.body;
       console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId, businessName });
       
       if (!phoneNumber) {
@@ -760,7 +760,12 @@ export function registerCustomerRoutes(app: Express): void {
           email: email || '',
           phoneNumber: formattedPhone,
           role: 'customer',
-          wholesalerId: targetUserId
+          wholesalerId: targetUserId,
+          ...(streetAddress ? { streetAddress } : {}),
+          ...(addressLine2 ? { addressLine2 } : {}),
+          ...(city ? { city } : {}),
+          ...(postalCode ? { postalCode } : {}),
+          ...(country ? { country } : {}),
         });
         
         // Create the wholesaler-customer relationship for multi-wholesaler platform

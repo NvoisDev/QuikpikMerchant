@@ -160,6 +160,7 @@ export const users = pgTable("users", {
   
   // Address fields for delivery/billing
   streetAddress: varchar("street_address"),
+  addressLine2: varchar("address_line2"),
   city: varchar("city"),
   state: varchar("state"),
   postalCode: varchar("postal_code"),

@@ -621,25 +621,15 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const cleanAddr = (s: string) => s.trim().replace(/^["']+$/, '');
   const isValidAddrLine = (s: string | null | undefined): s is string => !!s && !!cleanAddr(s);
-  let addressLines: string[] = [];
-  if (order.deliveryAddressId) {
-    try {
-      const addr = await storage.getDeliveryAddressById(order.deliveryAddressId);
-      if (addr) [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country].filter(isValidAddrLine).forEach(l => addressLines.push(cleanAddr(l)));
-    } catch (_) {}
-  }
-  if (addressLines.length === 0 && order.deliveryAddress && order.deliveryAddress !== '""' && order.deliveryAddress !== "''") {
-    addressLines = order.deliveryAddress.split(',').map(cleanAddr).filter(Boolean);
-  }
-  if (addressLines.length === 0 && order.retailerId && order.wholesalerId) {
-    try {
-      const addrs = await storage.getDeliveryAddresses(order.retailerId, order.wholesalerId);
-      if (addrs.length > 0) {
-        const addr = addrs[0];
-        [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode, addr.country].filter(isValidAddrLine).forEach(l => addressLines.push(cleanAddr(l)));
-      }
-    } catch (_) {}
-  }
+  // Use the customer's own stored address (not the delivery/shipping address)
+  const retailer = order.retailer;
+  const addressLines: string[] = [
+    retailer?.streetAddress,
+    retailer?.addressLine2,
+    retailer?.city,
+    retailer?.postalCode,
+    retailer?.country,
+  ].filter(isValidAddrLine).map(cleanAddr);
   const isCancelledOrder = order.status === 'cancelled';
   const ps = order.paymentStatus || 'unpaid';
   const psLabel = isCancelledOrder ? 'VOID' : (ps === 'paid' ? 'Paid' : ps === 'part_paid' ? 'Part Paid' : 'Unpaid');
