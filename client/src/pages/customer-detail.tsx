@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
@@ -161,7 +161,7 @@ export default function CustomerDetail() {
     queryKey: ["/api/customers"],
   });
 
-  const customer = customers.find((c) => c.id === customerId);
+  const customer = useMemo(() => customers.find((c) => c.id === customerId), [customers, customerId]);
 
   const { data: addresses = [], isLoading: addressesLoading } = useQuery<DeliveryAddress[]>({
     queryKey: [`/api/wholesaler/customers/${customerId}/addresses`],
@@ -173,9 +173,11 @@ export default function CustomerDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const customerOrders = allOrders
-    .filter((o) => o.retailerId === customerId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const customerOrders = useMemo(() =>
+    allOrders
+      .filter((o) => o.retailerId === customerId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [allOrders, customerId]);
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (updates: Partial<Customer>) => {
@@ -468,7 +470,7 @@ export default function CustomerDetail() {
     return null;
   };
 
-  const priceBreakdownRows = (() => {
+  const priceBreakdownRows = useMemo(() => {
     if (!customerPriceLists) return [];
     const byProduct: Record<number, { name: string; standardPrice: number; best: number; listCount: number }> = {};
     customerPriceLists.ids.forEach((id) => {
@@ -488,7 +490,7 @@ export default function CustomerDetail() {
       });
     });
     return Object.values(byProduct).sort((a, b) => a.name.localeCompare(b.name));
-  })();
+  }, [customerPriceLists, priceBreakdownCache]);
 
   const hasPortalAccess = !!customer?.email;
 
