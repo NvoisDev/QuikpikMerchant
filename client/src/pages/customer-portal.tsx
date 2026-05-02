@@ -755,12 +755,6 @@ export default function CustomerPortal() {
 
   // Memoized calculations
   const filteredProducts = useMemo(() => {
-      totalProducts: products.length,
-      searchTerm,
-      selectedCategory,
-      productsStatus: products.map(p => ({ id: p.id, name: p.name, status: p.status }))
-    });
-    
     const filtered = products.filter((product: Product) => {
       const matchesSearch = !searchTerm || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
