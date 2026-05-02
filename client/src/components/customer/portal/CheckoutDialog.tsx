@@ -458,7 +458,6 @@ export function CheckoutDialog({
                     value="pickup"
                     checked={customerData.shippingOption === 'pickup'}
                     onChange={async () => {
-                      console.log('🚚 PICKUP RADIO: User clicked pickup option');
                       try {
                         setCustomerData((prev: any) => ({...prev, shippingOption: 'pickup'}));
                         if (authenticatedCustomer?.id) {
@@ -534,7 +533,6 @@ export function CheckoutDialog({
                       value="delivery"
                       checked={customerData.shippingOption === 'delivery'}
                       onChange={async () => {
-                        console.log('🚚 DELIVERY RADIO: User clicked delivery option');
                         setCustomerData((prev: any) => ({
                           ...prev,
                           shippingOption: 'delivery',
@@ -547,12 +545,10 @@ export function CheckoutDialog({
                               customerId: authenticatedCustomer.id,
                               shippingChoice: 'delivery'
                             });
-                            console.log('✅ Delivery preference saved to backend');
                           } catch (error) {
                             console.error('❌ Failed to save delivery preference:', error);
                           }
                         }
-                        console.log('🚚 DELIVERY SELECTED: Waiting for address selection to create payment intent');
                       }}
                       className="w-4 h-4 text-emerald-600"
                     />
@@ -600,7 +596,6 @@ export function CheckoutDialog({
                     selectedAddress={customerData.selectedDeliveryAddress}
                     addressExplicitlyCleared={customerData.addressExplicitlyCleared || false}
                     onAddressSelect={(address) => {
-                      console.log('🏠 Address selected in checkout:', address);
                       setCustomerData((prev: any) => ({
                         ...prev,
                         address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',

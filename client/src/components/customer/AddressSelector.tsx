@@ -88,7 +88,6 @@ export function AddressSelector({
 
   // Auto-select default address when available and no address is currently selected
   useEffect(() => {
-    console.log('🏠 ADDRESS SELECTOR DEBUG:', {
       addressesLength: addresses.length,
       hasDefaultAddress: !!defaultAddress,
       hasSelectedAddress: !!selectedAddress,
@@ -99,18 +98,13 @@ export function AddressSelector({
     
     // Only auto-select default address if user hasn't explicitly cleared it
     if (defaultAddress && !selectedAddress && addresses.length > 0 && !userClearedAddress && !addressExplicitlyCleared) {
-      console.log('🏠 AUTO-SELECTING: Default address found, auto-selecting for customer convenience:', defaultAddress.addressLine1);
       onAddressSelect(defaultAddress);
     } else if (addresses.length === 0) {
-      console.log('🏠 NO ADDRESSES: Customer has no delivery addresses saved');
     } else if (!defaultAddress && addresses.length > 0) {
-      console.log('🏠 NO DEFAULT: Customer has addresses but no default address set - requiring explicit selection');
       // CRITICAL FIX: Don't auto-select first address, force explicit customer choice
       // This prevents wrong addresses from being selected automatically
     } else if (selectedAddress) {
-      console.log('🏠 ADDRESS ALREADY SELECTED: Using existing selection:', selectedAddress.addressLine1);
     } else if (userClearedAddress || addressExplicitlyCleared) {
-      console.log('🏠 USER CLEARED: User explicitly cleared address selection - showing address selection interface');
     }
   }, [defaultAddress, selectedAddress, onAddressSelect, addresses.length, addresses, userClearedAddress, addressExplicitlyCleared]);
 
@@ -180,7 +174,6 @@ export function AddressSelector({
           className="cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
             if (!selectedAddress && displayAddress) {
-              console.log('🏠 MANUAL SELECT: User clicked address card, selecting:', displayAddress.addressLine1);
               onAddressSelect(displayAddress);
             }
           }}

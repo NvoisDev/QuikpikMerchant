@@ -146,7 +146,6 @@ const PaymentFormContent = ({
       } else if (paymentIntent && paymentIntent.status === 'processing') {
         // Deferred payment method (BACS, SEPA, ACH) — payment is queued, not yet settled.
         // Advance to the success screen so the customer isn't stuck on the payment form.
-        console.log('Payment processing (deferred method):', paymentIntent.id);
         onSuccess({
           orderNumber: "Processing…",
           cart: [],
@@ -162,7 +161,6 @@ const PaymentFormContent = ({
         });
 
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('Payment succeeded:', paymentIntent.id);
         try {
           const timeoutPromise = new Promise<Response>((_, reject) =>
             setTimeout(() => reject(new Error('OrderTimeout')), 20000)

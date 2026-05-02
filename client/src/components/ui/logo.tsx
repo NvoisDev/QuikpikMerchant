@@ -19,7 +19,6 @@ export default function Logo({
 
   // Add effect to log when user data changes for debugging
   useEffect(() => {
-    console.log("🔄 Logo component - user data changed:", {
       logoType: user?.logoType,
       hasLogoUrl: !!user?.logoUrl,
       logoUrlLength: user?.logoUrl?.length || 0,
@@ -59,7 +58,6 @@ export default function Logo({
 
   // Determine what to show based on user settings hierarchy
   const renderLogo = () => {
-    console.log("Logo render - user data:", { 
       user: user?.firstName, 
       businessName: user?.businessName, 
       logoType: user?.logoType,
@@ -107,7 +105,6 @@ export default function Logo({
     
     // 4. Fallback to user initials (when no logoType is set)
     const nameInitials = getInitials();
-    console.log("Logo render - using fallback initials:", nameInitials);
     return (
       <div className={`${sizeClasses[size]} aspect-square bg-emerald-600 rounded-lg flex items-center justify-center`}>
         <span className={`${textSizeClasses[size]} font-bold text-white select-none`}>

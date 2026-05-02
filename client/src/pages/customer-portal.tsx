@@ -74,7 +74,6 @@ import { UnitSelectionModal } from "@/components/customer/portal/UnitSelectionMo
 //   as "wholesaler is not defined". Fixed in task109 by moving the early-return to AFTER all
 //   hooks. This module-level log confirms the fix is deployed.
 const CUSTOMER_PORTAL_VERSION = 'task110-fix-2026-04-13';
-console.log(`[CustomerPortal ${CUSTOMER_PORTAL_VERSION}] module loaded`);
 
 export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
@@ -416,7 +415,6 @@ export default function CustomerPortal() {
   // Cache invalidation when wholesaler ID changes
   useEffect(() => {
     if (wholesalerId) {
-      console.log('🧹 Cache invalidation: Wholesaler ID changed to:', wholesalerId);
       // Clear all relevant caches when switching wholesalers
       queryClient.invalidateQueries({ queryKey: ['wholesaler'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customer-auth/check'] });
@@ -475,7 +473,6 @@ export default function CustomerPortal() {
   // Update customer data when authenticated customer becomes available
   useEffect(() => {
     if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone || !customerData.businessName)) {
-      console.log('🚚 CRITICAL: Updating customer data from authenticated customer, preserving existing shippingOption:', customerData.shippingOption);
       setCustomerData(prevData => ({
         ...prevData, // CRITICAL: This preserves the shippingOption and all other fields
         name: authenticatedCustomer.name || '',
@@ -490,13 +487,11 @@ export default function CustomerPortal() {
   
   // Debug: Log state changes
   useEffect(() => {
-    console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
   }, [customerData.shippingOption]);
 
   // Auto-create payment intent when checkout opens with pre-selected shipping (skip in pay-later mode)
   useEffect(() => {
     if (showCheckout && !payLaterMode && customerData.shippingOption && !clientSecret && !isCreatingIntent && cart.length > 0) {
-      console.log('🚚 AUTO-CREATING: Payment intent on checkout open with pre-selected shipping:', customerData.shippingOption);
       createPaymentIntentForCheckout(customerData.shippingOption);
     }
   }, [showCheckout, payLaterMode, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
@@ -506,7 +501,6 @@ export default function CustomerPortal() {
   // CRITICAL FIX: Clear all customer data when authenticated customer changes
   useEffect(() => {
     if (authenticatedCustomer?.phone) {
-      console.log('🧹 Customer changed - clearing all customer data cache for:', authenticatedCustomer.name);
       queryClient.invalidateQueries({ queryKey: ["/api/customer-orders/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/customer-orders"] });
       queryClient.removeQueries({ queryKey: ["/api/customer-orders/stats"] });
@@ -518,14 +512,12 @@ export default function CustomerPortal() {
   const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
     queryKey: ['wholesaler', wholesalerId],
     queryFn: async () => {
-      console.log(`Fetching wholesaler data for ID: ${wholesalerId}`);
       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
       if (!response.ok) {
         console.error(`Wholesaler fetch failed: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch wholesaler: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Wholesaler data received:', data);
       return data;
     },
     enabled: !!wholesalerId,
@@ -549,7 +541,6 @@ export default function CustomerPortal() {
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
-      console.log('🎯 Generating welcome message for:', authenticatedCustomer.name, 'with stats:', customerOrderStats);
       
       const generatePersonalizedMessage = () => {
         const orders = customerOrderStats.totalOrders || 0;
@@ -626,11 +617,9 @@ export default function CustomerPortal() {
   const { data: featuredProduct, isLoading: featuredLoading, refetch: refetchFeaturedProduct } = useQuery({
     queryKey: ['featured-product', featuredProductId],
     queryFn: async () => {
-      console.log(`🌟 Fetching featured product: ${featuredProductId}`);
       const response = await fetch(`/api/marketplace/products/${featuredProductId}`);
       if (!response.ok) throw new Error("Failed to fetch featured product");
       const data = await response.json();
-      console.log(`✅ Featured product received:`, { id: data.id, name: data.name, status: data.status });
       return data;
     },
     enabled: !!featuredProductId,
@@ -643,13 +632,8 @@ export default function CustomerPortal() {
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['wholesaler-products', wholesalerId, hasCustomerSession, shouldFetchGuestSafeProducts],
     queryFn: async () => {
-      console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
-      console.log(`🌐 Current domain: ${window.location.origin}`);
-      console.log(`🔍 Fetching products for wholesaler: ${wholesalerId}`);
       const guestParam = shouldFetchGuestSafeProducts ? '?guest=true' : '';
       const response = await fetch(`/api/customer-products/${wholesalerId}${guestParam}`);
-      console.log(`📡 API Response status: ${response.status}`);
-      console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const responseText = await response.text();
@@ -659,8 +643,6 @@ export default function CustomerPortal() {
       }
       
       const data = await response.json();
-      console.log(`✅ Products received: ${data.length} items`);
-      console.log(`📦 Product sample:`, data.slice(0, 2).map((p: any) => ({ id: p.id, name: p.name, status: p.status })));
       return data;
     },
     enabled: !!wholesalerId,
@@ -773,7 +755,6 @@ export default function CustomerPortal() {
 
   // Memoized calculations
   const filteredProducts = useMemo(() => {
-    console.log('🔍 filteredProducts calculation:', {
       totalProducts: products.length,
       searchTerm,
       selectedCategory,
@@ -790,17 +771,14 @@ export default function CustomerPortal() {
       
       const isActive = product.status === 'active';
       
-      console.log(`Product ${product.name}: search=${matchesSearch}, category=${matchesCategory}, active=${isActive}`);
       
       return matchesSearch && matchesCategory && isActive;
     });
     
-    console.log('🔍 Filtered products result:', filtered.length);
     return filtered;
   }, [products, searchTerm, selectedCategory]);
 
   const otherProducts = useMemo(() => {
-    console.log('🔍 otherProducts calculation:', {
       featuredProduct: featuredProduct?.name || 'none',
       filteredProductsCount: filteredProducts.length,
       featuredProductId,
@@ -1334,7 +1312,6 @@ export default function CustomerPortal() {
 
   // Authentication handlers
   const handleAuthSuccess = (customer: any) => {
-    console.log("🎉 handleAuthSuccess called with customer:", customer);
     clearGuestParam();
     setOpenRequestAccessOnAuth(false);
     setAuthenticatedCustomer(customer);
@@ -1484,7 +1461,6 @@ export default function CustomerPortal() {
 
     // Check if user explicitly wants to login (force login parameter)
     if (forceLoginParam) {
-      console.log('🔑 Force login requested - showing auth screen');
       setOpenRequestAccessOnAuth(false);
       setIsAuthenticated(false);
       setAuthenticatedCustomer(null);
@@ -1495,7 +1471,6 @@ export default function CustomerPortal() {
 
     // Check if we have a valid server session
     if (sessionData?.authenticated && sessionData?.customer) {
-      console.log('✅ Valid server session found for:', sessionData.customer.name);
       setIsAuthenticated(true);
       setAuthenticatedCustomer(sessionData.customer);
       setShowAuth(false);
@@ -1506,7 +1481,6 @@ export default function CustomerPortal() {
     }
 
     if (forceGuestParam) {
-      console.log('🛍️ Guest browse requested');
       setIsAuthenticated(false);
       setAuthenticatedCustomer(null);
       setShowAuth(false);
@@ -1516,14 +1490,12 @@ export default function CustomerPortal() {
     
     // No valid authentication - show authentication screen only if not switching wholesalers
     if (!isSwitchingWholesaler) {
-      console.log('🔐 No valid authentication found, showing auth screen');
       setIsAuthenticated(false);
       setAuthenticatedCustomer(null);
       setShowAuth(true);
       setIsGuestMode(true);
     } else {
       // Session check resolved with no auth while switching — clear switching state and show auth
-      console.log('🔄 Switching wholesaler: session check resolved with no auth, clearing switch state');
       setIsSwitchingWholesaler(false);
       setIsAuthenticated(false);
       setAuthenticatedCustomer(null);
@@ -1586,7 +1558,6 @@ export default function CustomerPortal() {
 
   // Show authentication screen (3-step process) - but not during wholesaler switching or session loading
   if (showAuth && !isEnhancedPreviewMode && wholesalerId && !isSwitchingWholesaler && !sessionLoading) {
-    console.log('🔐 Showing 3-step authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
@@ -1617,7 +1588,6 @@ export default function CustomerPortal() {
 
   // Show thank you page after successful order
   if (showThankYou && completedOrder && wholesaler && isAuthenticated) {
-    console.log('🎉 Showing thank you page');
     return <LazyThankYouPage
       orderNumber={completedOrder.orderNumber}
       cart={completedOrder.cart}

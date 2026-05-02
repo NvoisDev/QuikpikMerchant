@@ -97,7 +97,6 @@ interface OrderItem {
 
 // Component to fetch and display delivery address details by ID for wholesaler
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
-  console.log('🏠 WholesalerDeliveryAddressDisplay rendering for addressId:', addressId);
   
   const { data: address, isLoading, error } = useQuery<{
     addressLine1: string;
@@ -112,7 +111,6 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
     retry: false,
   });
 
-  console.log('🏠 Address query state:', { isLoading, error: error?.message, address });
 
   if (isLoading) {
     return (
@@ -246,7 +244,6 @@ export default function OrdersFresh() {
       
       if (response.ok) {
         const stats = await response.json();
-        console.log(`📊 Loaded order stats for ${tab} tab:`, stats);
         setOrderStats(stats);
       } else {
         console.error('❌ Stats API returned non-OK status:', response.status);
@@ -285,14 +282,12 @@ export default function OrdersFresh() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`✅ Loaded ${data.orders.length} orders successfully (page ${page} of ${data.totalPages})`);
         // Log order statuses for debugging
         const statusCounts: Record<string, number> = {};
         data.orders.forEach((o: any) => {
           const status = o.status || 'null';
           statusCounts[status] = (statusCounts[status] || 0) + 1;
         });
-        console.log(`📋 Order statuses on this page:`, statusCounts);
         
         setOrders(data.orders);
         setTotalOrders(data.total);
@@ -300,7 +295,6 @@ export default function OrdersFresh() {
         setCurrentPage(page);
         // Use stats from paginated response (more reliable than separate API call)
         if (data.stats) {
-          console.log(`📊 Got stats from paginated response:`, data.stats);
           setOrderStats(data.stats);
         }
       } else {
