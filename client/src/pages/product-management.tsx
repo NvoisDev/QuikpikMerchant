@@ -526,7 +526,6 @@ export default function ProductManagement() {
   //       
   //       // Only update if the value actually changed
   //       if (sellingFormat !== newSellingFormat) {
-  //         console.log('🏷️ Auto-updating selling format:', { from: sellingFormat, to: newSellingFormat, hasPalletConfig });
   //         form.setValue('sellingFormat', newSellingFormat, { shouldValidate: false });
   //       }
   //     }

@@ -1493,18 +1493,6 @@ export default function CustomerPortal() {
 
 
 
-  // Debug output temporarily disabled to reduce noise
-  // console.log('🔄 Customer Portal Render State:', {
-  //   wholesalerId,
-  //   showAuth,
-  //   isPreviewMode,
-  //   isAuthenticated,
-  //   showHomePage,
-  //   showAllProducts,
-  //   featuredProductId,
-  //   featuredLoading,
-  //   wholesalerLoading
-  // });
 
   // Show store not found if no wholesaler ID in URL
   if (!wholesalerId && !isEnhancedPreviewMode) {
