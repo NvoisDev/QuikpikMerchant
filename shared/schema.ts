@@ -164,7 +164,7 @@ export const users = pgTable("users", {
   city: varchar("city"),
   state: varchar("state"),
   postalCode: varchar("postal_code"),
-  country: varchar("country").default("United Kingdom"),
+  country: varchar("country"),
   
   // Archive functionality
   archived: boolean("archived").default(false), // For soft delete when customer has orders
