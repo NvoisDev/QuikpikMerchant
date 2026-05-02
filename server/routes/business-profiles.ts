@@ -149,7 +149,6 @@ export function registerBusinessProfileRoutes(app: Express): void {
 
       if (!updated) return res.status(404).json({ error: "User not found" });
 
-      console.log(`⚖️ Admin updated legal info for user ${userId}`);
       res.json({ success: true, user: updated });
     } catch (error) {
       console.error("Error updating legal info:", error);
@@ -179,7 +178,6 @@ export function registerBusinessProfileRoutes(app: Express): void {
 
       if (!updated) return res.status(404).json({ error: "User not found" });
 
-      console.log(`🏢 Admin set enableMultiProfile=${enableMultiProfile} for user ${userId}`);
       res.json({ success: true, user: updated });
     } catch (error) {
       console.error("Error toggling multi-profile:", error);

@@ -77,7 +77,6 @@ import {
 import { getEmailDeliveryAddress } from "../utils/address-helper";
 import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
 
-
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export {
   storage, db, performanceMiddleware, queryOptimizer, queryCache,
@@ -194,7 +193,6 @@ export function parseAddressForEmail(address: string | null | undefined): {
       } else {
         result.city = validParts[0]; result.country = validParts[1];
       }
-      console.log(`🏠 ROUTES ADDRESS PARSED: "${cleanAddress}" → components:`, result);
       return result;
     }
   }
@@ -232,7 +230,6 @@ export async function generateOrderNumber(wholesalerId: string, trx?: any): Prom
     const storedPrefix = (row.order_number_prefix as string) || '';
     const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
     const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
-    console.log(`🏢 Generated order number: ${orderNumber} (counter=${counter})`);
     return orderNumber;
   } catch (error: any) {
     console.error(`❌ CRITICAL: generateOrderNumber error:`, { message: error.message, wholesalerId });
@@ -339,7 +336,6 @@ export async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) 
 
     const response = await sgMail.send(msg);
     if (response[0].statusCode === 202) {
-      console.log('✅ Team invitation email sent to:', teamMember.email);
     }
     return true;
   } catch (error: any) {
@@ -372,7 +368,7 @@ export async function refundAcrossPaymentIntents(
         const charge = await stripeClient.charges.retrieve(chargeId);
         refundablePence = charge.amount - charge.amount_refunded;
       }
-      if (refundablePence <= 0) { console.log(`💳 PI ${piId} fully refunded already, skipping`); continue; }
+      if (refundablePence <= 0) { continue; }
       const refundThisPence = Math.min(remainingPence, refundablePence);
       const refundParams: Record<string, unknown> = {
         payment_intent: piId,
@@ -388,7 +384,6 @@ export async function refundAcrossPaymentIntents(
       const refund = await stripeClient.refunds.create(refundParams as any, requestOptions);
       totalRefundedPence += refund.amount;
       remainingPence -= refund.amount;
-      console.log(`💳 Refunded £${(refund.amount / 100).toFixed(2)} from PI ${piId}, remaining: £${(remainingPence / 100).toFixed(2)}`);
     } catch (e: any) {
       lastError = e?.message || 'Unknown error';
       console.error(`Stripe refund failed for PI ${piId}:`, e);
@@ -491,7 +486,6 @@ export async function enforceNewPlanLimits(
       if (excess.length > 0) {
         await db.update(products).set({ status: 'locked' }).where(inArray(products.id, excess.map(p => p.id)));
         productsLocked = excess.length;
-        console.log(`🔒 Locked ${productsLocked} products for user ${userId} (tier: ${targetTier})`);
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [products] failed for user ${userId}:`, err); }
   }
@@ -504,7 +498,6 @@ export async function enforceNewPlanLimits(
       if (membersToSuspend.length > 0) {
         await db.update(teamMembers).set({ status: 'suspended' }).where(inArray(teamMembers.id, membersToSuspend.map(m => m.id)));
         teamMembersSuspended = membersToSuspend.length;
-        console.log(`🔒 Suspended ${teamMembersSuspended} team members for user ${userId} (tier: ${targetTier})`);
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [team members] failed for user ${userId}:`, err); }
   }
@@ -517,7 +510,6 @@ export async function enforceNewPlanLimits(
       if (groupsToArchive.length > 0) {
         await db.update(customerGroups).set({ status: 'archived' }).where(inArray(customerGroups.id, groupsToArchive.map(g => g.id)));
         groupsArchived = groupsToArchive.length;
-        console.log(`🔒 Archived ${groupsArchived} customer groups for user ${userId} (tier: ${targetTier})`);
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [customer groups] failed for user ${userId}:`, err); }
   }
@@ -530,7 +522,6 @@ export async function enforceNewPlanLimits(
       if (excessPriceLists.length > 0) {
         await db.update(priceLists).set({ isLocked: true }).where(inArray(priceLists.id, excessPriceLists.map(pl => pl.id)));
         priceListsLocked = excessPriceLists.length;
-        console.log(`🔒 Locked ${priceListsLocked} price lists for user ${userId} (tier: ${targetTier})`);
       }
     } catch (err) { console.error(`❌ enforceNewPlanLimits [price lists] failed for user ${userId}:`, err); }
   }
@@ -551,7 +542,6 @@ export async function unlockForUpgrade(userId: string): Promise<{ productsUnlock
       await db.update(products).set({ status: 'inactive' })
         .where(inArray(products.id, lockedProducts.map(p => p.id)));
       productsUnlocked = lockedProducts.length;
-      console.log(`🔓 Unlocked ${productsUnlocked} products for user ${userId} after upgrade`);
     }
   } catch (err) { console.error(`❌ unlockForUpgrade [products] failed for user ${userId}:`, err); }
   try {
@@ -561,7 +551,6 @@ export async function unlockForUpgrade(userId: string): Promise<{ productsUnlock
       await db.update(priceLists).set({ isLocked: false })
         .where(inArray(priceLists.id, lockedPriceLists.map(pl => pl.id)));
       priceListsUnlocked = lockedPriceLists.length;
-      console.log(`🔓 Unlocked ${priceListsUnlocked} price lists for user ${userId} after upgrade`);
     }
   } catch (err) { console.error(`❌ unlockForUpgrade [price lists] failed for user ${userId}:`, err); }
   return { productsUnlocked, priceListsUnlocked };
@@ -947,7 +936,6 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
         : `Thank you for your order!`;
     const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">${emailTitle}</h2><p>Dear ${customerName},</p><p>${emailIntro}</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${paymentSummaryHtml}${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
     if (!process.env.SENDGRID_API_KEY) {
-      console.log("SendGrid not configured — email skipped for order #" + order.id);
       return;
     }
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -962,7 +950,6 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       pdfAttachment = { content: pdfBuffer.toString('base64'), filename: `invoice-${order.orderNumber || order.id}.pdf`, type: 'application/pdf', disposition: 'attachment' };
     } catch (pdfError) { console.error('⚠️ Could not generate PDF for email (email still sends without it):', pdfError); }
     await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `${emailTitle} ${orderRef} - ${businessName}`, html: emailHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
-    console.log(`✅ Confirmation email sent to ${customer.email} for order #${order.id}`);
     if (wholesaler.email) {
       try {
         const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
@@ -974,7 +961,6 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
             : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
         const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">${wholesalerSubjectLabel} — ${orderRef}</h2><p>${wholesalerBodyLabel}</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
         await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
-        console.log(`✅ Wholesaler invoice copy sent to ${wholesaler.email}`);
       } catch (err: any) { console.error('⚠️ Failed to send wholesaler invoice copy (non-fatal):', err?.message); }
     }
   } catch (error) { console.error('Failed to send customer confirmation email:', error); }
@@ -983,14 +969,13 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
 export async function createStripeRefundReceipt(order: any, refund: any, wholesaler: any, customer: any, reason: string): Promise<any> {
   let stripeClient: ReturnType<typeof getStripeClient> | null = null;
   try { stripeClient = getStripeClient(Boolean(wholesaler?.isTestAccount)); } catch { /* key not configured */ }
-  if (!stripeClient || !wholesaler.stripeAccountId) { console.log('Stripe not configured or no Connect account, skipping refund receipt'); return; }
+  if (!stripeClient || !wholesaler.stripeAccountId) { return; }
   try {
     if (refund?.id) {
       const invoices = await stripeClient.invoices.list({ customer: customer.email, limit: 10 }, { stripeAccount: wholesaler.stripeAccountId });
       const originalInvoice = invoices.data.find(inv => inv.metadata?.order_id === order.id.toString());
       if (originalInvoice) {
         const creditNote = await stripeClient.creditNotes.create({ invoice: originalInvoice.id, amount: refund.amount, reason: 'requested_by_customer', memo: reason || 'Refund processed', metadata: { order_id: order.id.toString(), refund_id: refund.id, refund_reason: reason || 'Customer requested refund' } }, { stripeAccount: wholesaler.stripeAccountId });
-        console.log(`✅ Stripe credit note created for refund ${refund.id}`);
         return creditNote;
       }
     }
@@ -998,7 +983,7 @@ export async function createStripeRefundReceipt(order: any, refund: any, wholesa
 }
 
 export async function sendRefundReceipt(customer: any, order: any, refund: any, wholesaler: any, reason: string): Promise<void> {
-  if (!sgMail) { console.log('SendGrid not configured, skipping refund receipt'); return; }
+  if (!sgMail) { return; }
   try {
     const businessName = wholesaler.businessName || 'Quikpik Merchant';
     const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
@@ -1007,7 +992,6 @@ export async function sendRefundReceipt(customer: any, order: any, refund: any, 
     const wholesalerUser = await storage.getUser(order.wholesalerId);
     const refundBody = `${emailHeading('Refund Receipt', { size: '22px', color: '#dc2626' })}${emailCard(`<p style="margin:0;font-size:15px;color:#7f1d1d">${isFullRefund ? 'Full refund' : 'Partial refund'} of <strong>${currencySymbol}${refundAmount.toFixed(2)}</strong> processed for Order #${order.id}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' })}${emailCard(`${emailHeading('Refund Summary', { size: '16px' })}<p style="margin:0 0 6px"><strong>Original Total:</strong> ${currencySymbol}${parseFloat(order.total).toFixed(2)}</p><p style="margin:0 0 6px"><strong>Refund Amount:</strong> <span style="color:#dc2626">${currencySymbol}${refundAmount.toFixed(2)}</span></p><p style="margin:0"><strong>Reference:</strong> ${refund ? refund.id : 'Manual Refund'}</p>${reason ? `<p style="margin:10px 0 0;padding-top:10px;border-top:1px solid #e5e7eb"><strong>Reason:</strong> ${reason}</p>` : ''}`)}<p style="margin:20px 0 0;text-align:center;color:#6b7280">Refund will appear on your payment method within 5-10 business days.</p>`;
     await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `Refund Receipt for Order #${order.id} - ${businessName}`, html: wrapCustomerEmail(refundBody, { businessName, logoUrl: getEmailLogoUrl(wholesalerUser?.id, wholesalerUser?.logoType, wholesalerUser?.logoUrl) }, { preheader: `Refund of ${currencySymbol}${refundAmount.toFixed(2)} processed` }) });
-    console.log(`✅ Refund receipt sent to ${customer.email} for order ${order.id}`);
   } catch (error) { console.error('❌ Failed to send refund receipt:', error); throw error; }
 }
 
@@ -1037,12 +1021,11 @@ export function isInvitationExpired(invitedAt: Date | string | null | undefined)
 }
 
 export async function sendWelcomeEmail(user: any): Promise<void> {
-  if (!process.env.SENDGRID_API_KEY) { console.log("⚠️ SendGrid not configured, skipping welcome email"); return; }
+  if (!process.env.SENDGRID_API_KEY) { return; }
   try {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     const welcomeBody = `${emailHeading('Welcome to Quikpik!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Hello ${user.firstName},</p><p style="margin:0 0 20px">Congratulations on joining Quikpik!</p>${emailCard(`${emailHeading('Get Started', { size: '16px', color: '#059669' })}<ul style="margin:0;padding-left:20px;font-size:14px"><li style="margin-bottom:6px">Add products with photos, pricing, and stock levels</li><li style="margin-bottom:6px">Create customer groups for targeted communication</li><li style="margin-bottom:6px">Get ready for WhatsApp broadcasts when they launch</li><li>Accept online payments and manage orders efficiently</li></ul>`)}${emailButton('Access Your Dashboard', 'https://quikpik.app')}`;
     await sgMail.send({ to: user.email, from: { email: 'hello@quikpik.co', name: 'Quikpik Team' }, subject: `Welcome to Quikpik, ${user.firstName}!`, html: wrapCustomerEmail(welcomeBody, { businessName: user.businessName || `${user.firstName}'s Business` || 'Quikpik', logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) }, { preheader: 'Welcome to Quikpik - your wholesale platform is ready' }) });
-    console.log(`✅ Welcome email sent to ${user.email}`);
   } catch (error) { console.error('Failed to send welcome email:', error); }
 }
 

@@ -174,7 +174,6 @@ export function registerOrderRoutes(app: Express): void {
       // Update the order with new address
       await storage.updateOrderDeliveryAddress(parseInt(orderId), parseInt(deliveryAddressId), formattedAddress);
       
-      
       res.json({ 
         success: true, 
         message: "Delivery address updated successfully",
@@ -200,7 +199,6 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      
       // Fetch order directly from database
       const [order] = await db
         .select()
@@ -211,7 +209,6 @@ export function registerOrderRoutes(app: Express): void {
       if (!order) {
         return res.status(404).json({ error: 'Order not found' });
       }
-
 
       // Verify the order belongs to this wholesaler
       if (order.wholesalerId !== wholesalerId) {
@@ -399,7 +396,6 @@ export function registerOrderRoutes(app: Express): void {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
 
-
       // Get order details
       const order = await storage.getOrder(orderId);
       if (!order) {
@@ -415,7 +411,6 @@ export function registerOrderRoutes(app: Express): void {
       if (order.status !== 'ready_for_collection' || !order.readyToCollectAt) {
         return res.status(400).json({ error: 'Order is not ready for collection' });
       }
-
 
       // Send email notification to customer
       try {
@@ -551,7 +546,6 @@ export function registerOrderRoutes(app: Express): void {
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
-
       // Task 4: Send payment notifications to customer and wholesaler (best-effort)
       try {
         const [customer, wholesaler] = await Promise.all([
@@ -670,7 +664,6 @@ export function registerOrderRoutes(app: Express): void {
       const orderId = parseInt(req.params.id);
       const userId = req.user!.id;
 
-
       // Get order details
       const order = await storage.getOrder(orderId);
       if (!order) {
@@ -686,7 +679,6 @@ export function registerOrderRoutes(app: Express): void {
       if (order.status !== 'paid') {
         return res.status(400).json({ error: 'Order must be in paid status to mark items as prepared' });
       }
-
 
       // Update order status using storage method
       const updated = await storage.updateOrderStatus(orderId, 'items_prepared');
@@ -898,7 +890,6 @@ export function registerOrderRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      
       // Build search conditions - customerId takes priority over text search
       const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId)];
       if (customerId) {
@@ -974,7 +965,6 @@ export function registerOrderRoutes(app: Express): void {
       const totalPages = Math.ceil(totalOrders / limit);
       const { paidOrdersCount, pendingOrdersCount, totalRevenue } = tabStatsResult[0];
       const { activeCount, archivedCount } = baseStatsResult[0];
-
 
       // Fetch cancellation requests for this page's orders only
       const orderIds = ordersResult.map(o => o.id);
@@ -1063,7 +1053,6 @@ export function registerOrderRoutes(app: Express): void {
         return false;
       };
       
-
       // Get all orders to calculate overall statistics
       const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
       
@@ -1074,7 +1063,6 @@ export function registerOrderRoutes(app: Express): void {
           ? allOrders.filter(order => isArchivedOrder(order))
           : allOrders.filter(order => !isArchivedOrder(order));
       
-
       // Calculate overall statistics for the filtered set
       const paidOrders = filteredOrders.filter(order => 
         order.status === 'paid' || 
@@ -2266,7 +2254,6 @@ export function registerOrderRoutes(app: Express): void {
       const objectStorageService = new ObjectStorageService();
       const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
       
-      
       const imageEntry = {
         id: crypto.randomUUID(),
         url: normalizedPath, // Use normalized path for serving
@@ -2279,7 +2266,6 @@ export function registerOrderRoutes(app: Express): void {
       const updatedImages = [...currentImages, imageEntry];
       
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
-      
       
       // Send email notification to customer about new photos
       try {
@@ -2357,7 +2343,6 @@ export function registerOrderRoutes(app: Express): void {
         req.file.originalname
       );
 
-
       const imageEntry = {
         id: crypto.randomUUID(),
         url: normalizedPath,
@@ -2369,7 +2354,6 @@ export function registerOrderRoutes(app: Express): void {
       const currentImages = order.orderImages || [];
       const updatedImages = [...currentImages, imageEntry];
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
-
 
       // Send email notification to customer (best-effort)
       try {
@@ -2420,7 +2404,6 @@ export function registerOrderRoutes(app: Express): void {
       const updatedImages = currentImages.filter(img => img.id !== imageId);
       
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
-      
       
       res.json({ success: true });
     } catch (error) {
@@ -2535,7 +2518,6 @@ export function registerOrderRoutes(app: Express): void {
       await db
         .delete(orders)
         .where(and(...whereConditions));
-
 
       res.json({ 
         message: `Successfully deleted ${orderIdsToDelete.length} orders and related data`,
@@ -2760,7 +2742,6 @@ export function registerOrderRoutes(app: Express): void {
         attachments: [pdfAttachment],
       } as MailDataRequired);
 
-      console.log(`📧 Customer invoice shared: order ${orderRef} → ${customerEmail}`);
       res.json({ message: `Invoice sent to ${customerEmail}` });
     } catch (error) {
       console.error('Error sharing invoice:', error);
@@ -2807,7 +2788,6 @@ export function registerOrderRoutes(app: Express): void {
         return res.status(500).json({ message: 'Failed to send SMS. Please check Twilio configuration.' });
       }
 
-      console.log(`📱 Invoice SMS sent for order ${order.orderNumber || id} → ${customerPhone}`);
       res.json({ message: 'Invoice sent via SMS' });
     } catch (error) {
       console.error('Error sending invoice via SMS:', error);
@@ -2874,8 +2854,6 @@ export function registerOrderRoutes(app: Express): void {
       if (!customerInfo.email) {
         return res.status(400).json({ message: "No customer email found for this order" });
       }
-
-      console.log(`📧 Sending receipt to: ${customerInfo.email} for customer: ${customerInfo.name}`);
 
       // Get order items with product details
       const orderItems = await storage.getOrderItems(order.id);
@@ -3155,8 +3133,6 @@ export function registerOrderRoutes(app: Express): void {
         paymentDescription = `Payment for remaining balance. Original order total: £${orderTotal.toFixed(2)}`;
       }
 
-      console.log(`💳 Payment link calculation: status=${order.paymentStatus}, depositPct=${depositPercentage}%, total=${orderTotal}, paid=${amountPaid}, outstanding=${amountOutstanding}, charging=${paymentAmount}`);
-
       // Validate wholesaler's Stripe Connect account for automatic transfer
       let balanceLinkUseConnect = false;
       if (wholesaler?.stripeAccountId) {
@@ -3164,9 +3140,7 @@ export function registerOrderRoutes(app: Express): void {
           const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
           if (connectAccount.charges_enabled && connectAccount.details_submitted) {
             balanceLinkUseConnect = true;
-            console.log(`✅ Balance link Connect account active: ${wholesaler.stripeAccountId}`);
           } else {
-            console.log(`⚠️ Balance link Connect account not ready: ${wholesaler.stripeAccountId}`);
           }
         } catch (connectErr: any) {
           console.error(`❌ Balance link Connect account validation failed: ${connectErr.message}`);
@@ -3228,8 +3202,6 @@ export function registerOrderRoutes(app: Express): void {
         })
         .where(eq(orders.id, orderId));
 
-      console.log(`✅ Balance payment link generated for order ${order.orderNumber}: ${session.url}`);
-
       // Send SMS notification to customer with payment link
       let smsSent = false;
       const customerPhone = order.customerPhone;
@@ -3265,7 +3237,6 @@ export function registerOrderRoutes(app: Express): void {
             message: smsMessage
           });
           
-          console.log(`📱 WhatsApp ${smsSent ? 'sent' : 'failed'} to ${customerPhone} for ${paymentTypeLabel.toLowerCase()}`);
         } catch (smsError) {
           console.error('❌ Failed to send payment WhatsApp:', smsError);
         }

@@ -313,7 +313,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.status(400).json({ error: 'Name and phone number are required' });
       }
 
-
       // Send email notification to platform admin
       try {
         const adminEmail = process.env.ADMIN_EMAIL || 'hello@quikpik.co';
@@ -459,7 +458,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         });
       }
 
-
       // Get wholesaler info for business name
       const wholesaler = await storage.getWholesalerProfile(wholesalerId);
       
@@ -585,7 +583,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
       };
 
-
       // Ensure session exists and store customer session
       if (!req.session) {
         console.error("Session not initialized - regenerating session");
@@ -595,7 +592,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Set customer authentication data in session
       (req.session as any).customerAuth = sessionData;
       
-
       // Force session save using callback method with timeout
       const saveSession = () => {
         return new Promise<void>((resolve, reject) => {
@@ -625,7 +621,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         console.error('Session save failed:', error);
         // Continue anyway to avoid blocking the user
       }
-      
       
       // Create a signed token as backup for session persistence issues
       // Set a fallback cookie with customer authentication
@@ -703,7 +698,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         res.clearCookie('customer_auth');
         return res.status(401).json({ authenticated: false, message: "Session expired" });
       }
-      
       
       // Valid session found - get full customer data including business name
       const fullCustomerData = await storage.getUser(customerAuth.customerId);
@@ -792,7 +786,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       res.cookie('customer_auth', signCustomerCookie(cookieData), COOKIE_OPTIONS);
       
-      
       res.json({
         success: true,
         message: "Wholesaler switched successfully",
@@ -861,7 +854,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       const { name, email, phone, businessName } = req.body;
       
-      
       // Prepare update data
       const updates: any = {};
       if (name && name.trim()) {
@@ -883,7 +875,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       if (!updatedCustomer) {
         return res.status(404).json({ error: "Customer not found" });
       }
-      
       
       res.json({
         success: true,
@@ -945,7 +936,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const { requestId } = req.params;
       const { action, responseMessage, customerGroupId } = req.body;
       const userId = (req as any).user.id;
-      
       
       if (!['approve', 'reject'].includes(action)) {
         return res.status(400).json({ error: 'Invalid action. Must be approve or reject' });
@@ -1066,7 +1056,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
-            
             const welcomeResult = await sendWelcomeMessages({
               customerName,
               customerEmail: requestData.customerEmail || undefined,
@@ -1141,7 +1130,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const { customerId } = req.params;
       const { firstName, lastName, email, phoneNumber, businessName } = req.body;
       
-      
       // Validate required fields
       if (!customerId) {
         return res.status(400).json({ error: "Customer ID is required" });
@@ -1160,7 +1148,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       // Update customer profile with automatic notifications to wholesalers
       const updatedCustomer = await storage.updateCustomerProfileWithNotifications(customerId, updates, true);
-      
       
       res.json({
         success: true,
@@ -1282,13 +1269,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       };
 
-
       // Ensure session exists and store customer session
       if (!req.session) {
         req.session = {} as any;
       }
       (req.session as any).customerAuth = sessionData;
-
 
       // Force session save
       const saveSession = () => new Promise<void>((resolve, reject) => {
@@ -1321,7 +1306,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         timestamp: Date.now(),
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
       }), COOKIE_OPTIONS);
-
 
       res.json({ 
         success: true, 

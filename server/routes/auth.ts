@@ -110,11 +110,9 @@ export function registerAuthRoutes(app: Express): void {
         }
       }
       
-
       // Update user profile
       await storage.updateUser(user.id, updates);
 
-      
       res.json({ 
         success: true, 
         message: "Profile updated successfully" 
@@ -193,7 +191,6 @@ export function registerAuthRoutes(app: Express): void {
           console.error('❌ Session save failed after Google auth:', err);
           return res.redirect('/login?error=session_failed');
         }
-        
         
         // Use returnTo if set (e.g. from /admin login)
         const returnTo = (req.session as any).returnTo;
@@ -275,7 +272,6 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-
       // Update session with new user data
       (req.session as any).user = {
         ...req.user,
@@ -337,7 +333,6 @@ export function registerAuthRoutes(app: Express): void {
           console.error('Session save error:', err);
           return res.status(500).json({ error: 'Session save failed' });
         }
-        
         
         res.json({ 
           success: true, 
@@ -1421,10 +1416,6 @@ export function registerAuthRoutes(app: Express): void {
   app.post('/api/auth/signup', async (req, res) => {
     const signupLogId = `signup-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const logSignup = (step: string, details?: Record<string, unknown>) => {
-      console.log(`[${signupLogId}] ${step}`, {
-        timestamp: new Date().toISOString(),
-        ...(details || {})
-      });
     };
     try {
       const {
@@ -1634,7 +1625,6 @@ export function registerAuthRoutes(app: Express): void {
       // Send password reset email with PLAIN token
       await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) });
       
-      
       res.json({ 
         success: true, 
         message: "If an account with that email exists, we've sent a password reset link." 
@@ -1704,7 +1694,6 @@ export function registerAuthRoutes(app: Express): void {
       if (!user) {
         return res.status(400).json({ error: "Invalid or expired reset token" });
       }
-      
       
       res.json({ 
         success: true, 

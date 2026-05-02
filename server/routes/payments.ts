@@ -84,7 +84,6 @@ export function registerPaymentRoutes(app: Express): void {
           const refreshUrl = `${baseUrl}/settings?tab=integrations`;
           const returnUrl = `${baseUrl}/stripe-success`;
           
-            
           // Get account link for existing account
           const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
@@ -100,7 +99,6 @@ export function registerPaymentRoutes(app: Express): void {
         }
       }
 
-      
       // Create new Connect Express account
       const account = await stripe.accounts.create({
         type: 'express',
@@ -115,13 +113,11 @@ export function registerPaymentRoutes(app: Express): void {
         },
       });
 
-
       // Update user with Connect account ID
       await storage.updateUser(user.id, {
         stripeAccountId: account.id
       });
       
-
       // Get proper base URL — use production domain when deployed, dev domain otherwise
       const baseUrl = process.env.NODE_ENV === 'production'
         ? 'https://quikpik.app'
@@ -132,7 +128,6 @@ export function registerPaymentRoutes(app: Express): void {
       const refreshUrl = `${baseUrl}/settings?tab=integrations`;
       const returnUrl = `${baseUrl}/stripe-success`;
       
-        
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
         account: account.id,
@@ -141,7 +136,6 @@ export function registerPaymentRoutes(app: Express): void {
         type: 'account_onboarding',
       });
 
-      
       res.json({ url: accountLink.url, accountId: account.id });
     } catch (error: any) {
       console.error('❌ Error creating Stripe Connect account:', error);
@@ -179,7 +173,6 @@ export function registerPaymentRoutes(app: Express): void {
 
       // Create a login link for the Express dashboard
       const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
-      
       
       res.json({ url: loginLink.url });
     } catch (error: any) {
@@ -242,7 +235,6 @@ export function registerPaymentRoutes(app: Express): void {
     let resolvedEventType = 'unknown';
     let resolvedEventId = 'unknown';
     res.on('finish', () => {
-      console.log(`📤 Webhook response sent: status=${res.statusCode} eventType=${resolvedEventType} eventId=${resolvedEventId}`);
     });
 
     const secretPairs = getWebhookSecretsWithLabels();
@@ -269,13 +261,10 @@ export function registerPaymentRoutes(app: Express): void {
     }
     resolvedEventType = event.type;
     resolvedEventId = event.id;
-    console.log(`✅ Stripe webhook received: type=${event.type} livemode=${event.livemode} secret=${matchedLabel} at ${new Date().toISOString()}`);
 
     try {
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`💳 Checkout completed: ${session?.id}`);
-        console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
         
         const userId = session?.metadata?.userId;
         const tier = session?.metadata?.targetTier || 
@@ -289,7 +278,6 @@ export function registerPaymentRoutes(app: Express): void {
         const isQuote = session?.metadata?.isQuote === 'true';
         
         if (orderId && orderNumber) {
-          console.log(`🧾 Processing quote/order payment: Order ${orderNumber}, ID ${orderId}`);
           
           // Get the current order from database to get accurate totals and existing payments
           const [existingOrder] = await db.select()
@@ -321,8 +309,6 @@ export function registerPaymentRoutes(app: Express): void {
             paymentStatus = 'part_paid';
           }
           
-          console.log(`📊 Payment update: This payment £${thisPayment.toFixed(2)}, Previously paid £${previouslyPaid.toFixed(2)}, Total paid £${cumulativePaid.toFixed(2)}, Outstanding £${newOutstanding.toFixed(2)}, Status: ${paymentStatus}`);
-          
           // Capture actual Stripe processing fee from balance_transaction (non-blocking)
           const piId = session.payment_intent as string | null;
           // Idempotency: skip fee capture if this PI was already processed (webhook retry safety)
@@ -343,7 +329,6 @@ export function registerPaymentRoutes(app: Express): void {
                 const thisFee = bt.fee / 100;
                 const existingFee = parseFloat(existingOrder.stripeActualFee || '0');
                 actualStripeFee = parseFloat((existingFee + thisFee).toFixed(2));
-                console.log(`💳 Stripe actual fee for order ${orderNumber}: £${thisFee.toFixed(2)} (cumulative: £${actualStripeFee.toFixed(2)})`);
               }
             } catch (feeErr) {
               console.warn(`⚠️ Could not retrieve Stripe fee for order ${orderNumber}:`, feeErr);
@@ -375,8 +360,6 @@ export function registerPaymentRoutes(app: Express): void {
             })
             .where(eq(orders.id, parseInt(orderId)));
           
-          console.log(`✅ Order ${orderNumber} payment updated: ${paymentStatus}, old payment link cleared`);
-
           // Log payment event for quotes (non-blocking)
           if (existingOrder.isQuote) {
             logQuoteActivity({
@@ -431,7 +414,6 @@ export function registerPaymentRoutes(app: Express): void {
                     paymentStatus,
                   };
                   await sendCustomerInvoiceEmail(customerForEmail, orderForEmail, enrichedItems, wholesaler);
-                  console.log(`📧 Confirmation email sent to ${customerForEmail.email} for order ${orderNumber}`);
                 }
               } catch (emailErr) {
                 console.error(`⚠️ Failed to send confirmation email for order ${orderNumber}:`, emailErr);
@@ -478,7 +460,6 @@ export function registerPaymentRoutes(app: Express): void {
                     latestPaymentAmount: thisPayment.toFixed(2),
                   };
                   await sendCustomerInvoiceEmail(customerForEmail, orderForEmail, enrichedItems, wholesaler, true);
-                  console.log(`📧 Balance payment confirmation email sent to ${customerForEmail.email} for order ${orderNumber}`);
                 }
               } catch (emailErr) {
                 console.error(`⚠️ Failed to send balance payment confirmation email for order ${orderNumber}:`, emailErr);
@@ -498,7 +479,6 @@ export function registerPaymentRoutes(app: Express): void {
         
         // Handle subscription payments (has userId and tier in metadata)
         if (userId && tier) {
-          console.log(`🔄 Processing ${subscriptionType || 'new'} subscription: ${userId} → ${tier}`);
           
           const productLimit = getProductLimit(tier);
           
@@ -542,8 +522,6 @@ export function registerPaymentRoutes(app: Express): void {
             await unlockForUpgrade(userId);
           }
           
-          console.log(`✅ ${subscriptionType || 'New'} subscription processed: ${userId} to ${tier}`);
-          
           return res.json({
             received: true,
             message: `Subscription ${subscriptionType === 'new' ? 'created' : 'updated'} - ${tier}`,
@@ -553,14 +531,11 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
         
-        console.log(`⚠️ Checkout completed but no matching handler - metadata:`, session?.metadata);
         return res.json({ received: true, type: event.type });
       }
 
       if (event.type === 'payment_intent.succeeded') {
         const paymentIntent = event.data?.object;
-        console.log(`💰 Payment succeeded: ${paymentIntent?.id}`);
-        console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
         
         const userId = paymentIntent?.metadata?.userId;
         // Handle all possible tier metadata field names for maximum compatibility
@@ -571,7 +546,6 @@ export function registerPaymentRoutes(app: Express): void {
         const orderType = paymentIntent?.metadata?.orderType;
         
         if (userId && tier) {
-          console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
           const productLimit = getProductLimit(tier);
           
@@ -586,8 +560,6 @@ export function registerPaymentRoutes(app: Express): void {
             await unlockForUpgrade(userId);
           }
           
-          console.log(`✅ Payment upgrade complete: ${userId} to ${tier}`);
-          
           return res.json({
             received: true,
             message: `Subscription upgraded to ${tier}`,
@@ -600,7 +572,6 @@ export function registerPaymentRoutes(app: Express): void {
 
       if (event.type === 'charge.refund.updated') {
         const refund = event.data.object as Stripe.Refund;
-        console.log(`🔄 Refund updated: ${refund.id}, status: ${refund.status}, amount: ${refund.amount}`);
 
         if (refund.status === 'succeeded' && refund.payment_intent) {
           const paymentIntentId = typeof refund.payment_intent === 'string'
@@ -628,12 +599,9 @@ export function registerPaymentRoutes(app: Express): void {
                     : `[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
                 })
                 .where(eq(orders.id, order.id));
-              console.log(`✅ Refund confirmed for order ${order.orderNumber} (refund ${refund.id})`);
             } else {
-              console.log(`ℹ️ Order ${order.orderNumber} already has refundedAt set, skipping`);
             }
           } else {
-            console.log(`⚠️ No order found for payment intent ${paymentIntentId}`);
           }
         }
 
@@ -646,7 +614,6 @@ export function registerPaymentRoutes(app: Express): void {
         const stripeCustomerId = typeof subscription.customer === 'string'
           ? subscription.customer
           : subscription.customer?.id;
-        console.log(`🔴 Subscription deleted: ${stripeSubscriptionId}, customer: ${stripeCustomerId}`);
 
         // Prefer lookup by Stripe customer ID (most reliable); fall back to subscription ID
         let affectedUser: typeof users.$inferSelect | undefined;
@@ -662,7 +629,6 @@ export function registerPaymentRoutes(app: Express): void {
         }
 
         if (!affectedUser) {
-          console.log(`⚠️ No user found for deleted subscription ${stripeSubscriptionId} — may already be cleaned up`);
           return res.json({ received: true, type: event.type });
         }
 
@@ -704,8 +670,6 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        console.log(`✅ DB updated to Free for user ${affectedUser.id} (was already free: ${wasAlreadyFree})`);
-
         // Enforce Free plan limits — lock excess products, suspend excess team members, archive excess groups
         let enforcementResult = { productsLocked: 0, teamMembersSuspended: 0, groupsArchived: 0 };
         if (!wasAlreadyFree) {
@@ -723,7 +687,6 @@ export function registerPaymentRoutes(app: Express): void {
               groupsArchived: enforcementResult.groupsArchived || undefined,
             });
             await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
-            console.log(`📧 Downgrade effective email sent to ${affectedUser.email}`);
           } catch (emailErr) {
             console.error('❌ Failed to send downgrade effective email:', emailErr);
           }
@@ -741,12 +704,10 @@ export function registerPaymentRoutes(app: Express): void {
         const subCustId = typeof subscription.customer === 'string'
           ? subscription.customer : subscription.customer.id;
         const subPriceId = subscription.items?.data?.[0]?.price?.id;
-        console.log(`🔔 ${event.type}: customer=${subCustId}, price=${subPriceId}`);
         if (!subCustId || !subPriceId) return res.json({ received: true, type: event.type });
 
         const [subUser] = await db.select().from(users).where(eq(users.stripeCustomerId, subCustId));
         if (!subUser) {
-          console.log(`⚠️ No user found for Stripe customer ${subCustId} (${event.type})`);
           return res.json({ received: true, type: event.type });
         }
 
@@ -771,12 +732,10 @@ export function registerPaymentRoutes(app: Express): void {
         }
 
         if (!subPlanId || subPlanId === 'free') {
-          console.log(`⚠️ Could not resolve paid plan for price ${subPriceId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
         if (subUser.currentPlan === subPlanId && subUser.subscriptionStatus === 'active') {
-          console.log(`ℹ️ User ${subUser.id} already on ${subPlanId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
@@ -829,7 +788,6 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        console.log(`✅ ${event.type}: Activated ${subPlanId} for user ${subUser.id} (${subUser.email})`);
         return res.json({ received: true, type: event.type, userId: subUser.id, planId: subPlanId });
       }
 
@@ -853,11 +811,8 @@ export function registerPaymentRoutes(app: Express): void {
             : null;
         if (!invCustId || !invSubId) return res.json({ received: true, type: event.type });
 
-        console.log(`💸 invoice.payment_succeeded: customer=${invCustId}, sub=${invSubId}, reason=${billingReason}`);
-
         const [invUser] = await db.select().from(users).where(eq(users.stripeCustomerId, invCustId));
         if (!invUser) {
-          console.log(`⚠️ No user for Stripe customer ${invCustId}`);
           return res.json({ received: true, type: event.type });
         }
         const stripe = getStripeClient(Boolean(invUser.isTestAccount));
@@ -894,12 +849,10 @@ export function registerPaymentRoutes(app: Express): void {
         }
 
         if (!invPlanId || invPlanId === 'free') {
-          console.log(`⚠️ Could not resolve paid plan for invoice price ${invPriceId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
         if (invUser.currentPlan === invPlanId && invUser.subscriptionStatus === 'active') {
-          console.log(`ℹ️ User ${invUser.id} already on ${invPlanId} — skipping`);
           return res.json({ received: true, type: event.type });
         }
 
@@ -945,7 +898,6 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        console.log(`✅ invoice.payment_succeeded: Activated ${invPlanId} for user ${invUser.id} (${invUser.email})`);
         return res.json({ received: true, type: event.type, userId: invUser.id, planId: invPlanId });
       }
 
@@ -975,7 +927,6 @@ export function registerPaymentRoutes(app: Express): void {
             severity: 'error',
           });
 
-          console.log(`💳 invoice.payment_failed logged to system_error_logs for customer ${failCustId}`);
         } catch (logErr) {
           console.error('Failed to log payment failure to system_error_logs:', logErr);
         }
@@ -1002,16 +953,13 @@ export function registerPaymentRoutes(app: Express): void {
           try {
             const wholesaler = await storage.getUserByStripeAccountId(accountId);
             if (!wholesaler || !wholesaler.email) {
-              console.log(`ℹ️ account.updated: no wholesaler found for stripeAccountId ${accountId}`);
             } else if (wholesaler.role !== 'wholesaler') {
-              console.log(`ℹ️ account.updated: user ${wholesaler.id} is not a wholesaler, skipping`);
             } else {
               // Atomically claim the send slot — sets stripe_verified_email_sent_at
               // only if it is currently NULL, preventing duplicate sends under
               // concurrent webhook deliveries or rapid retries.
               const claimed = await storage.claimStripeVerifiedEmailSend(wholesaler.id);
               if (!claimed) {
-                console.log(`ℹ️ account.updated: verification email already sent for wholesaler ${wholesaler.id}, skipping`);
               } else {
                 const businessName =
                   wholesaler.businessName ||
@@ -1022,7 +970,6 @@ export function registerPaymentRoutes(app: Express): void {
                   wholesalerName: businessName,
                 });
                 if (sent) {
-                  console.log(`✅ Stripe verification email sent to wholesaler ${wholesaler.id} (${wholesaler.email})`);
                 } else {
                   // Roll back the claim so a future account.updated event (or internal retry) can try again.
                   await storage.updateUserSettings(wholesaler.id, { stripeVerifiedEmailSentAt: null });
@@ -1219,9 +1166,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const paymentIntent = await stripeClient.paymentIntents.create(paymentIntentData);
 
-      console.log(`💳 Payment intent created for Order #${orderId}`);
       if (retailer?.email) {
-        console.log(`✅ Stripe receipt will be automatically sent to: ${retailer.email}`);
       }
 
       res.json({ clientSecret: paymentIntent.client_secret });
@@ -1268,15 +1213,6 @@ export function registerPaymentRoutes(app: Express): void {
             accountStatus = 'active';
           }
           
-          console.log(`🔍 Stripe Connect status for user ${userId}:`, {
-            accountId: user.stripeAccountId,
-            chargesEnabled: account.charges_enabled,
-            payoutsEnabled: account.payouts_enabled,
-            detailsSubmitted: account.details_submitted,
-            isConnected,
-            accountStatus
-          });
-          
         } catch (error: any) {
           console.error(`❌ Error checking Stripe account ${user.stripeAccountId}:`, error);
           // Account might be deleted or invalid
@@ -1299,7 +1235,6 @@ export function registerPaymentRoutes(app: Express): void {
       res.status(500).json({ error: "Failed to fetch Stripe Connect status" });
     }
   });
-
 
   // GET /api/stripe/payouts
   app.get('/api/stripe/payouts', requireAuth, async (req: any, res) => {
@@ -1354,8 +1289,6 @@ export function registerPaymentRoutes(app: Express): void {
         (t) => t.type === 'payment' || t.type === 'charge' || t.type === 'transfer'
       );
 
-      console.log(`📊 Payout ${payoutId}: ${txns.data.length} total txns, ${chargeTxns.length} payment/charge/transfer`);
-
       // Per-transaction order match using four complementary strategies:
       //   1. source = "tr_xxx" → DB lookup by stripeTransferId (fast path for new orders)
       //   2. source = "tr_xxx" fallback → expand Transfer on platform to get source_transaction.payment_intent
@@ -1367,8 +1300,6 @@ export function registerPaymentRoutes(app: Express): void {
           const sourceId = typeof t.source === 'string' ? t.source : (t.source as any)?.id ?? null;
           let order: Awaited<ReturnType<typeof storage.getOrderByTransferId>> | undefined;
 
-          console.log(`  txn ${t.id}: type=${t.type} source=${sourceId} amount=${t.amount}`);
-
           // Helper: try to find order via a Transfer ID (DB lookup then PI fallback)
           const findByTransferId = async (trId: string): Promise<typeof order> => {
             let found = await storage.getOrderByTransferId(trId);
@@ -1379,7 +1310,6 @@ export function registerPaymentRoutes(app: Express): void {
                 expand: ['source_transaction'],
               });
               const sourceTxn = transfer.source_transaction;
-              console.log(`    Transfer ${trId} source_transaction: ${typeof sourceTxn === 'object' && sourceTxn ? (sourceTxn as any).id : sourceTxn}`);
               const rawPi = sourceTxn && typeof sourceTxn === 'object'
                 ? (sourceTxn as any).payment_intent
                 : null;
@@ -1413,7 +1343,6 @@ export function registerPaymentRoutes(app: Express): void {
               const trId: string | null = typeof rawTr === 'string'
                 ? rawTr
                 : (rawTr && typeof rawTr === 'object' ? (rawTr as any).id : null);
-              console.log(`    ch_ ${sourceId} source_transfer: ${trId}`);
               if (trId) {
                 order = await findByTransferId(trId);
               }
@@ -1431,14 +1360,12 @@ export function registerPaymentRoutes(app: Express): void {
             const netPounds = t.amount / 100;
             order = await storage.getOrderByNetAmountForWholesaler(user.id, netPounds, t.created);
             if (order) {
-              console.log(`  ✅ Matched txn ${t.id} → order ${order.orderNumber} via amount fallback (£${netPounds})`);
               // Backfill Transfer ID if source was a Transfer and we now have the order
               if (sourceId?.startsWith('tr_') && !order.stripeTransferId) {
                 storage.updateOrder(order.id, { stripeTransferId: sourceId })
                   .catch((e) => console.warn(`⚠️ stripeTransferId backfill failed for order ${order!.id}:`, e));
               }
             } else {
-              console.log(`  ⚠️ No order matched for txn ${t.id} (source=${sourceId}, amount=£${netPounds})`);
             }
           }
 
@@ -1464,7 +1391,6 @@ export function registerPaymentRoutes(app: Express): void {
       res.status(500).json({ message: 'Failed to fetch payout transactions' });
     }
   });
-
 
   // GET /api/subscriptions/plans
   app.get('/api/subscriptions/plans', async (req, res) => {
@@ -1529,7 +1455,6 @@ export function registerPaymentRoutes(app: Express): void {
       
       if (existingSubscription && existingSubscription.stripeSubscriptionId) {
         // UPGRADE FLOW: User has existing subscription - modify it with proration
-        console.log('🔄 Processing subscription upgrade with proration');
         
         try {
           const updatedSubscription = await SubscriptionService.upgradeSubscriptionWithProration(
@@ -1593,7 +1518,6 @@ export function registerPaymentRoutes(app: Express): void {
               customer: stripeCustomerId,
               return_url: `${returnBase}/subscription-pricing?success=true`,
             });
-            console.log('✅ Billing Portal session created as upgrade fallback:', portalSession.id);
             return res.json({
               success: true,
               type: 'portal',
@@ -1613,7 +1537,6 @@ export function registerPaymentRoutes(app: Express): void {
         }
       } else {
         // NEW SUBSCRIPTION FLOW: User has no existing subscription - use checkout session
-        console.log('🆕 Creating new subscription via checkout session');
         
         const sessionOptions: any = {
           customer: stripeCustomerId,
@@ -1724,7 +1647,6 @@ export function registerPaymentRoutes(app: Express): void {
               groupsToArchive: enforcedNow.groupsArchived || undefined,
             });
             await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
-            console.log(`📧 Downgrade scheduled email sent to ${downgradedUser.email}`);
           } catch (emailErr) {
             console.error('❌ Failed to send downgrade scheduled email:', emailErr);
           }
@@ -1808,8 +1730,6 @@ export function registerPaymentRoutes(app: Express): void {
           updatedAt: new Date(),
         }).where(eq(users.id, userId));
 
-        console.log(`✅ DB synced: cancelAtPeriodEnd=true, subscriptionStatus=cancel_at_period_end for user ${userId}`);
-
         // Compute projected impact for the scheduled email (cancel = at period end, nothing locked yet)
         const cancelProjectedImpact = await getProjectedDowngradeImpact(userId, 'free');
 
@@ -1829,7 +1749,6 @@ export function registerPaymentRoutes(app: Express): void {
               groupsToArchive: cancelProjectedImpact.groupsToArchive || undefined,
             });
             await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
-            console.log(`📧 Downgrade scheduled email sent to ${user.email}`);
           } catch (emailErr) {
             console.error('❌ Failed to send downgrade scheduled email:', emailErr);
           }
@@ -1884,7 +1803,6 @@ export function registerPaymentRoutes(app: Express): void {
             });
           }
 
-          console.log('✅ Stale subscription cleared — user reverted to free plan:', userId);
           return res.json({
             success: true,
             message: 'Subscription cancelled and plan reverted to Free'
@@ -1925,8 +1843,6 @@ export function registerPaymentRoutes(app: Express): void {
         : req.user.id;
       
       const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null } = req.body;
-      
-      console.log('📝 Creating quote:', { wholesalerId, customerId, itemCount: items?.length, sendVia, depositPercentage, fulfillmentType, deliveryAddressId, hasDeliveryAddress: !!deliveryAddress, hasCustomAddressFields: !!customAddressFields });
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
@@ -2091,7 +2007,6 @@ export function registerPaymentRoutes(app: Express): void {
           });
           resolvedDeliveryAddressId = savedAddress.id;
           resolvedDeliveryAddress = deliveryAddress || `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}`;
-          console.log(`📍 Auto-saved delivery address ${savedAddress.id} for customer ${customerId}`);
         } catch (addrErr) {
           console.error('⚠️ Failed to auto-save delivery address, continuing with text:', addrErr);
         }
@@ -2159,7 +2074,6 @@ export function registerPaymentRoutes(app: Express): void {
           packDescLines.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
 
           const quantity = item.quantity;
-          console.log(`📦 QUOTE STOCK: Decrementing ${quantity} ${sellingType} of ${product.name} at quote creation`);
           
           // Use InventoryCalculator for proper stock tracking
           let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
@@ -2203,7 +2117,6 @@ export function registerPaymentRoutes(app: Express): void {
             businessProfileId: quoteOrder.businessProfileId ?? null,
           });
           
-          console.log(`✅ QUOTE STOCK: ${product.name} ${sellingType}: ${sellingType === 'pallets' ? product.palletStock : product.stock} → ${sellingType === 'pallets' ? newPalletStock : newUnitStock}`);
         }
       }
 
@@ -2213,7 +2126,6 @@ export function registerPaymentRoutes(app: Express): void {
 
       const wholesalerConnectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
       if (!wholesalerConnectReady && validDepositPercentage > 0 && !isOffline) {
-        console.log(`⚠️ Skipping payment link creation for order — wholesaler Connect account not active (wholesalerId: ${wholesalerId})`);
       }
 
       if (validDepositPercentage > 0 && !isOffline && wholesalerConnectReady) {
@@ -2261,9 +2173,7 @@ export function registerPaymentRoutes(app: Express): void {
               const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
               if (connectAccount.charges_enabled && connectAccount.details_submitted) {
                 quoteUseConnect = true;
-                console.log(`✅ Quote Connect account active: ${wholesaler.stripeAccountId}`);
               } else {
-                console.log(`⚠️ Quote Connect account not ready: ${wholesaler.stripeAccountId}`);
               }
             } catch (connectErr: any) {
               console.error(`❌ Quote Connect account validation failed: ${connectErr.message}`);
@@ -2308,17 +2218,14 @@ export function registerPaymentRoutes(app: Express): void {
                   },
                 },
               });
-              console.log(`✅ Quote session created with Connect routing: ${session.id}`);
             } catch (connectSessionErr: any) {
               console.error(`❌ Quote session with Connect routing failed — type: ${connectSessionErr.type}, code: ${connectSessionErr.code}, message: ${connectSessionErr.message}`);
-              console.log(`⚠️ Retrying quote session without Connect routing...`);
             }
           }
 
           // Fallback: plain session without Connect routing (payment goes to platform account)
           if (!session) {
             session = await stripe.checkout.sessions.create(baseSessionParams);
-            console.log(`✅ Quote session created (no Connect routing): ${session.id}`);
           }
 
           paymentLinkUrl = session.url || '';
@@ -2404,7 +2311,6 @@ export function registerPaymentRoutes(app: Express): void {
             to: customer.phoneNumber,
             message,
           });
-          console.log(`📱 Invoice WhatsApp sent to ${customer.phoneNumber}`);
           
           // Update quote sent timestamp
           await db.update(orders)
@@ -2414,8 +2320,6 @@ export function registerPaymentRoutes(app: Express): void {
           console.error('❌ Failed to send quote WhatsApp:', smsError);
         }
       }
-
-      console.log(`✅ Quote ${orderNumber} created successfully`);
 
       // Send customer email for offline payment methods when sendVia === 'email'
       // (For Stripe-based orders the Stripe webhook fires sendCustomerInvoiceEmail after payment;
@@ -2501,7 +2405,6 @@ export function registerPaymentRoutes(app: Express): void {
             subject: `${emailSubjectPrefix} ${orderNumber} from ${businessName}`,
             html: customerEmailHtml,
           });
-          console.log(`📧 Customer invoice email (offline payment) sent to ${customer.email}`);
 
           await db.update(orders)
             .set({ quoteSentAt: new Date() })
@@ -2566,14 +2469,12 @@ export function registerPaymentRoutes(app: Express): void {
           const quoteEmailBody = `${emailHeading('Invoice Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${wholesalerWeightRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const customerDisplayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || customer.phoneNumber || 'Customer';
           const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Invoice ${orderNumber} sent to ${customerDisplayName} - £${subtotal.toFixed(2)}` });
-          console.log(`📏 Quote email HTML size: ${Buffer.byteLength(quoteHtml, 'utf8')} bytes (Gmail clips at ~102400)`);
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Invoice ${orderNumber} Sent to ${customerDisplayName}`,
             html: quoteHtml
           });
-          console.log(`📧 Quote confirmation email sent to ${wholesaler.email}`);
         }
       } catch (quoteEmailError) {
         console.error('Failed to send quote confirmation email:', quoteEmailError);
@@ -2792,7 +2693,6 @@ export function registerPaymentRoutes(app: Express): void {
       // and the wholesaler's Connect account is fully active.
       const editConnectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
       if (!editConnectReady && !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0) {
-        console.log(`⚠️ Skipping payment link update for quote edit — wholesaler Connect account not active (wholesalerId: ${wholesalerId})`);
       }
       const needsNewStripeSession = !isOfflineEdit && existingOrder.paymentStatus !== 'paid' && newAmountOutstanding > 0 && editConnectReady;
       const packDescLinesForStripe: string[] = [];
@@ -3077,7 +2977,6 @@ export function registerPaymentRoutes(app: Express): void {
       if (oldStripeSessionId && oldStripeSessionId !== newPaymentLinkId) {
         try {
           await stripe.checkout.sessions.expire(oldStripeSessionId);
-          console.log(`✅ Expired old Stripe session: ${oldStripeSessionId}`);
         } catch (expireErr: any) {
           console.warn(`⚠️ Could not expire old Stripe session ${oldStripeSessionId}: ${expireErr.message}`);
         }
@@ -3110,13 +3009,10 @@ export function registerPaymentRoutes(app: Express): void {
             subject: `Your invoice ${existingOrder.orderNumber} has been updated`,
             html,
           });
-          console.log(`📧 Quote update email sent to customer ${customerForEmail.email}`);
         } catch (emailErr: any) {
           console.warn(`⚠️ Failed to send quote update email to customer: ${emailErr.message}`);
         }
       }
-
-      console.log(`✅ Quote ${existingOrder.orderNumber} updated by ${editorName}`);
 
       const updatedOrder = await storage.getOrder(quoteId);
       res.json({

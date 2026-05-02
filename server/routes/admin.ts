@@ -405,7 +405,6 @@ export function registerAdminRoutes(app: Express): void {
 
       if (!updated) return res.status(404).json({ error: 'Wholesaler not found' });
 
-      console.log(`✅ Admin set custom fee for wholesaler ${req.params.id}: ${customFeePercentage === null ? 'reset to default' : customFeePercentage + '%'}`);
       res.json({ id: updated.id, customFeePercentage: updated.customFeePercentage });
     } catch (error) {
       console.error('Admin set-custom-fee error:', error);
@@ -665,7 +664,6 @@ export function registerAdminRoutes(app: Express): void {
       let resolvedPlanId: string;
       if (overridePlanId) {
         resolvedPlanId = overridePlanId;
-        console.log(`🔧 Admin using planId override "${resolvedPlanId}" (price ${recoverPriceId} may be archived)`);
       } else {
         const [recoverPlan] = await db.select().from(subscriptionPlans)
           .where(eq(subscriptionPlans.stripePriceId, recoverPriceId));
@@ -712,7 +710,6 @@ export function registerAdminRoutes(app: Express): void {
         });
       }
 
-      console.log(`🔧 Admin activated ${resolvedPlanId} for user ${recoverUser.id} (${recoverUser.email}) via sub ${stripeSub.id}`);
       return res.json({
         success: true,
         userId: recoverUser.id,
@@ -826,7 +823,6 @@ export function registerAdminRoutes(app: Express): void {
         });
       }
 
-      console.log(`🔧 Admin sync-by-customer: set ${resolvedPlanId} for ${syncUser.email} (${syncUser.id}) via sub ${syncSub.id}`);
       return res.json({
         success: true,
         userId: syncUser.id,
@@ -1975,7 +1971,6 @@ export function registerAdminRoutes(app: Express): void {
         return { deleted: counts };
       });
 
-      console.log(`🧹 Admin cleanup-test-data: removed`, deleted, `for ${testUserIds.length} test account(s)`);
       res.json({
         message: `Cleanup complete. Deleted data for ${testUserIds.length} test account(s).`,
         testAccounts: testUserIds,
@@ -2007,7 +2002,6 @@ export function registerAdminRoutes(app: Express): void {
 
       if (!updated) return res.status(404).json({ error: 'User not found' });
 
-      console.log(`🏷️ Admin set is_test_account=${isTestAccount} on user ${userId} (${updated.email})`);
       res.json({ success: true, user: updated });
     } catch (error) {
       console.error('Admin test-account toggle error:', error);
@@ -2229,8 +2223,6 @@ export function registerAdminRoutes(app: Express): void {
         sc('customer_profile_update_notifications',  db.select({ n: count() }).from(customerProfileUpdateNotifications)),
       ]);
 
-      console.log(`🗑️  Go-live reset: TRUNCATE CASCADE targeting ${truncateTargets.length} tables: ${truncateTargets.join(', ')}`);
-
       // ── Transaction ────────────────────────────────────────────────────────
       await db.transaction(async (trx) => {
         // Step 1: TRUNCATE all non-user tables with CASCADE.
@@ -2290,7 +2282,6 @@ export function registerAdminRoutes(app: Express): void {
       };
       const totalDeleted = Object.values(deleted).reduce((a, b) => a + b, 0);
 
-      console.log(`🚀 Go-live reset complete via TRUNCATE CASCADE. Key counts:`, deleted);
       res.json({ success: true, message: 'Platform reset complete. Ready for real customers.', deleted, totalDeleted });
     } catch (error) {
       console.error('Go-live reset error:', error);
@@ -2368,7 +2359,6 @@ export function registerAdminRoutes(app: Express): void {
         console.warn(`⚠️ Invite email failed for new tester ${emailNorm}:`, emailErr);
       }
 
-      console.log(`✅ Admin created test account for ${emailNorm} (emailSent=${emailSent})`);
       res.json({ success: true, id: newUser.id, email: newUser.email, emailSent });
     } catch (error) {
       console.error('Admin create-test-account error:', error);

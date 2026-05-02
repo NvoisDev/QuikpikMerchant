@@ -1057,7 +1057,6 @@ export function registerCampaignRoutes(app: Express): void {
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
       
-      
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid campaign ID format" });
       }

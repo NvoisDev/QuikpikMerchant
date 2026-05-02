@@ -79,23 +79,17 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customer-groups/all-members
   app.get('/api/customer-groups/all-members', requireAuth, async (req: any, res) => {
     try {
-      console.log("Fetching all customer members for user:", req.user?.id);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       
-      console.log("Target user ID:", targetUserId);
       const customerGroups = await storage.getCustomerGroups(targetUserId);
-      console.log("Found customer groups:", customerGroups.length);
       
       const allMembers: any[] = [];
       const seenCustomers = new Set<string>();
       
       for (const group of customerGroups) {
-        console.log(`Fetching members for group: ${group.name} (ID: ${group.id})`);
         const members = await storage.getGroupMembers(group.id);
-        console.log(`Found ${members.length} members in group ${group.name}`);
-        console.log("Member data:", members.map(m => ({ firstName: m.firstName, lastName: m.lastName, phoneNumber: m.phoneNumber })));
         
         for (const member of members) {
           // Use phone number as unique identifier instead of userId since customers might share userIds
@@ -124,7 +118,6 @@ export function registerCustomerRoutes(app: Express): void {
         }
       }
       
-      console.log("Total unique customers found:", allMembers.length);
       res.json(allMembers);
     } catch (error) {
       console.error("Error fetching all customer group members:", error);
@@ -345,10 +338,6 @@ export function registerCustomerRoutes(app: Express): void {
           // Portal access instructions
           const accessInstructions = `To access your customer portal:\n1. Visit: ${portalUrl}\n2. Enter last 4 digits of your phone: ${lastFourDigits}\n3. Enter the SMS code sent to your phone`;
           
-          console.log(`📱 Sending welcome notifications to ${formattedPhoneNumber} for ${businessName}`);
-          console.log(`Portal URL: ${portalUrl}`);
-          console.log(`Last 4 digits for login: ${lastFourDigits}`);
-          
           let notificationResults = {
             sms: false,
             email: false,
@@ -371,9 +360,7 @@ export function registerCustomerRoutes(app: Express): void {
               });
               
               notificationResults.sms = true;
-              console.log(`✅ Welcome SMS sent to ${formattedPhoneNumber}: ${message.sid}`);
             } else {
-              console.log(`⚠️ SMS service not configured, skipping SMS notification`);
             }
           } catch (smsError) {
             console.error(`SMS notification error for ${formattedPhoneNumber}:`, smsError);
@@ -395,9 +382,7 @@ export function registerCustomerRoutes(app: Express): void {
               notificationResults.email = emailSuccess;
               
               if (emailSuccess) {
-                console.log(`✅ Welcome email sent to ${customer.email}`);
               } else {
-                console.log(`❌ Failed to send welcome email to ${customer.email}`);
               }
             } catch (emailError) {
               console.error(`Email notification error for ${customer.email}:`, emailError);
@@ -415,7 +400,6 @@ export function registerCustomerRoutes(app: Express): void {
                 phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
               });
               notificationResults.whatsapp = true;
-              console.log(`✅ Welcome WhatsApp message sent to ${formattedPhoneNumber}`);
             }
           } catch (whatsappError) {
             console.error(`WhatsApp notification error for ${formattedPhoneNumber}:`, whatsappError);
@@ -428,9 +412,7 @@ export function registerCustomerRoutes(app: Express): void {
             .join(', ');
           
           if (sentChannels) {
-            console.log(`📊 Welcome notifications sent via: ${sentChannels}`);
           } else {
-            console.log(`⚠️ No welcome notifications were sent successfully`);
           }
           
         } catch (welcomeError) {
@@ -638,8 +620,6 @@ export function registerCustomerRoutes(app: Express): void {
         return res.status(400).json({ message: "Primary customer ID and duplicate customer IDs are required" });
       }
 
-      console.log(`🔗 Merging customers: primary=${primaryCustomerId}, duplicates=${duplicateCustomerIds.join(', ')}`);
-
       // Use the merge functionality from storage
       const result = await storage.mergeCustomers(primaryCustomerId, duplicateCustomerIds, mergedData);
       
@@ -671,11 +651,9 @@ export function registerCustomerRoutes(app: Express): void {
   // POST /api/customers
   app.post('/api/customers', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
-      console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       
       const { firstName, lastName, email, phoneNumber, groupId, businessName, streetAddress, addressLine2, city, postalCode, country } = req.body;
-      console.log('Customer data:', { firstName, lastName, email, phoneNumber, groupId, businessName });
       
       if (!phoneNumber) {
         return res.status(400).json({ error: 'Phone number is required' });
@@ -683,7 +661,6 @@ export function registerCustomerRoutes(app: Express): void {
       
       // Format phone number
       const formattedPhone = formatPhoneToInternational(phoneNumber);
-      console.log('Formatted phone:', formattedPhone);
       
       // Check for existing customer by phone number first
       let customer = await storage.getUserByPhone(formattedPhone);
@@ -698,14 +675,11 @@ export function registerCustomerRoutes(app: Express): void {
         if (customer.archived) {
           updates.archived = false;
           updates.archivedAt = null;
-          console.log('🔄 Unarchiving existing customer:', customer.id);
         }
         
         if (Object.keys(updates).length > 0) {
           customer = await storage.updateCustomer(customer.id, updates);
-          console.log('✅ Updated and unarchived existing customer:', customer);
         } else {
-          console.log('Using existing active customer:', customer);
         }
         
         // Ensure the wholesaler-customer relationship exists
@@ -731,7 +705,6 @@ export function registerCustomerRoutes(app: Express): void {
             status: 'active',
             displayName: displayNameValue,
           });
-          console.log('✅ Created new wholesaler-customer relationship for existing customer');
         } else {
           // Update displayName in case the wholesaler is re-adding with a different name
           await db.update(wholesalerCustomerRelationships)
@@ -740,7 +713,6 @@ export function registerCustomerRoutes(app: Express): void {
               eq(wholesalerCustomerRelationships.customerId, customer.id),
               eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
             ));
-          console.log('✅ Updated wholesaler-customer relationship displayName');
         }
       } else {
         // Check for existing customer with same email and 'customer' role
@@ -775,51 +747,28 @@ export function registerCustomerRoutes(app: Express): void {
           wholesalerId: targetUserId,
           status: 'active',
         });
-        console.log('✅ Created wholesaler-customer relationship for multi-wholesaler platform');
       }
       
       // Optional: Add customer to specified group if groupId is provided
       if (groupId && groupId > 0) {
         try {
           await storage.addCustomerToGroup(groupId, customer.id);
-          console.log(`✅ Customer ${customer.id} added to group ${groupId}`);
         } catch (groupError) {
           console.warn(`⚠️ Failed to add customer to group ${groupId}:`, groupError);
           // Don't fail the entire operation if group assignment fails
         }
       }
       
-      console.log('Customer created:', customer);
-
       // Get wholesaler details for welcome messages
       const wholesaler = await storage.getUser(targetUserId);
-      console.log('Wholesaler found for welcome messages:', wholesaler ? `${wholesaler.firstName || ''} ${wholesaler.lastName || ''} (${wholesaler.email})` : 'No wholesaler found');
       
       if (wholesaler) {
         const customerName = `${firstName || ''} ${lastName || ''}`.trim();
         const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
         const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
         
-        console.log('Sending welcome messages with params:', {
-          customerName,
-          customerEmail: email,
-          customerPhone: formattedPhone,
-          wholesalerName,
-          wholesalerEmail: wholesaler.email,
-          portalUrl
-        });
-        
         // Send welcome messages (email and WhatsApp)
         try {
-          console.log('🚀 STARTING WELCOME MESSAGE PROCESS FOR CUSTOMER:', {
-            customerName,
-            customerEmail: email,
-            customerPhone: formattedPhone,
-            wholesalerName,
-            wholesalerEmail: wholesaler.email,
-            hasWholesalerEmail: !!wholesaler.email,
-            portalUrl
-          });
           
           const welcomeResult = await sendWelcomeMessages({
             customerName,
@@ -834,8 +783,6 @@ export function registerCustomerRoutes(app: Express): void {
             wholesalerLogoType: wholesaler.logoType,
             wholesalerLogoUrl: wholesaler.logoUrl,
           });
-          
-          console.log('✅ WELCOME MESSAGES COMPLETED. RESULT:', welcomeResult);
           
           // Add welcome message status to response
           res.json({
@@ -861,7 +808,6 @@ export function registerCustomerRoutes(app: Express): void {
           });
         }
       } else {
-        console.log('No wholesaler found - skipping welcome messages');
         res.json({
           ...customer,
           welcomeMessages: {
@@ -903,8 +849,6 @@ export function registerCustomerRoutes(app: Express): void {
       const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       
-      console.log('🔄 Manual welcome message request for customer:', customerName);
-      
       // Send welcome messages (email and WhatsApp)
       try {
         const welcomeResult = await sendWelcomeMessages({
@@ -919,8 +863,6 @@ export function registerCustomerRoutes(app: Express): void {
           wholesalerLogoType: wholesaler.logoType,
           wholesalerLogoUrl: wholesaler.logoUrl,
         });
-        
-        console.log('✅ Manual welcome messages sent. Result:', welcomeResult);
         
         res.json({
           success: true,
@@ -1054,8 +996,6 @@ export function registerCustomerRoutes(app: Express): void {
       const customerId = req.params.id;
       const { firstName, lastName, businessName, ...nonNameUpdates } = req.body;
       
-      console.log('Updating customer:', customerId, 'with updates:', req.body);
-
       const hasNameChange = firstName !== undefined || lastName !== undefined || businessName !== undefined;
 
       // Only update displayName (per-wholesaler override) when personal name fields change.
@@ -1079,7 +1019,6 @@ export function registerCustomerRoutes(app: Express): void {
 
       // Write all fields (name + any other updates) to the shared user record
       const updatedCustomer = await storage.updateCustomer(customerId, { ...nonNameUpdates, ...nameUpdates });
-      console.log('Customer updated successfully:', updatedCustomer);
 
       // Respond immediately — don't wait for the orders backfill
       res.json({
@@ -1104,7 +1043,7 @@ export function registerCustomerRoutes(app: Express): void {
               eq(orders.retailerId, customerId),
               eq(orders.wholesalerId, targetUserId)
             ))
-            .then(() => console.log(`✅ Backfilled customerName="${newCustomerName}" on orders for customer ${customerId}`))
+            .then(() => {})
             .catch((err: unknown) => console.error('⚠️ Failed to backfill customerName on orders:', err));
         }
       }

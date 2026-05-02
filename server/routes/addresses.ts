@@ -284,7 +284,6 @@ export function registerAddressRoutes(app: Express): void {
         isDefault: isDefault || false
       });
       
-      
       res.status(201).json(newAddress);
     } catch (error) {
       console.error("❌ Error creating delivery address:", error);
@@ -330,7 +329,6 @@ export function registerAddressRoutes(app: Express): void {
       
       const updatedAddress = await storage.updateDeliveryAddress(parseInt(addressId), updates);
       
-      
       res.json(updatedAddress);
     } catch (error) {
       console.error("❌ Error updating delivery address:", error);
@@ -360,7 +358,6 @@ export function registerAddressRoutes(app: Express): void {
       }
       
       await storage.deleteDeliveryAddress(parseInt(addressId));
-      
       
       res.json({ success: true, message: "Delivery address deleted successfully" });
     } catch (error) {
@@ -392,7 +389,6 @@ export function registerAddressRoutes(app: Express): void {
       
       await storage.setDefaultDeliveryAddress(customerAuth.customerId, parseInt(addressId));
       
-      
       res.json({ success: true, message: "Default address updated successfully" });
     } catch (error) {
       console.error("❌ Error setting default address:", error);
@@ -422,8 +418,6 @@ export function registerAddressRoutes(app: Express): void {
       if (!defaultAddress) {
         return res.status(404).json({ error: "No default address found" });
       }
-      
-      console.log(`📍 Retrieved default address ${defaultAddress.id} for customer ${customerAuth.customerId}`);
       
       res.json(defaultAddress);
     } catch (error) {

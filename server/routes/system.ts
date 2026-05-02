@@ -36,7 +36,6 @@ export function registerSystemRoutes(app: Express): void {
   // POST /api/logo-upload-url
   app.post('/api/logo-upload-url', async (req, res) => {
     try {
-      console.log('🔧 Logo upload URL request (bypass enabled for testing)');
       
       // Check if object storage is configured
       if (!process.env.PUBLIC_OBJECT_SEARCH_PATHS) {
@@ -51,7 +50,6 @@ export function registerSystemRoutes(app: Express): void {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
-      console.log('✅ Logo upload URL generated successfully:', uploadURL ? 'URL received' : 'No URL');
       res.json({ uploadURL });
       
     } catch (error) {
@@ -71,7 +69,6 @@ export function registerSystemRoutes(app: Express): void {
   // POST /api/update-logo-url
   app.post('/api/update-logo-url', requireAuth, async (req, res) => {
     try {
-      console.log('🔧 Direct logo URL update request from authenticated user:', req.user?.email);
       const { logoUrl } = req.body;
       
       if (!logoUrl || typeof logoUrl !== 'string') {
@@ -87,7 +84,6 @@ export function registerSystemRoutes(app: Express): void {
         logoType: 'custom'
       });
       
-      console.log('✅ Logo URL updated successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo URL updated successfully',
@@ -103,7 +99,6 @@ export function registerSystemRoutes(app: Express): void {
   // POST /api/upload-logo-base64
   app.post('/api/upload-logo-base64', requireAuth, async (req, res) => {
     try {
-      console.log('🔧 Base64 logo upload request from authenticated user:', req.user?.email);
       const { imageData, fileName, fileType } = req.body;
       
       if (!imageData || !fileType) {
@@ -122,7 +117,6 @@ export function registerSystemRoutes(app: Express): void {
         logoType: 'custom'
       });
       
-      console.log('✅ Base64 logo updated successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo uploaded successfully',
@@ -138,7 +132,6 @@ export function registerSystemRoutes(app: Express): void {
   // POST /api/clear-logo
   app.post('/api/clear-logo', requireAuth, async (req, res) => {
     try {
-      console.log('🧹 Logo clear request from authenticated user:', req.user?.email);
       
       if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -150,7 +143,6 @@ export function registerSystemRoutes(app: Express): void {
         logoType: 'business' // Reset to business initials
       });
       
-      console.log('✅ Logo cleared successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo cleared successfully',

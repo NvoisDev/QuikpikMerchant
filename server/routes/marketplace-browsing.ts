@@ -208,7 +208,6 @@ export function registerBrowsingRoutes(app: Express): void {
           });
         });
 
-
         // Inject custom prices from price lists if customer is authenticated
         try {
           const customerId = (req.session as any)?.customerAuth?.customerId;

@@ -58,7 +58,6 @@ export function registerCollectionAddressRoutes(app: Express) {
               isActive: true,
             });
             addresses = [created];
-            console.log(`✅ Lazy-migrated pickupAddress → collection_addresses for wholesaler ${effectiveWholesalerId}`);
           } catch (migrateErr) {
             console.error("Lazy migration of pickupAddress failed (non-fatal):", migrateErr);
           }

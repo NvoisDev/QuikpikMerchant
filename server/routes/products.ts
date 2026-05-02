@@ -21,9 +21,7 @@ export function registerProductRoutes(app: Express): void {
         targetUserId = req.user.id;
       }
       
-      console.log('Products request - Target user ID:', targetUserId);
       let productList = await storage.getProducts(targetUserId);
-      console.log('Products found:', productList.length);
 
       // Customer-facing view: hide locked products
       // A request is a customer view if the requester is viewing someone else's products
@@ -306,11 +304,8 @@ export function registerProductRoutes(app: Express): void {
           if (availableSlots > 0 && lockedProducts.length > 0) {
             const productsToUnlock = lockedProducts.slice(0, availableSlots);
             
-            console.log(`🔓 Product deletion created ${availableSlots} available slots, unlocking ${productsToUnlock.length} products`);
-            
             for (const product of productsToUnlock) {
               await storage.updateProduct(product.id, { status: 'active' });
-              console.log(`🔓 Auto-unlocked product: ${product.name} (ID: ${product.id})`);
             }
           }
         }
@@ -538,8 +533,6 @@ export function registerProductRoutes(app: Express): void {
       
       await Promise.all(resetPromises);
       
-      console.log(`✅ Reset promotional pricing for ${userProducts.length} products for wholesaler ${wholesalerId}`);
-      
       res.json({ 
         success: true, 
         message: `Reset promotional pricing for ${userProducts.length} products`,
@@ -729,7 +722,6 @@ export function registerProductRoutes(app: Express): void {
 
       const alertsAutoResolved = await storage.autoResolveStockAlertsIfRestocked(productId, stockAfter);
       if (alertsAutoResolved > 0) {
-        console.log(`✅ Auto-resolved ${alertsAutoResolved} stock alert(s) for product ${productId} (stock now ${stockAfter})`);
       }
       
       res.json({ 
@@ -861,8 +853,6 @@ export function registerProductRoutes(app: Express): void {
       // 2. Create lead in database
       // 3. Send notification to wholesaler
       // 4. Send confirmation email to inquirer
-      
-      console.log(`New inquiry for product ${slug}:`, inquiryData);
       
       // Mock successful response
       res.json({

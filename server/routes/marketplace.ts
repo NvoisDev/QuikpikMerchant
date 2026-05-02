@@ -322,10 +322,8 @@ export function registerMarketplaceRoutes(app: Express): void {
       const decodedPhoneNumber = decodeURIComponent(phoneNumber);
       const lastFourDigits = decodedPhoneNumber.slice(-4);
 
-
       // Get all wholesalers where this customer is registered
       const accessibleWholesalers = await storage.getWholesalersForCustomer(lastFourDigits);
-      
       
       res.json(accessibleWholesalers);
     } catch (error) {
@@ -383,7 +381,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       // Normalise to E.164 immediately so all formats of the same number are treated identically
       const customerPhone = formatPhoneToInternational(req.body.customerPhone || '');
       
-      
       // Validate required fields
       if (!wholesalerId || !customerPhone || !customerName) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -423,7 +420,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         productsInterested: productsInterested || null,
         orderFrequency: orderFrequency || null,
       });
-      
       
       // Send email notification to wholesaler
       const wholesaler = await storage.getUser(wholesalerId);
@@ -999,7 +995,6 @@ export function registerMarketplaceRoutes(app: Express): void {
       }, {
         idempotencyKey: idempotencyKey
       });
-      console.log(`Payment intent created: ${paymentIntent.id} (${stripeAmountFinal} pence, VAT: ${checkoutVatAmount.toFixed(2)})`);
       
       } catch (stripeError: any) {
         console.error("Stripe payment intent creation error:", stripeError.message);
@@ -1163,7 +1158,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         let customer = await storage.getUserByPhone(customerPhone);
         const { firstName, lastName } = parseCustomerName(customerName);
         
-        
         // If phone lookup fails, try email lookup
         if (!customer && customerEmail) {
           customer = await storage.getUserByEmail(customerEmail);
@@ -1186,7 +1180,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               const customerName = `${firstName || ''} ${lastName || ''}`.trim();
               const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-              
               
               const welcomeResult = await sendWelcomeMessages({
                 customerName,
@@ -1247,9 +1240,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           }
         }
         
-
         // 🚚 SHIPPING INFO: Already parsed above for debug logging - use existing shippingInfo variable
-        
         
         // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
         if (!shippingInfoJson) {
@@ -1340,7 +1331,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               ? parseFloat(productSubtotal).toFixed(2)
               : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
             
-
             // VAT — read from Stripe payment metadata (set at checkout creation time)
             const webhookVatAmount = parseFloat(metadataVatAmount || '0');
             const webhookVatRateAppliedStr = metadataVatRateApplied && metadataVatRateApplied !== '0' ? metadataVatRateApplied : null;
@@ -1401,10 +1391,8 @@ export function registerMarketplaceRoutes(app: Express): void {
               };
             }));
 
-            
             // Use transaction-aware storage method with integrity check
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
-            
             
             // 🔒 DATA INTEGRITY: Verify all items were saved correctly
             const savedItems = await trx.select().from(orderItems).where(eq(orderItems.orderId, createdOrder.id));
@@ -1432,7 +1420,6 @@ export function registerMarketplaceRoutes(app: Express): void {
           throw error; // Re-throw other errors
         }
         
-
         // Capture Stripe Transfer ID for exact payout-to-order reconciliation.
         // This runs outside the transaction so a Stripe API failure never blocks the order.
         if (paymentIntent?.id) {
@@ -1453,7 +1440,6 @@ export function registerMarketplaceRoutes(app: Express): void {
               : (rawTransfer && typeof rawTransfer === 'object' ? rawTransfer.id : null);
             if (transferId) {
               await storage.updateOrder(order.id, { stripeTransferId: transferId });
-              console.log(`✅ Stored Stripe Transfer ID ${transferId} on order ${order.id}`);
             }
           } catch (transferErr) {
             console.warn(`⚠️ Could not store Stripe Transfer ID for order ${order.id}:`, transferErr);
@@ -1498,7 +1484,6 @@ export function registerMarketplaceRoutes(app: Express): void {
                 customerAddress
             }, order, enrichedItems, wholesaler);
 
-            
           } catch (emailError) {
             console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);
           }
@@ -1938,7 +1923,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         return await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
       });
 
-
       // --- Send notifications ---
 
       // WhatsApp notification to wholesaler (mirrors create-order flow)
@@ -2202,7 +2186,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         })
         .returning();
       
-      
       // Notify wholesaler about the cancellation request via SMS and email
       try {
         const wholesaler = await storage.getUser(order.wholesalerId);
@@ -2384,7 +2367,6 @@ export function registerMarketplaceRoutes(app: Express): void {
             const customerName = `${firstName || ''} ${lastName || ''}`.trim();
             const portalUrl = `https://quikpik.app/customer/${userId}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-            
             
             const welcomeResult = await sendWelcomeMessages({
               customerName,
@@ -2570,7 +2552,6 @@ Please contact the customer to confirm this order.
               const portalUrl = `https://quikpik.app/customer/${userId}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
-              
               const welcomeResult = await sendWelcomeMessages({
                 customerName,
                 customerEmail: customerEmail,
@@ -2738,7 +2719,6 @@ Please contact the customer to confirm this order.
     }
   });
 
-
   // GET /api/customer/wholesalers
   app.get('/api/customer/wholesalers', requireAuth, async (req: any, res) => {
     try {
@@ -2792,9 +2772,7 @@ Please contact the customer to confirm this order.
           const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
           if (connectAccount.charges_enabled && connectAccount.details_submitted) {
             customerBalanceUseConnect = true;
-            console.log(`✅ Customer balance link Connect account active: ${wholesaler.stripeAccountId}`);
           } else {
-            console.log(`⚠️ Customer balance link Connect account not ready: ${wholesaler.stripeAccountId}`);
           }
         } catch (connectErr: any) {
           console.error(`❌ Customer balance link Connect account validation failed: ${connectErr.message}`);
@@ -2856,7 +2834,6 @@ Please contact the customer to confirm this order.
           quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         })
         .where(eq(orders.id, orderId));
-
 
       res.json({
         success: true,
@@ -3189,7 +3166,6 @@ Please contact the customer to confirm this order.
           quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         })
         .where(eq(orders.id, createdOrder.id));
-
 
       res.json({
         success: true,
