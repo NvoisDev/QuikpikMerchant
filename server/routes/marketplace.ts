@@ -1262,13 +1262,6 @@ export function registerMarketplaceRoutes(app: Express): void {
         // Use actual order shipping choice, not saved customer preference
         const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
         
-          customerId: customer.id,
-          customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
-          orderShippingOption: shippingInfo.option,
-          finalFulfillmentType: fulfillmentType,
-          willCreateDeliveryOrder: fulfillmentType === 'delivery'
-        });
-
         // CRITICAL FIX: Use explicit address ID from payment metadata if available, ALWAYS override metadata address
         if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
           try {

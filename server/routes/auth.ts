@@ -148,12 +148,6 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const { code, error, state } = req.query;
       
-        hasCode: !!code, 
-        codeLength: code?.length, 
-        error: error || 'none',
-        state: state || 'none'
-      });
-      
       if (error) {
         return res.redirect('/login?error=oauth_denied');
       }
