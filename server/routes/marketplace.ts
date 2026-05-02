@@ -3006,6 +3006,19 @@ Please contact the customer to confirm this order.
       }
       const stripe = getStripeClient(Boolean(reorderWholesalerObj.isTestAccount));
 
+      // Validate wholesaler's Stripe Connect account for automatic transfer
+      let reorderUseConnect = false;
+      if (reorderWholesalerObj?.stripeAccountId) {
+        try {
+          const connectAccount = await stripe.accounts.retrieve(reorderWholesalerObj.stripeAccountId);
+          if (connectAccount.charges_enabled && connectAccount.details_submitted) {
+            reorderUseConnect = true;
+          }
+        } catch (connectErr: any) {
+          console.error(`❌ Reorder Connect account validation failed: ${connectErr.message}`);
+        }
+      }
+
       // Fetch current product prices
       const reorderProductIds = originalItems.map(i => i.productId);
       const reorderProductResults = await db.select().from(products).where(inArray(products.id, reorderProductIds));
@@ -3087,6 +3100,9 @@ Please contact the customer to confirm this order.
       const reorderVatRateApplied = reorderVatEnabled ? reorderVatRate : null;
       const total = subtotal + reorderVatAmount + customerTransactionFee + deliveryCost + shippingTotal;
 
+      // Wholesaler's share: subtotal minus platform fee, plus VAT pass-through (in pence)
+      const reorderTransferAmount = Math.round((subtotal - platformFee + reorderVatAmount) * 100);
+
       const newOrderData: any = {
         orderNumber: newOrderNumber,
         wholesalerId: order.wholesalerId,
@@ -3165,6 +3181,14 @@ Please contact the customer to confirm this order.
         },
         customer_email: order.customerEmail || undefined,
         expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+        ...(reorderUseConnect && reorderTransferAmount > 0 ? {
+          payment_intent_data: {
+            transfer_data: {
+              destination: reorderWholesalerObj.stripeAccountId!,
+              amount: reorderTransferAmount,
+            },
+          },
+        } : {}),
       });
 
       await db.update(orders)
