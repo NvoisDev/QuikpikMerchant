@@ -41,56 +41,10 @@ import { FloatingHelp } from "@/components/ui/floating-help";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { formatNumber } from "@shared/utils/currency";
-
-interface BulkUploadRow {
-  name: string;
-  description: string;
-  price: string;
-  promoPrice: string;
-  promoActive: boolean;
-  currency: string;
-  moq: string;
-  stock: string;
-  category: string;
-  imageUrl: string;
-  priceVisible: boolean;
-  status: string;
-  unit: string;
-  unitFormat: string;
-  sellingFormat: string;
-  unitsPerPallet: string;
-  palletPrice: string;
-  palletMoq: string;
-  palletStock: string;
-  palletWeight: string;
-  temperatureRequirement: string;
-  contentCategory: string;
-  specialHandling: { fragile: boolean; perishable: boolean; hazardous: boolean };
-  deliveryOptions: { pickup: boolean; delivery: boolean };
-}
-
-interface ProductBatch {
-  id: number;
-  status: string;
-  quantity: number;
-  expiryDate?: string | null;
-  batchNumber?: string | null;
-  costPrice?: number | string | null;
-}
-
-interface StockMovement {
-  id: number;
-  quantity: number;
-  movementType: string;
-  reason?: string | null;
-  createdAt: string;
-  customerName?: string | null;
-  businessProfileName?: string | null;
-  orderNumber?: string | null;
-  orderId?: number | null;
-  stockBefore: number;
-  stockAfter: number;
-}
+import BulkUploadDialog from "@/components/product/BulkUploadDialog";
+import BatchBreakdownPanel from "@/components/product/BatchBreakdownPanel";
+import StockManagementDialog from "@/components/product/StockManagementDialog";
+import type { BulkUploadRow, ProductBatch, StockMovement } from "@/components/product/types";
 
 const productCategories = [
   "Groceries & Food",
@@ -1382,6 +1336,33 @@ export default function ProductManagement() {
     );
   };
 
+  const handleStockDialogClose = useCallback(() => {
+    setStockProduct(null);
+    setSelectedBatchId(null);
+    setTopUpBatchId(null);
+    setTopUpQuantity("");
+    setEditCostPriceBatchId(null);
+    setEditCostPriceValue("");
+    setStockQuantity("");
+    setStockReason("");
+    if (navigateBackTo) {
+      const dest = navigateBackTo;
+      setNavigateBackTo(null);
+      navigate(dest);
+    }
+  }, [navigateBackTo, navigate]);
+
+  const handleSetAdjustmentType = useCallback((type: "increase" | "decrease") => {
+    setStockAdjustmentType(type);
+    setStockReason("");
+    setStockQuantity("");
+    setSelectedBatchId(null);
+    setTopUpBatchId(null);
+    setTopUpQuantity("");
+    setEditCostPriceBatchId(null);
+    setEditCostPriceValue("");
+  }, []);
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2057,126 +2038,18 @@ export default function ProductManagement() {
               </DialogContent>
             </Dialog>
 
-            {/* Bulk Upload Dialog — controlled via state */}
-                <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Bulk Upload Products</DialogTitle>
-                  </DialogHeader>
-                  
-                  {uploadedProducts.length === 0 ? (
-                    <div className="space-y-6">
-                      <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-semibold text-gray-900">Upload Product File</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Upload a CSV or Excel file with your product data
-                        </p>
-                        <div className="mt-6">
-                          <input
-                            type="file"
-                            accept=".csv,.xlsx,.xls"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            id="bulk-upload-file"
-                          />
-                          <label htmlFor="bulk-upload-file">
-                            <Button variant="outline" className="cursor-pointer" asChild>
-                              <span>
-                                <Upload className="mr-2 h-4 w-4" />
-                                Choose File
-                              </span>
-                            </Button>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <h4 className="font-semibold">File Format Requirements:</h4>
-                        <div className="text-sm text-gray-600 space-y-2">
-                          <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
-                          <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
-                        </div>
-                        <Button variant="link" onClick={downloadTemplate} className="p-0">
-                          Download template file to get started
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {uploadErrors.length > 0 && (
-                        <div className="border border-red-200 bg-red-50 rounded-lg p-4">
-                          <div className="flex">
-                            <AlertCircle className="h-5 w-5 text-red-400" />
-                            <div className="ml-3">
-                              <h3 className="text-sm font-medium text-red-800">Upload Errors</h3>
-                              <div className="mt-2 text-sm text-red-700">
-                                <ul className="list-disc list-inside space-y-1">
-                                  {uploadErrors.map((error, index) => (
-                                    <li key={index}>{error}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="border border-green-200 bg-green-50 rounded-lg p-4">
-                        <div className="flex">
-                          <CheckCircle className="h-5 w-5 text-green-400" />
-                          <div className="ml-3">
-                            <h3 className="text-sm font-medium text-green-800">
-                              {uploadedProducts.length} Products Ready to Upload
-                            </h3>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="max-h-64 overflow-y-auto border rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">MOQ</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {uploadedProducts.map((product, index) => (
-                              <tr key={index}>
-                                <td className="px-4 py-2 text-sm text-gray-900">{product.name}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(parseFloat(product.price), product.currency)}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      <div className="flex justify-end space-x-3">
-                        <Button variant="outline" onClick={() => {
-                          setUploadedProducts([]);
-                          setUploadErrors([]);
-                        }}>
-                          Cancel
-                        </Button>
-                        <Button 
-                          onClick={() => bulkCreateProductsMutation.mutate(uploadedProducts)}
-                          disabled={bulkCreateProductsMutation.isPending || uploadedProducts.length === 0}
-                        >
-                          {bulkCreateProductsMutation.isPending ? "Creating..." : `Create ${uploadedProducts.length} Products`}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-                </Dialog>
+            {/* Bulk Upload Dialog */}
+            <BulkUploadDialog
+              open={isBulkUploadDialogOpen}
+              onOpenChange={setIsBulkUploadDialogOpen}
+              uploadedProducts={uploadedProducts}
+              uploadErrors={uploadErrors}
+              onFileUpload={handleFileUpload}
+              onConfirmUpload={() => bulkCreateProductsMutation.mutate(uploadedProducts)}
+              onCancelUpload={() => { setUploadedProducts([]); setUploadErrors([]); }}
+              isBulkCreating={bulkCreateProductsMutation.isPending}
+              onDownloadTemplate={downloadTemplate}
+            />
 
               {/* Standalone Dialog without DialogTrigger */}
               <Dialog 
@@ -3377,130 +3250,20 @@ export default function ProductManagement() {
 
                   {/* Expandable batch breakdown */}
                   {expandedBatchProductId === product.id && (
-                    <div className="mt-2 border border-blue-100 rounded-lg bg-blue-50/40 p-3">
-                      <h5 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                        <PackagePlus className="h-3.5 w-3.5 text-blue-600" /> Batch Breakdown
-                      </h5>
-                      {isLoadingBatches ? (
-                        <p className="text-xs text-gray-500 py-2 text-center">Loading batches...</p>
-                      ) : (productBatches as ProductBatch[])?.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-gray-500 border-b border-blue-100">
-                                <th className="text-left py-1 pr-3 font-medium">Batch Ref</th>
-                                <th className="text-right py-1 pr-3 font-medium">Qty</th>
-                                <th className="text-left py-1 pr-3 font-medium">Expiry</th>
-                                <th className="text-right py-1 pr-3 font-medium">Cost</th>
-                                <th className="text-left py-1 pr-3 font-medium">Status</th>
-                                <th className="text-right py-1 font-medium">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(productBatches as ProductBatch[]).map((batch: ProductBatch) => {
-                                const isExpired = batch.expiryDate && new Date(batch.expiryDate) < new Date();
-                                const isDepleted = batch.status === 'depleted';
-                                const expiryFmt = batch.expiryDate
-                                  ? new Date(batch.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                  : '—';
-                                return (
-                                  <tr key={batch.id} className={`border-b border-blue-50 last:border-0 ${isDepleted || isExpired ? 'opacity-50' : ''}`}>
-                                    <td className="py-1.5 pr-3 text-gray-700">{batch.batchNumber || 'Initial Stock'}</td>
-                                    <td className="py-1.5 pr-3 text-right font-medium">{formatNumber(batch.quantity)}</td>
-                                    <td className="py-1.5 pr-3">
-                                      {editingExpiryBatchId === batch.id ? (
-                                        <input
-                                          type="date"
-                                          autoFocus
-                                          className="text-xs border rounded px-1 py-0.5 w-28"
-                                          value={editingExpiryValue}
-                                          onChange={e => setEditingExpiryValue(e.target.value)}
-                                          onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                              expiryEditCancelledRef.current = true; // prevent double-fire from blur
-                                              updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
-                                            } else if (e.key === 'Escape') {
-                                              expiryEditCancelledRef.current = true;
-                                              setEditingExpiryBatchId(null);
-                                            }
-                                          }}
-                                          onBlur={() => {
-                                            if (expiryEditCancelledRef.current) {
-                                              expiryEditCancelledRef.current = false;
-                                              return;
-                                            }
-                                            updateExpiryMutation.mutate({ productId: product.id, batchId: batch.id, expiryDate: editingExpiryValue || null });
-                                          }}
-                                        />
-                                      ) : (
-                                        <span className="flex items-center gap-1">
-                                          {batch.expiryDate ? (
-                                            <span className={isExpired ? 'text-red-600 font-medium' : new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) ? 'text-amber-600 font-medium' : 'text-gray-600'}>
-                                              {expiryFmt}
-                                              {isExpired && ' 🔴'}
-                                              {!isExpired && new Date(batch.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) && ' 🟠'}
-                                            </span>
-                                          ) : <span className="text-gray-400">—</span>}
-                                          <button
-                                            className="text-gray-400 hover:text-gray-600"
-                                            onClick={() => {
-                                              const iso = batch.expiryDate ? String(batch.expiryDate).split('T')[0] : '';
-                                              setEditingExpiryValue(iso);
-                                              setEditingExpiryBatchId(batch.id);
-                                            }}
-                                          >
-                                            <Pencil className="h-3 w-3" />
-                                          </button>
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? formatCurrency(batch.costPrice) : '—'}</td>
-                                    <td className="py-1.5 pr-3">
-                                      {isDepleted ? (
-                                        <Badge className="text-xs bg-gray-100 text-gray-500 border-0">Depleted</Badge>
-                                      ) : isExpired ? (
-                                        <Badge className="text-xs bg-red-100 text-red-700 border-0">Expired</Badge>
-                                      ) : (
-                                        <Badge className="text-xs bg-green-100 text-green-700 border-0">Active</Badge>
-                                      )}
-                                    </td>
-                                    <td className="py-1.5 text-right">
-                                      {!isDepleted && (
-                                        <div className="flex items-center justify-end gap-1">
-                                          <button
-                                            className="text-xs text-orange-600 hover:text-orange-800 px-1.5 py-0.5 rounded border border-orange-200 hover:bg-orange-50"
-                                            onClick={() => {
-                                              const delta = prompt('Enter quantity to remove (negative number reduces stock):');
-                                              if (delta && !isNaN(parseInt(delta))) {
-                                                adjustBatchMutation.mutate({ productId: product.id, batchId: batch.id, delta: -Math.abs(parseInt(delta)), reason: 'Manual adjustment' });
-                                              }
-                                            }}
-                                          >
-                                            Adjust
-                                          </button>
-                                          <button
-                                            className="text-xs text-gray-500 hover:text-red-600 px-1.5 py-0.5 rounded border border-gray-200 hover:bg-red-50"
-                                            onClick={() => {
-                                              if (confirm('Mark this batch as depleted?')) {
-                                                depleteBatchMutation.mutate({ productId: product.id, batchId: batch.id });
-                                              }
-                                            }}
-                                          >
-                                            Deplete
-                                          </button>
-                                        </div>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500 py-2 text-center">No batches found</p>
-                      )}
-                    </div>
+                    <BatchBreakdownPanel
+                      product={product}
+                      productBatches={productBatches as ProductBatch[]}
+                      isLoadingBatches={isLoadingBatches}
+                      editingExpiryBatchId={editingExpiryBatchId}
+                      setEditingExpiryBatchId={setEditingExpiryBatchId}
+                      editingExpiryValue={editingExpiryValue}
+                      setEditingExpiryValue={setEditingExpiryValue}
+                      expiryEditCancelledRef={expiryEditCancelledRef}
+                      isViewer={isViewer}
+                      onAdjustBatch={(args) => adjustBatchMutation.mutate(args)}
+                      onDepleteBatch={(args) => depleteBatchMutation.mutate(args)}
+                      onUpdateExpiry={(args) => updateExpiryMutation.mutate(args)}
+                    />
                   )}
                 </div>
               ))}
@@ -3548,469 +3311,48 @@ export default function ProductManagement() {
           )}
       </div>
 
-      <Dialog open={!!stockProduct} onOpenChange={(open) => { if (!open) { setStockProduct(null); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); setStockQuantity(""); setStockReason(""); if (navigateBackTo) { const dest = navigateBackTo; setNavigateBackTo(null); navigate(dest); } } }}>
-        <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PackagePlus className="h-5 w-5 text-green-600" />
-              Manage Stock - {stockProduct?.name}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {stockProduct && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Current Stock</span>
-                <span className={`text-lg font-bold ${stockProduct.stock > 10 ? 'text-green-600' : stockProduct.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {formatNumber(stockProduct.stock)} units
-                </span>
-              </div>
-
-              {/* Tab buttons */}
-              <div className="flex gap-2">
-                <Button
-                  variant={stockAdjustmentType === "increase" ? "default" : "outline"}
-                  size="sm"
-                  className={stockAdjustmentType === "increase" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("increase"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); }}
-                >
-                  <ArrowUpCircle className="h-4 w-4 mr-1" />
-                  Add New Batch
-                </Button>
-                <Button
-                  variant={stockAdjustmentType === "decrease" ? "default" : "outline"}
-                  size="sm"
-                  className={stockAdjustmentType === "decrease" ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1"}
-                  onClick={() => { setStockAdjustmentType("decrease"); setStockReason(""); setStockQuantity(""); setSelectedBatchId(null); setTopUpBatchId(null); setTopUpQuantity(""); setEditCostPriceBatchId(null); setEditCostPriceValue(""); }}
-                >
-                  <ArrowDownCircle className="h-4 w-4 mr-1" />
-                  Remove Stock
-                </Button>
-              </div>
-
-              {/* Shared FEFO-sorted batch list for both modes (batch-tracked products only) */}
-              {(() => {
-                const hasBatches = (stockProduct.batchCount ?? 0) > 0;
-                if (!hasBatches) return null;
-                const sortedBatches = [...((modalBatches as ProductBatch[]) || [])].sort((a: ProductBatch, b: ProductBatch) => {
-                  if (!a.expiryDate && !b.expiryDate) return 0;
-                  if (!a.expiryDate) return 1;
-                  if (!b.expiryDate) return -1;
-                  return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-                });
-                const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
-                const activeBatches = sortedBatches.filter((b: ProductBatch) => b.status !== 'depleted' && b.quantity > 0);
-
-                const fmtExpiry = (d: string | null) =>
-                  d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'No expiry';
-
-                const isRemove = stockAdjustmentType === "decrease";
-
-                return (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      {isRemove ? 'Select batch to remove from' : 'Existing batches (FEFO order)'}
-                    </p>
-                    {isLoadingModalBatches ? (
-                      <p className="text-xs text-gray-400 py-2 text-center">Loading batches…</p>
-                    ) : activeBatches.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-2 text-center italic">All batches depleted — add a new batch to restock</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {activeBatches.map((batch: ProductBatch, idx: number) => {
-                          const label = batch.batchNumber || `Batch ${idx + 1}`;
-                          const expiry = fmtExpiry(batch.expiryDate);
-                          const isSelected = selectedBatchId === batch.id;
-                          if (isRemove) {
-                            return (
-                              <button
-                                key={batch.id}
-                                type="button"
-                                onClick={() => setSelectedBatchId(isSelected ? null : batch.id)}
-                                className={`w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors text-left min-h-[44px] ${
-                                  isSelected
-                                    ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-400'
-                                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isSelected ? 'bg-orange-500' : 'bg-gray-300'}`} />
-                                  <span className="font-medium text-gray-800">{label}</span>
-                                  <span className="text-gray-400">·</span>
-                                  <span className="text-gray-500 text-xs">Exp: {expiry}</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1 sm:mt-0 pl-4 sm:pl-0">
-                                  <span className="text-gray-500 text-xs">
-                                    Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
-                                  </span>
-                                  <span className="text-gray-400">·</span>
-                                  <span className="font-semibold text-gray-700">{formatNumber(batch.quantity)} units</span>
-                                </div>
-                              </button>
-                            );
-                          } else {
-                            const isExpired = batch.status !== 'active' || (batch.expiryDate && new Date(batch.expiryDate) < todayDate);
-                            const isTopUp = topUpBatchId === batch.id;
-                            const isEditingCost = editCostPriceBatchId === batch.id;
-                            return (
-                              <div key={batch.id} className="rounded-lg border border-gray-200 overflow-hidden">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 py-2.5 bg-gray-50 text-sm min-h-[44px] gap-1.5 sm:gap-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isExpired ? 'bg-red-400' : 'bg-green-400'}`} />
-                                    <span className={`font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>{label}</span>
-                                    <span className="text-gray-300">·</span>
-                                    <span className={`text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}`}>Exp: {expiry}</span>
-                                    {isExpired && <span className="text-xs text-red-500 font-medium">(expired)</span>}
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0 pl-4 sm:pl-0">
-                                    {isViewer ? (
-                                      <span className="text-xs text-gray-400">
-                                        Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"}
-                                      </span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const current = batch.costPrice != null && batch.costPrice !== "" ? String(batch.costPrice) : "";
-                                          setEditCostPriceValue(current);
-                                          setEditCostPriceBatchId(isEditingCost ? null : batch.id);
-                                          if (isTopUp) { setTopUpBatchId(null); setTopUpQuantity(""); }
-                                        }}
-                                        className="text-xs text-gray-400 hover:text-green-600 transition-colors py-2.5 min-h-[44px] inline-flex items-center"
-                                        title="Edit cost price"
-                                      >
-                                        Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency) : "—"} ✎
-                                      </button>
-                                    )}
-                                    <span className="text-gray-300">·</span>
-                                    <span className={`font-semibold ${isExpired ? 'text-gray-400' : 'text-gray-500'}`}>{formatNumber(batch.quantity)} units</span>
-                                    {!isExpired && (
-                                      <button
-                                        type="button"
-                                        onClick={() => { setTopUpBatchId(isTopUp ? null : batch.id); setTopUpQuantity(""); setEditCostPriceBatchId(null); }}
-                                        className={`px-3 py-2.5 rounded text-xs font-medium border transition-colors min-h-[44px] ${
-                                          isTopUp
-                                            ? 'bg-green-600 text-white border-green-600'
-                                            : 'bg-white text-green-700 border-green-400 hover:bg-green-50'
-                                        }`}
-                                      >
-                                        {isTopUp ? 'Cancel' : 'Add to batch'}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                                {isEditingCost && (
-                                  <div className="px-3 py-2.5 bg-blue-50 border-t border-blue-100 flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      placeholder="Cost price"
-                                      value={editCostPriceValue}
-                                      onChange={(e) => setEditCostPriceValue(e.target.value)}
-                                      className="h-8 text-sm flex-1"
-                                      autoFocus
-                                    />
-                                    {batch.costPrice != null && batch.costPrice !== "" && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => updateBatchCostPriceMutation.mutate({ productId: stockProduct!.id, batchId: batch.id, costPrice: null })}
-                                        disabled={updateBatchCostPriceMutation.isPending}
-                                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 flex-shrink-0"
-                                      >
-                                        Clear
-                                      </Button>
-                                    )}
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setEditCostPriceBatchId(null)}
-                                      className="h-8 text-xs flex-shrink-0"
-                                    >
-                                      Cancel
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => {
-                                        const val = editCostPriceValue.trim();
-                                        if (!val) return;
-                                        updateBatchCostPriceMutation.mutate({ productId: stockProduct!.id, batchId: batch.id, costPrice: val });
-                                      }}
-                                      disabled={!editCostPriceValue.trim() || updateBatchCostPriceMutation.isPending}
-                                      className="h-8 bg-blue-600 hover:bg-blue-700 flex-shrink-0"
-                                    >
-                                      {updateBatchCostPriceMutation.isPending ? "Saving…" : "Save"}
-                                    </Button>
-                                  </div>
-                                )}
-                                {isTopUp && (
-                                  <div className="px-3 py-2.5 bg-green-50 border-t border-green-100 flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      placeholder="Units to add"
-                                      value={topUpQuantity}
-                                      onChange={(e) => setTopUpQuantity(e.target.value)}
-                                      className="h-8 text-sm flex-1"
-                                      autoFocus
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={handleBatchTopUp}
-                                      disabled={!topUpQuantity || adjustBatchMutation.isPending}
-                                      className="h-8 bg-green-600 hover:bg-green-700 flex-shrink-0"
-                                    >
-                                      {adjustBatchMutation.isPending ? "Adding…" : `Add ${topUpQuantity || 0}`}
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Add New Batch form */}
-              {stockAdjustmentType === "increase" ? (
-                <div className="space-y-3 p-3 bg-green-50 rounded-lg border border-green-100">
-                  <p className="text-xs text-green-700 font-medium">Stock is tracked per batch for FEFO (first-expired, first-out) picking.</p>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Quantity <span className="text-red-500">*</span></label>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Units in this delivery"
-                      value={stockQuantity}
-                      onChange={(e) => setStockQuantity(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="sm:grid sm:grid-cols-2 sm:gap-3 space-y-3 sm:space-y-0">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Best Before / Expiry <span className="text-gray-400 text-xs">(optional)</span></label>
-                      <Input
-                        type="date"
-                        value={batchExpiry}
-                        onChange={(e) => setBatchExpiry(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Batch Reference <span className="text-gray-400 text-xs">(optional)</span></label>
-                      <Input
-                        type="text"
-                        placeholder="e.g. INV-2024-001"
-                        value={batchRef}
-                        onChange={(e) => setBatchRef(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Cost Price per Unit <span className="text-gray-400 text-xs">(optional)</span></label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder={stockProduct?.costPrice ? `Default: £${parseFloat(stockProduct.costPrice).toFixed(2)}` : "e.g. 1.50"}
-                      value={batchCostPrice}
-                      onChange={(e) => setBatchCostPrice(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleAddBatch}
-                    disabled={!stockQuantity || createBatchMutation.isPending}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {createBatchMutation.isPending ? "Adding..." : `Add ${stockQuantity || 0} units as new batch`}
-                  </Button>
-                </div>
-              ) : (
-                /* Remove Stock — batch-aware when batches exist, global otherwise */
-                (stockProduct.batchCount ?? 0) > 0 ? (() => {
-                  // Resolve against current modalBatches so stale IDs don't slip through
-                  const activeBatchList = (modalBatches as ProductBatch[]) ?? [];
-                  const selectedBatch = activeBatchList.find((b: ProductBatch) => b.id === selectedBatchId) ?? null;
-                  return (
-                    <div className="space-y-3">
-                      {!selectedBatch && (
-                        <p className="text-xs text-orange-600 font-medium text-center py-1">↑ Tap a batch above to select it</p>
-                      )}
-                      {selectedBatch && (
-                        <>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="Enter quantity"
-                              value={stockQuantity}
-                              onChange={(e) => setStockQuantity(e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
-                                <button
-                                  key={preset}
-                                  type="button"
-                                  onClick={() => setStockReason(preset)}
-                                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                    stockReason === preset
-                                      ? 'bg-orange-600 text-white border-orange-600'
-                                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  {preset}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <Button
-                            onClick={handleBatchRemoval}
-                            disabled={!stockQuantity || !stockReason || removeBatchStockMutation.isPending}
-                            className="w-full bg-orange-600 hover:bg-orange-700"
-                          >
-                            {removeBatchStockMutation.isPending ? "Removing…" : (() => {
-                              const ref = selectedBatch.batchNumber || 'batch';
-                              const exp = selectedBatch.expiryDate ? ` · Exp ${new Date(selectedBatch.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}` : '';
-                              return `Remove ${stockQuantity || 0} units from ${ref}${exp}`;
-                            })()}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })() : (
-                  /* Non-batch product — original global remove flow */
-                  <>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Quantity to remove</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        placeholder="Enter quantity"
-                        value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Reason</label>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {["Damaged goods", "Expired stock", "Stock correction", "Customer return"].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setStockReason(preset)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                              stockReason === preset
-                                ? 'bg-orange-600 text-white border-orange-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {stockQuantity && (
-                      <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                        <span className="text-gray-600">New stock will be: </span>
-                        <span className="font-bold text-blue-700">
-                          {formatNumber(Math.max(0, stockProduct.stock - parseInt(stockQuantity || "0")))} units
-                        </span>
-                      </div>
-                    )}
-                    <Button
-                      onClick={handleStockAdjustment}
-                      disabled={!stockQuantity || !stockReason || stockAdjustmentMutation.isPending}
-                      className="w-full bg-orange-600 hover:bg-orange-700"
-                    >
-                      {stockAdjustmentMutation.isPending ? "Updating..." : `Remove ${stockQuantity || 0} units`}
-                    </Button>
-                  </>
-                )
-              )}
-
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  Stock Movement History
-                </h4>
-                {isLoadingMovements ? (
-                  <p className="text-sm text-gray-500 text-center py-4">Loading history...</p>
-                ) : stockMovements && (stockMovements as StockMovement[]).length > 0 ? (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {(stockMovements as StockMovement[]).slice(0, 20).map((movement: StockMovement) => {
-                      const isIncrease = movement.quantity > 0;
-                      const typeLabel = movement.movementType === 'purchase' ? 'Order'
-                        : movement.movementType === 'return' ? 'Return'
-                        : movement.movementType === 'manual_increase' ? 'Restocked'
-                        : movement.movementType === 'manual_decrease' ? 'Removed'
-                        : movement.movementType === 'initial' ? 'Initial Stock'
-                        : 'Updated';
-                      return (
-                        <div key={movement.id} className={`p-2.5 rounded-lg text-xs border-l-3 ${isIncrease ? 'bg-green-50 border-l-green-500' : 'bg-red-50 border-l-red-500'}`}>
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0">
-                            <div className="flex items-center gap-1.5">
-                              {isIncrease ? (
-                                <ArrowUpCircle className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                              ) : (
-                                <ArrowDownCircle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
-                              )}
-                              <span className={`font-bold ${isIncrease ? 'text-green-700' : 'text-red-700'}`}>
-                                {isIncrease ? '+' : ''}{movement.quantity} units
-                              </span>
-                              <span className="text-gray-500 font-medium">· {typeLabel}</span>
-                              {movement.orderNumber && movement.orderId && (
-                                <Link
-                                  href={`/orders/${movement.orderId}`}
-                                  className="text-blue-500 hover:text-blue-700 font-normal hover:underline"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  #{movement.orderNumber}
-                                </Link>
-                              )}
-                            </div>
-                            <span className="text-gray-400 sm:flex-shrink-0">
-                              {new Date(movement.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-0.5 sm:gap-0">
-                            <span>
-                              {movement.reason || ''}
-                              {movement.customerName && (
-                                <span className="text-gray-400 font-normal">{movement.reason ? ' · ' : ''}{movement.customerName}</span>
-                              )}
-                              {movement.businessProfileName && (
-                                <span className="ml-1 text-blue-600 font-medium">· {movement.businessProfileName}</span>
-                              )}
-                            </span>
-                            <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
-                              {movement.stockBefore} → {movement.stockAfter}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">No stock movements recorded yet</p>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <StockManagementDialog
+        open={!!stockProduct}
+        onClose={handleStockDialogClose}
+        stockProduct={stockProduct}
+        isViewer={isViewer}
+        stockAdjustmentType={stockAdjustmentType}
+        onSetAdjustmentType={handleSetAdjustmentType}
+        modalBatches={modalBatches as ProductBatch[] | undefined}
+        isLoadingModalBatches={isLoadingModalBatches}
+        stockMovements={stockMovements as StockMovement[] | undefined}
+        isLoadingMovements={isLoadingMovements}
+        stockQuantity={stockQuantity}
+        setStockQuantity={setStockQuantity}
+        batchExpiry={batchExpiry}
+        setBatchExpiry={setBatchExpiry}
+        batchRef={batchRef}
+        setBatchRef={setBatchRef}
+        batchCostPrice={batchCostPrice}
+        setBatchCostPrice={setBatchCostPrice}
+        onAddBatch={handleAddBatch}
+        isAddingBatch={createBatchMutation.isPending}
+        selectedBatchId={selectedBatchId}
+        setSelectedBatchId={setSelectedBatchId}
+        stockReason={stockReason}
+        setStockReason={setStockReason}
+        onRemoveBatchStock={handleBatchRemoval}
+        isRemovingBatchStock={removeBatchStockMutation.isPending}
+        onStockAdjustment={handleStockAdjustment}
+        isAdjustingStock={stockAdjustmentMutation.isPending}
+        topUpBatchId={topUpBatchId}
+        setTopUpBatchId={setTopUpBatchId}
+        topUpQuantity={topUpQuantity}
+        setTopUpQuantity={setTopUpQuantity}
+        onBatchTopUp={handleBatchTopUp}
+        isTopUpPending={adjustBatchMutation.isPending}
+        editCostPriceBatchId={editCostPriceBatchId}
+        setEditCostPriceBatchId={setEditCostPriceBatchId}
+        editCostPriceValue={editCostPriceValue}
+        setEditCostPriceValue={setEditCostPriceValue}
+        onUpdateBatchCostPrice={(args) => updateBatchCostPriceMutation.mutate(args)}
+        isUpdatingCostPrice={updateBatchCostPriceMutation.isPending}
+      />
     </div>
 
     <SubscriptionUpgradeModal

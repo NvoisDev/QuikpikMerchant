@@ -1,0 +1,128 @@
+We’re going to make product-management.tsx smaller and safer without breaking anything.
+
+The goal is NOT:
+
+“Rewrite the file”
+
+The goal IS:
+
+“Reduce its responsibility without changing behaviour”
+
+🧠 First — what we’re dealing with
+
+From your map:
+
+product-management.tsx → 4,010 lines
+It handles:
+Product CRUD
+Batch management
+Price lists
+AI descriptions
+
+👉 That’s 4–5 features living in one file
+
+🎯 Strategy (very important)
+
+We will use:
+
+“Extract, don’t refactor”
+
+Meaning:
+
+Move chunks out
+Keep logic intact
+Pass props down
+Don’t change behaviour
+🔥 Step-by-step SAFE extraction plan
+✅ Step 1: Identify safe extraction targets
+
+Start with the lowest-risk UI sections:
+
+Best candidates (in order):
+Batch management UI
+Price list UI
+AI description generator
+Product form sections (optional later)
+
+👉 These are usually:
+
+Visually separate
+Not deeply tied to global state
+✅ Step 2: Extract ONE feature only (start with Batch Management)
+
+Create:
+
+components/products/BatchManagementSection.tsx
+✅ Step 3: Move UI only (not logic yet)
+
+Inside product-management.tsx:
+
+BEFORE:
+<div>
+  {/* 300+ lines of batch UI */}
+</div>
+AFTER:
+<BatchManagementSection
+  batches={batches}
+  onAddBatch={handleAddBatch}
+  onDeleteBatch={handleDeleteBatch}
+  ...
+/>
+
+👉 Then move that JSX into the new component
+
+✅ Step 4: Pass everything as props
+
+Do NOT:
+
+Move hooks
+Move API calls
+Move state logic
+
+👉 Keep all logic in the parent for now
+
+This is what makes it safe
+
+✅ Step 5: Test immediately
+
+After extraction:
+
+Load product page
+Add/edit product
+Add/remove batch
+Save product
+
+👉 If it works → you’re good
+
+✅ Step 6: Repeat for next section
+
+Once Batch is stable:
+
+Next:
+
+components/products/PriceListSection.tsx
+
+Then:
+
+components/products/AIDescriptionSection.tsx
+📦 Suggested final structure
+pages/
+  product-management.tsx   (~2000 lines target)
+
+components/products/
+  ProductForm.tsx
+  BatchManagementSection.tsx
+  PriceListSection.tsx
+  AIDescriptionSection.tsx
+  ProductTable.tsx
+
+👉 You don’t need to reach this fully — just move toward it
+
+🚫 What NOT to do (this is where people break things)
+
+❌ Don’t move API calls yet
+❌ Don’t change state structure
+❌ Don’t rename variables everywhere
+❌ Don’t “clean up everything at once”
+
+👉 That’s how regressions happen
