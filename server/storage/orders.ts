@@ -539,12 +539,32 @@ export class OrderStorage extends ProductStorage {
       }
 
       // ── BATCH EXECUTE: flush all mutations ───────────────────────────────
-      // 1. Update touched batches (individual updates; savings come from pre-fetching)
-      for (const { id, newQty, newStatus } of batchUpdates) {
-        await tx
-          .update(productBatches)
-          .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
-          .where(eq(productBatches.id, id));
+      // Deduplicate batchUpdates: if the same batch was touched by multiple items
+      // keep only the last entry (which carries the cumulative final quantity).
+      const dedupedBatchUpdates = new Map<number, { id: number; newQty: number; newStatus: string }>();
+      for (const upd of batchUpdates) {
+        dedupedBatchUpdates.set(upd.id, upd);
+      }
+      const finalBatchUpdates = Array.from(dedupedBatchUpdates.values());
+
+      // 1. Single CASE-based UPDATE for all touched batches
+      if (finalBatchUpdates.length > 0) {
+        const qtyCases = sql.join(
+          finalBatchUpdates.map(b => sql`WHEN ${b.id} THEN ${b.newQty}`),
+          sql` `
+        );
+        const statusCases = sql.join(
+          finalBatchUpdates.map(b => sql`WHEN ${b.id} THEN ${b.newStatus}`),
+          sql` `
+        );
+        const batchIds = sql.join(finalBatchUpdates.map(b => sql`${b.id}`), sql`, `);
+        await tx.execute(sql`
+          UPDATE product_batches
+          SET quantity    = CASE id ${qtyCases} ELSE quantity END,
+              status      = CASE id ${statusCases} ELSE status END,
+              updated_at  = NOW()
+          WHERE id IN (${batchIds})
+        `);
       }
 
       // 2. Bulk-insert all stock movements in a single statement
@@ -562,12 +582,24 @@ export class OrderStorage extends ProductStorage {
         await tx.insert(orderItems).values(orderItemRows);
       }
 
-      // 4. Update product stock counters (one UPDATE per distinct product)
-      for (const [productId, { stock, palletStock }] of productStockFinal.entries()) {
-        await tx
-          .update(products)
-          .set({ stock, palletStock })
-          .where(eq(products.id, productId));
+      // 4. Single CASE-based UPDATE for all affected product stock counters
+      if (productStockFinal.size > 0) {
+        const entries = Array.from(productStockFinal.entries());
+        const stockCases = sql.join(
+          entries.map(([pid, { stock }]) => sql`WHEN ${pid} THEN ${stock}`),
+          sql` `
+        );
+        const palletCases = sql.join(
+          entries.map(([pid, { palletStock }]) => sql`WHEN ${pid} THEN ${palletStock}`),
+          sql` `
+        );
+        const productIds = sql.join(entries.map(([pid]) => sql`${pid}`), sql`, `);
+        await tx.execute(sql`
+          UPDATE products
+          SET stock       = CASE id ${stockCases} ELSE stock END,
+              pallet_stock = CASE id ${palletCases} ELSE pallet_stock END
+          WHERE id IN (${productIds})
+        `);
       }
 
       return newOrder;
