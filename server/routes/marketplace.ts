@@ -2103,7 +2103,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   registerBrowsingRoutes(app);
   // Utility routes (fee config, registration, accessible wholesalers, stats)
   // extracted to marketplace-utils.ts to reduce file size.
-  registerUtilityRoutes(app);
+  registerUtilityRoutes(app, customerActionLimiter);
 
   // POST /api/marketplace/orders
   app.post('/api/marketplace/orders', customerActionLimiter, async (req, res) => {

@@ -12,23 +12,13 @@
  *   GET  /api/dashboard/multi-wholesaler-stats
  *   GET  /api/customer/wholesalers
  */
-import type { Express } from "express";
-import rateLimit from "express-rate-limit";
+import type { Express, RequestHandler } from "express";
 import { getCurrentFeeConfig } from "../utils/fee-config";
 import {
   db, emailButton, emailCard, emailHeading, formatPhoneToInternational,
   getEmailLogoUrl, getStripeClient, multiWholesalerService,
   requireAuth, sendEmail, storage, wrapCustomerEmail,
 } from "./shared";
-
-// Same settings as customerActionLimiter in marketplace.ts
-const customerActionLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again later." },
-});
 
 /** Escapes characters that have special meaning in HTML to prevent XSS in email templates. */
 function escapeHtml(str: string | null | undefined): string {
@@ -41,7 +31,7 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#39;');
 }
 
-export function registerUtilityRoutes(app: Express): void {
+export function registerUtilityRoutes(app: Express, customerActionLimiter: RequestHandler): void {
 
   // GET /api/config/customer-fee — public, no auth required
   // Returns the live customer transaction fee config so the checkout dialog
