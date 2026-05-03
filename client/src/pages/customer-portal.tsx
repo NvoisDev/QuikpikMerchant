@@ -1,6 +1,7 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 // Core UI Components - loaded immediately
 import { Button } from "@/components/ui/button";
@@ -2128,6 +2129,7 @@ export default function CustomerPortal() {
             </TabsList>
 
             <TabsContent value="home" className="space-y-5 mb-16 pb-6">
+              <SectionErrorBoundary sectionName="Home">
               <HomeTab
                 setActiveTab={setActiveTab}
                 cart={cart}
@@ -2161,8 +2163,10 @@ export default function CustomerPortal() {
                 setShowUnitSelectionModal={setShowUnitSelectionModal}
                 setShowStoreSwitcher={setShowStoreSwitcher}
               />
+              </SectionErrorBoundary>
             </TabsContent>
             <TabsContent value="products" className="space-y-6 mb-16 pb-6">
+              <SectionErrorBoundary sectionName="Products">
               <ProductsTab
                 setActiveTab={setActiveTab}
                 cart={cart}
@@ -2206,8 +2210,10 @@ export default function CustomerPortal() {
                 setModalQuantity={setModalQuantity}
                 setShowUnitSelectionModal={setShowUnitSelectionModal}
               />
+              </SectionErrorBoundary>
             </TabsContent>
             <TabsContent value="orders" className="space-y-6 pb-6">
+              <SectionErrorBoundary sectionName="Order history">
               <OrdersTab
                 setActiveTab={setActiveTab}
                 cart={cart}
@@ -2220,8 +2226,10 @@ export default function CustomerPortal() {
                 customerOrderStats={customerOrderStats}
                 authenticatedCustomer={authenticatedCustomer}
               />
+              </SectionErrorBoundary>
             </TabsContent>
             <TabsContent value="account" className="space-y-6 pb-6">
+              <SectionErrorBoundary sectionName="Account">
               <AccountTab
                 setActiveTab={setActiveTab}
                 cart={cart}
@@ -2240,8 +2248,10 @@ export default function CustomerPortal() {
                 wholesaler={wholesaler}
                 customerOrderStats={customerOrderStats}
               />
+              </SectionErrorBoundary>
             </TabsContent>
             <TabsContent value="help" className="pb-6">
+              <SectionErrorBoundary sectionName="Help">
               <HelpTab
                 wholesaler={wholesaler}
                 setActiveTab={setActiveTab}
@@ -2250,11 +2260,13 @@ export default function CustomerPortal() {
                 isCreatingIntent={isCreatingIntent}
                 handleLogout={handleLogout}
               />
+              </SectionErrorBoundary>
             </TabsContent>
           </Tabs>
         )}
 
         {/* Checkout Modal Dialog */}
+        <SectionErrorBoundary sectionName="Checkout">
         <CheckoutDialog
           showCheckout={showCheckout}
           setShowCheckout={setShowCheckout}
@@ -2287,6 +2299,7 @@ export default function CustomerPortal() {
           setLastUsedShippingOption={setLastUsedShippingOption}
           setShowThankYou={setShowThankYou}
         />
+        </SectionErrorBoundary>
 
 
         {/* Enhanced Unit/Pallet Selection Modal with Quantity Adjustment */}

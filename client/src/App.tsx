@@ -10,6 +10,7 @@ import { usePresencePing } from "@/hooks/usePresencePing";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import { ImpersonationProvider } from "@/contexts/impersonation-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import ElephantLoader from "@/components/ui/elephant-loader";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -57,6 +58,93 @@ const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
 
 import AppLayout from "@/components/layout/app-layout";
 
+// ---------------------------------------------------------------------------
+// Stable section-wrapped page components
+// Defined at module level so their identity is constant across renders, which
+// prevents wouter from remounting the page on every parent re-render.
+// ---------------------------------------------------------------------------
+
+const MarketplaceSection = () => (
+  <SectionErrorBoundary sectionName="Marketplace"><Marketplace /></SectionErrorBoundary>
+);
+const ProductDetailSection = () => (
+  <SectionErrorBoundary sectionName="Product detail"><ProductDetail /></SectionErrorBoundary>
+);
+const ProductManagementSection = () => (
+  <SectionErrorBoundary sectionName="Product management"><ProductManagement /></SectionErrorBoundary>
+);
+const PromotionsSection = () => (
+  <SectionErrorBoundary sectionName="Promotions"><Promotions /></SectionErrorBoundary>
+);
+const CustomerDetailSection = () => (
+  <SectionErrorBoundary sectionName="Customer detail"><CustomerDetail /></SectionErrorBoundary>
+);
+const CustomersSection = () => (
+  <SectionErrorBoundary sectionName="Customers"><Customers /></SectionErrorBoundary>
+);
+const CustomerRegistrationRequestsSection = () => (
+  <SectionErrorBoundary sectionName="Customer registration requests"><CustomerRegistrationRequests /></SectionErrorBoundary>
+);
+const OrderDetailSection = () => (
+  <SectionErrorBoundary sectionName="Order detail"><OrderDetail /></SectionErrorBoundary>
+);
+const OrdersSection = () => (
+  <SectionErrorBoundary sectionName="Orders"><OrdersFresh /></SectionErrorBoundary>
+);
+const AnalyticsSection = () => (
+  <SectionErrorBoundary sectionName="Analytics"><Analytics /></SectionErrorBoundary>
+);
+const FinancialsSection = () => (
+  <SectionErrorBoundary sectionName="Financials"><Financials /></SectionErrorBoundary>
+);
+const FinancialHealthSection = () => (
+  <SectionErrorBoundary sectionName="Financial health"><FinancialHealth /></SectionErrorBoundary>
+);
+const SettingsSection = () => (
+  <SectionErrorBoundary sectionName="Settings"><Settings /></SectionErrorBoundary>
+);
+const CampaignsSection = () => (
+  <SectionErrorBoundary sectionName="Campaigns"><Campaigns /></SectionErrorBoundary>
+);
+const MessageTemplatesSection = () => (
+  <SectionErrorBoundary sectionName="Message templates"><Campaigns /></SectionErrorBoundary>
+);
+const StockAlertsSection = () => (
+  <SectionErrorBoundary sectionName="Stock alerts"><StockAlerts /></SectionErrorBoundary>
+);
+const QuickQuoteSection = () => (
+  <SectionErrorBoundary sectionName="Quick quote"><QuickQuote /></SectionErrorBoundary>
+);
+const TeamManagementSection = () => (
+  <SectionErrorBoundary sectionName="Team management"><TeamManagement /></SectionErrorBoundary>
+);
+const IntegrationsSection = () => (
+  <SectionErrorBoundary sectionName="Integrations"><Integrations /></SectionErrorBoundary>
+);
+const CustomerPortalSection = () => (
+  <SectionErrorBoundary sectionName="Customer portal"><CustomerPortal /></SectionErrorBoundary>
+);
+const StorePreviewSection = () => (
+  <SectionErrorBoundary sectionName="Store preview"><CustomerPortal /></SectionErrorBoundary>
+);
+const CheckoutSection = () => (
+  <SectionErrorBoundary sectionName="Checkout"><Checkout /></SectionErrorBoundary>
+);
+const CampaignPreviewSection = () => (
+  <SectionErrorBoundary sectionName="Campaign"><CampaignPreview /></SectionErrorBoundary>
+);
+const ProductOrderSection = () => (
+  <SectionErrorBoundary sectionName="Product page"><ProductOrderPage /></SectionErrorBoundary>
+);
+const PublicProductSection = () => (
+  <SectionErrorBoundary sectionName="Product page"><PublicProductPage /></SectionErrorBoundary>
+);
+const WelcomeSection = () => (
+  <SectionErrorBoundary sectionName="Store"><WelcomePage /></SectionErrorBoundary>
+);
+
+// ---------------------------------------------------------------------------
+
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
     <ElephantLoader message="Loading..." />
@@ -79,14 +167,14 @@ function PublicRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/campaign/:id" component={CampaignPreview} />
-        <Route path="/marketplace/product/:id" component={ProductOrderPage} />
-        <Route path="/product/:slug" component={PublicProductPage} />
+        <Route path="/campaign/:id" component={CampaignPreviewSection} />
+        <Route path="/marketplace/product/:id" component={ProductOrderSection} />
+        <Route path="/product/:slug" component={PublicProductSection} />
         <Route path="/customer/payment-success" component={PaymentSuccess} />
         <Route path="/customer/:id" component={({ params }) => { const [, setLocation] = useLocation(); useEffect(() => { setLocation(`/welcome/${params.id}`, { replace: true }); }, [params.id]); return null; }} />
-        <Route path="/welcome/:wholesalerId" component={WelcomePage} />
-        <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
-        <Route path="/store/:id" component={CustomerPortal} />
+        <Route path="/welcome/:wholesalerId" component={WelcomeSection} />
+        <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortalSection} />
+        <Route path="/store/:id" component={CustomerPortalSection} />
         <Route path="/team-invitation" component={TeamInvitation} />
         <Route path="/signup" component={Signup} />
         <Route path="/signup-complete" component={SignupComplete} />
@@ -129,39 +217,39 @@ function AuthenticatedRoutes() {
     <AppLayout>
       <Suspense fallback={<ContentLoader />}>
         <Switch>
-          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/marketplace" component={MarketplaceSection} />
           {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
             <>
-              <Route path="/" component={user?.role === 'team_member' ? OrdersFresh : WholesalerDashboard} />
+              <Route path="/" component={user?.role === 'team_member' ? OrdersSection : WholesalerDashboard} />
               <Route path="/dashboard" component={WholesalerDashboard} />
-              <Route path="/products/:id" component={ProductDetail} />
-              <Route path="/products" component={ProductManagement} />
-              <Route path="/promotions" component={Promotions} />
-              <Route path="/customers/:customerId" component={CustomerDetail} />
-              <Route path="/customers" component={Customers} />
-              <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
-              <Route path="/orders/:id" component={OrderDetail} />
-              <Route path="/orders" component={OrdersFresh} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/financials" component={Financials} />
-              <Route path="/financial-health" component={FinancialHealth} />
-              <Route path="/settings" component={Settings} />
+              <Route path="/products/:id" component={ProductDetailSection} />
+              <Route path="/products" component={ProductManagementSection} />
+              <Route path="/promotions" component={PromotionsSection} />
+              <Route path="/customers/:customerId" component={CustomerDetailSection} />
+              <Route path="/customers" component={CustomersSection} />
+              <Route path="/customer-registration-requests" component={CustomerRegistrationRequestsSection} />
+              <Route path="/orders/:id" component={OrderDetailSection} />
+              <Route path="/orders" component={OrdersSection} />
+              <Route path="/analytics" component={AnalyticsSection} />
+              <Route path="/financials" component={FinancialsSection} />
+              <Route path="/financial-health" component={FinancialHealthSection} />
+              <Route path="/settings" component={SettingsSection} />
               <Route path="/stripe-success" component={StripeSuccess} />
-              <Route path="/campaigns" component={Campaigns} />
-              <Route path="/broadcasts" component={Campaigns} />
-              <Route path="/message-templates" component={Campaigns} />
-              <Route path="/stock-alerts" component={StockAlerts} />
-              <Route path="/quick-quote" component={QuickQuote} />
-              <Route path="/team-management" component={TeamManagement} />
+              <Route path="/campaigns" component={CampaignsSection} />
+              <Route path="/broadcasts" component={CampaignsSection} />
+              <Route path="/message-templates" component={MessageTemplatesSection} />
+              <Route path="/stock-alerts" component={StockAlertsSection} />
+              <Route path="/quick-quote" component={QuickQuoteSection} />
+              <Route path="/team-management" component={TeamManagementSection} />
               <Route path="/help" component={Help} />
               <Route path="/subscription-pricing" component={SubscriptionPricing} />
-              <Route path="/preview-store" component={CustomerPortal} />
-              <Route path="/preview-store/:id" component={CustomerPortal} />
-              <Route path="/integrations" component={Integrations} />
+              <Route path="/preview-store" component={StorePreviewSection} />
+              <Route path="/preview-store/:id" component={StorePreviewSection} />
+              <Route path="/integrations" component={IntegrationsSection} />
             </>
           ) : (
             <>
-              <Route path="/checkout" component={Checkout} />
+              <Route path="/checkout" component={CheckoutSection} />
             </>
           )}
           <Route component={NotFound} />
