@@ -312,7 +312,9 @@ export function registerOrderRoutes(app: Express): void {
               if (!emailCollAddr) {
                 emailCollAddr = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
               }
-            } catch (_) {}
+            } catch (e) {
+              console.warn('[orders] collection address lookup failed:', e instanceof Error ? e.message : e);
+            }
           }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: updated.orderNumber,
@@ -477,7 +479,9 @@ export function registerOrderRoutes(app: Express): void {
               if (!resendCollAddr) {
                 resendCollAddr = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
               }
-            } catch (_) {}
+            } catch (e) {
+              console.warn('[orders] collection address lookup failed (resend):', e instanceof Error ? e.message : e);
+            }
           }
           const emailData = generateReadyForCollectionEmail({
             orderNumber: order.orderNumber,

@@ -109,7 +109,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
           setCountryCode(data.defaultCountryCode);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[CustomerAuth] failed to load wholesaler branding:', err);
+      });
   }, [wholesalerId]);
 
   // Countdown timer
@@ -164,7 +166,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
           onAuthSuccess(data.customer);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[CustomerAuth] session check failed:', err);
+      });
   }, [wholesalerId]);
 
   const handleSendOtp = async (resend = false) => {

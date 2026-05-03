@@ -405,7 +405,15 @@ export default function OrderDetail() {
           window.history.replaceState({}, '', window.location.pathname);
         }
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error('[order-detail] failed to load order:', err);
+        setLoading(false);
+        toast({
+          title: "Couldn't load order",
+          description: "Something went wrong loading this order. Please refresh the page.",
+          variant: "destructive",
+        });
+      });
   }, [id]);
 
   const buildShareMessage = (o: Order): string => {
@@ -633,7 +641,9 @@ export default function OrderDetail() {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ approved: true })
-          }).catch(() => {});
+          }).catch((err) => {
+            console.error('[order-detail] failed to acknowledge cancellation request:', err);
+          });
           setPendingCancellationRequestId(null);
         }
 

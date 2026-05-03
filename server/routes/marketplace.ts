@@ -482,7 +482,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             html: regHtml
           });
         } catch (emailError) {
-          console.error('Failed to send registration request notification:', emailError);
+          console.warn('[sendgrid] registration notification email failed:', emailError instanceof Error ? emailError.message : emailError);
         }
       }
       
@@ -1618,7 +1618,9 @@ export function registerMarketplaceRoutes(app: Express): void {
                 if (!emailCollectionAddress) {
                   emailCollectionAddress = wholesaler.pickupAddress || wholesaler.businessAddress || undefined;
                 }
-              } catch (_) {}
+              } catch (e) {
+                console.warn('[marketplace] collection address lookup failed:', e instanceof Error ? e.message : e);
+              }
             }
 
             const emailData: OrderEmailData = {
@@ -2043,7 +2045,9 @@ export function registerMarketplaceRoutes(app: Express): void {
               if (!payLaterCollAddr) {
                 payLaterCollAddr = wholesalerProfile.pickupAddress || wholesalerProfile.businessAddress || undefined;
               }
-            } catch (_) {}
+            } catch (e) {
+              console.warn('[marketplace] collection address lookup failed (pay-later):', e instanceof Error ? e.message : e);
+            }
           }
 
           const emailData: OrderEmailData = {

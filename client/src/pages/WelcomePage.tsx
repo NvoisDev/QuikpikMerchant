@@ -96,7 +96,10 @@ export default function WelcomePage() {
           setSessionChecked(true);
         }
       })
-      .catch(() => setSessionChecked(true));
+      .catch((err) => {
+        console.error('[WelcomePage] session check failed:', err);
+        setSessionChecked(true);
+      });
   }, [wholesalerId, setLocation]);
 
   // Fetch wholesaler branding
@@ -113,7 +116,10 @@ export default function WelcomePage() {
         }
         setLoadingWholesaler(false);
       })
-      .catch(() => setLoadingWholesaler(false));
+      .catch((err) => {
+        console.error('[WelcomePage] failed to load wholesaler branding:', err);
+        setLoadingWholesaler(false);
+      });
   }, [wholesalerId]);
 
   // Fetch product preview (guest-safe, no prices)
@@ -127,7 +133,9 @@ export default function WelcomePage() {
           setPreviewProducts(data.slice(0, 8));
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[WelcomePage] failed to load preview products:', err);
+      });
   }, [wholesalerId]);
 
   const fullPhone = formatPhoneToInternational(

@@ -142,13 +142,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       res.json({ url: accountLink.url, accountId: account.id });
     } catch (error: any) {
-      console.error('❌ Error creating Stripe Connect account:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        type: error.type,
-        code: error.code,
-        statusCode: error.statusCode
-      });
+      console.error('❌ Error creating Stripe Connect account:', error instanceof Error ? error.message : String(error));
       
       let errorMessage = "Failed to create Stripe Connect account";
       if (error.message && error.message.includes('No such application')) {
