@@ -417,7 +417,7 @@ export function registerOrderRoutes(app: Express): void {
         }
       } catch (smsError) {
         const msg = smsError instanceof Error ? smsError.message : String(smsError);
-        console.error(`❌ WhatsApp failed [service=Twilio endpoint=ready-for-collection orderId=${orderId}]: ${msg}`);
+        console.warn(`[twilio] ready-for-collection WhatsApp failed [orderId=${orderId}]: ${msg}`);
       }
 
       res.json({ success: true, order: updated });
@@ -507,7 +507,8 @@ export function registerOrderRoutes(app: Express): void {
           
         }
       } catch (emailError) {
-        console.error('❌ Failed to resend ready for collection email:', emailError);
+        const msg = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn(`[sendgrid] resend ready-for-collection email failed: ${msg}`);
         return res.status(500).json({ error: 'Failed to send notification email' });
       }
 
@@ -1279,8 +1280,8 @@ export function registerOrderRoutes(app: Express): void {
             return { ...item, productName: prod?.name || 'Product', packDescriptor: formatPackDescriptor(prod?.packQuantity || prod?.quantityInPack, prod?.sizePerUnit || prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, packQuantity: prod.packQuantity, quantityInPack: prod.quantityInPack, sizePerUnit: prod.sizePerUnit, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           })), wholesaler);
         } catch (emailError) {
-          console.error("Failed to send confirmation email:", emailError);
-          // Don't fail the order creation if email fails
+          const msg = emailError instanceof Error ? emailError.message : String(emailError);
+          console.warn(`[sendgrid] order confirmation email failed: ${msg}`);
         }
       }
       
@@ -2363,8 +2364,8 @@ export function registerOrderRoutes(app: Express): void {
           
         }
       } catch (emailError) {
-        console.error('📧 Failed to send photo notification email:', emailError);
-        // Don't fail the whole request if email fails
+        const msg = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn(`[sendgrid] photo notification email failed: ${msg}`);
       }
       
       res.json({ success: true, image: imageEntry });
@@ -2443,7 +2444,8 @@ export function registerOrderRoutes(app: Express): void {
           });
         }
       } catch (emailError) {
-        console.error('📧 Photo notification email failed (non-fatal):', emailError);
+        const msg = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn(`[sendgrid] photo notification email (non-fatal) failed: ${msg}`);
       }
 
       res.json({ success: true, image: imageEntry });
@@ -2520,7 +2522,8 @@ export function registerOrderRoutes(app: Express): void {
         await sendCustomerInvoiceEmail(order.retailer, order, enrichedItems, wholesaler);
         res.json({ message: "Confirmation email sent successfully" });
       } catch (emailError) {
-        console.error("Email sending failed:", emailError);
+        const msg = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn(`[sendgrid] resend confirmation email failed: ${msg}`);
         res.status(500).json({ message: "Failed to send confirmation email" });
       }
     } catch (error) {
