@@ -98,6 +98,7 @@ export default function WelcomePage() {
       })
       .catch((err) => {
         console.error('[WelcomePage] session check failed:', err);
+        toast({ title: "Session check failed", description: "Couldn't verify your session. Please continue below.", variant: "destructive" });
         setSessionChecked(true);
       });
   }, [wholesalerId, setLocation]);
@@ -118,6 +119,7 @@ export default function WelcomePage() {
       })
       .catch((err) => {
         console.error('[WelcomePage] failed to load wholesaler branding:', err);
+        toast({ title: "Couldn't load store info", description: "Store details failed to load.", variant: "destructive" });
         setLoadingWholesaler(false);
       });
   }, [wholesalerId]);
@@ -135,6 +137,7 @@ export default function WelcomePage() {
       })
       .catch((err) => {
         console.error('[WelcomePage] failed to load preview products:', err);
+        toast({ title: "Couldn't load products", description: "Product preview failed to load.", variant: "destructive" });
       });
   }, [wholesalerId]);
 

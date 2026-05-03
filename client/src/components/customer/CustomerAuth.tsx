@@ -111,6 +111,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       })
       .catch((err) => {
         console.error('[CustomerAuth] failed to load wholesaler branding:', err);
+        toast({ title: "Couldn't load store info", description: "Store details failed to load. You can still sign in.", variant: "destructive" });
       });
   }, [wholesalerId]);
 
@@ -168,6 +169,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       })
       .catch((err) => {
         console.error('[CustomerAuth] session check failed:', err);
+        toast({ title: "Session check failed", description: "Couldn't verify your session. Please sign in.", variant: "destructive" });
       });
   }, [wholesalerId]);
 
