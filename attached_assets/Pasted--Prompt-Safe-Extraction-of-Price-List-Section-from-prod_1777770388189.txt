@@ -1,0 +1,86 @@
+🧠 Prompt: Safe Extraction of Price List Section from product-management.tsx
+
+Extract the Price List UI section from product-management.tsx into a separate component, without changing any behaviour, logic, or data flow.
+
+🎯 Objective
+
+Reduce the size and complexity of product-management.tsx by isolating the price list UI into its own component, while keeping all existing functionality exactly the same.
+
+🧩 Requirements
+1. Create new component
+
+Create a new file:
+
+components/products/PriceListSection.tsx
+2. Move ONLY UI (no logic changes)
+Move all JSX/UI related to:
+Customer pricing
+Price list tables
+Price inputs / overrides
+Price rules display
+DO NOT move:
+API calls
+useState / useEffect hooks
+Business logic
+Data transformations
+
+👉 All logic must remain in product-management.tsx
+
+3. Pass all required data via props
+
+Pass everything the UI needs as props, for example:
+
+priceLists
+selectedCustomer / group
+pricing data structures
+handlers (e.g. onUpdatePrice, onAddRule, onDeleteRule)
+
+Use existing types where possible.
+
+4. Replace original section
+
+In product-management.tsx, replace the extracted JSX with:
+
+<PriceListSection
+  {...props}
+/>
+5. Ensure NO behaviour changes
+
+The following must remain identical:
+
+Pricing display
+Editing prices
+Adding/removing price rules
+Saving product
+Interaction with customer-specific pricing
+6. Preserve styling exactly
+No UI/UX changes
+No layout shifts
+No className changes unless required for extraction
+7. Add documentation comment
+
+At the top of the new file:
+
+// NOTE:
+// Extracted from product-management.tsx to reduce file size and isolate pricing UI.
+// All logic remains in the parent component (safe extraction phase).
+8. Validation checklist (must pass)
+
+After extraction, verify:
+
+Viewing price lists works
+Editing prices works
+Saving product persists pricing correctly
+Customer-specific pricing still applies correctly
+No console errors
+🚀 Constraints
+Do NOT refactor logic
+Do NOT rename variables unnecessarily
+Do NOT introduce new abstractions
+Do NOT change API calls
+Do NOT modify backend
+✅ Success Criteria
+product-management.tsx is smaller
+Price list UI lives in its own component
+No functional or visual changes
+No regressions
