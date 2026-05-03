@@ -402,7 +402,19 @@ if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
   process.env.GOOGLE_OAUTH_REDIRECT_URI = 'https://quikpik.app/api/auth/google/callback';
 }
 
+import rateLimit from "express-rate-limit";
+
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.path.startsWith('/api') || req.path.startsWith('/api/webhooks'),
+  message: { error: 'Too many requests from this IP. Please try again later.' },
+});
+
 const app = express();
+app.use(generalApiLimiter);
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith('/api/webhooks/stripe')) {
     express.raw({ type: 'application/json', limit: '10mb' })(req, res, next);

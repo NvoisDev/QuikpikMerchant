@@ -33,6 +33,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import {
   and, count, createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl,
@@ -42,6 +43,14 @@ import {
   wrapCustomerEmail, GoogleAuthBlockedError
 } from "./shared";
 import { isImpersonating } from "../utils/isImpersonating";
+
+const googleOAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication requests from this IP. Please try again later.' },
+});
 
 export function registerAuthRoutes(app: Express): void {
   // PUT /api/user/profile
@@ -162,7 +171,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // GET /api/auth/google
-  app.get('/api/auth/google', (req, res) => {
+  app.get('/api/auth/google', googleOAuthLimiter, (req, res) => {
     try {
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null;
       if (returnTo) {

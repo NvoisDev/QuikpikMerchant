@@ -3161,6 +3161,7 @@ export function registerOrderRoutes(app: Express): void {
   app.post('/api/orders/:orderId/generate-balance-link', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
