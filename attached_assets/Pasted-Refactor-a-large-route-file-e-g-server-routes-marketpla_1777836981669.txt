@@ -1,0 +1,104 @@
+Refactor a large route file (e.g. server/routes/marketplace.ts) by moving logic into existing stub route modules.
+
+Context:
+The codebase already has split route files:
+- marketplace-browsing.ts
+- marketplace-orders.ts
+- marketplace-payments.ts
+- marketplace-utils.ts
+
+However, these files are mostly empty (~17 lines), while the main marketplace.ts file contains ~3,000 lines of logic.
+
+Goal:
+Move logic from marketplace.ts into the appropriate existing files WITHOUT changing behaviour.
+
+----------------------------------
+
+STEP 1 — Identify Logical Sections
+
+Scan marketplace.ts and group logic into:
+- browsing (product listing, search, filters)
+- order creation / checkout
+- payment handling (Stripe, fees)
+- utility/helper logic
+
+----------------------------------
+
+STEP 2 — Select ONE Section (Start with Browsing)
+
+Choose a low-risk section:
+- read-heavy
+- no side effects
+- no payment logic
+
+----------------------------------
+
+STEP 3 — Move Route Handlers
+
+Move the selected endpoints into the correct file:
+- marketplace-browsing.ts
+
+Ensure:
+- same route paths
+- same middleware
+- same request/response behaviour
+
+----------------------------------
+
+STEP 4 — Export Router
+
+In the new file:
+- create and export a router
+
+Example:
+const router = express.Router();
+router.get('/api/...', handler);
+export default router;
+
+----------------------------------
+
+STEP 5 — Wire Into Main Router
+
+In marketplace.ts or routes.ts:
+- import and mount the new router
+
+Example:
+app.use(router);
+
+----------------------------------
+
+STEP 6 — Remove Old Code
+
+Delete the moved handlers from marketplace.ts
+
+----------------------------------
+
+STEP 7 — Validate
+
+Ensure:
+- endpoints still work identically
+- no duplicate routes
+- no missing middleware
+- no logic changes
+
+----------------------------------
+
+OUTPUT
+
+1. Section moved
+2. File used (e.g. marketplace-browsing.ts)
+3. Lines removed from marketplace.ts
+4. Confirmation behaviour unchanged
+
+----------------------------------
+
+RULES
+
+- Move only ONE section per task
+- Do NOT refactor logic
+- Do NOT change endpoints
+- Do NOT touch other route files
+- Do NOT introduce new abstractions
+
+Goal:
+Reduce size of marketplace.ts by distributing logic into existing modules.
