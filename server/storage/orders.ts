@@ -710,12 +710,10 @@ export class OrderStorage extends ProductStorage {
       .limit(1);
     
     if (result.length === 0) {
-      console.log(`📊 No orders found for wholesaler ${wholesalerId}`);
       return undefined;
     }
     
     const lastOrder = result[0];
-    console.log(`📊 Last order for wholesaler ${wholesalerId}: #${lastOrder.id} (${lastOrder.orderNumber})`);
     return lastOrder;
   }
 
@@ -784,9 +782,6 @@ export class OrderStorage extends ProductStorage {
   }
 
   async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order & { _wasDuplicate?: boolean }> {
-    console.log(`🔄 TRANSACTION ORDER: Creating order with ${items.length} items`);
-    console.log(`📦 ITEMS: ${items.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`).join(', ')}`);
-    
     // Create order within transaction — ON CONFLICT on idempotency_key handles duplicate
     // requests atomically; scoping to the specific column avoids masking other unique violations.
     const inserted = await trx
@@ -817,14 +812,10 @@ export class OrderStorage extends ProductStorage {
     if (!newOrder) {
       throw new Error('Order insert returned no rows and no existing order found for idempotency key');
     }
-      
-    console.log(`✅ ORDER CREATED: ID ${newOrder.id}`);
 
     // Create order items with the order ID AND reduce stock
     if (items.length > 0) {
-      console.log(`🔄 PROCESSING: ${items.length} items for stock reduction`);
       for (const item of items) {
-        console.log(`📦 ITEM: ${item.productId}, qty: ${item.quantity}, type: ${item.sellingType}`);
         
         // NOTE: batchId is populated after FEFO allocation below (order item is inserted there)
         
@@ -835,18 +826,10 @@ export class OrderStorage extends ProductStorage {
           .where(eq(products.id, item.productId!));
         
         if (currentProduct) {
-          console.log(`📦 PRODUCT: ${currentProduct.name} (ID: ${item.productId})`);
-          console.log(`📊 CURRENT STOCK: units: ${currentProduct.stock}, pallets: ${currentProduct.palletStock}`);
-
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;
           const freeItemsQty = item.freeItems ?? 0;
           const totalStockToReduce = orderedQuantity + freeItemsQty;
-
-          if (freeItemsQty > 0) {
-            console.log(`🎁 BOGOF: ${orderedQuantity} ordered + ${freeItemsQty} free = ${totalStockToReduce} total stock reduction`);
-          }
-          console.log(`🛒 ORDER: ${totalStockToReduce} ${sellingType} (includes ${freeItemsQty} free items)`);
 
           // ── FEFO batch allocation ────────────────────────────────────────────
           const today = new Date().toISOString().split('T')[0];
@@ -952,10 +935,7 @@ export class OrderStorage extends ProductStorage {
             .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
             .where(sql`${products.id} = ${item.productId}`);
 
-          console.log(`✅ FEFO STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets (batch #${primaryBatchId})`);
           // ────────────────────────────────────────────────────────────────────
-        } else {
-          console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
         }
       }
     }
