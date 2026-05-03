@@ -1123,9 +1123,19 @@ export class CustomerStorage extends OrderStorage {
         return [];
       }
       
-      // Get wholesaler data using same approach as getWholesalerProfile
+      // Get wholesaler display data — explicit column list so no sensitive fields
+      // (password hash, Stripe IDs, subscription tier, fees) leak to customers.
       const wholesalersResult = await db.execute(sql`
-        SELECT * FROM users 
+        SELECT id, email, first_name, last_name, profile_image_url, role,
+               business_name, logo_url, logo_type, store_tagline, store_slug,
+               business_address, business_phone, business_email, business_description,
+               business_type, default_currency, preferred_currency, default_country_code,
+               enable_pickup, enable_delivery, delivery_flat_rate, delivery_note,
+               pickup_address, pickup_instructions, allow_pay_later,
+               whatsapp_enabled, show_prices_to_wholesalers,
+               timezone, phone_number, city, state, country, postal_code, street_address,
+               created_at, updated_at
+        FROM users 
         WHERE id = ${filters.wholesalerId} AND role = 'wholesaler'
         LIMIT 1
       `);
@@ -1257,8 +1267,48 @@ export class CustomerStorage extends OrderStorage {
       whereConditions.push(sql`${users.businessAddress} ILIKE ${`%${filters.location}%`}`);
     }
 
+    // Explicit column selection — never SELECT * so no sensitive fields
+    // (password hash, Stripe IDs, subscription details, fees) reach the customer.
     const wholesalers = await db
-      .select()
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        businessName: users.businessName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+        logoUrl: users.logoUrl,
+        logoType: users.logoType,
+        storeTagline: users.storeTagline,
+        storeSlug: users.storeSlug,
+        businessAddress: users.businessAddress,
+        businessPhone: users.businessPhone,
+        businessEmail: users.businessEmail,
+        businessDescription: users.businessDescription,
+        businessType: users.businessType,
+        defaultCurrency: users.defaultCurrency,
+        preferredCurrency: users.preferredCurrency,
+        defaultCountryCode: users.defaultCountryCode,
+        enablePickup: users.enablePickup,
+        enableDelivery: users.enableDelivery,
+        deliveryFlatRate: users.deliveryFlatRate,
+        deliveryNote: users.deliveryNote,
+        pickupAddress: users.pickupAddress,
+        pickupInstructions: users.pickupInstructions,
+        allowPayLater: users.allowPayLater,
+        whatsappEnabled: users.whatsappEnabled,
+        showPricesToWholesalers: users.showPricesToWholesalers,
+        timezone: users.timezone,
+        phoneNumber: users.phoneNumber,
+        city: users.city,
+        state: users.state,
+        country: users.country,
+        postalCode: users.postalCode,
+        streetAddress: users.streetAddress,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
       .from(users)
       .where(and(...whereConditions));
 
@@ -1304,10 +1354,20 @@ export class CustomerStorage extends OrderStorage {
     try {
       console.log('Getting wholesaler profile for ID:', id);
       
-      // Use raw SQL to bypass Drizzle ORM issues
-      // Try by primary ID first, then fall back to store_slug
+      // Explicit column list — never SELECT * so no sensitive fields
+      // (password hash, Stripe IDs, subscription details, fees) reach the customer.
+      // Try by primary ID first, then fall back to store_slug.
       const wholesalerResult = await db.execute(sql`
-        SELECT * FROM users 
+        SELECT id, email, first_name, last_name, profile_image_url, role,
+               business_name, logo_url, logo_type, store_tagline, store_slug,
+               business_address, business_phone, business_email, business_description,
+               business_type, default_currency, preferred_currency, default_country_code,
+               enable_pickup, enable_delivery, delivery_flat_rate, delivery_note,
+               pickup_address, pickup_instructions, allow_pay_later,
+               whatsapp_enabled, show_prices_to_wholesalers,
+               timezone, phone_number, city, state, country, postal_code, street_address,
+               created_at, updated_at
+        FROM users 
         WHERE (id = ${id} OR store_slug = ${id}) AND role = 'wholesaler'
         LIMIT 1
       `);
@@ -1368,7 +1428,10 @@ export class CustomerStorage extends OrderStorage {
 
       console.log('Products found for wholesaler:', wholesalerProducts.length);
 
-      // Transform wholesaler data to match User type
+      // Safe allow-list: only public-facing display fields.
+      // Sensitive fields (passwordHash, Stripe IDs, subscription tier/status,
+      // customFeePercentage, VAT/company registration, internalNote, googleId,
+      // isTestAccount, onboarding state, gamification) are intentionally omitted.
       const transformedWholesaler = {
         id: wholesaler.id,
         email: wholesaler.email,
@@ -1377,21 +1440,17 @@ export class CustomerStorage extends OrderStorage {
         profileImageUrl: wholesaler.profile_image_url,
         role: wholesaler.role as 'wholesaler',
         businessName: wholesaler.business_name,
-        stripeAccountId: wholesaler.stripe_account_id,
-        stripeCustomerId: wholesaler.stripe_customer_id,
         createdAt: wholesaler.created_at,
         updatedAt: wholesaler.updated_at,
-        stripeSubscriptionId: wholesaler.stripe_subscription_id,
-        subscriptionTier: wholesaler.subscription_tier,
-        subscriptionStatus: wholesaler.subscription_status,
-        subscriptionEndsAt: wholesaler.subscription_ends_at,
-        productLimit: wholesaler.product_limit,
         preferredCurrency: wholesaler.preferred_currency,
+        defaultCurrency: wholesaler.default_currency,
         businessAddress: wholesaler.business_address,
         businessPhone: wholesaler.business_phone,
+        businessEmail: wholesaler.business_email,
+        businessDescription: wholesaler.business_description,
+        businessType: wholesaler.business_type,
         timezone: wholesaler.timezone,
         phoneNumber: wholesaler.phone_number,
-        notificationPreferences: wholesaler.notification_preferences,
         streetAddress: wholesaler.street_address,
         city: wholesaler.city,
         state: wholesaler.state,
@@ -1400,39 +1459,15 @@ export class CustomerStorage extends OrderStorage {
         whatsappEnabled: wholesaler.whatsapp_enabled || false,
         logoUrl: wholesaler.logo_url,
         logoType: wholesaler.logo_type,
-        onboardingCompleted: wholesaler.onboarding_completed,
-        onboardingStep: wholesaler.onboarding_step,
-        onboardingSkipped: wholesaler.onboarding_skipped,
-        googleId: wholesaler.google_id,
-        isFirstLogin: wholesaler.is_first_login,
         storeTagline: wholesaler.store_tagline,
         defaultCountryCode: wholesaler.default_country_code || '+44',
         showPricesToWholesalers: wholesaler.show_prices_to_wholesalers,
-        defaultLowStockThreshold: wholesaler.default_low_stock_threshold,
-        businessDescription: wholesaler.business_description,
-        businessEmail: wholesaler.business_email,
-        businessType: wholesaler.business_type,
-        estimatedMonthlyVolume: wholesaler.estimated_monthly_volume,
-        defaultCurrency: wholesaler.default_currency,
-        legalBusinessName: wholesaler.legal_business_name,
-        vatNumber: wholesaler.vat_number,
-        companyRegistrationNumber: wholesaler.company_registration_number,
-        sendOrderDispatchedEmails: wholesaler.send_order_dispatched_emails,
-        autoMarkFulfilled: wholesaler.auto_mark_fulfilled,
-        enableTrackingNotifications: wholesaler.enable_tracking_notifications,
-        sendDeliveryConfirmations: wholesaler.send_delivery_confirmations,
         enablePickup: wholesaler.enable_pickup,
         enableDelivery: wholesaler.enable_delivery,
         deliveryFlatRate: wholesaler.delivery_flat_rate,
         deliveryNote: wholesaler.delivery_note,
         pickupAddress: wholesaler.pickup_address,
         pickupInstructions: wholesaler.pickup_instructions,
-        passwordHash: wholesaler.password_hash,
-        experiencePoints: wholesaler.experience_points,
-        currentLevel: wholesaler.current_level,
-        totalBadges: wholesaler.total_badges,
-        completedAchievements: wholesaler.completed_achievements,
-        onboardingProgress: wholesaler.onboarding_progress,
         allowPayLater: wholesaler.allow_pay_later || false,
         storeSlug: wholesaler.store_slug || null,
       };
