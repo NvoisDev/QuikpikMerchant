@@ -1343,7 +1343,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
                 storage.updateOrder(order.id, { stripeTransferId: sourceId })
                   .catch((e) => console.warn(`⚠️ stripeTransferId backfill failed for order ${order!.id}:`, e));
               }
-            } else {
             }
           }
 
