@@ -148,7 +148,7 @@ export function registerAdminRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt));
+      const wholesalersList = await db.select().from(users).where(eq(users.role, 'wholesaler')).orderBy(desc(users.createdAt)).limit(500);
 
       const wholesalerIds = wholesalersList.map(w => w.id);
 

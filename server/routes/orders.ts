@@ -1306,6 +1306,11 @@ export function registerOrderRoutes(app: Express): void {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
       const { status } = req.body;
+      const allowedStatuses = ['pending', 'processing', 'fulfilled', 'cancelled', 'refunded'];
+      if (!status || !allowedStatuses.includes(status)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
+      }
+
       const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
         ? req.user.wholesalerId
         : req.user.id;

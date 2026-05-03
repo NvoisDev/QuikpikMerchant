@@ -1,0 +1,108 @@
+Full Platform Audit
+Date: May 2026 | Tests: 273 passing | Total server code: ~24,000 lines across 17 route files
+
+1. Security
+High — cost_price field included in getProducts() response
+server/storage/products.ts line ~187 includes costPrice: row.cost_price in the mapped object returned by getProducts(). This is the wholesaler-only margin field. While the customer browsing route (marketplace-browsing.ts) didn't directly reference it, getProducts() is the shared storage method. Any route that calls it and forwards the full object to a customer would expose margins. Needs explicit exclusion at the API layer for every customer-facing endpoint.
+
+High — getMarketplaceProducts uses SELECT *
+server/storage/customers.ts:1100 — SELECT * FROM products WHERE .... This pulls every column including cost_price and the mapper returns it all in the response object. There is no explicit field exclusion before it's sent to the customer.
+
+Medium — dangerouslySetInnerHTML in two components
+client/src/components/ui/dynamic-tooltip.tsx:296 — renders content prop as raw HTML
+client/src/components/ui/contextual-help.tsx:412 — renders selectedResource.content as raw HTML
+Both need to verify the content source. If it ever includes user-supplied input (e.g. a wholesaler's product description injected into a tooltip), it is a stored XSS vector.
+
+Medium — Admin role check relies on requireAuth only
+All 10+ admin routes checked use requireAuth as their guard. There's no separate requireAdmin or role === 'admin' check visible at the route level — any authenticated user who knows the /api/admin/* URLs could call them. The actual role check may be inside requireAuth (not verified), but this deserves explicit confirmation.
+
+Medium — Raw SQL TRUNCATE TABLE with dynamic table names
+server/routes/admin.ts:2250 — sql.raw(TRUNCATE TABLE ${tableList} CASCADE) where tableList is constructed from a Set of existing tables. The table names are quoted with double-quotes but come from the DB introspection result. This is inside the test account cleanup endpoint — low-risk but should be a whitelist of known safe table names, not a dynamic set.
+
+Low — Session cookie settings
+The httpOnly, secure, and sameSite cookie attributes couldn't be confirmed in server/index.ts from scanning. Worth verifying explicitly that session cookies are httpOnly: true, secure: true in production, and sameSite: 'lax' at minimum.
+
+Low — parseInt without isNaN guard
+server/routes/orders.ts has 21 parseInt(req.params...) calls and 23 isNaN checks — roughly matched, but 2 may lack a guard. NaN IDs passed to Drizzle queries would silently match nothing rather than return a 400 error.
+
+2. Performance
+High — getProducts() has no cap on the admin/global path
+When called without a wholesalerId (used by admin or fallback paths), getProducts() has no LIMIT clause — it can return every product in the database. The wholesaler-specific path is capped at 200. Phase 2 addressed getOrders, but getProducts on the uncapped path was not.
+
+High — 3 routes bypass the getOrders 500-row cap
+unpaginated: true is passed by:
+
+campaigns.ts:601 — campaign revenue analytics
+campaigns.ts:808 — template campaign statistics
+orders.ts:1102 — financial reporting
+For a wholesaler with thousands of orders these will load everything into memory. Fine for now but will degrade under load.
+
+Medium — 50+ console.log calls in production route files
+server/routes/marketplace.ts has debug logs like "Products found: N", "Wholesalers found: N", "Results prepared: N". These are debug statements that create log noise in production and make it harder to spot real issues.
+
+Medium — product-management.tsx is 3,371 lines
+It contains 7 useQuery, 13 useMutation, and 9 useEffect hooks in a single component. Every tab render re-evaluates all of them. Splitting into tab-specific components would reduce rerender scope significantly.
+
+Low — customer-portal.tsx (2,435 lines) and CustomerOrderHistory.tsx (2,335 lines)
+Both are oversized for a single component but are partially lazy-loaded already.
+
+3. Observability & Logging
+logServerError() helper already exists but is barely used
+server/lib/errorLogger.ts has a complete logServerError(errorType, message, options) function that writes to systemErrorLogs (the DB table). The /api/admin/errors endpoint already reads from it. However it's only called in 3 places (all in payments.ts for Stripe failures). The 21+ external service catch blocks normalised in Task #948 call console.warn instead of logServerError().
+
+This is the exact gap Task #952 is designed to close — and the infrastructure is already in place.
+
+Still using console.error with full error objects in 6 files
+As documented in the Phase 3 audit: payments.ts (8 catches), auth.ts (3), customer-auth.ts (2), customers.ts (4), shared.ts (4), campaigns.ts (2) — all external service failures, all still using console.error with full error objects.
+
+Single global ErrorBoundary on the app root
+client/src/App.tsx:224 wraps the whole app in one ErrorBoundary. A crash in the product management page, order detail, or campaign editor brings down the entire app with a single fallback screen rather than recovering gracefully per section.
+
+4. Data Integrity
+Medium — Only 4 DB transactions in the storage layer
+server/storage/delivery.ts (3) and server/storage/orders.ts (1) use db.transaction(). Most multi-step write operations — creating orders with items, applying stock changes, updating customer relationships — run as separate sequential queries. A failure midway leaves partial data.
+
+Medium — deleteProduct has no cascade check visible
+server/storage/products.ts:420 — deleteProduct(id) exists but no explicit orphan protection is shown for orderItems, templateProducts, or productBatches referencing that product. Relies on DB-level cascade settings being correct.
+
+Low — unpaginated orders in analytics
+See Performance section above — the same 3 routes loading all orders also increase the risk of OOM under large datasets.
+
+5. Test Coverage
+17 test files, 273 tests — solid for focused logic but missing whole domains:
+
+Covered ✅	Not covered ❌
+Order payment calculations	Product management CRUD
+Checkout fee calculations	Customer management flows
+Phone/OTP auth security	Campaign sending
+Currency and fee utilities	Analytics and reporting
+Stock creation logic	Admin control centre
+Email templates	Subscription lifecycle
+Guest browsing	AI generation paths
+Order query caps	Webhook handler edge cases
+Collection address resolution	Price list assignment
+6. Code Quality
+Metric	Value	Note
+TypeScript : any usages in routes	435	High — reduces type safety across all routes
+console.log in production routes	50+	Should be DEBUG-gated or removed
+Largest frontend file	3,371 lines	product-management.tsx — needs splitting
+DB tables defined in schema	48	Reasonable for platform scope
+Route files	17	Well-organised
+Average route file size	~1,400 lines	marketplace.ts (3,283) and orders.ts (3,351) are the outliers
+Priority Summary
+Priority	Finding	Effort
+🔴 High	cost_price / SELECT * exposure in marketplace storage	Small — strip field at API boundary
+🔴 High	getProducts() uncapped path for admin/global	Small — add LIMIT or explicit flag
+🟠 Medium	Admin routes need explicit role guard confirmation	Small — confirm or add check
+🟠 Medium	dangerouslySetInnerHTML in tooltip/help components	Small — sanitise content source
+🟠 Medium	3 unpaginated: true routes in campaigns/financials	Medium — add pagination
+🟠 Medium	logServerError() adoption for 21 remaining catches	Medium — Task #952 scope
+🟠 Medium	Single global error boundary	Small — add per-section boundaries
+🟡 Low	TRUNCATE TABLE with dynamic names in admin	Small — whitelist tables
+🟡 Low	console.log debug noise in marketplace storage	Small — remove or gate
+🟡 Low	Session cookie settings confirmation	Small — verify config
+🟡 Low	product-management.tsx component size	Large — phased split
+🟡 Low	No transactions on multi-step writes	Large — gradual migration
+Task #952 (in progress) directly addresses the medium-priority observability gap. The two high-priority items — cost_price field exposure and the uncapped getProducts path — are the most actionable short-term fixes worth prioritising next.
+Michael Ogunjemilua completed: Add structured error logging so production issues are easier to diagnose
+Updated environment
