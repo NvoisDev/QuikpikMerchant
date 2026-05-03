@@ -57,6 +57,17 @@ import { registerBrowsingRoutes } from "./marketplace-browsing";
  * signature already guarantees the payload was issued by this server and has
  * not been tampered with.
  */
+/** Escapes characters that have special meaning in HTML to prevent XSS in email templates. */
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function resolveCustomerAuth(
   req: any,
   wholesalerId: string
@@ -374,7 +385,7 @@ export function registerMarketplaceRoutes(app: Express): void {
 
   // GET /api/customer/registration-status?wholesalerId=X&phone=Y
   // Lightweight check so the registration form can detect a pending request up-front.
-  app.get("/api/customer/registration-status", async (req, res) => {
+  app.get("/api/customer/registration-status", customerActionLimiter, async (req, res) => {
     try {
       const wholesalerId = req.query.wholesalerId as string;
       const phone = req.query.phone as string;
@@ -453,7 +464,15 @@ export function registerMarketplaceRoutes(app: Express): void {
             businessType === 'business' ? 'Business (Restaurant, Salon, etc.)' :
             businessType === 'individual' ? 'Individual / Sole Trader' :
             businessType || null;
-          const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p>${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${businessTypeLabel}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
+          const safeCustomerName = escapeHtml(customerName);
+          const safeBusinessName = escapeHtml(req.body.businessName) || 'Not provided';
+          const safeCustomerPhone = escapeHtml(customerPhone);
+          const safeCustomerEmail = escapeHtml(customerEmail) || 'Not provided';
+          const safeProductsInterested = escapeHtml(productsInterested);
+          const safeOrderFrequency = escapeHtml(orderFrequency);
+          const safeRequestMessage = escapeHtml(requestMessage);
+          const safeWholesalerFirstName = escapeHtml(wholesaler.firstName) || 'Wholesaler';
+          const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${safeWholesalerFirstName}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${safeCustomerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${safeBusinessName}</p>${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${escapeHtml(businessTypeLabel)}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${safeCustomerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${safeCustomerEmail}</p>${safeProductsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${safeProductsInterested}</p>` : ''}${safeOrderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${safeOrderFrequency}</p>` : ''}${safeRequestMessage ? `<p style="margin:0"><strong>Message:</strong> ${safeRequestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
           const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
           await sendEmail({
@@ -1663,7 +1682,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       }
     } catch (error: any) {
       console.error('Error creating order:', error);
-      res.status(500).json({ message: 'Failed to create order: ' + error.message });
+      res.status(500).json({ message: 'Failed to create order. Please try again.' });
     }
   });
 
@@ -2076,7 +2095,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       });
     } catch (error: unknown) {
       console.error('❌ Error creating pay-later order:', error);
-      res.status(500).json({ message: 'Failed to create order: ' + (error instanceof Error ? error.message : String(error)) });
+      res.status(500).json({ message: 'Failed to create order. Please try again.' });
     }
   });
 

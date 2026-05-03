@@ -76,6 +76,14 @@ const resetPasswordLimiter = rateLimit({
   message: { error: 'Too many password reset requests from this IP. Please try again later.' },
 });
 
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many signup attempts from this IP. Please try again later.' },
+});
+
 export function registerAuthRoutes(app: Express): void {
   // PUT /api/user/profile
   app.put('/api/user/profile', requireAuth, async (req: any, res) => {
@@ -1556,7 +1564,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/signup
-  app.post('/api/auth/signup', async (req, res) => {
+  app.post('/api/auth/signup', signupLimiter, async (req, res) => {
     const signupLogId = `signup-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     try {
       const {

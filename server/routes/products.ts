@@ -67,6 +67,11 @@ export function registerProductRoutes(app: Express): void {
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
+      // Ownership check — team members share their parent wholesaler's product catalogue
+      const effectiveWholesalerId = req.user.wholesalerId || req.user.id;
+      if (product.wholesalerId !== effectiveWholesalerId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.json(product);
     } catch (error) {
       console.error("Error fetching product:", error);

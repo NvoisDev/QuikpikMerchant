@@ -181,7 +181,7 @@ export function registerPaymentRoutes(app: Express): void {
       res.json({ url: loginLink.url });
     } catch (error: any) {
       console.error('❌ Error creating Stripe dashboard link:', error);
-      res.status(500).json({ message: "Failed to create dashboard link: " + error.message });
+      res.status(500).json({ message: "Failed to create dashboard link. Please try again." });
     }
   });
 

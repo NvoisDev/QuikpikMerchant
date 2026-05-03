@@ -158,7 +158,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
         return res.json({
           success: true,
           message: 'Verification code sent',
-          ...(process.env.NODE_ENV === 'development' ? { debugCode: code } : {})
         });
       }
       return res.status(500).json({ error: 'Failed to send SMS. Please try again.' });
