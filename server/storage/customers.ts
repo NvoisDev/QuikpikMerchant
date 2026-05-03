@@ -1269,6 +1269,9 @@ export class CustomerStorage extends OrderStorage {
 
     // Explicit column selection — never SELECT * so no sensitive fields
     // (password hash, Stripe IDs, subscription details, fees) reach the customer.
+    // `email` is retained as a customer-facing contact fallback; `firstName` and
+    // `lastName` are used for name display and avatar initials when businessName
+    // is absent.  Truly sensitive fields are not selected.
     const wholesalers = await db
       .select({
         id: users.id,
@@ -1356,6 +1359,10 @@ export class CustomerStorage extends OrderStorage {
       
       // Explicit column list — never SELECT * so no sensitive fields
       // (password hash, Stripe IDs, subscription details, fees) reach the customer.
+      // `email` is retained as a customer-facing contact fallback (used in the
+      // customer portal HelpTab and ThankYouPage when businessEmail is absent).
+      // `first_name`/`last_name` are retained for business name fallback and
+      // avatar initials. Truly sensitive fields are intentionally excluded above.
       // Try by primary ID first, then fall back to store_slug.
       const wholesalerResult = await db.execute(sql`
         SELECT id, email, first_name, last_name, profile_image_url, role,
