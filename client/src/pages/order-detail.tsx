@@ -2044,6 +2044,11 @@ export default function OrderDetail() {
                           {' · '}{new Date(order.createdAt).toLocaleDateString()}
                         </div>
                       )}
+                      {!hasPaid && !hasDeposit && order.balanceDueDays !== undefined && order.balanceDueDays > 0 && (
+                        <div className="text-xs text-red-400 mt-0.5">
+                          Due by {new Date(new Date(order.createdAt).getTime() + (order.balanceDueDays * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
