@@ -43,7 +43,7 @@ export async function generateProductDescription(productName: string, category?:
       ],
       max_tokens: 100,
       temperature: 0.7,
-    });
+    }, { signal: AbortSignal.timeout(25_000) });
 
     const rawDescription = response.choices[0].message.content || "";
     
@@ -86,7 +86,7 @@ export async function generateProductImage(productName: string, category?: strin
       n: 1,
       size: "1024x1024",
       quality: "standard",
-    });
+    }, { signal: AbortSignal.timeout(60_000) });
 
     if (!response.data || !response.data[0] || !response.data[0].url) {
       throw new Error("No image URL returned from OpenAI");

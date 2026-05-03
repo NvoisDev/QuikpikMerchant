@@ -743,7 +743,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         max_tokens: 500,
         temperature: 0.7,
         response_format: { type: "json_object" }
-      });
+      }, { signal: AbortSignal.timeout(25_000) });
 
       const aiInsights = JSON.parse(response.choices[0].message.content || '{}');
       

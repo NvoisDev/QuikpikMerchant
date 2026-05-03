@@ -776,7 +776,7 @@ export function registerProductRoutes(app: Express): void {
         ],
         max_tokens: 60,
         temperature: 0.7,
-      });
+      }, { signal: AbortSignal.timeout(25_000) });
 
       let generatedDescription = (response.choices[0].message.content || "").trim();
 
@@ -951,7 +951,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
         ],
         max_tokens: 300,
         temperature: 0.8,
-      });
+      }, { signal: AbortSignal.timeout(25_000) });
 
       const generatedText = response.choices[0].message.content || "";
       const taglines = generatedText

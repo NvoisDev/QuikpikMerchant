@@ -76,7 +76,7 @@ Respond with JSON in this exact format:
       response_format: { type: "json_object" },
       max_tokens: 300,
       temperature: 0.7,
-    });
+    }, { signal: AbortSignal.timeout(25_000) });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
     
@@ -166,7 +166,7 @@ Respond with JSON array of exactly 3 campaigns in this format:
       response_format: { type: "json_object" },
       max_tokens: 800,
       temperature: 0.8,
-    });
+    }, { signal: AbortSignal.timeout(25_000) });
 
     const result = JSON.parse(response.choices[0].message.content || '[]');
     return Array.isArray(result) ? result : [];
@@ -251,7 +251,7 @@ Respond with JSON in this format:
       response_format: { type: "json_object" },
       max_tokens: 400,
       temperature: 0.3,
-    });
+    }, { signal: AbortSignal.timeout(25_000) });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
     

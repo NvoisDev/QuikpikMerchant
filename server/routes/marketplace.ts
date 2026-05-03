@@ -1207,7 +1207,8 @@ export function registerMarketplaceRoutes(app: Express): void {
               
             }
           } catch (welcomeError) {
-            console.error('❌ Error sending welcome messages (Payment Processing):', welcomeError);
+            const msg = welcomeError instanceof Error ? welcomeError.message : String(welcomeError);
+            console.error(`❌ Welcome messages failed [service=sendWelcomeMessages wholesalerId=${wholesalerId}]: ${msg}`);
           }
         } else {
           // Check if email belongs to different customer before updating
@@ -1950,7 +1951,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             }
           );
         } catch (waError: unknown) {
-          console.error('❌ WhatsApp notification error (pay-later):', waError instanceof Error ? waError.message : String(waError));
+          const msg = waError instanceof Error ? waError.message : String(waError);
+          console.error(`❌ WhatsApp notification failed [service=WhatsAppBusiness endpoint=pay-later orderId=${order.id}]: ${msg}`);
         }
       }
 
@@ -1968,7 +1970,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             wholesalerProfile
           );
         } catch (emailError) {
-          console.error('❌ Failed to send pay-later customer email:', emailError);
+          const msg = emailError instanceof Error ? emailError.message : String(emailError);
+          console.error(`❌ Email failed [service=SendGrid endpoint=pay-later-customer-invoice orderId=${order.id} to=${customerEmail}]: ${msg}`);
         }
       }
 
@@ -2049,7 +2052,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             text: emailTemplate.text,
           });
         } catch (emailError) {
-          console.error('❌ Failed to send pay-later wholesaler email:', emailError);
+          const msg = emailError instanceof Error ? emailError.message : String(emailError);
+          console.error(`❌ Email failed [service=SendGrid endpoint=pay-later-wholesaler-notification orderId=${order.id} to=${wholesalerProfile?.email}]: ${msg}`);
         }
       }
 
@@ -2396,7 +2400,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             
           }
         } catch (welcomeError) {
-          console.error('❌ Error sending welcome messages (Marketplace Order):', welcomeError);
+          const msg = welcomeError instanceof Error ? welcomeError.message : String(welcomeError);
+          console.error(`❌ Welcome messages failed [service=sendWelcomeMessages wholesalerId=${product.wholesalerId} customerId=${customer?.id}]: ${msg}`);
         }
       }
       
@@ -2478,7 +2483,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             product: { name: product.name, price: item.unitPrice, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure }
           })), wholesaler);
         } catch (emailError) {
-          console.error("Failed to send confirmation email:", emailError);
+          const msg = emailError instanceof Error ? emailError.message : String(emailError);
+          console.error(`❌ Email failed [service=SendGrid endpoint=marketplace-customer-invoice orderId=${order.id} to=${customerEmail}]: ${msg}`);
         }
       }
       
@@ -2514,9 +2520,9 @@ Please contact the customer to confirm this order.
             }
           }
         } catch (notificationError) {
-        console.warn("Failed to send order notification:", notificationError);
-        // Don't fail the order creation if notification fails
-      }
+          const msg = notificationError instanceof Error ? notificationError.message : String(notificationError);
+          console.error(`❌ WhatsApp notification failed [service=WhatsAppBusiness endpoint=marketplace-wholesaler-notify orderId=${order.id}]: ${msg}`);
+        }
       
       res.json({
         success: true,
@@ -2584,7 +2590,8 @@ Please contact the customer to confirm this order.
               
             }
           } catch (welcomeError) {
-            console.error('❌ Error sending welcome messages (Customer Portal Orders):', welcomeError);
+            const msg = welcomeError instanceof Error ? welcomeError.message : String(welcomeError);
+            console.error(`❌ Welcome messages failed [service=sendWelcomeMessages wholesalerId=${firstProduct.wholesalerId} customerId=${customer?.id}]: ${msg}`);
           }
         }
       } catch (error) {
@@ -2667,8 +2674,8 @@ Please contact the customer to confirm this order.
         
         await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
       } catch (error) {
-        console.error("Failed to send customer invoice email:", error);
-        // Don't fail the order creation if email fails
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Email failed [service=SendGrid endpoint=customer-portal-invoice orderId=${order.id} to=${customer?.email}]: ${msg}`);
       }
 
       // Notify wholesaler via WhatsApp
@@ -2685,8 +2692,8 @@ Please contact the customer to confirm this order.
           }
         }
       } catch (error) {
-        console.error("Failed to send WhatsApp notification:", error);
-        // Don't fail the order creation if notification fails
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ WhatsApp notification failed [service=WhatsAppBusiness endpoint=customer-portal-wholesaler-notify orderId=${order.id}]: ${msg}`);
       }
 
       res.json({

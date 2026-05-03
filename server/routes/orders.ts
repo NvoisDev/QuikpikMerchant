@@ -408,19 +408,14 @@ export function registerOrderRoutes(app: Express): void {
             ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!${itemsList}\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
             : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!${itemsList}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
           
-          const smsSent = await sendWhatsAppMessage({
+          await sendWhatsAppMessage({
             to: customer.phoneNumber,
             message: smsMessage
           });
-          
-          if (smsSent) {
-          } else {
-          }
-        } else {
         }
       } catch (smsError) {
-        console.error('❌ Failed to send ready for collection WhatsApp:', smsError);
-        // Don't fail the API call if SMS fails
+        const msg = smsError instanceof Error ? smsError.message : String(smsError);
+        console.error(`❌ WhatsApp failed [service=Twilio endpoint=ready-for-collection orderId=${orderId}]: ${msg}`);
       }
 
       res.json({ success: true, order: updated });
@@ -639,7 +634,8 @@ export function registerOrderRoutes(app: Express): void {
                 from: `${businessName} via Quikpik <hello@quikpik.co>`,
               });
             } catch (emailErr) {
-              console.error('⚠️ Failed to send customer payment email:', emailErr);
+              const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+              console.error(`❌ Email failed [service=SendGrid endpoint=customer-payment-received orderId=${order.id} to=${customer.email}]: ${msg}`);
             }
           }
 
@@ -651,7 +647,8 @@ export function registerOrderRoutes(app: Express): void {
                 : `Hi ${customerName}! ${businessName} has received a payment of ${currencySymbol}${parsedAmount.toFixed(2)} for order ${order.orderNumber}. Outstanding balance: ${currencySymbol}${outstanding.toFixed(2)}.`;
               await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
             } catch (smsErr) {
-              console.error('⚠️ Failed to send customer payment WhatsApp:', smsErr);
+              const msg = smsErr instanceof Error ? smsErr.message : String(smsErr);
+              console.error(`❌ WhatsApp failed [service=Twilio endpoint=customer-payment-received orderId=${order.id} to=${customer.phoneNumber}]: ${msg}`);
             }
           }
 
@@ -684,7 +681,8 @@ export function registerOrderRoutes(app: Express): void {
                 from: `Quikpik <hello@quikpik.co>`,
               });
             } catch (emailErr) {
-              console.error('⚠️ Failed to send wholesaler payment email:', emailErr);
+              const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+              console.error(`❌ Email failed [service=SendGrid endpoint=wholesaler-payment-received orderId=${order.id} to=${wholesaler.email}]: ${msg}`);
             }
           }
         }
@@ -1728,7 +1726,8 @@ export function registerOrderRoutes(app: Express): void {
                 from: `${businessName} via Quikpik <hello@quikpik.co>`
               });
             } catch (emailError) {
-              console.error('Failed to send cancellation email:', emailError);
+              const msg = emailError instanceof Error ? emailError.message : String(emailError);
+              console.error(`❌ Email failed [service=SendGrid endpoint=cancellation-notification orderId=${order.id} to=${customer?.email}]: ${msg}`);
             }
           }
         }
@@ -2151,7 +2150,8 @@ export function registerOrderRoutes(app: Express): void {
           }
         }
       } catch (error) {
-        console.error('Failed to send cancellation response notification:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Cancellation notification failed [orderId=${req.params.id}]: ${msg}`);
       }
       
       res.json({ 
@@ -3318,7 +3318,8 @@ export function registerOrderRoutes(app: Express): void {
           });
           
         } catch (smsError) {
-          console.error('❌ Failed to send payment WhatsApp:', smsError);
+          const msg = smsError instanceof Error ? smsError.message : String(smsError);
+          console.error(`❌ WhatsApp failed [service=Twilio endpoint=send-payment-link orderId=${orderId}]: ${msg}`);
         }
       }
 
