@@ -53,7 +53,8 @@ import {
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendWhatsAppMessage, sgMail, sql, stockMovements, storage, sum,
   getStripeClient, isLiveMode,
-  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate, MailDataRequired
+  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate, MailDataRequired,
+  sendOrderStatusNotification,
 } from "./shared";
 import { productBatches, businessProfiles } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
@@ -733,27 +734,9 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       // Send notification to customer about items being prepared
-      try {
-        const customer = await storage.getUser(updated.retailerId);
-        const wholesaler = await storage.getUser(updated.wholesalerId);
-        
-        if (customer && wholesaler) {
-          await orderNotificationService.sendOrderStatusUpdate({
-            orderId: updated.id,
-            orderNumber: updated.orderNumber,
-            status: 'items_prepared',
-            customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
-            customerPhone: customer.phoneNumber || '',
-            customerEmail: customer.email || undefined,
-            wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
-            trackingNumber: updated.deliveryTrackingNumber || undefined,
-            estimatedDelivery: undefined
-          });
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send items prepared notifications:', notificationError);
-        // Don't fail the status update if notifications fail
-      }
+      sendOrderStatusNotification({ orderId: updated.id, status: 'items_prepared' }).catch((err) => {
+        console.error('❌ Failed to send items prepared notifications:', err);
+      });
 
       res.json({ success: true, order: updated });
     } catch (error) {
@@ -1329,27 +1312,10 @@ export function registerOrderRoutes(app: Express): void {
       const updatedOrder = await storage.updateOrderStatus(id, status);
 
       // Send real-time notifications to the customer
-      try {
-        if (updatedOrder) {
-          const customer = await storage.getUser(updatedOrder.retailerId);
-          const wholesaler = await storage.getUser(updatedOrder.wholesalerId);
-          if (customer && wholesaler) {
-            await orderNotificationService.sendOrderStatusUpdate({
-              orderId: updatedOrder.id,
-              orderNumber: updatedOrder.orderNumber,
-              status: updatedOrder.status,
-              customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
-              customerPhone: customer.phoneNumber || '',
-              customerEmail: customer.email || undefined,
-              wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
-              trackingNumber: updatedOrder.deliveryTrackingNumber || undefined,
-              estimatedDelivery: undefined
-            });
-          }
-        }
-      } catch (notificationError) {
-        console.error('Failed to send order status notifications:', notificationError);
-        // Don't fail the status update if notifications fail
+      if (updatedOrder) {
+        sendOrderStatusNotification({ orderId: updatedOrder.id, status: updatedOrder.status }).catch((err) => {
+          console.error('Failed to send order status notifications:', err);
+        });
       }
 
       // Auto-archive fulfilled orders after 24 hours

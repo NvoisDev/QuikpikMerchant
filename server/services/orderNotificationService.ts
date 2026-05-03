@@ -192,3 +192,54 @@ export class OrderNotificationService {
 }
 
 export const orderNotificationService = new OrderNotificationService();
+
+export interface SendOrderStatusNotificationParams {
+  orderId: number;
+  status: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+}
+
+/**
+ * Standalone helper that resolves customer/wholesaler from storage and sends
+ * order status notifications via all available channels.  Call this from
+ * route handlers instead of performing the user lookups inline.
+ */
+export async function sendOrderStatusNotification(
+  params: SendOrderStatusNotificationParams
+): Promise<void> {
+  const { orderId, status, trackingNumber, estimatedDelivery } = params;
+
+  const order = await storage.getOrder(orderId);
+  if (!order) {
+    console.warn(`[orderNotificationService] sendOrderStatusNotification: order ${orderId} not found`);
+    return;
+  }
+
+  const [customer, wholesaler] = await Promise.all([
+    storage.getUser(order.retailerId),
+    storage.getUser(order.wholesalerId),
+  ]);
+
+  if (!customer || !wholesaler) {
+    console.warn(`[orderNotificationService] sendOrderStatusNotification: customer or wholesaler not found for order ${orderId}`);
+    return;
+  }
+
+  await orderNotificationService.sendOrderStatusUpdate({
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    status,
+    customerName:
+      `${customer.firstName || ''} ${customer.lastName || ''}`.trim() ||
+      customer.businessName ||
+      'Customer',
+    customerPhone: customer.phoneNumber || '',
+    customerEmail: customer.email || undefined,
+    wholesalerName:
+      wholesaler.businessName ||
+      `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
+    trackingNumber: trackingNumber ?? order.deliveryTrackingNumber ?? undefined,
+    estimatedDelivery,
+  });
+}

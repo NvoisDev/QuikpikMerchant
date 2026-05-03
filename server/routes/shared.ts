@@ -67,7 +67,7 @@ import {
   type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem,
 } from "../email-templates";
 import { sendWelcomeMessages } from "../services/welcomeMessageService.js";
-import { orderNotificationService } from "../services/orderNotificationService";
+import { orderNotificationService, sendOrderStatusNotification } from "../services/orderNotificationService";
 import { quickOrderService } from "../services/quickOrderService";
 import { multiWholesalerService } from "../services/multiWholesalerService";
 import { db } from "../db";
@@ -122,6 +122,7 @@ export {
   generateDowngradeEffectiveEmail, formatPackDescriptor,
   sendWelcomeMessages,
   orderNotificationService,
+  sendOrderStatusNotification,
   quickOrderService,
   multiWholesalerService,
   getEmailDeliveryAddress,
