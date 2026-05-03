@@ -953,7 +953,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-email-verification/send
-  app.post('/api/customer-email-verification/send', async (req, res) => {
+  app.post('/api/customer-email-verification/send', otpSendLimiter, async (req, res) => {
     try {
       const { customerId, email } = req.body;
       
@@ -992,7 +992,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-email-verification/verify
-  app.post('/api/customer-email-verification/verify', async (req, res) => {
+  app.post('/api/customer-email-verification/verify', otpVerifyLimiter, async (req, res) => {
     try {
       const { customerId, email, code, wholesalerId } = req.body;
       

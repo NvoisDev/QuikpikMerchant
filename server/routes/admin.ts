@@ -989,7 +989,8 @@ export function registerAdminRoutes(app: Express): void {
       }).from(products)
         .leftJoin(users, eq(products.wholesalerId, users.id))
         .where(and(inArray(products.status, ['active', 'inactive', 'locked']), eq(users.isTestAccount, false)))
-        .orderBy(desc(products.id));
+        .orderBy(desc(products.id))
+        .limit(2000);
 
       const enriched = productList.map(p => {
         const price = parseFloat(p.price || '0');

@@ -1113,13 +1113,10 @@ export class CustomerStorage extends OrderStorage {
       `);
       type MarketplaceProductRow = Record<string, unknown> & { price: string; created_at: unknown; wholesaler: { rating?: number } };
       const productsList = productsResult.rows as MarketplaceProductRow[];
-      console.log('Products found:', productsList.length);
-
       // Get unique wholesaler IDs
       const wholesalerIds = Array.from(new Set(productsList.map(p => p.wholesaler_id)));
       
       if (wholesalerIds.length === 0) {
-        console.log('No wholesaler IDs found');
         return [];
       }
       
@@ -1141,7 +1138,6 @@ export class CustomerStorage extends OrderStorage {
       `);
 
       const wholesalers = wholesalersResult.rows as (Record<string, unknown>)[];
-      console.log('Wholesalers found:', wholesalers.length);
 
       // Create wholesaler lookup map
       const wholesalerMap = new Map(wholesalers.map(w => [w.id, w]));
@@ -1236,7 +1232,6 @@ export class CustomerStorage extends OrderStorage {
         });
       }
 
-      console.log('Results prepared:', results.length);
       return results as unknown as (Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[];
     } catch (error: any) {
       console.error('Error in getMarketplaceProducts:', error);
@@ -1344,8 +1339,8 @@ export class CustomerStorage extends OrderStorage {
         return {
           ...wholesaler,
           products: wholesalerProducts,
-          rating: 4.5, // Mock rating
-          totalOrders: Math.floor(Math.random() * 100) + 10, // Mock order count
+          rating: 4.5,
+          totalOrders: 0,
         };
       })
     );
@@ -1355,8 +1350,6 @@ export class CustomerStorage extends OrderStorage {
 
   async getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined> {
     try {
-      console.log('Getting wholesaler profile for ID:', id);
-      
       // Explicit column list — never SELECT * so no sensitive fields
       // (password hash, Stripe IDs, subscription details, fees) reach the customer.
       // `email` is retained as a customer-facing contact fallback (used in the
@@ -1380,21 +1373,20 @@ export class CustomerStorage extends OrderStorage {
       `);
 
       if (!wholesalerResult.rows || wholesalerResult.rows.length === 0) {
-        console.log('Wholesaler not found');
         return undefined;
       }
 
       type WholesalerRow = Record<string, unknown>;
       const wholesaler = wholesalerResult.rows[0] as WholesalerRow;
-      console.log('Wholesaler found:', wholesaler.business_name);
 
       // Use the resolved internal ID for related queries (not the slug param)
       const resolvedId = wholesaler.id as string;
 
-      // Get products for this wholesaler using raw SQL
+      // Get products for this wholesaler using raw SQL (capped at 200 rows)
       const productsResult = await db.execute(sql`
         SELECT * FROM products 
         WHERE wholesaler_id = ${resolvedId} AND status = 'active'
+        LIMIT 200
       `);
 
       type WholesalerProductRow = Record<string, unknown>;
@@ -1432,8 +1424,6 @@ export class CustomerStorage extends OrderStorage {
           updatedAt: product.updated_at,
         };
       });
-
-      console.log('Products found for wholesaler:', wholesalerProducts.length);
 
       // Safe allow-list: only public-facing display fields.
       // Sensitive fields (passwordHash, Stripe IDs, subscription tier/status,

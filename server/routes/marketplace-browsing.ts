@@ -79,8 +79,8 @@ export function registerBrowsingRoutes(app: Express): void {
         topWholesalers: topWholesalers.slice(0, 6),
         recentProducts: recentProducts.slice(0, 8),
         stats: {
-          totalWholesalers: Math.max(500, topWholesalers.length),
-          totalProducts: Math.max(10000, recentProducts.length),
+          totalWholesalers: topWholesalers.length,
+          totalProducts: recentProducts.length,
           totalCategories: 20
         }
       });
