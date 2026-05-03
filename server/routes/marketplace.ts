@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
 import { calculateCheckoutTotals } from "./checkout-fee-calculations";
@@ -79,6 +80,14 @@ async function resolveCustomerAuth(
  * Any Stripe call in this file MUST use `getStripeClient(Boolean(wholesaler.isTestAccount))`
  * — never the module-level `stripe` singleton (which has no per-request account context).
  */
+const orderCreateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many order requests, please try again later." },
+});
+
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/config/customer-fee — public, no auth required
   // Returns the live customer transaction fee config so the checkout dialog
@@ -1084,7 +1093,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/marketplace/create-order
-  app.post('/api/marketplace/create-order', async (req, res) => {
+  app.post('/api/marketplace/create-order', orderCreateLimiter, async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
       
@@ -1646,7 +1655,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/marketplace/create-order-pay-later
-  app.post('/api/marketplace/create-order-pay-later', async (req, res) => {
+  app.post('/api/marketplace/create-order-pay-later', orderCreateLimiter, async (req, res) => {
     try {
       const {
         cart,

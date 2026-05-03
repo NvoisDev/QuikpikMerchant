@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import Stripe from "stripe";
 import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
@@ -18,6 +19,14 @@ import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many payment requests, please try again later." },
+});
 
 export function registerPaymentRoutes(app: Express): void {
   // POST /api/stripe/connect
@@ -1085,7 +1094,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // POST /api/create-payment-intent
-  app.post("/api/create-payment-intent", requireAuth, async (req: any, res) => {
+  app.post("/api/create-payment-intent", paymentLimiter, requireAuth, async (req: any, res) => {
     try {
       const { orderId } = req.body;
       const userId = req.user.id;
@@ -1413,7 +1422,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // POST /api/subscriptions/create-checkout-session
-  app.post('/api/subscriptions/create-checkout-session', requireAuth, requireOwner, async (req: any, res) => {
+  app.post('/api/subscriptions/create-checkout-session', paymentLimiter, requireAuth, requireOwner, async (req: any, res) => {
     try {
       const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const userId = req.user.id;
