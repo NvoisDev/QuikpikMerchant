@@ -608,7 +608,9 @@ export function registerAnalyticsRoutes(app: Express): void {
       const lookbackDays = periodDays[period as string] ?? 90;
       const periodStart = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
 
-      // Get comprehensive financial data — orders bounded to the selected period
+      // Get comprehensive financial data — orders bounded to the selected period.
+      // Note: getWholesalerStats returns all-time aggregates (totalRevenue etc.);
+      // bounded order count is used for in-period metrics (costs, growth, LTV).
       const [stats, orders, products] = await Promise.all([
         storage.getWholesalerStats(userId),
         storage.getOrdersForDateRange(userId, periodStart, now),

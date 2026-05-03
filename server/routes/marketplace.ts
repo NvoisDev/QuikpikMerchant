@@ -88,6 +88,10 @@ const orderCreateLimiter = rateLimit({
   message: { error: "Too many order requests, please try again later." },
 });
 
+// Covers unauthenticated customer-action endpoints (payment initiation, order
+// placement, access requests, reorders, cancellations).  30 per 15 min is more
+// permissive than orderCreateLimiter (20/15 min) to allow legitimate browsing
+// and multi-step checkout flows while still blocking automated abuse.
 const customerActionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
