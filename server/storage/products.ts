@@ -189,7 +189,6 @@ export class ProductStorage extends UserStorageBase {
         shelfLife: null,
         contentCategory: null,
         expiryDate: row.expiry_date ? String(row.expiry_date) : null,
-        costPrice: row.cost_price ? String(row.cost_price) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       });

@@ -1273,9 +1273,16 @@ export class CustomerStorage extends OrderStorage {
         
         const allRelevantIds = [wholesaler.id, ...teamMemberIds.map(tm => tm.userId)];
         
-        // Include products from parent company AND team members
+        // Include products from parent company AND team members.
+        // cost_price is intentionally excluded — this is a customer-facing listing.
         const wholesalerProducts = await db.execute(sql`
-          SELECT * FROM products 
+          SELECT id, name, description, price, currency, moq, stock,
+                 image_url, images, category, status, wholesaler_id,
+                 promo_price, promo_active, promotional_offers,
+                 price_visible, selling_format,
+                 units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+                 created_at, updated_at
+          FROM products 
           WHERE wholesaler_id IN (${sql.join(allRelevantIds.map(id => sql`${id}`), sql`, `)}) 
           AND status = 'active' 
           LIMIT 6
