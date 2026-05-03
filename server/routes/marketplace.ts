@@ -1528,7 +1528,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             }, order, enrichedItems, wholesaler);
 
           } catch (emailError) {
-            console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);
+            const msg = emailError instanceof Error ? emailError.message : String(emailError);
+            console.warn(`[sendgrid] stripe-checkout confirmation email failed [orderId=${order.id}]: ${msg}`);
           }
         }
 
@@ -1548,7 +1549,8 @@ export function registerMarketplaceRoutes(app: Express): void {
               }
             }
           } catch (error) {
-            console.error('Failed to send WhatsApp notification:', error);
+            const msg = error instanceof Error ? error.message : String(error);
+            console.warn(`[whatsapp-business] wholesaler order notification failed: ${msg}`);
           }
         }
 
@@ -1663,7 +1665,8 @@ export function registerMarketplaceRoutes(app: Express): void {
             });
 
           } catch (error) {
-            console.error('Failed to send wholesaler email notification:', error);
+            const msg = error instanceof Error ? error.message : String(error);
+            console.warn(`[sendgrid] wholesaler order notification email failed: ${msg}`);
           }
         }
 
@@ -2265,7 +2268,8 @@ export function registerMarketplaceRoutes(app: Express): void {
           });
         }
       } catch (error) {
-        console.error('Failed to send cancellation request notification:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        console.warn(`[sendgrid] cancellation request notification failed: ${msg}`);
       }
       
       res.json({ 

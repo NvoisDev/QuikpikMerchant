@@ -57,7 +57,8 @@ export async function generateProductDescription(productName: string, category?:
     
     return cleanedDescription;
   } catch (error) {
-    console.error("Error generating product description:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[openai] product description generation failed: ${msg}`);
     throw new Error("Failed to generate product description");
   }
 }
@@ -94,7 +95,8 @@ export async function generateProductImage(productName: string, category?: strin
 
     return response.data[0].url;
   } catch (error) {
-    console.error("Error generating product image:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[openai] product image generation failed: ${msg}`);
     throw new Error("Failed to generate product image");
   }
 }

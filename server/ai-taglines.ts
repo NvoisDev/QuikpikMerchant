@@ -88,9 +88,8 @@ Respond with JSON in this exact format:
     };
 
   } catch (error) {
-    console.error('OpenAI API Error details:', error);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : undefined);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[openai] tagline/personalisation generation failed: ${msg}`);
     
     // Always return fallback message instead of throwing error
     const fallbackGreeting = context.customerName ? `Hi ${context.customerName}!` : "Hello!";
@@ -172,7 +171,8 @@ Respond with JSON array of exactly 3 campaigns in this format:
     return Array.isArray(result) ? result : [];
 
   } catch (error) {
-    console.error('Campaign suggestions error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[openai] campaign suggestions failed: ${msg}`);
     return [
       {
         title: "Weekly Stock Update",
@@ -263,7 +263,8 @@ Respond with JSON in this format:
     };
 
   } catch (error) {
-    console.error('Message timing optimization error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[openai] message timing optimisation failed: ${msg}`);
     return {
       recommendedTime: "10:00",
       recommendedDay: "Tuesday",
