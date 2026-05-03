@@ -59,8 +59,8 @@ import { registerBrowsingRoutes } from "./marketplace-browsing";
  */
 /** Escapes characters that have special meaning in HTML to prevent XSS in email templates. */
 function escapeHtml(str: string | null | undefined): string {
-  if (!str) return '';
-  return str
+  if (str == null) return '';
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
