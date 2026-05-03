@@ -1,0 +1,106 @@
+Refactor an analytics query that currently loads all orders into memory and processes them in JavaScript.
+
+Goal:
+Move aggregation logic into the database to improve performance and prevent memory issues.
+
+----------------------------------
+
+STEP 1 — Locate Problem Query
+
+Find a query that:
+- loads all orders for a wholesaler
+- includes joins (items, products, retailer)
+- performs aggregation in JavaScript (reduce, map, filter)
+
+----------------------------------
+
+STEP 2 — Identify Required Output
+
+Determine what the frontend actually needs.
+
+Examples:
+- total revenue
+- order count
+- monthly breakdown
+- average order value
+
+DO NOT return full order objects if not needed.
+
+----------------------------------
+
+STEP 3 — Rewrite Using SQL Aggregation
+
+Replace in-memory processing with a database query using:
+- COUNT(*)
+- SUM(...)
+- AVG(...)
+- GROUP BY (e.g. month)
+- DATE_TRUNC for time grouping
+
+Example:
+
+SELECT
+  DATE_TRUNC('month', created_at) AS month,
+  COUNT(*) AS order_count,
+  SUM(total_amount) AS revenue
+FROM orders
+WHERE wholesaler_id = $1
+GROUP BY month
+ORDER BY month DESC
+LIMIT 12;
+
+----------------------------------
+
+STEP 4 — Apply Sensible Limits
+
+- Limit time range (e.g. last 12 months)
+- Limit result rows (e.g. LIMIT 12 or 100)
+- Avoid unbounded queries
+
+----------------------------------
+
+STEP 5 — Update Route
+
+- Replace old query + JS processing with new DB query
+- Return the aggregated result directly
+- Keep response format consistent for frontend
+
+----------------------------------
+
+STEP 6 — Preserve Behaviour
+
+Ensure:
+- same metrics are returned
+- same units (currency, counts)
+- no missing data
+- no change to API contract
+
+----------------------------------
+
+STEP 7 — Validate Performance
+
+Confirm:
+- query returns small result set
+- no large objects loaded into memory
+- no joins unless strictly required
+
+----------------------------------
+
+OUTPUT
+
+1. Query replaced
+2. Before vs after (rows loaded)
+3. Performance improvement explanation
+4. Confirmation no behaviour change
+
+----------------------------------
+
+RULES
+
+- DO NOT load full orders unless absolutely necessary
+- DO NOT process large datasets in JavaScript
+- DO NOT change frontend
+- DO NOT refactor unrelated logic
+
+Goal:
+Make analytics queries constant-time regardless of order volume.

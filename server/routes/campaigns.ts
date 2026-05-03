@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { ANALYTICS_ORDER_CAP } from "../constants";
 import {
   and, count, customerGroups, generateCampaignSuggestions, generatePersonalizedTagline,
   getBroadcastLimit, insertBroadcastSchema, insertMessageTemplateSchema,
@@ -7,6 +6,7 @@ import {
   requireAuth, requireBroadcastLimits, requireNotViewer, storage, sum, twilio,
   whatsAppBusinessService
 } from "./shared";
+import { getBroadcastProductMetrics } from "../services/analyticsService";
 
 export function registerCampaignRoutes(app: Express): void {
   // GET /api/whatsapp/status
@@ -598,41 +598,20 @@ export function registerCampaignRoutes(app: Express): void {
         storage.getMessageTemplates(targetUserId)
       ]);
 
-      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
-      // See server/constants.ts for the rationale.
-      const allOrders = await storage.getOrders(targetUserId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP });
-
       // Convert broadcasts to unified campaign format with real order data
       const broadcastCampaigns = await Promise.all(broadcasts.map(async broadcast => {
         let realOrderCount = 0;
         let realRevenue = '0.00';
-        
+
         if (broadcast.sentAt && broadcast.product) {
-          // Count orders for this specific product after broadcast was sent
-          // Include all completed order statuses, not just 'paid'
-          const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(String(order.createdAt || Date.now()));
-            const broadcastDate = new Date(String(broadcast.sentAt));
-            const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
-            return orderDate >= broadcastDate && validStatuses.includes(order.status);
-          });
-
-          // Get order items for this specific product
-          const productOrders = await Promise.all(
-            ordersForProduct.map(async order => {
-              const orderItems = await storage.getOrderItems(order.id);
-              return orderItems.filter(item => item.productId === broadcast.product.id);
-            })
+          // Single SQL JOIN query — no in-memory order loading or N+1 item fetches
+          const metrics = await getBroadcastProductMetrics(
+            targetUserId,
+            broadcast.product.id,
+            new Date(String(broadcast.sentAt)),
           );
-
-          // Count actual number of orders (not quantities) for this product
-          const ordersWithProduct = productOrders.filter(orderItems => orderItems.length > 0);
-          realOrderCount = ordersWithProduct.length;
-          
-          // Calculate total revenue for this product
-          realRevenue = productOrders.flat().reduce((sum, item) => {
-            return sum + (parseFloat(item.unitPrice) * item.quantity);
-          }, 0).toFixed(2);
+          realOrderCount = metrics.orderCount;
+          realRevenue = metrics.revenue.toFixed(2);
         }
 
         // Fetch fresh product data with current promotional offers
@@ -803,12 +782,9 @@ export function registerCampaignRoutes(app: Express): void {
           break;
       }
 
-      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
-      // See server/constants.ts for the rationale.
-      const [broadcasts, templates, allOrders] = await Promise.all([
+      const [broadcasts, templates] = await Promise.all([
         storage.getBroadcasts(targetUserId),
         storage.getMessageTemplates(targetUserId),
-        storage.getOrders(targetUserId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP })
       ]);
 
       // Filter campaigns by date and type
@@ -855,51 +831,61 @@ export function registerCampaignRoutes(app: Express): void {
       let totalOrders = 0;
       let totalRevenue = 0;
 
-      // Calculate metrics from broadcast campaigns
+      // Aggregate broadcast metrics using SQL JOIN queries — one per broadcast,
+      // replacing the previous pattern of loading all orders into memory and
+      // doing N×getOrderItems calls.  Also combines the two former broadcast
+      // loops (metrics + best-performing) into a single pass.
+      let bestPerformingCampaign = null;
+      let bestRevenue = 0;
+
       for (const broadcast of filteredBroadcasts) {
         if (broadcast.sentAt) {
           totalRecipients += broadcast.recipientCount || 0;
-          
-          // Calculate real order metrics for this broadcast
-          const broadcastDate = new Date(broadcast.sentAt || Date.now());
-          const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
-            return orderDate >= broadcastDate && validStatuses.includes(order.status);
-          });
 
-          // Get order items for this specific product
-          const productOrders = await Promise.all(
-            ordersForProduct.map(async order => {
-              const orderItems = await storage.getOrderItems(order.id);
-              return orderItems.filter(item => item.productId === broadcast.product?.id);
-            })
+          const broadcastDate = new Date(broadcast.sentAt || Date.now());
+          const metrics = await getBroadcastProductMetrics(
+            targetUserId,
+            broadcast.product?.id,
+            broadcastDate,
           );
 
-          const ordersWithProduct = productOrders.filter(orderItems => orderItems.length > 0);
-          const broadcastOrderCount = ordersWithProduct.length;
-          const broadcastRevenue = productOrders.flat().reduce((sum, item) => {
-            return sum + (parseFloat(item.unitPrice) * item.quantity);
-          }, 0);
+          totalOrders  += metrics.orderCount;
+          totalRevenue += metrics.revenue;
+          totalClicks  += Math.ceil(metrics.orderCount * 1.5); // 67% conversion estimate
+          totalViews   += Math.ceil((broadcast.recipientCount || 0) * 0.6); // 60% view-rate estimate
 
-          totalOrders += broadcastOrderCount;
-          totalRevenue += broadcastRevenue;
-          
-          // Estimate clicks and views based on conversion data
-          totalClicks += Math.ceil(broadcastOrderCount * 1.5); // Assume 67% conversion from clicks
-          totalViews += Math.ceil((broadcast.recipientCount || 0) * 0.6); // Assume 60% view rate
+          if (metrics.revenue > bestRevenue) {
+            bestRevenue = metrics.revenue;
+            bestPerformingCampaign = {
+              id: `broadcast_${broadcast.id}`,
+              title: `${broadcast.product?.name} Promotion`,
+              revenue: metrics.revenue,
+              type: 'single',
+            };
+          }
         }
       }
 
-      // Calculate metrics from template campaigns
+      // Template campaign metrics come from stored campaign records (no order join needed)
       for (const template of filteredTemplates) {
         for (const campaign of template.campaigns || []) {
           if (campaign.sentAt) {
             totalRecipients += campaign.recipientCount || 0;
-            totalOrders += campaign.orderCount || 0;
-            totalRevenue += parseFloat(campaign.totalRevenue || '0');
-            totalClicks += campaign.clickCount || 0;
-            totalViews += Math.ceil((campaign.recipientCount || 0) * 0.6); // Estimate 60% view rate
+            totalOrders     += campaign.orderCount || 0;
+            totalRevenue    += parseFloat(campaign.totalRevenue || '0');
+            totalClicks     += campaign.clickCount || 0;
+            totalViews      += Math.ceil((campaign.recipientCount || 0) * 0.6);
+
+            const revenue = parseFloat(campaign.totalRevenue || '0');
+            if (revenue > bestRevenue) {
+              bestRevenue = revenue;
+              bestPerformingCampaign = {
+                id: `template_${template.id}`,
+                title: template.title,
+                revenue,
+                type: 'multi',
+              };
+            }
           }
         }
       }
@@ -908,60 +894,6 @@ export function registerCampaignRoutes(app: Express): void {
       const averageConversionRate = totalRecipients > 0 ? (totalOrders / totalRecipients) * 100 : 0;
       const averageClickRate = totalRecipients > 0 ? (totalClicks / totalRecipients) * 100 : 0;
 
-      // Find best performing campaign
-      let bestPerformingCampaign = null;
-      let bestRevenue = 0;
-
-      // Check broadcasts
-      for (const broadcast of filteredBroadcasts) {
-        if (broadcast.sentAt) {
-          const broadcastDate = new Date(broadcast.sentAt || Date.now());
-          const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
-            return orderDate >= broadcastDate && validStatuses.includes(order.status);
-          });
-
-          const productOrders = await Promise.all(
-            ordersForProduct.map(async order => {
-              const orderItems = await storage.getOrderItems(order.id);
-              return orderItems.filter(item => item.productId === broadcast.product?.id);
-            })
-          );
-
-          const revenue = productOrders.flat().reduce((sum, item) => {
-            return sum + (parseFloat(item.unitPrice) * item.quantity);
-          }, 0);
-
-          if (revenue > bestRevenue) {
-            bestRevenue = revenue;
-            bestPerformingCampaign = {
-              id: `broadcast_${broadcast.id}`,
-              title: `${broadcast.product?.name} Promotion`,
-              revenue: revenue,
-              type: 'single'
-            };
-          }
-        }
-      }
-
-      // Check template campaigns
-      for (const template of filteredTemplates) {
-        for (const campaign of template.campaigns || []) {
-          const revenue = parseFloat(campaign.totalRevenue || '0');
-          if (revenue > bestRevenue) {
-            bestRevenue = revenue;
-            bestPerformingCampaign = {
-              id: `template_${template.id}`,
-              title: template.title,
-              revenue: revenue,
-              type: 'multi'
-            };
-          }
-        }
-      }
-
-      const isCappedAnalytics = allOrders.length === ANALYTICS_ORDER_CAP;
       const performanceData = {
         totalCampaigns: filteredBroadcasts.length + filteredTemplates.length,
         activeCampaigns: filteredBroadcasts.filter(b => b.sentAt).length + 
@@ -975,7 +907,7 @@ export function registerCampaignRoutes(app: Express): void {
         averageClickRate: Math.round(averageClickRate * 100) / 100,
         bestPerformingCampaign,
         recentPerformance: [], // Could be expanded with detailed trend data
-        isCapped: isCappedAnalytics
+        isCapped: false
       };
 
       res.json(performanceData);

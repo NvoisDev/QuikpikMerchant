@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import crypto from "crypto";
-import { ANALYTICS_ORDER_CAP } from "../constants";
 
 /**
  * Derive a stable, time-bucketed idempotency fingerprint for an order creation request.
@@ -61,6 +60,7 @@ import { productBatches, businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
+import { getOrderStats } from "../services/analyticsService";
 
 /**
  * Batch-aware unit stock restock helper.
@@ -1081,54 +1081,10 @@ export function registerOrderRoutes(app: Express): void {
         return false;
       };
       
-      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
-      // See server/constants.ts for the rationale. isCapped is included in the response
-      // so the frontend can optionally note "showing results for most recent N orders".
-      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP });
-      const isCapped = allOrders.length === ANALYTICS_ORDER_CAP;
-      
-      // Filter by active/archived based on tab
-      const filteredOrders = archiveTab === 'all'
-        ? allOrders
-        : archiveTab === 'archived'
-          ? allOrders.filter(order => isArchivedOrder(order))
-          : allOrders.filter(order => !isArchivedOrder(order));
-      
-      // Calculate overall statistics for the filtered set
-      const paidOrders = filteredOrders.filter(order => 
-        order.status === 'paid' || 
-        order.status === 'completed' ||
-        order.status === 'processing' ||
-        order.status === 'shipped'
-      );
+      // Aggregate directly in the database — no rows loaded into Node.js memory.
+      const stats = await getOrderStats(wholesalerId, archiveTab);
 
-      const pendingOrders = filteredOrders.filter(order => 
-        order.status === 'pending'
-      );
-
-      // Calculate net revenue using subtotal for non-cancelled/refunded orders
-      const revenueOrders = filteredOrders.filter(order => !['cancelled', 'refunded'].includes(order.status));
-      const totalRevenue = revenueOrders.reduce((sum, order) => {
-        const netAmount = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
-        return sum + (isNaN(netAmount) ? 0 : netAmount);
-      }, 0);
-
-      // Count by tab for badges using the same isArchivedOrder logic
-      const activeCount = allOrders.filter(order => !isArchivedOrder(order)).length;
-      const archivedCount = allOrders.filter(order => isArchivedOrder(order)).length;
-
-      const stats = {
-        ordersCount: filteredOrders.length,
-        totalRevenue: totalRevenue,
-        paidOrdersCount: paidOrders.length,
-        pendingOrdersCount: pendingOrders.length,
-        avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0,
-        activeCount: activeCount,
-        archivedCount: archivedCount,
-        isCapped: isCapped
-      };
-
-      res.json(stats);
+      res.json({ ...stats, isCapped: false });
     } catch (error) {
       console.error("❌ Error fetching order statistics:", error);
       res.status(500).json({ 
