@@ -1,0 +1,178 @@
+TASK: Full Platform Audit — Post-Security Fix & Refactor Review
+
+Context:
+We have just completed:
+- Removal of sensitive debug logs
+- Secure cookie fix (secure: true in production)
+- Rate limiting on auth + OTP endpoints
+- NaN guards added to route params
+- Limit cap added to marketplace queries
+
+The platform is currently stable and all tests are passing.
+
+Your job is to perform a COMPLETE audit of the codebase to identify:
+1. Any regressions introduced
+2. Remaining risks (security, data, performance)
+3. Structural weaknesses that will become problems at scale
+4. Opportunities to simplify or reduce complexity WITHOUT breaking behaviour
+
+---
+
+SECTION 1 — Regression & Stability Check
+
+- Verify no functionality was broken by recent changes
+- Check:
+  - Auth flows (wholesaler + customer)
+  - OTP login
+  - Checkout (Stripe + Pay Later)
+  - Order creation + fulfilment
+  - Customer creation + portal access
+- Confirm:
+  - No new 500 errors possible from added guards
+  - Rate limiting does not block legitimate users
+
+Output:
+- List of any regressions or edge cases introduced
+
+---
+
+SECTION 2 — Security Audit (Deep)
+
+Re-check entire backend for:
+
+- Any remaining:
+  - console.log dumping sensitive data
+  - unsecured endpoints
+  - missing auth guards
+- Validate:
+  - All admin routes require auth
+  - Tenant isolation is enforced everywhere (no cross-wholesaler access)
+- Review:
+  - Session handling
+  - Cookie settings
+  - OTP flows (brute-force protection)
+
+Output:
+- Any remaining vulnerabilities ranked by severity
+
+---
+
+SECTION 3 — API & Backend Risk
+
+- Identify:
+  - Routes >2000 lines (high complexity risk)
+  - Any route doing too many responsibilities
+- Check for:
+  - Duplicate logic across routes (orders, payments, marketplace)
+  - Inconsistent validation patterns
+  - Missing input validation beyond NaN
+
+Output:
+- Top 5 backend risks
+- Suggested split points (NOT implementation, just identification)
+
+---
+
+SECTION 4 — Frontend Complexity & Maintainability
+
+- Identify:
+  - Pages/components >1500 lines
+  - Props drilling / overly coupled components
+- Check:
+  - Reusability of extracted components
+  - Any duplicated UI logic (customer, product, order flows)
+
+Output:
+- Top 5 frontend refactor candidates
+- Quick wins (safe extractions like last session)
+
+---
+
+SECTION 5 — Data Consistency & Integrity
+
+- Check:
+  - Address handling (camelCase vs snake_case)
+  - Customer creation flows (with/without phone)
+  - Order totals vs payment calculations
+- Validate:
+  - No silent data fallbacks that could hide bugs
+
+Output:
+- Any inconsistencies or silent failure risks
+
+---
+
+SECTION 6 — External Services Reliability
+
+Review usage of:
+- Stripe
+- Twilio (SMS)
+- SendGrid
+- OpenAI (if used)
+
+Check:
+- What happens if service fails?
+- Are errors surfaced or silently ignored?
+- Any missing retries or fallbacks?
+
+Output:
+- Reliability gaps
+
+---
+
+SECTION 7 — Logging & Observability
+
+- Evaluate current logging:
+  - Is it too noisy?
+  - Are important events logged?
+- Identify:
+  - Missing logs for critical flows (payments, auth, admin actions)
+
+Output:
+- Logging improvements (reduce noise + improve signal)
+
+---
+
+SECTION 8 — Performance & Scale Readiness
+
+- Identify:
+  - Unbounded queries
+  - Potential N+1 queries
+  - Large payload responses
+- Check:
+  - Any heavy operations in request cycle (sync tasks)
+
+Output:
+- Top 5 performance risks at scale (1000+ users)
+
+---
+
+SECTION 9 — Dead Code & Cleanup
+
+- Identify:
+  - Unused components
+  - Legacy files (e.g. old storage patterns)
+  - TODOs / commented code
+
+Output:
+- Safe deletions (zero-risk cleanup list)
+
+---
+
+SECTION 10 — Final Scorecard
+
+Provide:
+
+- Overall platform rating (out of 10)
+- Breakdown:
+  - Security
+  - Stability
+  - Maintainability
+  - Scalability readiness
+
+- Top 5 priorities for next phase (ordered, actionable)
+
+IMPORTANT:
+- DO NOT suggest large refactors or rewrites
+- Focus on safe, incremental improvements
+- Be specific (file names, line ranges where possible)
