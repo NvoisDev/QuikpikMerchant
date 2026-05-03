@@ -1,0 +1,455 @@
+import type { Express } from "express";
+import {
+  SubscriptionService, db, eq, enforceNewPlanLimits, getUserPlanLimits,
+  generateDowngradeScheduledEmail, generateDowngradeEffectiveEmail,
+  getProjectedDowngradeImpact, requireAuth, requireOwner, sendEmail,
+  storage, subscriptionPlans, unlockForUpgrade, userSubscriptions, users, z,
+} from "./shared";
+import { getStripeClient } from "../stripeConfig";
+import { getProductLimit } from "../utils/plan-tier";
+import { paymentLimiter } from "./payments-connect";
+
+export function registerSubscriptionRoutes(app: Express): void {
+  // GET /api/subscriptions/plans
+  app.get('/api/subscriptions/plans', async (req, res) => {
+    try {
+      const plans = await SubscriptionService.getPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error('❌ Failed to get subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to get subscription plans',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/subscriptions/current
+  app.get('/api/subscriptions/current', requireAuth, async (req: any, res) => {
+    try {
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
+      const subscription = await SubscriptionService.getUserSubscription(userId);
+      res.json(subscription);
+    } catch (error) {
+      console.error('❌ Failed to get user subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to get user subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/subscriptions/create-checkout-session
+  app.post('/api/subscriptions/create-checkout-session', paymentLimiter, requireAuth, requireOwner, async (req: any, res) => {
+    try {
+      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
+      const userId = req.user.id;
+      const { priceId, idempotencyKey } = req.body;
+
+      if (!priceId) {
+        return res.status(400).json({ message: 'Price ID is required' });
+      }
+
+      // Validate priceId exists in our subscription plans
+      const validPlans = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.stripePriceId, priceId));
+      
+      if (validPlans.length === 0) {
+        return res.status(400).json({ message: 'Invalid price ID' });
+      }
+
+      const targetPlan = validPlans[0];
+      
+      const isTestAccount = Boolean(req.user.isTestAccount);
+
+      // Get or create Stripe customer
+      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, isTestAccount);
+      
+      // Check for existing active subscription
+      const existingSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
+      
+      if (existingSubscription && existingSubscription.stripeSubscriptionId) {
+        // UPGRADE FLOW: User has existing subscription - modify it with proration
+        
+        try {
+          const updatedSubscription = await SubscriptionService.upgradeSubscriptionWithProration(
+            existingSubscription.stripeSubscriptionId,
+            priceId,
+            targetPlan.planId,
+            isTestAccount,
+          );
+          
+          // Update user's plan immediately for upgrades (instant access).
+          await storage.updateUser(userId, {
+            currentPlan: targetPlan.planId,
+            subscriptionStatus: 'active',
+            productLimit: getProductLimit(targetPlan.planId),
+            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
+          });
+
+          // Clear the scheduled cancellation flag on userSubscriptions so that the
+          // "Cancellation Scheduled" badge disappears immediately after upgrade.
+          await db.update(userSubscriptions).set({
+            cancelAtPeriodEnd: false,
+            status: 'active',
+            updatedAt: new Date()
+          }).where(eq(userSubscriptions.userId, userId));
+
+          await unlockForUpgrade(userId);
+          
+          return res.json({ 
+            success: true, 
+            type: 'upgrade',
+            newPlan: targetPlan.planId,
+            subscription: {
+              id: updatedSubscription.id,
+              status: updatedSubscription.status,
+              current_period_end: updatedSubscription.current_period_end
+            },
+            message: 'Subscription upgraded successfully with proration applied'
+          });
+        } catch (upgradeError: any) {
+          // Structured error log — every field here is useful for diagnosing which
+          // Stripe error caused the direct update to fail (e.g. resource_missing,
+          // subscription_update_forbidden, payment_method_unexpected_state, etc.)
+          console.error('❌ Direct subscription upgrade failed — attempting Billing Portal fallback:', {
+            stripeType: upgradeError?.type,
+            stripeCode: upgradeError?.code,
+            stripeDeclineCode: upgradeError?.decline_code ?? null,
+            message: upgradeError?.message,
+            subscriptionId: existingSubscription.stripeSubscriptionId,
+            customerId: stripeCustomerId,
+            targetPlanId: targetPlan.planId,
+            targetPriceId: priceId,
+          });
+
+          // Fallback: redirect the user to the Stripe Billing Portal so they can
+          // complete the upgrade there. The portal is the correct Stripe primitive
+          // for modifying an *existing* subscription — unlike a new Checkout Session
+          // (mode:'subscription') it never conflicts with an existing active sub.
+          const returnBase = process.env.FRONTEND_URL || 'https://quikpik.app';
+          try {
+            const portalSession = await stripe.billingPortal.sessions.create({
+              customer: stripeCustomerId,
+              return_url: `${returnBase}/subscription-pricing?success=true`,
+            });
+            return res.json({
+              success: true,
+              type: 'portal',
+              url: portalSession.url,
+            });
+          } catch (portalError: any) {
+            console.error('❌ Billing Portal fallback also failed:', {
+              stripeType: portalError?.type,
+              stripeCode: portalError?.code,
+              message: portalError?.message,
+            });
+            return res.status(500).json({
+              message: 'We could not process your upgrade automatically. Please contact support or try again later.',
+              stripeCode: portalError?.code ?? upgradeError?.code ?? 'unknown',
+            });
+          }
+        }
+      } else {
+        // NEW SUBSCRIPTION FLOW: User has no existing subscription - use checkout session
+        
+        const sessionOptions: any = {
+          customer: stripeCustomerId,
+          payment_method_types: ['card'],
+          line_items: [{
+            price: priceId,
+            quantity: 1,
+          }],
+          mode: 'subscription',
+          success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing?cancelled=true`,
+          metadata: {
+            userId: userId,
+            planId: targetPlan.planId,
+            subscriptionType: 'new'
+          }
+        };
+
+        // Create Stripe checkout session with correct API syntax
+        const session = idempotencyKey 
+          ? await stripe.checkout.sessions.create(sessionOptions, { idempotencyKey })
+          : await stripe.checkout.sessions.create(sessionOptions);
+
+        return res.json({ 
+          success: true, 
+          type: 'checkout',
+          sessionId: session.id,
+          url: session.url 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to create checkout session:', error);
+      res.status(500).json({ 
+        message: 'Failed to create checkout session',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/subscriptions/downgrade
+  app.post('/api/subscriptions/downgrade', requireAuth, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { targetPlan } = req.body;
+
+      // Zod validation for targetPlan
+      const targetPlanSchema = z.object({
+        targetPlan: z.enum(['free', 'standard', 'premium'], {
+          errorMap: () => ({ message: 'targetPlan must be one of: free, standard, premium' })
+        })
+      });
+
+      const validation = targetPlanSchema.safeParse({ targetPlan });
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: 'Invalid target plan',
+          errors: validation.error.errors
+        });
+      }
+
+      const isTestAccount = Boolean(req.user.isTestAccount);
+
+      // Get current subscription
+      const currentSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
+      
+      if (!currentSubscription?.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'No active subscription found' });
+      }
+
+      // Get target plan details to get the price ID
+      const plans = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, targetPlan));
+      
+      if (plans.length === 0) {
+        return res.status(400).json({ message: 'Target plan not found' });
+      }
+
+      const targetPlanData = plans[0];
+
+      // Handle downgrade to free plan with proper proration
+      if (targetPlan === 'free') {
+        // Compute projected impact BEFORE proratedFreeDowngrade mutates the DB
+        const projectedImpact = await getProjectedDowngradeImpact(userId, 'free');
+
+        const result = await SubscriptionService.proratedFreeDowngrade(
+          currentSubscription.stripeSubscriptionId,
+          userId,
+          isTestAccount,
+        );
+
+        // Enforce limits immediately (immediate downgrade path)
+        const enforcedNow = await enforceNewPlanLimits(userId, 'free');
+
+        // Send downgrade scheduled/immediate confirmation email
+        // The webhook will also send the "effective" email when customer.subscription.deleted fires
+        const [downgradedUser] = await db.select().from(users).where(eq(users.id, userId));
+        if (downgradedUser?.email) {
+          try {
+            const { subject, html, text } = generateDowngradeScheduledEmail({
+              firstName: downgradedUser.firstName || '',
+              email: downgradedUser.email,
+              businessName: downgradedUser.businessName || 'Quikpik',
+              currentPlan: currentSubscription.currentPlan || 'standard', // captured before proratedFreeDowngrade mutated the DB
+              effectiveDate: new Date(), // immediate cancellation — effective today
+              productsToLock: enforcedNow.productsLocked || undefined,
+              totalProducts: projectedImpact.totalProducts || undefined,
+              teamMembersToSuspend: enforcedNow.teamMembersSuspended || undefined,
+              groupsToArchive: enforcedNow.groupsArchived || undefined,
+            });
+            await sendEmail({ to: downgradedUser.email, from: 'hello@quikpik.co', subject, html, text });
+          } catch (emailErr) {
+            console.error('❌ Failed to send downgrade scheduled email:', emailErr);
+          }
+        }
+        
+        res.json({
+          success: true,
+          type: 'downgrade_immediate',
+          targetPlan: targetPlan,
+          proratedCredit: result.proratedCredit,
+          message: result.message
+        });
+        return;
+      }
+
+      // Handle downgrade to paid plan with immediate proration
+      if (!targetPlanData.stripePriceId) {
+        return res.status(400).json({ message: 'Target plan price ID not configured' });
+      }
+
+      const result = await SubscriptionService.immediateDowngradeWithProration(
+        currentSubscription.stripeSubscriptionId,
+        targetPlanData.stripePriceId,
+        targetPlan,
+        isTestAccount,
+      );
+
+      // Enforce paid→paid downgrade limits (e.g. Premium→Standard: lock products >50)
+      await enforceNewPlanLimits(userId, targetPlan);
+
+      res.json({
+        success: true,
+        type: 'downgrade_immediate',
+        targetPlan: targetPlan,
+        subscriptionId: result.id,
+        message: 'Subscription downgraded immediately with pro-rated credit'
+      });
+    } catch (error) {
+      console.error('❌ Failed to downgrade subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to downgrade subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/subscriptions/cancel
+  app.post('/api/subscriptions/cancel', requireAuth, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { user } = await SubscriptionService.getUserSubscription(userId);
+      
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'No active subscription found' });
+      }
+
+      try {
+        // Cancel subscription at period end using service method
+        const subscription = await SubscriptionService.cancelSubscription(
+          user.stripeSubscriptionId,
+          Boolean(req.user.isTestAccount),
+          { cancelAtPeriodEnd: true }
+        );
+
+        // CRITICAL: Sync cancel_at_period_end back to the DB immediately so the next
+        // GET /api/subscriptions/current returns fresh data (not a 304 with stale ETag).
+        const cancelPeriodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : null;
+
+        await db.update(userSubscriptions).set({
+          cancelAtPeriodEnd: true,
+          status: 'active', // stays active until period end
+          currentPeriodEnd: cancelPeriodEnd,
+          updatedAt: new Date(),
+        }).where(eq(userSubscriptions.userId, userId));
+
+        // Keep users table in sync so any code reading users.subscriptionStatus sees the correct state
+        await db.update(users).set({
+          subscriptionStatus: 'cancel_at_period_end',
+          updatedAt: new Date(),
+        }).where(eq(users.id, userId));
+
+        // Compute projected impact for the scheduled email (cancel = at period end, nothing locked yet)
+        const cancelProjectedImpact = await getProjectedDowngradeImpact(userId, 'free');
+
+        // Send downgrade scheduled confirmation email
+        if (user.email) {
+          try {
+            const effectiveDate = new Date(subscription.current_period_end * 1000);
+            const { subject, html, text } = generateDowngradeScheduledEmail({
+              firstName: user.firstName || '',
+              email: user.email,
+              businessName: user.businessName || 'Quikpik',
+              currentPlan: user.currentPlan || 'standard',
+              effectiveDate,
+              productsToLock: cancelProjectedImpact.productsToLock || undefined,
+              totalProducts: cancelProjectedImpact.totalProducts || undefined,
+              teamMembersToSuspend: cancelProjectedImpact.teamMembersToSuspend || undefined,
+              groupsToArchive: cancelProjectedImpact.groupsToArchive || undefined,
+            });
+            await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
+          } catch (emailErr) {
+            console.error('❌ Failed to send downgrade scheduled email:', emailErr);
+          }
+        }
+
+        return res.json({ 
+          success: true, 
+          message: 'Subscription will be canceled at the end of the current period',
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodEnd: subscription.current_period_end
+        });
+      } catch (stripeError: any) {
+        // If Stripe says the subscription doesn't exist, it's already gone — clean up the DB
+        const isStaleSubscription = 
+          stripeError?.message?.includes('No such subscription') ||
+          stripeError?.code === 'resource_missing';
+
+        if (isStaleSubscription) {
+          console.warn('⚠️ Stripe subscription not found — cleaning up stale ID for user:', userId, user.stripeSubscriptionId);
+
+          await db.update(users).set({
+            subscriptionStatus: 'free',
+            currentPlan: 'free',
+            subscriptionTier: 'free',
+            productLimit: 2,
+            stripeSubscriptionId: null,
+            subscriptionPeriodStart: null,
+            subscriptionPeriodEnd: null,
+            updatedAt: new Date()
+          }).where(eq(users.id, userId));
+
+          const existingSub = await db.select().from(userSubscriptions)
+            .where(eq(userSubscriptions.userId, userId));
+
+          if (existingSub.length > 0) {
+            await db.update(userSubscriptions).set({
+              planId: 'free',
+              stripeSubscriptionId: null,
+              status: 'canceled',
+              cancelAtPeriodEnd: null,
+              updatedAt: new Date()
+            }).where(eq(userSubscriptions.userId, userId));
+          } else {
+            await db.insert(userSubscriptions).values({
+              userId,
+              planId: 'free',
+              stripeSubscriptionId: null,
+              status: 'free',
+              currentPeriodStart: null,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: null
+            });
+          }
+
+          return res.json({
+            success: true,
+            message: 'Subscription cancelled and plan reverted to Free'
+          });
+        }
+
+        throw stripeError;
+      }
+    } catch (error) {
+      console.error('❌ Failed to cancel subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to cancel subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/subscriptions/plan-limits
+  app.get('/api/subscriptions/plan-limits', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const planLimits = await getUserPlanLimits(userId);
+      res.json(planLimits);
+    } catch (error) {
+      console.error('❌ Failed to get plan limits:', error);
+      res.status(500).json({ 
+        message: 'Failed to get plan limits',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+}
