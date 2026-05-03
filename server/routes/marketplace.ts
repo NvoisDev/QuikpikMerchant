@@ -2519,7 +2519,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           })), wholesaler);
         } catch (emailError) {
           const msg = emailError instanceof Error ? emailError.message : String(emailError);
-          console.error(`❌ Email failed [service=SendGrid endpoint=marketplace-customer-invoice orderId=${order.id} to=${customerEmail}]: ${msg}`);
+          console.warn(`[sendgrid] marketplace-customer-invoice email failed [orderId=${order.id}]: ${msg}`);
         }
       }
       
@@ -2710,7 +2710,7 @@ Please contact the customer to confirm this order.
         await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error(`❌ Email failed [service=SendGrid endpoint=customer-portal-invoice orderId=${order.id} to=${customer?.email}]: ${msg}`);
+        console.warn(`[sendgrid] customer-portal-invoice email failed [orderId=${order.id}]: ${msg}`);
       }
 
       // Notify wholesaler via WhatsApp

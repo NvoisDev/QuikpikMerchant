@@ -640,7 +640,7 @@ export function registerOrderRoutes(app: Express): void {
               });
             } catch (emailErr) {
               const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-              console.error(`❌ Email failed [service=SendGrid endpoint=customer-payment-received orderId=${order.id} to=${customer.email}]: ${msg}`);
+              console.warn(`[sendgrid] customer-payment-received email failed [orderId=${order.id}]: ${msg}`);
             }
           }
 
@@ -653,7 +653,7 @@ export function registerOrderRoutes(app: Express): void {
               await sendWhatsAppMessage({ to: customer.phoneNumber, message: smsMsg });
             } catch (smsErr) {
               const msg = smsErr instanceof Error ? smsErr.message : String(smsErr);
-              console.error(`❌ WhatsApp failed [service=Twilio endpoint=customer-payment-received orderId=${order.id} to=${customer.phoneNumber}]: ${msg}`);
+              console.warn(`[twilio] customer-payment-received WhatsApp failed [orderId=${order.id}]: ${msg}`);
             }
           }
 
@@ -687,7 +687,7 @@ export function registerOrderRoutes(app: Express): void {
               });
             } catch (emailErr) {
               const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-              console.error(`❌ Email failed [service=SendGrid endpoint=wholesaler-payment-received orderId=${order.id} to=${wholesaler.email}]: ${msg}`);
+              console.warn(`[sendgrid] wholesaler-payment-received email failed [orderId=${order.id}]: ${msg}`);
             }
           }
         }
@@ -1732,7 +1732,7 @@ export function registerOrderRoutes(app: Express): void {
               });
             } catch (emailError) {
               const msg = emailError instanceof Error ? emailError.message : String(emailError);
-              console.error(`❌ Email failed [service=SendGrid endpoint=cancellation-notification orderId=${order.id} to=${customer?.email}]: ${msg}`);
+              console.warn(`[sendgrid] cancellation-notification email failed [orderId=${order.id}]: ${msg}`);
             }
           }
         }
@@ -3326,7 +3326,7 @@ export function registerOrderRoutes(app: Express): void {
           
         } catch (smsError) {
           const msg = smsError instanceof Error ? smsError.message : String(smsError);
-          console.error(`❌ WhatsApp failed [service=Twilio endpoint=send-payment-link orderId=${orderId}]: ${msg}`);
+          console.warn(`[twilio] send-payment-link WhatsApp failed [orderId=${orderId}]: ${msg}`);
         }
       }
 

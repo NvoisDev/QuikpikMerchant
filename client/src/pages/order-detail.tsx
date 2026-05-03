@@ -643,6 +643,7 @@ export default function OrderDetail() {
             body: JSON.stringify({ approved: true })
           }).catch((err) => {
             console.error('[order-detail] failed to acknowledge cancellation request:', err);
+            toast({ title: "Acknowledgement failed", description: "Cancellation was processed but the request acknowledgement failed.", variant: "destructive" });
           });
           setPendingCancellationRequestId(null);
         }

@@ -145,6 +145,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
       })
       .catch((err) => {
         console.error('[CustomerAuth] registration status check failed:', err);
+        toast({ title: "Couldn't check registration", description: "Registration status check failed. Please try again.", variant: "destructive" });
         setRegistrationPendingStatus('none');
       });
   }, [wholesalerId]);
