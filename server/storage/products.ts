@@ -100,33 +100,61 @@ function resolveLivePromo(offers: any[], basePrice: string): { promoActive: bool
 }
 
 export class ProductStorage extends UserStorageBase {
-  async getProducts(wholesalerId?: string): Promise<Product[]> {
+  async getProducts(wholesalerId?: string, options?: { unpaginated?: boolean }): Promise<Product[]> {
     const startTime = Date.now();
     
     if (wholesalerId) {
+      // Default: 200 rows per wholesaler. Pass { unpaginated: true } only for
+      // internal analytics / bulk-export paths that genuinely need the full list.
+      const rowLimit = options?.unpaginated ? undefined : 200;
+
       // Optimized query for specific wholesaler with strategic field selection
-      const result = await db.execute(sql`
-        SELECT 
-          id, name, description, price, stock, moq, 
-          wholesaler_id, image_url, images, status, category,
-          promo_active, promo_price, low_stock_threshold,
-          price_visible,
-          pack_quantity, unit_of_measure, size_per_unit, currency,
-          selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
-          base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
-          unit, unit_format, pallet_weight, unit_weight, total_package_weight,
-          promotional_offers, expiry_date, cost_price,
-          created_at, updated_at
-        FROM products 
-        WHERE wholesaler_id = ${wholesalerId} 
-          AND status IN ('active', 'inactive', 'locked')
-        ORDER BY 
-          status = 'active' DESC,
-          promo_active DESC,
-          stock > 0 DESC,
-          created_at DESC
-        LIMIT 200
-      `);
+      const result = await db.execute(
+        rowLimit !== undefined
+          ? sql`
+            SELECT 
+              id, name, description, price, stock, moq, 
+              wholesaler_id, image_url, images, status, category,
+              promo_active, promo_price, low_stock_threshold,
+              price_visible,
+              pack_quantity, unit_of_measure, size_per_unit, currency,
+              selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+              base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
+              unit, unit_format, pallet_weight, unit_weight, total_package_weight,
+              promotional_offers, expiry_date, cost_price,
+              created_at, updated_at
+            FROM products 
+            WHERE wholesaler_id = ${wholesalerId} 
+              AND status IN ('active', 'inactive', 'locked')
+            ORDER BY 
+              status = 'active' DESC,
+              promo_active DESC,
+              stock > 0 DESC,
+              created_at DESC
+            LIMIT ${rowLimit}
+          `
+          : sql`
+            SELECT 
+              id, name, description, price, stock, moq, 
+              wholesaler_id, image_url, images, status, category,
+              promo_active, promo_price, low_stock_threshold,
+              price_visible,
+              pack_quantity, unit_of_measure, size_per_unit, currency,
+              selling_format, units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+              base_unit_stock, quantity_in_pack, edit_count, delivery_excluded,
+              unit, unit_format, pallet_weight, unit_weight, total_package_weight,
+              promotional_offers, expiry_date, cost_price,
+              created_at, updated_at
+            FROM products 
+            WHERE wholesaler_id = ${wholesalerId} 
+              AND status IN ('active', 'inactive', 'locked')
+            ORDER BY 
+              status = 'active' DESC,
+              promo_active DESC,
+              stock > 0 DESC,
+              created_at DESC
+          `
+      );
       
       const queryTime = Date.now() - startTime;
       console.log(`⚡ PERFORMANCE: Wholesaler products query: ${result.rows.length} rows in ${queryTime}ms`);
@@ -208,7 +236,9 @@ export class ProductStorage extends UserStorageBase {
       }) as unknown as Product[];
     }
     
-    // General query optimization for all products
+    // General fallback path (no wholesalerId). Hard-capped at 100 rows — no caller
+    // currently hits this path without an ID, but the cap guards against accidental
+    // unbounded queries if a future route omits the wholesalerId argument.
     const result = await db.execute(sql`
       SELECT 
         id, name, description, price, stock, moq, 

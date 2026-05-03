@@ -105,7 +105,7 @@ export interface IStorage {
   resetPasswordWithToken(token: string, newPassword: string): Promise<User | null>;
   
   // Product operations
-  getProducts(wholesalerId?: string): Promise<Product[]>;
+  getProducts(wholesalerId?: string, options?: { unpaginated?: boolean }): Promise<Product[]>;
   getExpiringProducts(wholesalerId: string): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
