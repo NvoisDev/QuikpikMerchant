@@ -208,23 +208,10 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
   // Try to fetch individual address components from live database
   if (order.deliveryAddressId) {
     try {
-      console.log(`🏠 FETCHING ADDRESS: deliveryAddressId=${order.deliveryAddressId}, customerId=${order.customerId}, wholesalerId=${order.wholesalerId}`);
       const addresses = await storage.getDeliveryAddresses(order.customerId || '');
-      console.log(`🏠 FOUND ${addresses.length} addresses for customer ${order.customerId}`);
       const fullAddress = (addresses.find((addr: any) => addr.id === order.deliveryAddressId)) as any;
-      
+
       if (fullAddress) {
-        console.log(`🏠 RAW DATABASE OBJECT:`, JSON.stringify(fullAddress, null, 2));
-        console.log(`🏠 OBJECT KEYS:`, Object.keys(fullAddress));
-        console.log(`🏠 FIELD ACCESS TEST:`);
-        console.log(`  - fullAddress.addressLine1: "${fullAddress.addressLine1}"`);
-        console.log(`  - fullAddress.address_line1: "${fullAddress.address_line1}"`);
-        console.log(`  - fullAddress.postalCode: "${fullAddress.postalCode}"`);
-        console.log(`  - fullAddress.postal_code: "${fullAddress.postal_code}"`);
-        console.log(`  - fullAddress.city: "${fullAddress.city}"`);
-        console.log(`  - fullAddress.state: "${fullAddress.state}"`);
-        console.log(`  - fullAddress.country: "${fullAddress.country}"`);
-        
         const components = {
           addressLine1: fullAddress.addressLine1 || fullAddress.address_line1 || '',
           addressLine2: fullAddress.addressLine2 || fullAddress.address_line2 || '',
@@ -233,8 +220,6 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
           postalCode: fullAddress.postalCode || fullAddress.postal_code || '',
           country: fullAddress.country || ''
         };
-        
-        console.log(`🏠 FINAL COMPONENTS:`, components);
         return components;
       }
     } catch (error) {

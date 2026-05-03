@@ -464,8 +464,6 @@ export class BroadcastStorage extends CustomerStorage {
 
   // Stock Movement operations
   async createStockMovement(movement: InsertStockMovement): Promise<StockMovement> {
-    console.log(`🔍 DEBUG: About to create stock movement:`, movement);
-    
     try {
       const [stockMovement] = await db
         .insert(stockMovements)

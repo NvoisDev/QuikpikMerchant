@@ -40,6 +40,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import {
   ReliableSMSService, and, createEmailVerification, customerRegistrationRequests, db, desc,
   emailButton, emailCard, emailHeading, eq, getEmailLogoUrl, gt, multiWholesalerService, or,
@@ -49,6 +50,22 @@ import {
 } from "./shared";
 import { formatPhoneToInternational, isValidMobile } from "../../shared/phone-utils";
 import { signCustomerCookie, parseCustomerCookie, COOKIE_OPTIONS, renewCustomerCookieIfNeeded } from "../utils/customer-auth-cookie";
+
+const otpSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OTP requests from this IP. Please try again later.' },
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many verification attempts from this IP. Please try again later.' },
+});
 
 // ─── Shared session helper ───────────────────────────────────────────────────
 async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wholesalerId: string) {
@@ -111,7 +128,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   // ─── NEW FLOW: Phone OTP (wholesaler-agnostic) ───────────────────────────
 
   // POST /api/customer-auth/request-phone-otp
-  app.post('/api/customer-auth/request-phone-otp', async (req, res) => {
+  app.post('/api/customer-auth/request-phone-otp', otpSendLimiter, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
       if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim().length < 7) {
@@ -152,7 +169,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   });
 
   // POST /api/customer-auth/verify-phone-otp
-  app.post('/api/customer-auth/verify-phone-otp', async (req, res) => {
+  app.post('/api/customer-auth/verify-phone-otp', otpVerifyLimiter, async (req, res) => {
     try {
       const { phoneNumber, code } = req.body;
       if (!phoneNumber || !code) {

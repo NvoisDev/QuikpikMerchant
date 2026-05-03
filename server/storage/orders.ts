@@ -384,49 +384,26 @@ export class OrderStorage extends ProductStorage {
         console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter}) inside createOrder transaction`);
       }
       
-      // CRITICAL DEBUG: Add detailed logging to identify SQL syntax error
-      const orderData = {
-        ...order,
-        orderNumber
-      };
-      
-      console.log(`🔍 DEBUG: About to insert order with data:`, orderData);
-      console.log(`🔍 DEBUG: Order data keys:`, Object.keys(orderData));
-      console.log(`🔍 DEBUG: Order data values:`, Object.values(orderData));
-      
-      // Try to insert each field explicitly to isolate the problem
       const cleanOrderData = {
-        orderNumber: orderData.orderNumber,
-        wholesalerId: orderData.wholesalerId,
-        retailerId: orderData.retailerId,
-        subtotal: orderData.subtotal,
-        platformFee: orderData.platformFee,
-        customerTransactionFee: orderData.customerTransactionFee,
-        vatAmount: orderData.vatAmount,
-        vatRateApplied: orderData.vatRateApplied,
-        total: orderData.total,
-        deliveryAddress: orderData.deliveryAddress,
-        notes: orderData.notes,
-        status: orderData.status || 'confirmed'
+        orderNumber,
+        wholesalerId: order.wholesalerId,
+        retailerId: order.retailerId,
+        subtotal: order.subtotal,
+        platformFee: order.platformFee,
+        customerTransactionFee: order.customerTransactionFee,
+        vatAmount: order.vatAmount,
+        vatRateApplied: order.vatRateApplied,
+        total: order.total,
+        deliveryAddress: order.deliveryAddress,
+        notes: order.notes,
+        status: order.status || 'confirmed'
       };
-      
-      console.log(`🔍 DEBUG: Clean order data:`, cleanOrderData);
       
       let newOrder;
       try {
         [newOrder] = await tx.insert(orders).values(cleanOrderData).returning();
-        
-        console.log(`✅ Order inserted successfully:`, newOrder);
       } catch (error) {
-        console.error(`❌ CRITICAL: Order insertion failed:`, error);
-        console.error(`❌ Clean order data that failed:`, cleanOrderData);
-        if (error instanceof Error) {
-          const dbErr = error as Error & { position?: string; code?: string };
-          console.error(`❌ Full error details:`, {
-            name: dbErr.name, message: dbErr.message, stack: dbErr.stack,
-            position: dbErr.position, code: dbErr.code
-          });
-        }
+        console.error(`❌ Order insertion failed:`, error);
         throw error;
       }
       

@@ -117,7 +117,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      const limitParam = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limitParam = req.query.limit ? Math.min(parseInt(req.query.limit as string) || 50, 200) : undefined;
 
       // Session guard: verify the caller is authenticated for this wholesaler
       const sessionAuth = await resolveCustomerAuth(req, wholesalerId);
@@ -2128,6 +2128,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.post('/api/customer/orders/:id/request-cancellation', async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const { customerPhone, reasonCategory, reasonNotes } = req.body;
       
       if (!customerPhone) {
@@ -2233,6 +2234,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.get('/api/customer/orders/:id/can-cancel', async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const customerPhone = req.query.customerPhone as string;
       
       if (!customerPhone) {
@@ -2744,6 +2746,7 @@ Please contact the customer to confirm this order.
   app.post('/api/customer/orders/:orderId/payment-link/:phoneNumber', async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const customerPhone = decodeURIComponent(req.params.phoneNumber);
 
       if (!customerPhone) {

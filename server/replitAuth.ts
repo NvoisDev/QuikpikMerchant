@@ -45,9 +45,9 @@ export function getSession() {
     rolling: true, // Reset expiry on each request
     cookie: {
       httpOnly: true,
-      secure: false, // Allow insecure cookies for development/testing
+      secure: process.env.NODE_ENV === 'production',
       maxAge: sessionTtl,
-      sameSite: 'lax', // Allow same-site cookie transmission
+      sameSite: 'lax',
     },
   });
 }

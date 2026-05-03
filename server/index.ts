@@ -445,7 +445,18 @@ app.use((req, res, next) => {
 (async () => {
   try {
     console.log("🚀 Starting Quikpik server...");
-    
+
+    // Warn about optional service keys that will silently degrade if missing
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      console.warn("⚠️  TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — SMS and WhatsApp notifications will be unavailable");
+    }
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn("⚠️  SENDGRID_API_KEY not set — email notifications will be unavailable");
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn("⚠️  OPENAI_API_KEY not set — AI features will be unavailable");
+    }
+
     // Validate database connection first
     const dbConnected = await validateDatabaseConnection();
     if (!dbConnected) {
