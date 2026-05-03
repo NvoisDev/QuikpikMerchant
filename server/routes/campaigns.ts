@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { ANALYTICS_ORDER_CAP } from "../constants";
 import {
   and, count, customerGroups, generateCampaignSuggestions, generatePersonalizedTagline,
   getBroadcastLimit, insertBroadcastSchema, insertMessageTemplateSchema,
@@ -597,8 +598,9 @@ export function registerCampaignRoutes(app: Express): void {
         storage.getMessageTemplates(targetUserId)
       ]);
 
-      // Get all orders for real order count calculation (analytics requires full history)
-      const allOrders = await storage.getOrders(targetUserId, undefined, undefined, { unpaginated: true });
+      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
+      // See server/constants.ts for the rationale.
+      const allOrders = await storage.getOrders(targetUserId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP });
 
       // Convert broadcasts to unified campaign format with real order data
       const broadcastCampaigns = await Promise.all(broadcasts.map(async broadcast => {
@@ -801,11 +803,12 @@ export function registerCampaignRoutes(app: Express): void {
           break;
       }
 
-      // Get campaigns and analytics data
+      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
+      // See server/constants.ts for the rationale.
       const [broadcasts, templates, allOrders] = await Promise.all([
         storage.getBroadcasts(targetUserId),
         storage.getMessageTemplates(targetUserId),
-        storage.getOrders(targetUserId, undefined, undefined, { unpaginated: true })
+        storage.getOrders(targetUserId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP })
       ]);
 
       // Filter campaigns by date and type
@@ -958,6 +961,7 @@ export function registerCampaignRoutes(app: Express): void {
         }
       }
 
+      const isCappedAnalytics = allOrders.length === ANALYTICS_ORDER_CAP;
       const performanceData = {
         totalCampaigns: filteredBroadcasts.length + filteredTemplates.length,
         activeCampaigns: filteredBroadcasts.filter(b => b.sentAt).length + 
@@ -970,7 +974,8 @@ export function registerCampaignRoutes(app: Express): void {
         averageConversionRate: Math.round(averageConversionRate * 100) / 100,
         averageClickRate: Math.round(averageClickRate * 100) / 100,
         bestPerformingCampaign,
-        recentPerformance: [] // Could be expanded with detailed trend data
+        recentPerformance: [], // Could be expanded with detailed trend data
+        isCapped: isCappedAnalytics
       };
 
       res.json(performanceData);

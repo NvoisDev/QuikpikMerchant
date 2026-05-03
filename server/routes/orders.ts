@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import crypto from "crypto";
+import { ANALYTICS_ORDER_CAP } from "../constants";
 
 /**
  * Derive a stable, time-bucketed idempotency fingerprint for an order creation request.
@@ -1080,8 +1081,11 @@ export function registerOrderRoutes(app: Express): void {
         return false;
       };
       
-      // Get all orders to calculate overall statistics (full history required for archive counts)
-      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined, { unpaginated: true });
+      // Cap at ANALYTICS_ORDER_CAP rows (newest-first) to prevent unbounded memory use.
+      // See server/constants.ts for the rationale. isCapped is included in the response
+      // so the frontend can optionally note "showing results for most recent N orders".
+      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined, { limit: ANALYTICS_ORDER_CAP });
+      const isCapped = allOrders.length === ANALYTICS_ORDER_CAP;
       
       // Filter by active/archived based on tab
       const filteredOrders = archiveTab === 'all'
@@ -1120,7 +1124,8 @@ export function registerOrderRoutes(app: Express): void {
         pendingOrdersCount: pendingOrders.length,
         avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0,
         activeCount: activeCount,
-        archivedCount: archivedCount
+        archivedCount: archivedCount,
+        isCapped: isCapped
       };
 
       res.json(stats);

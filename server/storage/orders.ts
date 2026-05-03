@@ -78,7 +78,7 @@ import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 import { ProductStorage } from './products';
 
 export class OrderStorage extends ProductStorage {
-  async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string, options?: { unpaginated?: boolean }): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
+  async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string, options?: { unpaginated?: boolean; limit?: number }): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
     // Apply basic filters - CRITICAL FIX: Include orders where user is EITHER wholesaler OR retailer
     const conditions = [];
     if (wholesalerId) {
@@ -108,8 +108,9 @@ export class OrderStorage extends ProductStorage {
       );
     }
 
-    // Default to 500 rows; callers that need full history pass { unpaginated: true }
-    const rowLimit = options?.unpaginated ? undefined : 500;
+    // Default to 500 rows; callers that need full history pass { unpaginated: true };
+    // analytics callers may pass { limit: ANALYTICS_ORDER_CAP } for a higher but bounded ceiling.
+    const rowLimit = options?.unpaginated ? undefined : (options?.limit ?? 500);
 
     const baseQuery = conditions.length > 0
       ? db.select().from(orders).where(and(...conditions)).orderBy(desc(orders.createdAt))
