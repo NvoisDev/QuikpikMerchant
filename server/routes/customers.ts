@@ -993,7 +993,8 @@ export function registerCustomerRoutes(app: Express): void {
           eq(orders.retailerId, customerId),
           eq(orders.wholesalerId, targetUserId)
         ))
-        .orderBy(desc(orders.createdAt));
+        .orderBy(desc(orders.createdAt))
+        .limit(5);
 
       res.json(rows);
     } catch (error) {
