@@ -237,7 +237,6 @@ async function markPromotionNotified(
 export class PromotionNotificationService {
   async checkAndSendPromotionNotifications(): Promise<void> {
     const today = getTodayDateString();
-    console.log(`🎯 Checking for promotions starting or ending today (${today})...`);
 
     try {
       const allActiveProducts = await db
@@ -258,7 +257,6 @@ export class PromotionNotificationService {
         );
 
       if (allActiveProducts.length === 0) {
-        console.log("✅ No products with promotions found");
         return;
       }
 
@@ -299,11 +297,8 @@ export class PromotionNotificationService {
       const endingCount = Array.from(endingByWholesaler.values()).reduce((s, a) => s + a.length, 0);
 
       if (startingCount === 0 && endingCount === 0) {
-        console.log("✅ No promotions starting or ending today");
         return;
       }
-
-      console.log(`📢 Found ${startingCount} promotions starting today, ${endingCount} ending today`);
 
       for (const [wholesalerId, promoProducts] of Array.from(startingByWholesaler.entries())) {
         await this.notifyCustomers(wholesalerId, promoProducts, "start");
@@ -326,14 +321,12 @@ export class PromotionNotificationService {
     try {
       const wholesaler = await getWholesalerInfo(wholesalerId);
       if (!wholesaler) {
-        console.warn(`⚠️ Could not find wholesaler ${wholesalerId} — skipping`);
         return;
       }
 
       const customers = await storage.getAllCustomers(wholesalerId);
 
       if (customers.length === 0) {
-        console.log(`📭 No customers for ${wholesaler.businessName} — skipping`);
         return;
       }
 
@@ -377,10 +370,6 @@ export class PromotionNotificationService {
       }
 
       const atLeastOneDelivered = emailsSent > 0 || smsSent > 0;
-
-      console.log(
-        `📢 ${eventType === "start" ? "Start" : "End"} notifications for ${wholesaler.businessName}: ${emailsSent} emails, ${smsSent} SMS — ${atLeastOneDelivered ? "marking sent" : "no delivery, NOT marking sent"}`
-      );
 
       if (atLeastOneDelivered) {
         for (const pp of promoProducts) {

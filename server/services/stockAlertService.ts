@@ -24,8 +24,6 @@ export class StockAlertService {
    */
   async checkAndSendLowStockAlerts(): Promise<void> {
     try {
-      console.log('🔍 Checking for low stock products...');
-
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
       const lowStockProducts = await db
@@ -53,11 +51,8 @@ export class StockAlertService {
         ));
 
       if (lowStockProducts.length === 0) {
-        console.log('✅ No low stock products found');
         return;
       }
-
-      console.log(`⚠️ Found ${lowStockProducts.length} low stock products`);
 
       // Group products by wholesaler
       const alertsByWholesaler = new Map<string, StockAlert[]>();
@@ -116,8 +111,6 @@ export class StockAlertService {
           .where(inArray(products.id, allAlertedProductIds));
       }
 
-      console.log(`📧 Stock alerts sent to ${alertsByWholesaler.size} wholesalers for ${allAlertedProductIds.length} products`);
-
     } catch (error) {
       console.error('❌ Error checking low stock:', error);
     }
@@ -163,14 +156,9 @@ export class StockAlertService {
         }
       }
 
-      if (members.length > 0) {
-        console.log(`📢 Stock alerts also sent to ${members.length} team member(s) for ${wholesaler.wholesalerName}`);
-      }
     } catch (error) {
       console.error(`❌ Failed to send stock alerts to team members for ${wholesaler.wholesalerName}:`, error);
     }
-
-    console.log(`📢 Stock alerts sent to ${wholesaler.wholesalerName} for ${productCount} products`);
   }
 
   /**
@@ -229,7 +217,6 @@ export class StockAlertService {
    */
   private async sendEmailAlert(wholesaler: StockAlert, emailContent: { subject: string; body: string }): Promise<void> {
     if (!wholesaler.wholesalerEmail) {
-      console.log(`📧 No email address for ${wholesaler.wholesalerName} - skipping email alert`);
       return;
     }
 
@@ -241,7 +228,6 @@ export class StockAlertService {
         text: emailContent.body.replace(/<[^>]*>/g, ''), // Strip HTML for text version
         html: emailContent.body
       });
-      console.log(`📧 Email stock alert sent to ${wholesaler.wholesalerName}`);
     } catch (error) {
       console.error(`❌ Failed to send email stock alert to ${wholesaler.wholesalerName}:`, error);
     }
@@ -252,13 +238,11 @@ export class StockAlertService {
    */
   private async sendWhatsAppAlert(wholesaler: StockAlert, message: string): Promise<void> {
     if (!wholesaler.wholesalerPhone) {
-      console.log(`💬 No phone number for ${wholesaler.wholesalerName} - skipping WhatsApp alert`);
       return;
     }
 
     try {
       await sendWhatsAppMessage({ to: wholesaler.wholesalerPhone, message });
-      console.log(`💬 WhatsApp stock alert sent to ${wholesaler.wholesalerName}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp stock alert to ${wholesaler.wholesalerName}:`, error);
     }

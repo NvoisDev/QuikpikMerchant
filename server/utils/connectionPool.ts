@@ -119,7 +119,7 @@ export class QueryOptimizer {
     if (cacheKey) {
       const cached = queryCache.get(cacheKey);
       if (cached) {
-        console.log(`⚡ QUERY CACHE HIT: ${queryName}`);
+        if (process.env.DEBUG) console.log(`⚡ QUERY CACHE HIT: ${queryName}`);
         return cached;
       }
     }
@@ -133,11 +133,13 @@ export class QueryOptimizer {
       // Update statistics
       this.updateQueryStats(queryName, duration);
       
-      // Log slow queries
-      if (duration > this.slowQueryThreshold) {
-        console.warn(`🐌 SLOW QUERY: ${queryName} took ${duration}ms`);
-      } else if (duration < 50) {
-        console.log(`⚡ FAST QUERY: ${queryName} took ${duration}ms`);
+      // Log slow queries (only in debug mode)
+      if (process.env.DEBUG) {
+        if (duration > this.slowQueryThreshold) {
+          console.warn(`🐌 SLOW QUERY: ${queryName} took ${duration}ms`);
+        } else if (duration < 50) {
+          console.log(`⚡ FAST QUERY: ${queryName} took ${duration}ms`);
+        }
       }
       
       // Cache successful results
@@ -293,15 +295,12 @@ export class ConnectionRetryHandler {
         lastError = error as Error;
         dbHealthMonitor.recordConnectionAttempt(false);
         
-        console.warn(`${operationName} attempt ${attempt}/${this.maxRetries} failed:`, error);
-        
         if (attempt < this.maxRetries) {
           const delay = Math.min(
             this.baseDelay * Math.pow(2, attempt - 1),
             this.maxDelay
           );
           
-          console.log(`Retrying ${operationName} in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -353,8 +352,6 @@ export class BatchQueryProcessor {
     
     this.batches.delete(batchKey);
     this.batchTimeouts.delete(batchKey);
-    
-    console.log(`⚡ Executing batch ${batchKey} with ${batch.length} queries`);
     
     // Execute all queries in parallel
     const promises = batch.map(({ queryFn }) => 

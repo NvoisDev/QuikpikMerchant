@@ -8,14 +8,6 @@ export class ReliableSMSService {
   // Initialize Twilio client
   private static initialize() {
     if (this.isInitialized) return;
-    
-    console.log('🔧 SMS Service Initialization');
-    console.log('Twilio credentials check:', {
-      hasSID: !!process.env.TWILIO_ACCOUNT_SID,
-      hasToken: !!process.env.TWILIO_AUTH_TOKEN,
-      hasPhone: !!process.env.TWILIO_PHONE_NUMBER,
-      environment: process.env.NODE_ENV
-    });
 
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       try {
@@ -23,13 +15,10 @@ export class ReliableSMSService {
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         );
-        console.log('✅ Twilio client initialized successfully');
       } catch (error) {
         console.error('❌ Twilio client initialization failed:', error);
         this.twilioClient = null;
       }
-    } else {
-      console.log('⚠️ Twilio credentials missing, using development mode');
     }
     
     this.isInitialized = true;
@@ -50,9 +39,6 @@ export class ReliableSMSService {
     this.initialize();
     
     const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    // Clean SMS logging for production
-    console.log(`📤 Sending SMS verification to ${phoneNumber}`);
 
     // If no Twilio client configured, return error
     if (!this.twilioClient) {
@@ -72,8 +58,6 @@ export class ReliableSMSService {
 
     // SMS ENABLED: Send real SMS codes with 5-minute expiration
     try {
-      console.log(`📤 Attempting SMS to ${phoneNumber}`);
-      
       const storeLink = wholesalerId ? `https://quikpik.app/store/${wholesalerId}` : 'https://quikpik.app';
       
       // Send verification code first
@@ -92,9 +76,6 @@ export class ReliableSMSService {
         riskCheck: 'disable' // Prevent legitimate messages from being blocked by spam filtering
       });
 
-      console.log(`✅ SMS verification code sent: ${codeMessage.sid}`);
-      console.log(`✅ SMS welcome message sent: ${message.sid}`);
-      
       return {
         success: true,
         messageId: `${codeMessage.sid},${message.sid}`
@@ -132,8 +113,6 @@ export class ReliableSMSService {
     error?: string;
   }> {
     this.initialize();
-    
-    console.log(`📤 Sending stock alert SMS to ${phoneNumber}`);
 
     if (!this.twilioClient) {
       return {
@@ -166,8 +145,6 @@ export class ReliableSMSService {
         riskCheck: 'disable'
       });
 
-      console.log(`✅ Stock alert SMS sent successfully: ${twilioMessage.sid}`);
-      
       return {
         success: true,
         messageId: twilioMessage.sid

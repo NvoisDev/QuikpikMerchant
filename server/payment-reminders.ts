@@ -23,8 +23,6 @@ interface OrderWithPaymentTerms {
 }
 
 export async function checkAndSendPaymentReminders() {
-  console.log('🔔 Running payment reminder check...');
-  
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -53,8 +51,6 @@ export async function checkAndSendPaymentReminders() {
       )
     );
     
-    console.log(`📋 Found ${ordersWithBalances.length} orders with outstanding balances and payment terms`);
-    
     let remindersSent = 0;
     
     for (const order of ordersWithBalances) {
@@ -69,13 +65,11 @@ export async function checkAndSendPaymentReminders() {
       const shouldSendReminder = daysUntilDue === 3 || daysUntilDue === 0 || daysUntilDue === -1;
       
       if (shouldSendReminder) {
-        console.log(`📧 Sending reminder for order ${order.orderNumber}: ${daysUntilDue} days until due`);
         await sendPaymentReminder(order as OrderWithPaymentTerms, daysUntilDue, dueDate);
         remindersSent++;
       }
     }
     
-    console.log(`✅ Payment reminder check complete. Sent ${remindersSent} reminders.`);
     return remindersSent;
     
   } catch (error) {
@@ -93,7 +87,6 @@ async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: s
 
     const connectReady = await isConnectAccountReady(wholesalerUser?.stripeAccountId, Boolean(wholesalerUser?.isTestAccount));
     if (!connectReady) {
-      console.log(`⚠️ Skipping fresh payment link for order ${order.orderNumber}: wholesaler Connect account not active`);
       return order.stripePaymentLinkUrl || '';
     }
 
@@ -134,7 +127,6 @@ async function getFreshPaymentLink(order: OrderWithPaymentTerms, businessName: s
       await db.update(orders)
         .set({ stripePaymentLinkUrl: freshUrl, stripePaymentLinkId: session.id })
         .where(eq(orders.id, order.id));
-      console.log(`✅ Fresh payment link generated for order ${order.orderNumber}`);
     }
     return freshUrl;
   } catch (err) {
@@ -210,7 +202,6 @@ async function sendPaymentReminder(
         paymentLink,
         urgency,
       });
-      console.log(`✅ Email reminder sent to ${order.customerEmail} for order ${orderRef}`);
     } catch (error) {
       console.error(`❌ Failed to send email reminder for order ${orderRef}:`, error);
     }
@@ -230,7 +221,6 @@ async function sendPaymentReminder(
       }
       
       await sendWhatsAppMessage({ to: order.customerPhone, message: smsMessage });
-      console.log(`✅ WhatsApp reminder sent to ${order.customerPhone} for order ${orderRef}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp reminder for order ${orderRef}:`, error);
     }

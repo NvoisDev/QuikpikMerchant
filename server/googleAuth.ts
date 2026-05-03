@@ -31,13 +31,6 @@ const getRedirectUri = () => {
 };
 
 const redirectUri = getRedirectUri();
-console.log('Google OAuth redirect URI:', redirectUri);
-
-// Log helpful information for OAuth setup
-console.log('🔧 Google OAuth Setup Information:');
-console.log('📋 Add this redirect URI to your Google Cloud Console:');
-console.log(`   ${redirectUri}`);
-console.log('🌐 Google Cloud Console: https://console.cloud.google.com/apis/credentials');
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
@@ -111,10 +104,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       const SIGNABLE_ROLES = ['wholesaler', 'admin'];
       if (!SIGNABLE_ROLES.includes(user.role)) {
         if (user.role === 'team_member') {
-          console.log(`🚫 Google sign-in blocked: googleId matched a team_member record (id: ${user.id}) — redirecting to Team Member tab`);
           throw new GoogleAuthBlockedError('team_member_use_tab');
         }
-        console.log(`⚠️  googleId match found a ${user.role} record (id: ${user.id}) — creating fresh wholesaler account to prevent data collision`);
         const newUser = await storage.createUser({
           id: googleUser.id,
           email: googleUser.email,
@@ -131,7 +122,6 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       }
 
       // Returning wholesaler/admin already linked to this Google account — update profile and sign in
-      console.log(`✅ Found existing ${user.role} by googleId: ${user.email}`);
       user = await storage.updateUser(user.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
@@ -157,7 +147,6 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
       if (linkable) {
         // Existing wholesaler/admin — link Google account and sign in
-        console.log(`🔗 Linking Google account to existing ${linkable.role}: ${linkable.email} (id: ${linkable.id})`);
         user = await storage.updateUser(linkable.id, {
           firstName: googleUser.given_name || googleUser.name.split(' ')[0],
           lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
@@ -172,15 +161,12 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       // direct them to use the Team Member tab (email + password).
       const allAreTeamMembers = emailUsers.every(u => u.role === 'team_member');
       if (allAreTeamMembers) {
-        console.log(`🚫 Google sign-in blocked: email ${googleUser.email} matched only team_member records — redirecting to Team Member tab`);
         throw new GoogleAuthBlockedError('team_member_use_tab');
       }
 
       // SECURITY: All email matches are non-wholesaler, non-team-member records (e.g. retailer,
       // customer) that have never been Google-linked. Do NOT bind this sign-in to any of
       // those records — create a fresh wholesaler account instead.
-      const roles = emailUsers.map(u => u.role).join(', ');
-      console.log(`⚠️  Email ${googleUser.email} matched only [${roles}] records — creating a fresh wholesaler account to prevent data collision`);
       user = await storage.createUser({
         id: googleUser.id,
         email: googleUser.email,
@@ -199,7 +185,6 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
     // Step 3: Completely new user — create fresh wholesaler account
     // SECURITY: All Google OAuth users are wholesalers by default
     // Customers use separate SMS-based authentication system
-    console.log(`🆕 Creating new wholesaler account for ${googleUser.email}`);
     user = await storage.createUser({
       id: googleUser.id,
       email: googleUser.email,

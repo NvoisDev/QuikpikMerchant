@@ -79,14 +79,6 @@ import { ProductStorage } from './products';
 
 export class OrderStorage extends ProductStorage {
   async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
-    console.log(`📊 Orders query - wholesalerId: ${wholesalerId}, retailerId: ${retailerId}, searchTerm: ${searchTerm}`);
-    const startTime = Date.now();
-    
-    // Get orders first with basic filtering
-    let orderQuery = db
-      .select()
-      .from(orders);
-
     // Apply basic filters - CRITICAL FIX: Include orders where user is EITHER wholesaler OR retailer
     const conditions = [];
     if (wholesalerId) {
@@ -120,8 +112,6 @@ export class OrderStorage extends ProductStorage {
       ? db.select().from(orders).where(and(...conditions)).orderBy(desc(orders.createdAt))
       : db.select().from(orders).orderBy(desc(orders.createdAt)));
 
-    console.log(`📊 Orders base query took ${Date.now() - startTime}ms, found ${orderResults.length} orders`);
-    
     if (orderResults.length === 0) {
       return [];
     }
@@ -208,8 +198,6 @@ export class OrderStorage extends ProductStorage {
       .leftJoin(products, eq(orderItems.productId, products.id))
       .where(sql`${orderItems.orderId} IN (${sql.join(orderIds.map(id => sql`${id}`), sql`, `)})`);
     
-    console.log(`📊 Order items query took ${Date.now() - startTime}ms total, found ${itemsResults.length} items`);
-    
     // Group items by order ID
     const itemsByOrderId = itemsResults.reduce((acc, item) => {
       const orderId = item.orderItemOrderId;
@@ -273,7 +261,6 @@ export class OrderStorage extends ProductStorage {
       };
     });
     
-    console.log(`✅ Orders query complete in ${Date.now() - startTime}ms`);
     return ordersWithItems as unknown as (Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[];
   }
 
@@ -357,7 +344,6 @@ export class OrderStorage extends ProductStorage {
     const storedPrefix = (row.order_number_prefix as string) || '';
     const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
     const orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
-    console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter})`);
     return orderNumber;
   }
 
@@ -381,7 +367,7 @@ export class OrderStorage extends ProductStorage {
         const storedPrefix = (genRow.order_number_prefix as string) || '';
         const prefix = storedPrefix.trim() ? storedPrefix.trim().toUpperCase() : 'ORD';
         orderNumber = `${prefix}-${counter.toString().padStart(3, '0')}`;
-        console.log(`🔢 Generated order number: ${orderNumber} (counter=${counter}) inside createOrder transaction`);
+
       }
       
       const cleanOrderData = {
@@ -535,39 +521,12 @@ export class OrderStorage extends ProductStorage {
             .set({ stock: newStock, palletStock: newPalletStock })
             .where(eq(products.id, item.productId));
 
-          console.log(`🗂 FEFO allocation: product ${item.productId} used batch ${primaryBatchId}, stock → ${newStock}`);
         }
         // ── End FEFO block ────────────────────────────────────────────────────
 
         // Insert order item — primaryBatchId is always set when we reach here
         // (we throw above if no active batches exist)
         await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
-
-        // Read refreshed stock for low-stock console warnings
-        if (currentProduct) {
-          const [refreshed] = await tx.select({ stock: products.stock, palletStock: products.palletStock })
-            .from(products).where(sql`${products.id} = ${item.productId}`);
-          const newUnitStock = refreshed?.stock ?? 0;
-          const newPalletStock = refreshed?.palletStock ?? 0;
-
-          console.log(`📦 Stock reduced for product ${item.productId}:`);
-          if (sellingType === 'pallets') {
-            console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
-          } else {
-            console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
-          }
-
-          // Low-stock warnings
-          if (sellingType === 'pallets') {
-            if (newPalletStock <= 5) console.log(`⚠️ LOW PALLET STOCK: Product ${item.productId} (${currentProduct.name}) → ${newPalletStock} pallets`);
-            if (newPalletStock === 0) console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name})`);
-          } else {
-            if (newUnitStock <= (currentProduct.lowStockThreshold || 10)) console.log(`⚠️ LOW UNIT STOCK: Product ${item.productId} (${currentProduct.name}) → ${newUnitStock} units`);
-            if (newUnitStock === 0) console.log(`🚨 OUT OF UNIT STOCK: Product ${item.productId} (${currentProduct.name})`);
-          }
-        } else {
-          console.log(`⚠️ Product ${item.productId} not found - cannot reduce stock`);
-        }
       }
       
       return newOrder;

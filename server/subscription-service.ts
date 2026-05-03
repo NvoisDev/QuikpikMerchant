@@ -139,8 +139,6 @@ export class SubscriptionService {
   static async createSubscription(stripeCustomerId: string, priceId: string, isTestAccount: boolean): Promise<Stripe.Subscription> {
     const stripe = requireStripe(isTestAccount);
     try {
-      console.log('🔄 Creating/updating subscription:', { stripeCustomerId, priceId });
-
       // Look for an existing subscription for this customer
       const subscriptions = await stripe.subscriptions.list({
         customer: stripeCustomerId,
@@ -150,8 +148,6 @@ export class SubscriptionService {
       if (subscriptions.data.length > 0) {
         // If a subscription exists, update it to the new price
         const subscription = subscriptions.data[0];
-        console.log('📝 Updating existing subscription:', subscription.id);
-        
         const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
           proration_behavior: 'always_invoice', // Handle pro-rated billing
           items: [{
@@ -159,22 +155,16 @@ export class SubscriptionService {
             price: priceId, // Switch to the new plan's price ID
           }],
         });
-        
-        console.log('✅ Subscription updated successfully:', updatedSubscription.id);
         return updatedSubscription;
         
       } else {
         // If no subscription exists, create a new one
-        console.log('🆕 Creating new subscription');
-        
         const newSubscription = await stripe.subscriptions.create({
           customer: stripeCustomerId,
           items: [{ price: priceId }],
           // For a Free plan, you can set a trial period
           trial_period_days: priceId === 'free_plan_price_id' ? 30 : undefined,
         });
-        
-        console.log('✅ New subscription created successfully:', newSubscription.id);
         return newSubscription;
       }
       
@@ -195,8 +185,6 @@ export class SubscriptionService {
   ): Promise<Stripe.Subscription> {
     const stripe = requireStripe(isTestAccount);
     try {
-      console.log('🚀 Upgrading subscription with proration:', { subscriptionId, newPriceId, newPlanId });
-
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
@@ -221,7 +209,6 @@ export class SubscriptionService {
         }
       });
 
-      console.log('✅ Subscription upgraded with proration:', updatedSubscription.id);
       return updatedSubscription;
     } catch (error: any) {
       console.error('❌ Failed to upgrade subscription with proration:', {
@@ -245,8 +232,6 @@ export class SubscriptionService {
   ): Promise<Stripe.Subscription> {
     const stripe = requireStripe(isTestAccount);
     try {
-      console.log('📉 Downgrading subscription with immediate proration:', { subscriptionId, newPriceId, newPlanId });
-
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
@@ -268,11 +253,7 @@ export class SubscriptionService {
         }
       });
 
-      console.log('✅ Stripe subscription downgraded with immediate proration:', updatedSubscription.id);
-
       // CRITICAL FIX: Update database immediately after Stripe call
-      console.log('🔄 Updating database immediately after downgrade...');
-      
       // Find user by subscription ID
       const [user] = await db.select().from(users)
         .where(eq(users.stripeSubscriptionId, subscriptionId));
@@ -308,7 +289,6 @@ export class SubscriptionService {
           updatedAt: new Date()
         }).where(eq(userSubscriptions.userId, user.id));
         
-        console.log('✅ Updated existing subscription record for user:', user.id);
       } else {
         // Create new subscription record
         await db.insert(userSubscriptions).values({
@@ -320,11 +300,8 @@ export class SubscriptionService {
           currentPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
           cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end
         });
-        
-        console.log('✅ Created new subscription record for user:', user.id);
       }
 
-      console.log('✅ Database updated immediately after downgrade for user:', user.id, 'New plan:', newPlanId);
       return updatedSubscription;
     } catch (error) {
       console.error('❌ Failed to downgrade subscription with proration:', error);
@@ -379,12 +356,10 @@ export class SubscriptionService {
 
       // Return existing Stripe customer ID if exists
       if (user.stripeCustomerId) {
-        console.log('📋 Using existing Stripe customer:', user.stripeCustomerId);
         return user.stripeCustomerId;
       }
 
       // Create new Stripe customer
-      console.log('🆕 Creating new Stripe customer for user:', userId);
       const stripeCustomer = await stripe.customers.create({
         email: user.email || undefined,
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
@@ -399,7 +374,6 @@ export class SubscriptionService {
         .set({ stripeCustomerId: stripeCustomer.id })
         .where(eq(users.id, userId));
 
-      console.log('✅ Stripe customer created:', stripeCustomer.id);
       return stripeCustomer.id;
       
     } catch (error) {
@@ -460,8 +434,6 @@ export class SubscriptionService {
   }> {
     const stripe = requireStripe(isTestAccount);
     try {
-      console.log('🆓 Processing prorated free downgrade:', { subscriptionId, userId });
-
       // Get current subscription details for credit calculation
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
@@ -477,13 +449,6 @@ export class SubscriptionService {
       const proratedCredit = remainingPeriod > 0 
         ? (currentPrice / 100) * (remainingPeriod / totalPeriod)
         : 0;
-
-      console.log('💰 Proration calculation:', {
-        currentPrice: currentPrice / 100,
-        remainingPeriod,
-        totalPeriod,
-        proratedCredit: proratedCredit.toFixed(2)
-      });
 
       // Create credit note/invoice item for the prorated amount before cancellation
       if (proratedCredit > 0) {
@@ -507,11 +472,7 @@ export class SubscriptionService {
         invoice_now: true // Create final invoice with credit
       });
 
-      console.log('✅ Stripe subscription cancelled successfully:', subscriptionId);
-
       // CRITICAL FIX: Update database immediately after Stripe cancellation
-      console.log('🔄 Updating database immediately after free downgrade...');
-      
       // Find user by user ID
       const [user] = await db.select().from(users)
         .where(eq(users.id, userId));
@@ -545,7 +506,6 @@ export class SubscriptionService {
           updatedAt: new Date()
         }).where(eq(userSubscriptions.userId, userId));
         
-        console.log('✅ Updated existing subscription record to free for user:', userId);
       } else {
         // Create new free subscription record
         await db.insert(userSubscriptions).values({
@@ -557,12 +517,8 @@ export class SubscriptionService {
           currentPeriodEnd: null,
           cancelAtPeriodEnd: null
         });
-        
-        console.log('✅ Created new free subscription record for user:', userId);
       }
 
-      console.log('✅ Database updated immediately after free downgrade for user:', userId);
-      console.log('✅ Free downgrade with proration completed successfully');
       return {
         success: true,
         proratedCredit: Math.max(0, proratedCredit),
@@ -585,14 +541,11 @@ export class SubscriptionService {
   }): Promise<Stripe.Subscription> {
     const stripe = requireStripe(isTestAccount);
     try {
-      console.log('🛑 Cancelling subscription:', subscriptionId, options);
-
       if (options?.cancelAtPeriodEnd) {
         // Schedule cancellation at period end
         const subscription = await stripe.subscriptions.update(subscriptionId, {
           cancel_at_period_end: true
         });
-        console.log('📅 Subscription scheduled for cancellation at period end');
         return subscription;
       } else {
         // Cancel immediately
@@ -600,7 +553,6 @@ export class SubscriptionService {
           prorate: options?.prorate ?? true,
           invoice_now: true
         });
-        console.log('✅ Subscription cancelled immediately');
         return cancelledSubscription;
       }
     } catch (error) {
@@ -779,7 +731,6 @@ export class SubscriptionService {
     const migrationDate = new Date('2027-05-01T00:00:00Z');
     if (new Date() < migrationDate) return;
 
-    console.log('📅 Running annual plan migration (due from 1 May 2027)...');
     const planMap: Record<string, string> = {
       standard_annual_intro: 'standard_annual',
       premium_annual_intro: 'premium_annual',
@@ -794,7 +745,6 @@ export class SubscriptionService {
       ));
 
     if (subsToMigrate.length === 0) {
-      console.log('ℹ️ No intro annual subscribers to migrate');
     }
 
     for (const sub of subsToMigrate) {
@@ -828,8 +778,7 @@ export class SubscriptionService {
       await db.update(users)
         .set({ currentPlan: targetPlanId, subscriptionTier: targetPlanId })
         .where(eq(users.id, sub.userId));
-      console.log(`✅ Migrated ${sub.userId}: ${sub.planId} → ${targetPlanId}`);
-    }
+      }
 
     // Activate full-rate annual plans so they appear in the pricing UI
     await db.update(subscriptionPlans)
@@ -841,7 +790,6 @@ export class SubscriptionService {
       .set({ isActive: false })
       .where(inArray(subscriptionPlans.planId, ['standard_annual_intro', 'premium_annual_intro']));
 
-    console.log('✅ Annual plan migration complete — full-rate plans activated, intro plans archived');
   }
 
   /**
@@ -853,7 +801,6 @@ export class SubscriptionService {
   static async runMonthlyPriceSwitchIfDue(): Promise<void> {
     if (isIntroPricingPeriod()) return;
 
-    console.log('💰 Running monthly price switch (intro period ended 30 April 2027)...');
 
     const updates: Array<{ planId: string; price: string }> = [
       { planId: 'standard', price: '49.99' },
@@ -871,15 +818,9 @@ export class SubscriptionService {
       await db.update(subscriptionPlans)
         .set({ monthlyPrice: price })
         .where(eq(subscriptionPlans.planId, planId));
-      console.log(`✅ Updated ${planId} monthly price → £${price}`);
       changed++;
     }
 
-    if (changed === 0) {
-      console.log('ℹ️ Monthly prices already at full rates — nothing to do');
-    } else {
-      console.log(`✅ Monthly price switch complete (${changed} plan(s) updated)`);
-    }
 
     // Ensure all Standard subscribers have the raised product limit (idempotent — safe to repeat)
     await db.execute(

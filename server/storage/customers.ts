@@ -78,27 +78,22 @@ export class CustomerStorage extends OrderStorage {
 
   async setCustomerShippingChoice(customerId: string, shippingChoice: 'pickup' | 'delivery'): Promise<void> {
     this._customerShippingChoices.set(customerId, shippingChoice);
-    console.log(`🚚 Stored shipping choice for customer ${customerId}: ${shippingChoice}`);
   }
 
   async getCustomerShippingChoice(customerId: string): Promise<'pickup' | 'delivery' | null> {
     const choice = this._customerShippingChoices.get(customerId) || null;
-    console.log(`🚚 Retrieved shipping choice for customer ${customerId}: ${choice}`);
     return choice;
   }
 
   // Customer authentication
   async findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any> {
     try {
-      console.log(`Finding customer with phone: ${phoneNumber}, last 4: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
-      
       // Format phone number to international format for consistent comparison
       const formattedPhone = this.formatPhoneToInternational(phoneNumber);
       
       // Verify the last 4 digits match
       const phoneLastFour = formattedPhone.slice(-4);
       if (phoneLastFour !== lastFourDigits) {
-        console.log(`Last 4 digits don't match: expected ${phoneLastFour}, got ${lastFourDigits}`);
         return null;
       }
       
@@ -124,13 +119,10 @@ export class CustomerStorage extends OrderStorage {
         .limit(1);
       
       if (customers.length === 0) {
-        console.log(`No customer found with phone ${formattedPhone} for wholesaler ${wholesalerId}`);
         return null;
       }
       
       const customer = customers[0];
-      console.log(`Customer found:`, customer);
-      
       return {
         id: customer.id,
         name: customer.name,
@@ -148,8 +140,6 @@ export class CustomerStorage extends OrderStorage {
   // Customer authentication using last 4 digits only
   async findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any> {
     try {
-      console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
-      
       // CRITICAL FIX: Search customers using new multi-wholesaler relationship system
       const wholesalerCustomers = await db.execute(sql`
         SELECT DISTINCT
@@ -190,10 +180,7 @@ export class CustomerStorage extends OrderStorage {
         return phoneLastFour === lastFourDigits;
       });
 
-      console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
-      
       if (matchingCustomers.length === 0) {
-        console.log(`No customer found with last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
         return null;
       }
 
@@ -206,11 +193,6 @@ export class CustomerStorage extends OrderStorage {
           // All records are duplicates of the same person — pick the one with an active
           // wholesaler_customer_relationships entry (new system) over legacy wholesaler_id match,
           // and among those pick the most recently created (highest ID timestamp prefix).
-          console.warn(`⚠️ Duplicate user records found for phone ending ${lastFourDigits} — deduplicating`);
-          matchingCustomers.forEach((c: any, i: number) => {
-            console.warn(`  Duplicate ${i + 1}: ${c.name} (${c.customer_id})`);
-          });
-
           const duplicateIds: string[] = matchingCustomers.map((c: any) => c.customer_id as string);
           const withRelationship = await db
             .select({ customerId: wholesalerCustomerRelationships.customerId })
@@ -232,7 +214,6 @@ export class CustomerStorage extends OrderStorage {
             chosen = matchingCustomers[matchingCustomers.length - 1];
           }
 
-          console.log(`✅ Resolved duplicate — using customer ${chosen.customer_id} (${chosen.name})`);
           return {
             id: chosen.customer_id,
             name: chosen.name,
@@ -252,9 +233,6 @@ export class CustomerStorage extends OrderStorage {
       }
 
       const matchingCustomer = matchingCustomers[0];
-
-      
-      console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone}) for wholesaler: ${wholesalerId}`);
       return {
         id: matchingCustomer.customer_id, // Use the actual user ID, not the member ID
         name: matchingCustomer.name,
@@ -272,7 +250,6 @@ export class CustomerStorage extends OrderStorage {
 
   async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; logoType?: string; storeTagline?: string; location?: string; rating?: number }[]> {
     try {
-      console.log(`🔍 Finding accessible wholesalers for customer with last 4 digits: ${lastFourDigits}`);
       
       // Find all wholesalers where this customer has active relationships using the new multi-wholesaler system
       const accessibleWholesalers = await db.execute(sql`
@@ -312,9 +289,6 @@ export class CustomerStorage extends OrderStorage {
         rating: parseFloat(row.rating) || 5.0
       }));
 
-      console.log(`✅ Found ${result.length} accessible wholesalers for customer with phone ending in ${lastFourDigits}`);
-      result.forEach(w => console.log(`  - ${w.businessName} (${w.id})`));
-      
       return result;
     } catch (error) {
       console.error('Error finding accessible wholesalers:', error);
@@ -491,7 +465,6 @@ export class CustomerStorage extends OrderStorage {
       .where(eq(users.phoneNumber, customer.phoneNumber))
       .limit(1);
     if (existing.length > 0) {
-      console.log(`♻️ Reusing existing user ${existing[0].id} for phone ${customer.phoneNumber}`);
       return existing[0];
     }
     const [user] = await db

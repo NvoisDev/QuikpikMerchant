@@ -17,31 +17,20 @@ export async function sendSMS(params: SMSParams): Promise<boolean> {
     const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
     
     if (!accountSid || !authToken || !twilioPhoneNumber) {
-      console.log('📱 Twilio credentials not configured, skipping SMS message');
       return false;
     }
-
-    console.log('📱 Twilio SMS Configuration:', {
-      hasSID: !!accountSid,
-      hasToken: !!authToken,
-      hasPhone: !!twilioPhoneNumber,
-      phoneNumber: twilioPhoneNumber
-    });
 
     const client = twilio(accountSid, authToken);
     
     // Format phone number to international format
     const formattedPhone = formatPhoneToInternational(to);
 
-    console.log(`📱 Sending SMS from ${twilioPhoneNumber} to ${formattedPhone}`);
-    
     await client.messages.create({
       from: twilioPhoneNumber,
       to: formattedPhone,
       body: message
     });
 
-    console.log(`✅ SMS sent successfully to ${formattedPhone}`);
     return true;
   } catch (error) {
     console.error('❌ SMS error:', error);
