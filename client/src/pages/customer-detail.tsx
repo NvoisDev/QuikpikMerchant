@@ -169,7 +169,7 @@ export default function CustomerDetail() {
   });
 
   const { data: customerOrders = [] } = useQuery<Order[]>({
-    queryKey: ["/api/customers", customerId, "orders"],
+    queryKey: [`/api/customers/${customerId}/orders`],
     enabled: !!customerId,
     staleTime: 2 * 60 * 1000,
   });
