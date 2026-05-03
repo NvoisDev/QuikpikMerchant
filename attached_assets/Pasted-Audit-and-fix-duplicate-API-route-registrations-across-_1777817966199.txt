@@ -1,0 +1,113 @@
+Audit and fix duplicate API route registrations across the backend.
+
+Context:
+The codebase currently registers many routes twice:
+- Once in the legacy monolithic file: server/routes.ts
+- Again in domain-based files under server/routes/
+
+Express executes both handlers in order, which creates:
+- unpredictable behaviour
+- potential auth bypasses
+- double writes or conflicting responses
+
+Goal:
+Remove duplicate route registrations WITHOUT breaking any existing functionality.
+
+----------------------------------
+
+STEP 1 — Detect Duplicates
+
+Scan all route registrations across:
+- server/routes.ts
+- all files in server/routes/
+
+Identify:
+- duplicate paths (e.g. /api/orders, /api/products/:id)
+- HTTP method (GET, POST, etc.)
+- file where each handler is defined
+
+Output a table:
+
+Path | Method | File A | File B | Notes
+
+----------------------------------
+
+STEP 2 — Compare Handlers
+
+For each duplicate:
+
+Analyse both handlers and determine:
+- which one is actively used (newer / domain-based)
+- which one is legacy (from routes.ts)
+- differences in:
+  - auth (requireAuth, requireCustomerAuth, etc.)
+  - business logic
+  - response shape
+
+----------------------------------
+
+STEP 3 — Decide Safe Source of Truth
+
+Rules:
+- Prefer domain-based routes (server/routes/*.ts)
+- Treat server/routes.ts as legacy unless proven otherwise
+- If both handlers contain unique logic → flag for manual review (DO NOT auto-delete)
+
+----------------------------------
+
+STEP 4 — Remove Legacy Registrations Safely
+
+For each duplicate:
+- Remove ONLY the legacy registration from server/routes.ts
+- Do NOT modify domain route files
+- Do NOT change handler logic
+
+----------------------------------
+
+STEP 5 — Add Safety Logging (Temporary)
+
+Before removal:
+- Add a temporary console.log in both handlers:
+  "ROUTE HIT: [file name] [path]"
+
+Simulate a few key API calls (orders, products, customers) to confirm:
+- which handler is actually being hit
+
+After confirmation:
+- remove legacy handler
+- remove temporary logs
+
+----------------------------------
+
+STEP 6 — Regression Safety Checks
+
+After cleanup:
+- Ensure no route returns 404 unexpectedly
+- Ensure auth behaviour is unchanged
+- Ensure no duplicate responses occur
+
+----------------------------------
+
+OUTPUT
+
+1. Summary:
+- number of duplicate routes found
+- number removed
+- number flagged for manual review
+
+2. List of removed routes
+
+3. List of flagged routes (if any)
+
+----------------------------------
+
+RULES
+
+- DO NOT refactor business logic
+- DO NOT merge handlers
+- DO NOT modify domain routes
+- DO NOT change request/response shapes
+- DO NOT touch frontend
+
+Goal:
+Eliminate duplicate route registrations safely and make route execution deterministic.

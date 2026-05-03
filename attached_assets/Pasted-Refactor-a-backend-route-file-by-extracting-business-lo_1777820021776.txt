@@ -1,0 +1,101 @@
+Refactor a backend route file by extracting business logic into small, focused service modules.
+
+Goal:
+- Move toward a routes → services → storage architecture
+- Reduce route file size
+- Avoid creating large "god services"
+- Preserve 100% existing behaviour
+
+----------------------------------
+
+STEP 1 — Identify Extractable Logic
+
+Scan the route file and locate:
+- business rules
+- workflows (multi-step operations)
+- side effects (payments, notifications)
+- calculations
+
+Ignore:
+- req/res handling
+- auth middleware
+
+----------------------------------
+
+STEP 2 — Define a Focused Service
+
+Choose ONE narrow responsibility:
+
+Examples:
+- order creation
+- payment processing
+- quote calculation
+- notification sending
+
+DO NOT create a generic service like:
+- orderService.ts (too broad)
+
+----------------------------------
+
+STEP 3 — Create Service File
+
+Location:
+server/services/
+
+Name clearly by responsibility:
+- orderCreationService.ts
+- paymentProcessingService.ts
+
+----------------------------------
+
+STEP 4 — Move Logic
+
+Extract only the relevant logic.
+
+Service functions must:
+- accept plain arguments (no req/res)
+- return data or throw errors
+- not depend on Express
+
+----------------------------------
+
+STEP 5 — Replace Route Logic
+
+In the route:
+- call the service function
+- keep only:
+  - request parsing
+  - auth checks
+  - response formatting
+
+----------------------------------
+
+STEP 6 — Preserve Behaviour
+
+Ensure:
+- identical DB writes
+- identical side effects
+- identical responses
+- identical error handling
+
+----------------------------------
+
+STEP 7 — Keep Scope Small
+
+- Extract only ONE responsibility per task
+- Do not refactor unrelated code
+- Do not introduce abstractions beyond simple functions
+
+----------------------------------
+
+OUTPUT
+
+1. Service created
+2. Responsibility extracted
+3. Lines removed from route file
+4. Confirmation behaviour unchanged
+
+----------------------------------
+
+Goal:
+Incrementally build a clean service layer without introducing risk or large rewrites.
