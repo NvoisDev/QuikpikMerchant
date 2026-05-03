@@ -1,12 +1,12 @@
 import type { Express } from "express";
-import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
 import {
-  ADMIN_EMAILS, adminAuditLogs, and, asc, count, db, desc, eq, getPlanLimits, getStripeClient,
-  inArray, or, orders, requireAuth, sql, storage, subscriptionPlans, SubscriptionService,
-  userSubscriptions, users, refundAcrossPaymentIntents,
+  ADMIN_EMAILS, adminAuditLogs, and, asc, count, db, desc, eq, formatPackDescriptor,
+  getStripeClient, gte, inArray, lte, or, orderItems, orders, products, productBatches,
+  refundAcrossPaymentIntents, requireAuth, sendCustomerInvoiceEmail, sql,
+  stockMovements, subscriptionAuditLogs, customerProfileUpdateNotifications,
+  systemErrorLogs, users,
 } from "./shared";
-import { getProductLimit } from "../utils/plan-tier";
 
 function getAdminEmail(req: any): string | undefined {
   return req._adminEmail || req.user?.email;
@@ -21,194 +21,207 @@ const impersonateLimiter = rateLimit({
 });
 
 export function registerAdminOpsRoutes(app: Express): void {
-  // POST /api/admin/subscriptions/activate
-  app.post('/api/admin/subscriptions/activate', requireAuth, async (req: any, res) => {
+  // GET /api/admin/products
+  app.get('/api/admin/products', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { sort = 'margin_asc' } = req.query as Record<string, string>;
 
-      const { stripeSubscriptionId, planId: overridePlanId } = req.body;
-      if (!stripeSubscriptionId) {
-        return res.status(400).json({ error: 'stripeSubscriptionId is required' });
-      }
-      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
-        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
-      }
+      const productList = await db.select({
+        id: products.id, name: products.name, wholesalerId: products.wholesalerId,
+        wholesalerName: users.businessName, price: products.price, costPrice: products.costPrice,
+        status: products.status,
+        baseUnitStock: sql<number>`COALESCE((
+          SELECT SUM(${productBatches.quantity})
+          FROM ${productBatches}
+          WHERE ${productBatches.productId} = ${products.id}
+            AND ${productBatches.status} = 'active'
+            AND (${productBatches.expiryDate} IS NULL OR ${productBatches.expiryDate} >= CURRENT_DATE)
+        ), 0)`,
+        category: products.category, quantityInPack: products.quantityInPack,
+        unitSize: products.unitSize, unitOfMeasure: products.unitOfMeasure,
+      }).from(products)
+        .leftJoin(users, eq(products.wholesalerId, users.id))
+        .where(and(inArray(products.status, ['active', 'inactive', 'locked']), eq(users.isTestAccount, false)))
+        .orderBy(desc(products.id))
+        .limit(2000);
 
-      let stripeSub: Stripe.Subscription;
-      try {
-        try {
-          stripeSub = await getStripeClient(false).subscriptions.retrieve(stripeSubscriptionId);
-        } catch (primaryErr: any) {
-          if (primaryErr?.statusCode === 404 || primaryErr?.code === 'resource_missing') {
-            stripeSub = await getStripeClient(true).subscriptions.retrieve(stripeSubscriptionId);
-          } else {
-            throw primaryErr;
-          }
-        }
-      } catch (e) {
-        return res.status(400).json({ error: `Stripe subscription not found: ${stripeSubscriptionId}` });
-      }
-
-      if (stripeSub.status !== 'active') {
-        return res.status(400).json({ error: `Subscription is not active (status: ${stripeSub.status})` });
-      }
-
-      const recoverCustId = typeof stripeSub.customer === 'string'
-        ? stripeSub.customer : stripeSub.customer.id;
-      const recoverPriceId = stripeSub.items?.data?.[0]?.price?.id;
-
-      if (!recoverCustId || !recoverPriceId) {
-        return res.status(400).json({ error: 'Could not extract customer or price from subscription' });
-      }
-
-      const [recoverUser] = await db.select().from(users).where(eq(users.stripeCustomerId, recoverCustId));
-      if (!recoverUser) {
-        return res.status(404).json({ error: `No user found with Stripe customer ID ${recoverCustId}` });
-      }
-
-      let resolvedPlanId: string;
-      if (overridePlanId) {
-        resolvedPlanId = overridePlanId;
-      } else {
-        const [recoverPlan] = await db.select().from(subscriptionPlans)
-          .where(eq(subscriptionPlans.stripePriceId, recoverPriceId));
-        if (!recoverPlan || !recoverPlan.planId || recoverPlan.planId === 'free') {
-          return res.status(400).json({ error: `No paid plan found for price ${recoverPriceId} — pass planId to override` });
-        }
-        resolvedPlanId = recoverPlan.planId;
-      }
-
-      const recoverProductLimit = getProductLimit(resolvedPlanId);
-      const recoverPeriodEnd = new Date(stripeSub.current_period_end * 1000);
-      const recoverPeriodStart = new Date(stripeSub.current_period_start * 1000);
-
-      await storage.updateUser(recoverUser.id, {
-        currentPlan: resolvedPlanId, subscriptionTier: resolvedPlanId,
-        subscriptionStatus: 'active', productLimit: recoverProductLimit,
-        stripeSubscriptionId: stripeSub.id, subscriptionEndsAt: recoverPeriodEnd,
+      const enriched = productList.map(p => {
+        const price = parseFloat(p.price || '0');
+        const cost = p.costPrice ? parseFloat(p.costPrice) : null;
+        const margin = cost !== null && price > 0 ? ((price - cost) / price) * 100 : null;
+        return {
+          ...p, price, costPrice: cost, margin,
+          hasMissingCost: cost === null,
+          hasLowMargin: margin !== null && margin < 10,
+          hasZeroStock: (Number(p.baseUnitStock) || 0) === 0,
+        };
       });
 
-      const [existingRecoverSub] = await db.select().from(userSubscriptions)
-        .where(eq(userSubscriptions.userId, recoverUser.id));
-      if (existingRecoverSub) {
-        await db.update(userSubscriptions).set({
-          planId: resolvedPlanId, stripeSubscriptionId: stripeSub.id, status: 'active',
-          currentPeriodStart: recoverPeriodStart, currentPeriodEnd: recoverPeriodEnd,
-          cancelAtPeriodEnd: false, updatedAt: new Date(),
-        }).where(eq(userSubscriptions.userId, recoverUser.id));
-      } else {
-        await db.insert(userSubscriptions).values({
-          userId: recoverUser.id, planId: resolvedPlanId, stripeSubscriptionId: stripeSub.id,
-          status: 'active', currentPeriodStart: recoverPeriodStart,
-          currentPeriodEnd: recoverPeriodEnd, cancelAtPeriodEnd: false,
-        });
-      }
-
-      return res.json({
-        success: true, userId: recoverUser.id, userEmail: recoverUser.email,
-        planId: resolvedPlanId, stripeSubscriptionId: stripeSub.id,
-        periodEnd: recoverPeriodEnd.toISOString(),
+      let sorted = enriched;
+      if (sort === 'margin_asc') sorted = [...enriched].sort((a, b) => {
+        if (a.margin === null && b.margin === null) return 0;
+        if (a.margin === null) return -1;
+        if (b.margin === null) return 1;
+        return a.margin - b.margin;
       });
+
+      res.json({ products: sorted });
     } catch (error) {
-      console.error('❌ Admin subscription activate error:', error);
-      res.status(500).json({ error: 'Failed to activate subscription' });
+      console.error('Admin products error:', error);
+      res.status(500).json({ error: 'Failed to fetch products' });
     }
   });
 
-  // POST /api/admin/subscriptions/sync-by-customer
-  app.post('/api/admin/subscriptions/sync-by-customer', requireAuth, async (req: any, res) => {
+  // GET /api/admin/alerts
+  app.get('/api/admin/alerts', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      const { email, stripeCustomerId, planId: overridePlanId } = req.body;
-      if (!email && !stripeCustomerId) {
-        return res.status(400).json({ error: 'email or stripeCustomerId is required' });
-      }
-      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
-        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
-      }
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const sevenDaysOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const todayStr = now.toISOString().slice(0, 10);
+      const sevenDaysOutStr = sevenDaysOut.toISOString().slice(0, 10);
 
-      const condition = email
-        ? eq(users.email, email.trim().toLowerCase())
-        : eq(users.stripeCustomerId, stripeCustomerId.trim());
-      const [syncUser] = await db.select().from(users).where(condition);
-      if (!syncUser) {
-        return res.status(404).json({ error: `No user found matching ${email || stripeCustomerId}` });
-      }
+      const [stuckOrders, expiringBatches, failedPayments] = await Promise.all([
+        db.select({ id: orders.id, orderNumber: orders.orderNumber, wholesalerName: users.businessName, createdAt: orders.createdAt })
+          .from(orders).leftJoin(users, eq(orders.wholesalerId, users.id))
+          .where(and(eq(orders.status, 'processing'), lte(orders.createdAt, oneDayAgo)))
+          .orderBy(asc(orders.createdAt)).limit(20),
+        db.select({ id: productBatches.id, productId: productBatches.productId, expiryDate: productBatches.expiryDate, batchCode: productBatches.batchNumber, quantity: productBatches.quantity })
+          .from(productBatches)
+          .where(and(sql`${productBatches.expiryDate} IS NOT NULL`, sql`${productBatches.expiryDate} >= ${todayStr}`, sql`${productBatches.expiryDate} <= ${sevenDaysOutStr}`))
+          .orderBy(asc(productBatches.expiryDate)).limit(20),
+        db.select({ id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId, createdAt: subscriptionAuditLogs.timestamp })
+          .from(subscriptionAuditLogs)
+          .where(and(eq(subscriptionAuditLogs.eventType, 'payment_failed'), gte(subscriptionAuditLogs.timestamp, thirtyDaysAgo)))
+          .orderBy(desc(subscriptionAuditLogs.timestamp)).limit(20),
+      ]);
 
-      const syncCustId = syncUser.stripeCustomerId;
-      if (!syncCustId) {
-        return res.status(400).json({ error: `User ${syncUser.email} has no Stripe customer ID` });
-      }
-
-      const syncStripe = getStripeClient(Boolean(syncUser.isTestAccount));
-      const syncSubs = await syncStripe.subscriptions.list({ customer: syncCustId, status: 'active', limit: 1 });
-      const syncSub = syncSubs.data[0];
-      if (!syncSub) {
-        return res.status(404).json({ error: `No active Stripe subscription found for customer ${syncCustId}` });
-      }
-
-      const syncPriceId = syncSub.items?.data?.[0]?.price?.id;
-      const syncUnitAmount = syncSub.items?.data?.[0]?.price?.unit_amount ?? 0;
-
-      let resolvedPlanId: string | undefined = overridePlanId;
-      let planSource: 'override' | 'db_lookup' | 'amount_fallback' = 'override';
-      if (!resolvedPlanId) {
-        const [syncPlanRow] = await db.select().from(subscriptionPlans)
-          .where(eq(subscriptionPlans.stripePriceId, syncPriceId || ''));
-        if (syncPlanRow?.planId && syncPlanRow.planId !== 'free') {
-          resolvedPlanId = syncPlanRow.planId;
-          planSource = 'db_lookup';
-        }
-      }
-      if (!resolvedPlanId) {
-        if (syncUnitAmount >= 4999) resolvedPlanId = 'premium';
-        else if (syncUnitAmount >= 1999) resolvedPlanId = 'standard';
-        if (resolvedPlanId) planSource = 'amount_fallback';
-      }
-      if (!resolvedPlanId || resolvedPlanId === 'free') {
-        return res.status(400).json({ error: `Could not resolve paid plan for price ${syncPriceId} (amount ${syncUnitAmount}p) — pass planId to override` });
-      }
-
-      const syncLimits = getPlanLimits(resolvedPlanId);
-      const syncProductLimit = syncLimits.products;
-
-      const rawPeriodEnd = syncSub.current_period_end;
-      const rawPeriodStart = syncSub.current_period_start;
-      const syncPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const syncPeriodStart = rawPeriodStart ? new Date(rawPeriodStart * 1000) : new Date();
-      const isPeriodValid = !isNaN(syncPeriodEnd.getTime()) && !isNaN(syncPeriodStart.getTime());
-
-      await storage.updateUser(syncUser.id, {
-        currentPlan: resolvedPlanId, subscriptionTier: resolvedPlanId,
-        subscriptionStatus: 'active', productLimit: syncProductLimit,
-        stripeSubscriptionId: syncSub.id,
-        ...(isPeriodValid ? { subscriptionEndsAt: syncPeriodEnd, subscriptionPeriodEnd: syncPeriodEnd, subscriptionPeriodStart: syncPeriodStart } : {}),
-      });
-
-      const [existingSyncSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, syncUser.id));
-      if (existingSyncSub) {
-        await db.update(userSubscriptions).set({
-          planId: resolvedPlanId, stripeSubscriptionId: syncSub.id, status: 'active',
-          ...(isPeriodValid ? { currentPeriodStart: syncPeriodStart, currentPeriodEnd: syncPeriodEnd } : {}),
-          cancelAtPeriodEnd: false, updatedAt: new Date(),
-        }).where(eq(userSubscriptions.userId, syncUser.id));
-      } else {
-        await db.insert(userSubscriptions).values({
-          userId: syncUser.id, planId: resolvedPlanId, stripeSubscriptionId: syncSub.id,
-          status: 'active', currentPeriodStart: syncPeriodStart, currentPeriodEnd: syncPeriodEnd,
-          cancelAtPeriodEnd: false,
-        });
-      }
-
-      return res.json({
-        success: true, userId: syncUser.id, userEmail: syncUser.email,
-        planId: resolvedPlanId, stripeCustomerId: syncCustId,
-        stripeSubscriptionId: syncSub.id, periodEnd: syncPeriodEnd.toISOString(), source: planSource,
+      res.json({
+        stuckOrders: stuckOrders.map(o => ({ id: o.id, orderNumber: o.orderNumber, wholesalerName: o.wholesalerName, createdAt: o.createdAt })),
+        stuckOrdersCount: stuckOrders.length,
+        expiringBatches: expiringBatches.map(b => ({ id: b.id, productId: b.productId, expiryDate: b.expiryDate, batchCode: b.batchCode, quantity: b.quantity })),
+        expiringBatchesCount: expiringBatches.length,
+        failedPayments: failedPayments.map(p => ({ id: p.id, userId: p.userId, createdAt: p.createdAt })),
+        failedPaymentsCount: failedPayments.length,
       });
     } catch (error) {
-      console.error('❌ Admin sync-by-customer error:', error);
-      res.status(500).json({ error: 'Failed to sync subscription' });
+      console.error('Admin alerts error:', error);
+      res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+  });
+
+  // GET /api/admin/wholesalers/:id/orders
+  app.get('/api/admin/wholesalers/:id/orders', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const recentOrders = await db.select({
+        id: orders.id, orderNumber: orders.orderNumber, customerName: orders.customerName,
+        subtotal: orders.subtotal, status: orders.status, paymentStatus: orders.paymentStatus, createdAt: orders.createdAt,
+      }).from(orders).where(eq(orders.wholesalerId, req.params.id))
+        .orderBy(desc(orders.createdAt)).limit(10);
+      res.json({ orders: recentOrders });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch wholesaler orders' });
+    }
+  });
+
+  // GET /api/admin/orders/:id/items
+  app.get('/api/admin/orders/:id/items', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const orderId = parseInt(req.params.id, 10);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+      const items = await db.select({
+        id: orderItems.id, productName: products.name, quantity: orderItems.quantity,
+        unitPrice: orderItems.unitPrice, total: orderItems.total, sellingType: orderItems.sellingType,
+        quantityInPack: products.quantityInPack, unitSize: products.unitSize,
+        unitOfMeasure: products.unitOfMeasure, appliedOfferLabel: orderItems.appliedOfferLabel,
+      }).from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, orderId));
+      res.json({ items });
+    } catch (error) {
+      console.error('Admin order items error:', error);
+      res.status(500).json({ error: 'Failed to fetch order items' });
+    }
+  });
+
+  // POST /api/admin/orders/:id/resend-invoice
+  app.post('/api/admin/orders/:id/resend-invoice', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const orderId = parseInt(req.params.id, 10);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      const [wholesaler] = await db.select().from(users).where(eq(users.id, order.wholesalerId)).limit(1);
+      if (!wholesaler) return res.status(404).json({ error: 'Wholesaler not found' });
+      let customer = null;
+      if (order.retailerId) {
+        const [c] = await db.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
+        customer = c || null;
+      }
+      if (!customer) customer = { email: null, firstName: order.customerName, lastName: '', phoneNumber: order.customerPhone };
+      const items = await db.select({
+        productName: products.name, quantity: orderItems.quantity, unitPrice: orderItems.unitPrice,
+        total: orderItems.total, quantityInPack: products.quantityInPack, unitSize: products.unitSize, unitOfMeasure: products.unitOfMeasure,
+      }).from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, order.id));
+
+      await sendCustomerInvoiceEmail(customer, order, items.map(i => ({
+        name: i.productName || 'Product',
+        productName: i.productName || 'Product',
+        quantity: i.quantity,
+        unitPrice: parseFloat(i.unitPrice || '0'),
+        total: parseFloat(i.total || '0'),
+        packDescriptor: formatPackDescriptor(i.quantityInPack, i.unitSize, i.unitOfMeasure),
+        product: { name: i.productName || 'Product', quantityInPack: i.quantityInPack, unitSize: i.unitSize, unitOfMeasure: i.unitOfMeasure },
+      })), wholesaler);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Admin resend-invoice error:', error);
+      res.status(500).json({ error: 'Failed to resend invoice' });
+    }
+  });
+
+  // POST /api/admin/orders/:id/issue-refund
+  app.post('/api/admin/orders/:id/issue-refund', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const refundOrderId = parseInt(req.params.id, 10);
+      if (isNaN(refundOrderId)) return res.status(400).json({ error: 'Invalid order ID' });
+      const [order] = await db.select().from(orders).where(eq(orders.id, refundOrderId)).limit(1);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (!order.stripePaymentIntentId) return res.status(400).json({ error: 'No payment intent on this order' });
+
+      const [refundWholesaler] = await db.select({ isTestAccount: users.isTestAccount })
+        .from(users).where(eq(users.id, order.wholesalerId)).limit(1);
+      if (!refundWholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found for this order' });
+      }
+      const stripe = getStripeClient(Boolean(refundWholesaler.isTestAccount));
+
+      const { amountPounds, reason = 'requested_by_customer' } = req.body;
+      const refundAmount = amountPounds ? parseFloat(amountPounds) : parseFloat(order.subtotal || '0');
+      if (isNaN(refundAmount) || refundAmount <= 0) return res.status(400).json({ error: 'Invalid refund amount' });
+
+      const result = await refundAcrossPaymentIntents(stripe, order.stripePaymentIntentId, refundAmount, { reason, orderId: String(order.id), adminEmail: req.user.email });
+
+      if (result.remaining === 0) {
+        await db.update(orders).set({ status: 'refunded' }).where(eq(orders.id, order.id));
+      }
+
+      res.json({ success: true, totalRefunded: result.totalRefunded, remaining: result.remaining, fullyRefunded: result.remaining === 0 });
+    } catch (error) {
+      console.error('Admin issue-refund error:', error);
+      res.status(500).json({ error: 'Failed to process refund' });
     }
   });
 
@@ -256,38 +269,182 @@ export function registerAdminOpsRoutes(app: Express): void {
     }
   });
 
-  // POST /api/admin/orders/:id/issue-refund
-  app.post('/api/admin/orders/:id/issue-refund', requireAuth, async (req: any, res) => {
+  // GET /api/admin/activity
+  app.get('/api/admin/activity', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      const refundOrderId = parseInt(req.params.id, 10);
-      if (isNaN(refundOrderId)) return res.status(400).json({ error: 'Invalid order ID' });
-      const [order] = await db.select().from(orders).where(eq(orders.id, refundOrderId)).limit(1);
-      if (!order) return res.status(404).json({ error: 'Order not found' });
-      if (!order.stripePaymentIntentId) return res.status(400).json({ error: 'No payment intent on this order' });
+      const { offset = '0', limit = '50', wholesalerId: wFilter } = req.query as Record<string, string>;
+      const offsetNum = Math.max(0, parseInt(offset, 10) || 0);
+      const limitNum = Math.min(100, parseInt(limit, 10) || 50);
 
-      const [refundWholesaler] = await db.select({ isTestAccount: users.isTestAccount })
-        .from(users).where(eq(users.id, order.wholesalerId)).limit(1);
-      if (!refundWholesaler) {
-        return res.status(404).json({ error: 'Wholesaler not found for this order' });
+      const allWholesalers = await db.select({ id: users.id, businessName: users.businessName, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.role, 'wholesaler'));
+      const wMap: Record<string, string> = {};
+      for (const w of allWholesalers) wMap[w.id] = w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim() || 'Unknown';
+
+      const [movements, subLogs, profileUpdates, recentOrders] = await Promise.all([
+        db.select({
+          id: stockMovements.id, productId: stockMovements.productId, wholesalerId: stockMovements.wholesalerId,
+          movementType: stockMovements.movementType, quantity: stockMovements.quantity,
+          reason: stockMovements.reason, customerName: stockMovements.customerName, createdAt: stockMovements.createdAt,
+        }).from(stockMovements)
+          .where(wFilter ? eq(stockMovements.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(stockMovements.createdAt)).limit(200),
+
+        db.select({
+          id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId,
+          eventType: subscriptionAuditLogs.eventType, fromTier: subscriptionAuditLogs.fromTier,
+          toTier: subscriptionAuditLogs.toTier, amount: subscriptionAuditLogs.amount,
+          reason: subscriptionAuditLogs.reason, timestamp: subscriptionAuditLogs.timestamp,
+        }).from(subscriptionAuditLogs)
+          .where(wFilter ? eq(subscriptionAuditLogs.userId, wFilter) : undefined)
+          .orderBy(desc(subscriptionAuditLogs.timestamp)).limit(200),
+
+        db.select({
+          id: customerProfileUpdateNotifications.id, customerId: customerProfileUpdateNotifications.customerId,
+          wholesalerId: customerProfileUpdateNotifications.wholesalerId,
+          updateType: customerProfileUpdateNotifications.updateType,
+          newValue: customerProfileUpdateNotifications.newValue, createdAt: customerProfileUpdateNotifications.createdAt,
+        }).from(customerProfileUpdateNotifications)
+          .where(wFilter ? eq(customerProfileUpdateNotifications.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(customerProfileUpdateNotifications.createdAt)).limit(200),
+
+        db.select({
+          id: orders.id, orderNumber: orders.orderNumber, wholesalerId: orders.wholesalerId,
+          customerName: orders.customerName, status: orders.status,
+          subtotal: orders.subtotal, createdAt: orders.createdAt,
+        }).from(orders)
+          .where(wFilter ? eq(orders.wholesalerId, wFilter) : undefined)
+          .orderBy(desc(orders.createdAt)).limit(200),
+      ]);
+
+      const subUserIds = Array.from(new Set(subLogs.map(l => l.userId)));
+      const subUsers: Record<string, string> = {};
+      if (subUserIds.length > 0) {
+        const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, subUserIds));
+        for (const u of fetched) subUsers[u.id] = u.businessName || u.email || u.id;
       }
-      const stripe = getStripeClient(Boolean(refundWholesaler.isTestAccount));
 
-      const { amountPounds, reason = 'requested_by_customer' } = req.body;
-      const refundAmount = amountPounds ? parseFloat(amountPounds) : parseFloat(order.subtotal || '0');
-      if (isNaN(refundAmount) || refundAmount <= 0) return res.status(400).json({ error: 'Invalid refund amount' });
+      type ActivityEntry = { timestamp: Date; type: string; description: string; wholesalerName: string; actorName: string };
+      const events: ActivityEntry[] = [];
 
-      const result = await refundAcrossPaymentIntents(stripe, order.stripePaymentIntentId, refundAmount, { reason, orderId: String(order.id), adminEmail: req.user.email });
-
-      if (result.remaining === 0) {
-        await db.update(orders).set({ status: 'refunded' }).where(eq(orders.id, order.id));
+      for (const m of movements) {
+        events.push({
+          timestamp: m.createdAt || new Date(), type: 'stock_movement',
+          description: `Stock ${m.movementType?.replace(/_/g, ' ')} of ${Math.abs(m.quantity)} units${m.reason ? ` — ${m.reason}` : ''}`,
+          wholesalerName: wMap[m.wholesalerId] || 'Unknown', actorName: m.customerName || 'System',
+        });
+      }
+      for (const s of subLogs) {
+        const isFailure = s.eventType?.includes('fail') || s.eventType?.includes('error');
+        events.push({
+          timestamp: s.timestamp || new Date(), type: isFailure ? 'payment_failure' : 'subscription_event',
+          description: `Subscription ${s.eventType?.replace(/_/g, ' ')}${s.fromTier && s.toTier ? ` (${s.fromTier} → ${s.toTier})` : ''}${s.amount ? ` £${parseFloat(String(s.amount)).toFixed(2)}` : ''}`,
+          wholesalerName: subUsers[s.userId] || 'Unknown', actorName: subUsers[s.userId] || 'System',
+        });
+      }
+      for (const p of profileUpdates) {
+        events.push({
+          timestamp: p.createdAt || new Date(), type: 'profile_update',
+          description: `Customer updated ${p.updateType?.replace(/_/g, ' ')}`,
+          wholesalerName: wMap[p.wholesalerId] || 'Unknown', actorName: 'Customer',
+        });
+      }
+      for (const o of recentOrders) {
+        events.push({
+          timestamp: o.createdAt || new Date(), type: 'order',
+          description: `Order ${o.orderNumber} placed — £${parseFloat(o.subtotal || '0').toFixed(2)} (${o.status})`,
+          wholesalerName: wMap[o.wholesalerId] || 'Unknown', actorName: o.customerName || 'Customer',
+        });
       }
 
-      res.json({ success: true, totalRefunded: result.totalRefunded, remaining: result.remaining, fullyRefunded: result.remaining === 0 });
+      events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const total = events.length;
+      const page = events.slice(offsetNum, offsetNum + limitNum).map(e => ({ ...e, timestamp: e.timestamp.toISOString() }));
+
+      res.json({ events: page, total, offset: offsetNum, limit: limitNum });
     } catch (error) {
-      console.error('Admin issue-refund error:', error);
-      res.status(500).json({ error: 'Failed to process refund' });
+      console.error('Admin activity error:', error);
+      res.status(500).json({ error: 'Failed to fetch activity feed' });
+    }
+  });
+
+  // GET /api/admin/errors
+  app.get('/api/admin/errors', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { limit = '50' } = req.query as Record<string, string>;
+      const limitNum = Math.min(200, parseInt(limit, 10) || 50);
+      const fetchCap = Math.min(400, limitNum * 4);
+
+      const [dbErrors, paymentFailures] = await Promise.all([
+        db.select().from(systemErrorLogs).orderBy(desc(systemErrorLogs.createdAt)).limit(fetchCap),
+        db.select({
+          id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId,
+          eventType: subscriptionAuditLogs.eventType, amount: subscriptionAuditLogs.amount,
+          reason: subscriptionAuditLogs.reason, timestamp: subscriptionAuditLogs.timestamp,
+        }).from(subscriptionAuditLogs)
+          .where(inArray(subscriptionAuditLogs.eventType, [
+            'payment_failed', 'subscription_payment_failed', 'subscription_cancelled',
+            'subscription_expired', 'invoice_failed',
+          ]))
+          .orderBy(desc(subscriptionAuditLogs.timestamp)).limit(fetchCap),
+      ]);
+
+      const failureUserIds = Array.from(new Set(paymentFailures.map(f => f.userId)));
+      const failureUsers: Record<string, string> = {};
+      if (failureUserIds.length > 0) {
+        const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, failureUserIds));
+        for (const u of fetched) failureUsers[u.id] = u.businessName || u.email || u.id;
+      }
+
+      const errorWholesalerIds = dbErrors.map(e => e.wholesalerId).filter(Boolean) as string[];
+      const errorWholesalers: Record<string, string> = {};
+      if (errorWholesalerIds.length > 0) {
+        const fetched = await db.select({ id: users.id, businessName: users.businessName }).from(users).where(inArray(users.id, errorWholesalerIds));
+        for (const u of fetched) errorWholesalers[u.id] = u.businessName || u.id;
+      }
+
+      const allErrors = [
+        ...dbErrors.map(e => ({
+          id: `sys-${e.id}`, errorType: e.errorType, message: e.message, severity: e.severity,
+          wholesalerName: e.wholesalerId ? (errorWholesalers[e.wholesalerId] || 'Unknown') : null,
+          context: e.context, timestamp: e.createdAt?.toISOString() || new Date().toISOString(), source: 'system',
+        })),
+        ...paymentFailures.map(f => ({
+          id: `pay-${f.id}`, errorType: 'payment_failed', message: f.reason || 'Payment failed',
+          severity: 'error', wholesalerName: failureUsers[f.userId] || 'Unknown',
+          context: { amount: f.amount, eventType: f.eventType },
+          timestamp: f.timestamp?.toISOString() || new Date().toISOString(), source: 'stripe',
+        })),
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      const errors = allErrors.slice(0, limitNum);
+      res.json({ errors, total: allErrors.length });
+    } catch (error) {
+      console.error('Admin errors error:', error);
+      res.status(500).json({ error: 'Failed to fetch error log' });
+    }
+  });
+
+  // GET /api/admin/service-errors
+  app.get('/api/admin/service-errors', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const entries = await db
+        .select().from(systemErrorLogs)
+        .where(inArray(systemErrorLogs.errorType, ['sendgrid', 'twilio', 'openai']))
+        .orderBy(desc(systemErrorLogs.createdAt)).limit(50);
+      res.json({ errors: entries.map(e => ({
+        id: e.id, service: e.errorType,
+        endpoint: (e.context as Record<string, unknown>)?.endpoint ?? null,
+        message: e.message, severity: e.severity, context: e.context,
+        wholesalerId: e.wholesalerId, timestamp: e.createdAt?.toISOString(),
+      })) });
+    } catch (error) {
+      console.error('Admin service-errors error:', error);
+      res.status(500).json({ error: 'Failed to fetch service error log' });
     }
   });
 
@@ -365,218 +522,6 @@ export function registerAdminOpsRoutes(app: Express): void {
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get impersonation status' });
-    }
-  });
-
-  // GET /api/admin/plans
-  app.get('/api/admin/plans', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-
-      const plans = await db.select().from(subscriptionPlans).orderBy(asc(subscriptionPlans.sortOrder), asc(subscriptionPlans.createdAt));
-
-      const subCounts = await db
-        .select({ planId: userSubscriptions.planId, cnt: count() })
-        .from(userSubscriptions)
-        .innerJoin(users, eq(userSubscriptions.userId, users.id))
-        .where(and(
-          sql`${userSubscriptions.status} IN ('active','trialing','past_due')`,
-          eq(users.isTestAccount, false),
-        ))
-        .groupBy(userSubscriptions.planId);
-      const countMap: Record<string, number> = {};
-      for (const row of subCounts) { if (row.planId) countMap[row.planId] = Number(row.cnt); }
-
-      const result = plans.map(p => ({
-        ...p,
-        subscriberCount: countMap[p.planId] || 0,
-        mrr: (countMap[p.planId] || 0) * parseFloat(p.monthlyPrice as string),
-      }));
-
-      res.json({ plans: result });
-    } catch (error) {
-      console.error('Admin plans error:', error);
-      res.status(500).json({ error: 'Failed to fetch plans' });
-    }
-  });
-
-  // POST /api/admin/plans
-  app.post('/api/admin/plans', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-
-      const { name, price, billingInterval = 'monthly', features = [], limits = {}, description = '' } = req.body;
-      if (!name || price === undefined || price === null) return res.status(400).json({ error: 'name and price are required' });
-      const priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ error: 'price must be a non-negative number' });
-
-      const basePlanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-
-      const existing = await db.select({ planId: subscriptionPlans.planId })
-        .from(subscriptionPlans)
-        .where(or(
-          eq(subscriptionPlans.planId, basePlanId),
-          sql`${subscriptionPlans.planId} LIKE ${basePlanId + '_v%'}`,
-        ));
-      const version = existing.length > 0 ? existing.length + 1 : 1;
-      const planId = version === 1 ? basePlanId : `${basePlanId}_v${version}`;
-
-      const maxSort = await db.select({ s: sql<number>`MAX(${subscriptionPlans.sortOrder})` }).from(subscriptionPlans);
-      const sortOrder = (Number(maxSort[0]?.s) || 0) + 1;
-
-      let stripeProductId: string | null = null;
-      let stripePriceId: string | null = null;
-
-      if (priceNum > 0) {
-        try {
-          const platformStripe = getStripeClient();
-          const product = await platformStripe.products.create({
-            name, description: description || `Quikpik ${name} plan`,
-            metadata: { planId, platform: 'quikpik' },
-          });
-          stripeProductId = product.id;
-
-          const stripeInterval = billingInterval === 'yearly' ? 'year' : 'month';
-          const stripePrice = await platformStripe.prices.create({
-            product: product.id, unit_amount: Math.round(priceNum * 100),
-            currency: 'gbp', recurring: { interval: stripeInterval },
-            metadata: { planId, platform: 'quikpik' },
-          });
-          stripePriceId = stripePrice.id;
-        } catch (stripeError: any) {
-          console.error('Stripe product/price creation failed:', stripeError?.message);
-          return res.status(502).json({ error: `Stripe error: ${stripeError?.message || 'unknown'}` });
-        }
-      }
-
-      const [created] = await db.insert(subscriptionPlans).values({
-        name, planId, stripeProductId, stripePriceId,
-        monthlyPrice: priceNum.toFixed(2), currency: 'GBP', description,
-        features: Array.isArray(features) ? features : [],
-        limits, billingInterval, version, isActive: true, sortOrder,
-      }).returning();
-
-      res.status(201).json({ plan: created });
-    } catch (error) {
-      console.error('Admin create plan error:', error);
-      res.status(500).json({ error: 'Failed to create plan' });
-    }
-  });
-
-  // PATCH /api/admin/plans/:id/archive
-  app.patch('/api/admin/plans/:id/archive', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const planId = parseInt(req.params.id, 10);
-      if (isNaN(planId)) return res.status(400).json({ error: 'Invalid plan ID' });
-      const planRecord = await db.select().from(subscriptionPlans)
-        .where(eq(subscriptionPlans.id, planId)).limit(1);
-      if (!planRecord[0]) return res.status(404).json({ error: 'Plan not found' });
-      await db.update(subscriptionPlans)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(subscriptionPlans.id, planId));
-      res.json({ success: true, planId: planRecord[0].planId });
-    } catch (error) {
-      console.error('Admin archive plan error:', error);
-      res.status(500).json({ error: 'Failed to archive plan' });
-    }
-  });
-
-  // POST /api/admin/wholesalers/:id/remove-custom-pricing
-  app.post('/api/admin/wholesalers/:id/remove-custom-pricing', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const [targetUser] = await db.select().from(users)
-        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
-      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
-      await db.update(userSubscriptions).set({
-        isCustomPricing: false, internalNote: null, customPriceExpiresAt: null, updatedAt: new Date(),
-      }).where(eq(userSubscriptions.userId, targetUser.id));
-      res.json({ success: true, userId: targetUser.id });
-    } catch (error) {
-      console.error('Admin remove-custom-pricing error:', error);
-      res.status(500).json({ error: 'Failed to remove custom pricing' });
-    }
-  });
-
-  // POST /api/admin/wholesalers/:id/change-plan
-  app.post('/api/admin/wholesalers/:id/change-plan', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-
-      const { planId: newPlanId, customPriceId, internalNote, customPriceExpiresAt } = req.body;
-      if (!newPlanId) return res.status(400).json({ error: 'planId is required' });
-
-      const [targetUser] = await db.select().from(users)
-        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
-      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
-
-      const [targetPlan] = await db.select().from(subscriptionPlans)
-        .where(eq(subscriptionPlans.planId, newPlanId));
-      if (!targetPlan) return res.status(400).json({ error: 'Plan not found' });
-
-      const limits = (targetPlan.limits as { products?: number } | null);
-      const productLimit = (limits?.products ?? 2);
-      const currentStripeSubId = targetUser.stripeSubscriptionId;
-      const isTargetTestAccount = Boolean(targetUser.isTestAccount);
-
-      if (currentStripeSubId) {
-        if (newPlanId === 'free') {
-          await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id, isTargetTestAccount);
-        } else if (customPriceId || targetPlan.stripePriceId) {
-          const effectivePriceId = customPriceId || targetPlan.stripePriceId!;
-          const isCustom = Boolean(customPriceId);
-
-          const [currentPlan] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
-            .from(subscriptionPlans)
-            .where(eq(subscriptionPlans.planId, targetUser.currentPlan || targetUser.subscriptionTier || 'free'));
-          const currentPrice = parseFloat((currentPlan?.monthlyPrice as string) || '0');
-          const newPrice = parseFloat(targetPlan.monthlyPrice as string);
-          const isDowngrade = !isCustom && newPrice < currentPrice;
-
-          if (isDowngrade) {
-            await SubscriptionService.immediateDowngradeWithProration(
-              currentStripeSubId, effectivePriceId, newPlanId, isTargetTestAccount,
-            );
-          } else {
-            await SubscriptionService.upgradeSubscriptionWithProration(
-              currentStripeSubId, effectivePriceId, newPlanId, isTargetTestAccount,
-            );
-          }
-          await storage.updateUser(targetUser.id, {
-            currentPlan: newPlanId, subscriptionTier: newPlanId,
-            subscriptionStatus: 'active', productLimit,
-          });
-          await db.update(userSubscriptions).set({
-            planId: newPlanId, status: 'active', cancelAtPeriodEnd: false,
-            isCustomPricing: isCustom,
-            internalNote: (internalNote as string) || null,
-            customPriceExpiresAt: customPriceExpiresAt ? new Date(customPriceExpiresAt as string) : null,
-            updatedAt: new Date(),
-          }).where(eq(userSubscriptions.userId, targetUser.id));
-        }
-      } else {
-        await storage.updateUser(targetUser.id, {
-          currentPlan: newPlanId, subscriptionTier: newPlanId,
-          subscriptionStatus: newPlanId === 'free' ? 'free' : 'active',
-          productLimit, stripeSubscriptionId: null,
-        });
-        const [existingSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, targetUser.id));
-        if (existingSub) {
-          await db.update(userSubscriptions).set({
-            planId: newPlanId, status: newPlanId === 'free' ? 'canceled' : 'active', updatedAt: new Date(),
-          }).where(eq(userSubscriptions.userId, targetUser.id));
-        } else if (newPlanId !== 'free') {
-          await db.insert(userSubscriptions).values({
-            userId: targetUser.id, planId: newPlanId, status: 'active',
-          });
-        }
-      }
-
-      res.json({ success: true, userId: targetUser.id, newPlanId });
-    } catch (error) {
-      console.error('Admin change-plan error:', error);
-      res.status(500).json({ error: 'Failed to change plan' });
     }
   });
 }

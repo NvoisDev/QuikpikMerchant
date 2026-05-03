@@ -1,10 +1,11 @@
 import type { Express } from "express";
+import { ilike } from "drizzle-orm";
 import {
-  ADMIN_EMAILS, and, count, db, eq, inArray, isNull, lte, or,
-  orders, orderItems, products, requireAuth, sql, storage,
+  ADMIN_EMAILS, and, asc, count, db, desc, eq, getStripeClient, inArray, isNull, lte, or,
+  orders, orderItems, products, requireAuth, sql, storage, SubscriptionService,
+  subscriptionPlans, userSubscriptions, users, getPlanLimits,
   stockMovements, stockUpdateNotifications, customerProfileUpdateNotifications,
-  smsVerificationCodes, userSubscriptions, users,
-  sendEmail,
+  smsVerificationCodes, sendEmail,
 } from "./shared";
 import { getCurrentFeeConfig, saveFeeConfig, getFeeConfigHistory } from "../utils/fee-config";
 import {
@@ -28,6 +29,321 @@ const getExistingTables = async (): Promise<Set<string>> => {
 };
 
 export function registerAdminSystemRoutes(app: Express): void {
+  // GET /api/admin/plans
+  app.get('/api/admin/plans', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const plans = await db.select().from(subscriptionPlans).orderBy(asc(subscriptionPlans.sortOrder), asc(subscriptionPlans.createdAt));
+
+      const subCounts = await db
+        .select({ planId: userSubscriptions.planId, cnt: count() })
+        .from(userSubscriptions)
+        .innerJoin(users, eq(userSubscriptions.userId, users.id))
+        .where(and(
+          sql`${userSubscriptions.status} IN ('active','trialing','past_due')`,
+          eq(users.isTestAccount, false),
+        ))
+        .groupBy(userSubscriptions.planId);
+      const countMap: Record<string, number> = {};
+      for (const row of subCounts) { if (row.planId) countMap[row.planId] = Number(row.cnt); }
+
+      const result = plans.map(p => ({
+        ...p,
+        subscriberCount: countMap[p.planId] || 0,
+        mrr: (countMap[p.planId] || 0) * parseFloat(p.monthlyPrice as string),
+      }));
+
+      res.json({ plans: result });
+    } catch (error) {
+      console.error('Admin plans error:', error);
+      res.status(500).json({ error: 'Failed to fetch plans' });
+    }
+  });
+
+  // POST /api/admin/plans
+  app.post('/api/admin/plans', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { name, price, billingInterval = 'monthly', features = [], limits = {}, description = '' } = req.body;
+      if (!name || price === undefined || price === null) return res.status(400).json({ error: 'name and price are required' });
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ error: 'price must be a non-negative number' });
+
+      const basePlanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+      const existing = await db.select({ planId: subscriptionPlans.planId })
+        .from(subscriptionPlans)
+        .where(or(
+          eq(subscriptionPlans.planId, basePlanId),
+          sql`${subscriptionPlans.planId} LIKE ${basePlanId + '_v%'}`,
+        ));
+      const version = existing.length > 0 ? existing.length + 1 : 1;
+      const planId = version === 1 ? basePlanId : `${basePlanId}_v${version}`;
+
+      const maxSort = await db.select({ s: sql<number>`MAX(${subscriptionPlans.sortOrder})` }).from(subscriptionPlans);
+      const sortOrder = (Number(maxSort[0]?.s) || 0) + 1;
+
+      let stripeProductId: string | null = null;
+      let stripePriceId: string | null = null;
+
+      if (priceNum > 0) {
+        try {
+          const platformStripe = getStripeClient();
+          const product = await platformStripe.products.create({
+            name, description: description || `Quikpik ${name} plan`,
+            metadata: { planId, platform: 'quikpik' },
+          });
+          stripeProductId = product.id;
+
+          const stripeInterval = billingInterval === 'yearly' ? 'year' : 'month';
+          const stripePrice = await platformStripe.prices.create({
+            product: product.id, unit_amount: Math.round(priceNum * 100),
+            currency: 'gbp', recurring: { interval: stripeInterval },
+            metadata: { planId, platform: 'quikpik' },
+          });
+          stripePriceId = stripePrice.id;
+        } catch (stripeError: any) {
+          console.error('Stripe product/price creation failed:', stripeError?.message);
+          return res.status(502).json({ error: `Stripe error: ${stripeError?.message || 'unknown'}` });
+        }
+      }
+
+      const [created] = await db.insert(subscriptionPlans).values({
+        name, planId, stripeProductId, stripePriceId,
+        monthlyPrice: priceNum.toFixed(2), currency: 'GBP', description,
+        features: Array.isArray(features) ? features : [],
+        limits, billingInterval, version, isActive: true, sortOrder,
+      }).returning();
+
+      res.status(201).json({ plan: created });
+    } catch (error) {
+      console.error('Admin create plan error:', error);
+      res.status(500).json({ error: 'Failed to create plan' });
+    }
+  });
+
+  // PATCH /api/admin/plans/:id/archive
+  app.patch('/api/admin/plans/:id/archive', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const planId = parseInt(req.params.id, 10);
+      if (isNaN(planId)) return res.status(400).json({ error: 'Invalid plan ID' });
+      const planRecord = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, planId)).limit(1);
+      if (!planRecord[0]) return res.status(404).json({ error: 'Plan not found' });
+      await db.update(subscriptionPlans)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(subscriptionPlans.id, planId));
+      res.json({ success: true, planId: planRecord[0].planId });
+    } catch (error) {
+      console.error('Admin archive plan error:', error);
+      res.status(500).json({ error: 'Failed to archive plan' });
+    }
+  });
+
+  // POST /api/admin/wholesalers/:id/remove-custom-pricing
+  app.post('/api/admin/wholesalers/:id/remove-custom-pricing', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const [targetUser] = await db.select().from(users)
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
+      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
+      await db.update(userSubscriptions).set({
+        isCustomPricing: false, internalNote: null, customPriceExpiresAt: null, updatedAt: new Date(),
+      }).where(eq(userSubscriptions.userId, targetUser.id));
+      res.json({ success: true, userId: targetUser.id });
+    } catch (error) {
+      console.error('Admin remove-custom-pricing error:', error);
+      res.status(500).json({ error: 'Failed to remove custom pricing' });
+    }
+  });
+
+  // POST /api/admin/wholesalers/:id/change-plan
+  app.post('/api/admin/wholesalers/:id/change-plan', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { planId: newPlanId, customPriceId, internalNote, customPriceExpiresAt } = req.body;
+      if (!newPlanId) return res.status(400).json({ error: 'planId is required' });
+
+      const [targetUser] = await db.select().from(users)
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')));
+      if (!targetUser) return res.status(404).json({ error: 'Wholesaler not found' });
+
+      const [targetPlan] = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.planId, newPlanId));
+      if (!targetPlan) return res.status(400).json({ error: 'Plan not found' });
+
+      const limits = (targetPlan.limits as { products?: number } | null);
+      const productLimit = (limits?.products ?? 2);
+      const currentStripeSubId = targetUser.stripeSubscriptionId;
+      const isTargetTestAccount = Boolean(targetUser.isTestAccount);
+
+      if (currentStripeSubId) {
+        if (newPlanId === 'free') {
+          await SubscriptionService.proratedFreeDowngrade(currentStripeSubId, targetUser.id, isTargetTestAccount);
+        } else if (customPriceId || targetPlan.stripePriceId) {
+          const effectivePriceId = customPriceId || targetPlan.stripePriceId!;
+          const isCustom = Boolean(customPriceId);
+
+          const [currentPlan] = await db.select({ monthlyPrice: subscriptionPlans.monthlyPrice })
+            .from(subscriptionPlans)
+            .where(eq(subscriptionPlans.planId, targetUser.currentPlan || targetUser.subscriptionTier || 'free'));
+          const currentPrice = parseFloat((currentPlan?.monthlyPrice as string) || '0');
+          const newPrice = parseFloat(targetPlan.monthlyPrice as string);
+          const isDowngrade = !isCustom && newPrice < currentPrice;
+
+          if (isDowngrade) {
+            await SubscriptionService.immediateDowngradeWithProration(
+              currentStripeSubId, effectivePriceId, newPlanId, isTargetTestAccount,
+            );
+          } else {
+            await SubscriptionService.upgradeSubscriptionWithProration(
+              currentStripeSubId, effectivePriceId, newPlanId, isTargetTestAccount,
+            );
+          }
+          await storage.updateUser(targetUser.id, {
+            currentPlan: newPlanId, subscriptionTier: newPlanId,
+            subscriptionStatus: 'active', productLimit,
+          });
+          await db.update(userSubscriptions).set({
+            planId: newPlanId, status: 'active', cancelAtPeriodEnd: false,
+            isCustomPricing: isCustom,
+            internalNote: (internalNote as string) || null,
+            customPriceExpiresAt: customPriceExpiresAt ? new Date(customPriceExpiresAt as string) : null,
+            updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, targetUser.id));
+        }
+      } else {
+        await storage.updateUser(targetUser.id, {
+          currentPlan: newPlanId, subscriptionTier: newPlanId,
+          subscriptionStatus: newPlanId === 'free' ? 'free' : 'active',
+          productLimit, stripeSubscriptionId: null,
+        });
+        const [existingSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, targetUser.id));
+        if (existingSub) {
+          await db.update(userSubscriptions).set({
+            planId: newPlanId, status: newPlanId === 'free' ? 'canceled' : 'active', updatedAt: new Date(),
+          }).where(eq(userSubscriptions.userId, targetUser.id));
+        } else if (newPlanId !== 'free') {
+          await db.insert(userSubscriptions).values({
+            userId: targetUser.id, planId: newPlanId, status: 'active',
+          });
+        }
+      }
+
+      res.json({ success: true, userId: targetUser.id, newPlanId });
+    } catch (error) {
+      console.error('Admin change-plan error:', error);
+      res.status(500).json({ error: 'Failed to change plan' });
+    }
+  });
+
+  // GET /api/admin/search
+  app.get('/api/admin/search', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { q = '' } = req.query as Record<string, string>;
+      const term = q.trim();
+      if (!term || term.length < 2) return res.json({ orders: [], customers: [], products: [] });
+      const searchPat = `%${term}%`;
+
+      const [matchedOrders, matchedCustomers, matchedProducts] = await Promise.all([
+        db.select({
+          id: orders.id, orderNumber: orders.orderNumber, customerName: orders.customerName,
+          wholesalerName: users.businessName, status: orders.status, createdAt: orders.createdAt,
+        }).from(orders).leftJoin(users, eq(orders.wholesalerId, users.id))
+          .where(or(ilike(orders.orderNumber, searchPat), ilike(orders.customerName, searchPat)))
+          .orderBy(desc(orders.createdAt)).limit(5),
+
+        db.select({
+          id: users.id, firstName: users.firstName, lastName: users.lastName,
+          businessName: users.businessName, phoneNumber: users.phoneNumber,
+          email: users.email, wholesalerId: users.wholesalerId,
+        }).from(users).where(and(
+          inArray(users.role, ['customer', 'retailer']),
+          or(
+            ilike(users.firstName, searchPat), ilike(users.lastName, searchPat),
+            ilike(users.businessName, searchPat), ilike(users.phoneNumber, searchPat),
+            ilike(users.email, searchPat),
+          ),
+        )).limit(5),
+
+        db.select({
+          id: products.id, name: products.name, category: products.category,
+          wholesalerName: users.businessName, status: products.status, price: products.price,
+        }).from(products).leftJoin(users, eq(products.wholesalerId, users.id))
+          .where(ilike(products.name, searchPat)).limit(5),
+      ]);
+
+      const custWholesalerIds = Array.from(new Set(matchedCustomers.map(c => c.wholesalerId).filter(Boolean))) as string[];
+      const custWholesalers: Record<string, string> = {};
+      if (custWholesalerIds.length > 0) {
+        const ws = await db.select({ id: users.id, businessName: users.businessName }).from(users).where(inArray(users.id, custWholesalerIds));
+        for (const w of ws) custWholesalers[w.id] = w.businessName || 'Unknown';
+      }
+
+      res.json({
+        orders: matchedOrders.map(o => ({
+          id: o.id, orderNumber: o.orderNumber, customerName: o.customerName,
+          wholesalerName: o.wholesalerName, status: o.status, createdAt: o.createdAt,
+        })),
+        customers: matchedCustomers.map(c => ({
+          id: c.id, name: c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown',
+          phoneNumber: c.phoneNumber, email: c.email,
+          wholesalerName: c.wholesalerId ? (custWholesalers[c.wholesalerId] || 'Unknown') : 'No wholesaler',
+        })),
+        products: matchedProducts.map(p => ({
+          id: p.id, name: p.name, category: p.category,
+          wholesalerName: p.wholesalerName, status: p.status, price: parseFloat(p.price || '0'),
+        })),
+      });
+    } catch (error) {
+      console.error('Admin search error:', error);
+      res.status(500).json({ error: 'Failed to search' });
+    }
+  });
+
+  // GET /api/admin/fee-config
+  app.get('/api/admin/fee-config', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const [current, history] = await Promise.all([
+        getCurrentFeeConfig(),
+        getFeeConfigHistory(20),
+      ]);
+      res.json({ current, history });
+    } catch (error) {
+      console.error('Admin fee-config GET error:', error);
+      res.status(500).json({ error: 'Failed to fetch fee configuration.' });
+    }
+  });
+
+  // POST /api/admin/fee-config
+  app.post('/api/admin/fee-config', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { percentage, fixed, notes } = req.body as { percentage: number; fixed: number; notes?: string };
+      if (typeof percentage !== 'number' || typeof fixed !== 'number') {
+        return res.status(400).json({ error: 'percentage and fixed must be numbers.' });
+      }
+      if (percentage < 0 || percentage > 1) {
+        return res.status(400).json({ error: 'percentage must be between 0 and 1 (e.g. 0.055 for 5.5%).' });
+      }
+      if (fixed < 0) {
+        return res.status(400).json({ error: 'fixed must be >= 0.' });
+      }
+      const adminEmail = getAdminEmail(req) || 'unknown';
+      const saved = await saveFeeConfig({ percentage, fixed, notes, changedBy: adminEmail });
+      res.json({ ok: true, config: saved });
+    } catch (error) {
+      console.error('Admin fee-config POST error:', error);
+      res.status(500).json({ error: 'Failed to save fee configuration.' });
+    }
+  });
+
   // POST /api/admin/cleanup-test-data
   app.post('/api/admin/cleanup-test-data', requireAuth, async (req: any, res) => {
     try {
@@ -420,44 +736,6 @@ export function registerAdminSystemRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin invalid-units-per-pallet error:', error);
       res.status(500).json({ error: 'Failed to query products.' });
-    }
-  });
-
-  // GET /api/admin/fee-config
-  app.get('/api/admin/fee-config', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const [current, history] = await Promise.all([
-        getCurrentFeeConfig(),
-        getFeeConfigHistory(20),
-      ]);
-      res.json({ current, history });
-    } catch (error) {
-      console.error('Admin fee-config GET error:', error);
-      res.status(500).json({ error: 'Failed to fetch fee configuration.' });
-    }
-  });
-
-  // POST /api/admin/fee-config
-  app.post('/api/admin/fee-config', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const { percentage, fixed, notes } = req.body as { percentage: number; fixed: number; notes?: string };
-      if (typeof percentage !== 'number' || typeof fixed !== 'number') {
-        return res.status(400).json({ error: 'percentage and fixed must be numbers.' });
-      }
-      if (percentage < 0 || percentage > 1) {
-        return res.status(400).json({ error: 'percentage must be between 0 and 1 (e.g. 0.055 for 5.5%).' });
-      }
-      if (fixed < 0) {
-        return res.status(400).json({ error: 'fixed must be >= 0.' });
-      }
-      const adminEmail = getAdminEmail(req) || 'unknown';
-      const saved = await saveFeeConfig({ percentage, fixed, notes, changedBy: adminEmail });
-      res.json({ ok: true, config: saved });
-    } catch (error) {
-      console.error('Admin fee-config POST error:', error);
-      res.status(500).json({ error: 'Failed to save fee configuration.' });
     }
   });
 }
