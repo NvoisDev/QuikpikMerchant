@@ -1097,9 +1097,17 @@ export class CustomerStorage extends OrderStorage {
         return [];
       }
       
-      // Get products using the exact same pattern as getWholesalerProfile
+      // Get products using an explicit column list — cost_price is intentionally
+      // excluded here because getMarketplaceProducts is a customer-facing API.
       const productsResult = await db.execute(sql`
-        SELECT * FROM products 
+        SELECT id, name, description, price, currency, moq, stock,
+               image_url, images, category, status, wholesaler_id,
+               promo_price, promo_active, promotional_offers,
+               price_visible, pack_quantity, unit_of_measure, unit_size,
+               selling_format, delivery_excluded,
+               units_per_pallet, pallet_price, pallet_moq, pallet_stock,
+               pallet_weight, unit_weight, created_at, updated_at
+        FROM products 
         WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
         LIMIT 100
       `);

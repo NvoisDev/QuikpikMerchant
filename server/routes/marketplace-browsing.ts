@@ -471,9 +471,11 @@ export function registerBrowsingRoutes(app: Express): void {
       }
 
       // SEPARATE STOCK TRACKING: Use actual stock fields directly
-      // Return product with actual separate stock values and wholesaler information
+      // Return product with actual separate stock values and wholesaler information.
+      // costPrice is a wholesaler-only margin field — never expose it to customers.
+      const { costPrice: _stripped, ...safeProduct } = product as typeof product & { costPrice?: unknown };
       res.json({
-        ...product,
+        ...safeProduct,
         // Use actual separate stock fields (no calculations needed)
         stock: product.stock || 0, // Individual units stock
         palletStock: product.palletStock || 0, // Pallet stock
