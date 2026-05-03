@@ -290,7 +290,9 @@ export const users = pgTable("users", {
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  phoneIdx: index("users_phone_number_idx").on(table.phoneNumber),
+}));
 
 // Team members table for multi-user access
 export const teamMembers = pgTable("team_members", {

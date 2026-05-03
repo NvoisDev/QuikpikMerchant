@@ -1,0 +1,1 @@
+CREATE INDEX "users_phone_number_idx" ON "users" USING btree ("phone_number");

@@ -1,6 +1,6 @@
 {
-  "id": "2d365d3e-9a1e-44be-9835-e3f2dc5ba7c2",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "0333f9aa-06c6-4f12-9651-347f0c493c9b",
+  "prevId": "2d365d3e-9a1e-44be-9835-e3f2dc5ba7c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7304,7 +7304,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_phone_number_idx": {
+          "name": "users_phone_number_idx",
+          "columns": [
+            {
+              "expression": "phone_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
