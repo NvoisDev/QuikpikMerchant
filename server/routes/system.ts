@@ -254,7 +254,10 @@ export function registerSystemRoutes(app: Express): void {
     try {
       const userId = req.user.id;
       
-      // Get all orders with shipping information
+      // Get recent orders for the shipping dashboard.
+      // The 500-row default cap is intentional here — a shipping dashboard
+      // showing the last 500 orders is more than sufficient; full history
+      // is not needed for active parcel tracking.
       const orders = await storage.getOrders(userId);
       
       // Filter orders that have shipping tracking (or demo mode: show all paid orders)
