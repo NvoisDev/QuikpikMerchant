@@ -535,6 +535,7 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   wholesalerIdIdx: index("products_wholesaler_id_idx").on(table.wholesalerId),
+  statusIdx: index("products_status_idx").on(table.status),
 }));
 
 // Batch-level inventory tracking — each delivery/restocking event creates a new batch
@@ -721,6 +722,9 @@ export const orders = pgTable("orders", {
   index("orders_wholesaler_created_idx").on(table.wholesalerId, table.createdAt),
   index("orders_retailer_idx").on(table.retailerId),
   index("orders_payment_status_idx").on(table.paymentStatus),
+  index("orders_status_idx").on(table.status),
+  index("orders_created_at_idx").on(table.createdAt),
+  index("orders_customer_phone_idx").on(table.customerPhone),
 ]);
 
 // ── Quote Activity Log ───────────────────────────────────────────────────────

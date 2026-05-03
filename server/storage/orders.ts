@@ -78,7 +78,7 @@ import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 import { ProductStorage } from './products';
 
 export class OrderStorage extends ProductStorage {
-  async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
+  async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string, options?: { unpaginated?: boolean }): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
     // Apply basic filters - CRITICAL FIX: Include orders where user is EITHER wholesaler OR retailer
     const conditions = [];
     if (wholesalerId) {
@@ -107,10 +107,17 @@ export class OrderStorage extends ProductStorage {
         )
       );
     }
-    
-    const orderResults = await (conditions.length > 0
+
+    // Default to 500 rows; callers that need full history pass { unpaginated: true }
+    const rowLimit = options?.unpaginated ? undefined : 500;
+
+    const baseQuery = conditions.length > 0
       ? db.select().from(orders).where(and(...conditions)).orderBy(desc(orders.createdAt))
-      : db.select().from(orders).orderBy(desc(orders.createdAt)));
+      : db.select().from(orders).orderBy(desc(orders.createdAt));
+
+    const orderResults = rowLimit !== undefined
+      ? await baseQuery.limit(rowLimit)
+      : await baseQuery;
 
     if (orderResults.length === 0) {
       return [];
@@ -401,134 +408,168 @@ export class OrderStorage extends ProductStorage {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Insert order items and reduce stock within transaction
-      for (const item of items) {
-        // ── Fetch current product (needed for both FEFO and legacy paths) ─────
-        const [currentProduct] = await tx
-          .select()
-          .from(products)
-          .where(eq(products.id, item.productId!));
+      // ── BATCH PRE-FETCH: products and batches in 2 queries instead of 2×N ──
+      const productIds = items
+        .map(i => i.productId)
+        .filter((id): id is number => id != null);
+
+      const allProductRows = await tx
+        .select()
+        .from(products)
+        .where(inArray(products.id, productIds));
+
+      const allBatchRows = await tx
+        .select()
+        .from(productBatches)
+        .where(
+          and(
+            inArray(productBatches.productId, productIds),
+            eq(productBatches.status, 'active'),
+            or(
+              isNull(productBatches.expiryDate),
+              sql`${productBatches.expiryDate} >= ${today}`
+            )
+          )
+        )
+        .orderBy(
+          sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+          asc(productBatches.expiryDate),
+          asc(productBatches.createdAt)
+        );
+
+      // Build lookup structures
+      const productMap = new Map(allProductRows.map(p => [p.id, p]));
+
+      // Group batches by productId — ordering preserved from the DB query
+      const batchesByProduct = new Map<number, typeof allBatchRows>();
+      for (const batch of allBatchRows) {
+        const list = batchesByProduct.get(batch.productId) ?? [];
+        list.push(batch);
+        batchesByProduct.set(batch.productId, list);
+      }
+
+      // Mutable working copy of batch quantities (updated in-memory as items are allocated)
+      const batchQty = new Map<number, number>(allBatchRows.map(b => [b.id, b.quantity]));
+
+      // Mutation accumulators — applied after all in-memory allocations are computed
+      const batchUpdates: Array<{ id: number; newQty: number; newStatus: string }> = [];
+      const movementsToInsert: (typeof stockMovements.$inferInsert)[] = [];
+      const productStockFinal = new Map<number, { stock: number; palletStock: number }>();
+      const primaryBatchByItemIndex = new Map<number, number | null>();
+
+      // ── FEFO allocation (pure in-memory, no DB round-trips) ──────────────
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.productId) {
+          primaryBatchByItemIndex.set(i, null);
+          continue;
+        }
+
+        const currentProduct = productMap.get(item.productId);
+        if (!currentProduct) {
+          primaryBatchByItemIndex.set(i, null);
+          continue;
+        }
 
         const orderedQuantity = item.quantity;
         const sellingType = item.sellingType || 'units';
+        const activeBatches = batchesByProduct.get(item.productId) ?? [];
 
-        // ── FEFO batch allocation ─────────────────────────────────────────────
-        let primaryBatchId: number | null = null;
-
-        if (item.productId && currentProduct) {
-          // Fetch active non-expired batches in FEFO order (earliest expiry first, no-expiry last)
-          const activeBatches = await tx
-            .select()
-            .from(productBatches)
-            .where(
-              and(
-                eq(productBatches.productId, item.productId!),
-                eq(productBatches.status, 'active'),
-                or(
-                  isNull(productBatches.expiryDate),
-                  sql`${productBatches.expiryDate} >= ${today}`
-                )
-              )
-            )
-            .orderBy(
-              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
-              asc(productBatches.expiryDate),
-              asc(productBatches.createdAt)
-            );
-
-          // ── Batch-only stock allocation: no legacy fallback ──────────────
-          // All products MUST have at least one active non-expired batch.
-          // If none exist (all depleted/expired or product never batch-seeded),
-          // the transaction is aborted. The startup migration seeds an "Initial
-          // Stock" batch for every existing product; new products created via
-          // POST /api/products auto-receive an initial batch when stock > 0.
-          if (activeBatches.length === 0) {
-            throw new Error(
-              `Product ${item.productId} (${currentProduct.name}) has no active batch stock. ` +
-              `Please add a new batch before ordering.`
-            );
-          }
-
-          const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
-          // quantityInPack = base units per pack; unitsPerPallet = packs per pallet
-          const quantityInPack: number = currentProduct.quantityInPack ?? 1;
-          // Convert ordered quantity to base units
-          const baseUnitsNeeded = sellingType === 'pallets'
-            ? orderedQuantity * unitsPerPallet * quantityInPack
-            : orderedQuantity;
-
-          // Pre-check: abort if total batch stock is insufficient
-          const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
-          if (totalAvailable < baseUnitsNeeded) {
-            throw new Error(
-              `Insufficient batch stock for product ${item.productId} (${currentProduct.name}): ` +
-              `need ${baseUnitsNeeded} units but only ${totalAvailable} available`
-            );
-          }
-
-          // FEFO deduction: walk batches earliest-expiry first
-          let remaining = baseUnitsNeeded;
-          for (const batch of activeBatches) {
-            if (remaining <= 0) break;
-            const deduct = Math.min(remaining, batch.quantity);
-            const newQty = batch.quantity - deduct;
-            const newStatus = newQty === 0 ? 'depleted' : 'active';
-
-            await tx
-              .update(productBatches)
-              .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
-              .where(eq(productBatches.id, batch.id));
-
-            // Record a stock_movement for each individual batch touched
-            await tx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId: order.wholesalerId,
-              movementType: 'purchase',
-              quantity: -deduct,          // actual units removed from this batch
-              unitType: 'units',
-              stockBefore: batch.quantity,
-              stockAfter: newQty,
-              reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
-              orderId: newOrder.id,
-              customerName,
-              businessProfileId: order.businessProfileId ?? null,
-            });
-
-            if (primaryBatchId === null) primaryBatchId = batch.id;
-            remaining -= deduct;
-          }
-
-          // Sync product.stock + palletStock from batch sum (source of truth)
-          const batchSum = await tx
-            .select({ total: sum(productBatches.quantity) })
-            .from(productBatches)
-            .where(
-              and(
-                eq(productBatches.productId, item.productId!),
-                eq(productBatches.status, 'active'),
-                or(
-                  isNull(productBatches.expiryDate),
-                  sql`${productBatches.expiryDate} >= ${today}`
-                )
-              )
-            );
-          const newStock = Number(batchSum[0]?.total ?? 0);
-          // Pallet stock = floor(floor(baseUnits / quantityInPack) / unitsPerPallet)
-          const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
-            ? Math.floor(Math.floor(newStock / quantityInPack) / unitsPerPallet)
-            : 0;
-          await tx.update(products)
-            .set({ stock: newStock, palletStock: newPalletStock })
-            .where(eq(products.id, item.productId));
-
+        // ── Batch-only stock allocation: no legacy fallback ──────────────────
+        if (activeBatches.length === 0) {
+          throw new Error(
+            `Product ${item.productId} (${currentProduct.name}) has no active batch stock. ` +
+            `Please add a new batch before ordering.`
+          );
         }
-        // ── End FEFO block ────────────────────────────────────────────────────
 
-        // Insert order item — primaryBatchId is always set when we reach here
-        // (we throw above if no active batches exist)
-        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id, batchId: primaryBatchId });
+        const unitsPerPallet: number = currentProduct.unitsPerPallet ?? 1;
+        const quantityInPack: number = currentProduct.quantityInPack ?? 1;
+        const baseUnitsNeeded = sellingType === 'pallets'
+          ? orderedQuantity * unitsPerPallet * quantityInPack
+          : orderedQuantity;
+
+        // Pre-check using current in-memory quantities (reflects prior items' deductions)
+        const totalAvailable = activeBatches.reduce((acc, b) => acc + (batchQty.get(b.id) ?? 0), 0);
+        if (totalAvailable < baseUnitsNeeded) {
+          throw new Error(
+            `Insufficient batch stock for product ${item.productId} (${currentProduct.name}): ` +
+            `need ${baseUnitsNeeded} units but only ${totalAvailable} available`
+          );
+        }
+
+        // FEFO deduction in-memory
+        let remaining = baseUnitsNeeded;
+        let primaryBatchId: number | null = null;
+        for (const batch of activeBatches) {
+          if (remaining <= 0) break;
+          const currentQty = batchQty.get(batch.id) ?? 0;
+          if (currentQty <= 0) continue;
+          const deduct = Math.min(remaining, currentQty);
+          const newQty = currentQty - deduct;
+          const newStatus = newQty === 0 ? 'depleted' : 'active';
+          batchQty.set(batch.id, newQty);
+          batchUpdates.push({ id: batch.id, newQty, newStatus });
+          movementsToInsert.push({
+            productId: item.productId,
+            wholesalerId: order.wholesalerId,
+            movementType: 'purchase',
+            quantity: -deduct,
+            unitType: 'units',
+            stockBefore: currentQty,
+            stockAfter: newQty,
+            reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
+            orderId: newOrder.id,
+            customerName,
+            businessProfileId: order.businessProfileId ?? null,
+          });
+          if (primaryBatchId === null) primaryBatchId = batch.id;
+          remaining -= deduct;
+        }
+
+        primaryBatchByItemIndex.set(i, primaryBatchId);
+
+        // Compute final product stock from in-memory batch quantities
+        const newStock = activeBatches.reduce((acc, b) => acc + (batchQty.get(b.id) ?? 0), 0);
+        const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
+          ? Math.floor(Math.floor(newStock / quantityInPack) / unitsPerPallet)
+          : 0;
+        // Last item for this product wins (correctly reflects cumulative deductions)
+        productStockFinal.set(item.productId, { stock: newStock, palletStock: newPalletStock });
       }
-      
+
+      // ── BATCH EXECUTE: flush all mutations ───────────────────────────────
+      // 1. Update touched batches (individual updates; savings come from pre-fetching)
+      for (const { id, newQty, newStatus } of batchUpdates) {
+        await tx
+          .update(productBatches)
+          .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
+          .where(eq(productBatches.id, id));
+      }
+
+      // 2. Bulk-insert all stock movements in a single statement
+      if (movementsToInsert.length > 0) {
+        await tx.insert(stockMovements).values(movementsToInsert);
+      }
+
+      // 3. Bulk-insert all order items in a single statement
+      const orderItemRows = items.map((item, i) => ({
+        ...item,
+        orderId: newOrder.id,
+        batchId: primaryBatchByItemIndex.get(i) ?? null,
+      }));
+      if (orderItemRows.length > 0) {
+        await tx.insert(orderItems).values(orderItemRows);
+      }
+
+      // 4. Update product stock counters (one UPDATE per distinct product)
+      for (const [productId, { stock, palletStock }] of productStockFinal.entries()) {
+        await tx
+          .update(products)
+          .set({ stock, palletStock })
+          .where(eq(products.id, productId));
+      }
+
       return newOrder;
     });
   }

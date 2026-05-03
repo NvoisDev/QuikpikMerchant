@@ -1101,6 +1101,7 @@ export class CustomerStorage extends OrderStorage {
       const productsResult = await db.execute(sql`
         SELECT * FROM products 
         WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
+        LIMIT 100
       `);
       type MarketplaceProductRow = Record<string, unknown> & { price: string; created_at: unknown; wholesaler: { rating?: number } };
       const productsList = productsResult.rows as MarketplaceProductRow[];

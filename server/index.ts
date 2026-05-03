@@ -280,6 +280,11 @@ async function runStartupMigrations() {
     // One-time migration: drop the old partial index if it exists (idempotent — no-op once converted)
     `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'orders_idempotency_key_idx' AND indexdef LIKE '%WHERE%') THEN DROP INDEX orders_idempotency_key_idx; END IF; END $$`,
     `CREATE UNIQUE INDEX IF NOT EXISTS orders_idempotency_key_idx ON orders (idempotency_key)`,
+    // Task #947: Performance indexes — orders status/createdAt/customerPhone and products status
+    `CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status)`,
+    `CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at)`,
+    `CREATE INDEX IF NOT EXISTS orders_customer_phone_idx ON orders (customer_phone)`,
+    `CREATE INDEX IF NOT EXISTS products_status_idx ON products (status)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

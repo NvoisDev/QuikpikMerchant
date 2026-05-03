@@ -597,8 +597,8 @@ export function registerCampaignRoutes(app: Express): void {
         storage.getMessageTemplates(targetUserId)
       ]);
 
-      // Get all orders for real order count calculation
-      const allOrders = await storage.getOrders(targetUserId);
+      // Get all orders for real order count calculation (analytics requires full history)
+      const allOrders = await storage.getOrders(targetUserId, undefined, undefined, { unpaginated: true });
 
       // Convert broadcasts to unified campaign format with real order data
       const broadcastCampaigns = await Promise.all(broadcasts.map(async broadcast => {
@@ -805,7 +805,7 @@ export function registerCampaignRoutes(app: Express): void {
       const [broadcasts, templates, allOrders] = await Promise.all([
         storage.getBroadcasts(targetUserId),
         storage.getMessageTemplates(targetUserId),
-        storage.getOrders(targetUserId)
+        storage.getOrders(targetUserId, undefined, undefined, { unpaginated: true })
       ]);
 
       // Filter campaigns by date and type

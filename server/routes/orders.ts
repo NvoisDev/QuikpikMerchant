@@ -1093,8 +1093,8 @@ export function registerOrderRoutes(app: Express): void {
         return false;
       };
       
-      // Get all orders to calculate overall statistics
-      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
+      // Get all orders to calculate overall statistics (full history required for archive counts)
+      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined, { unpaginated: true });
       
       // Filter by active/archived based on tab
       const filteredOrders = archiveTab === 'all'
