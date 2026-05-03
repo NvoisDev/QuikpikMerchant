@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { formatPhoneToInternational } from '../../shared/phone-utils.js';
+import { logServiceError } from '../utils/logServiceError';
 
 interface SMSParams {
   to: string;
@@ -32,8 +33,14 @@ export async function sendSMS(params: SMSParams): Promise<boolean> {
     });
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ SMS error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const twilioCode = (error instanceof Error) ? (error as Record<string, unknown>).code : undefined;
+    await logServiceError('twilio', 'sendSMS', msg, {
+      to: params.to,
+      twilioCode,
+    });
     return false;
   }
 }

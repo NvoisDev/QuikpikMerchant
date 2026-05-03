@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logServiceError } from "./utils/logServiceError";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -59,6 +60,7 @@ export async function generateProductDescription(productName: string, category?:
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[openai] product description generation failed: ${msg}`);
+    await logServiceError('openai', 'chat.completions.create/productDescription', msg, { productName, category });
     throw new Error("Failed to generate product description");
   }
 }
@@ -97,6 +99,7 @@ export async function generateProductImage(productName: string, category?: strin
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[openai] product image generation failed: ${msg}`);
+    await logServiceError('openai', 'images.generate/productImage', msg, { productName, category });
     throw new Error("Failed to generate product image");
   }
 }

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logServiceError } from "./utils/logServiceError";
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY environment variable is required");
@@ -90,6 +91,7 @@ Respond with JSON in this exact format:
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[openai] tagline/personalisation generation failed: ${msg}`);
+    await logServiceError('openai', 'chat.completions.create/tagline', msg, { businessName: context.businessName });
     
     // Always return fallback message instead of throwing error
     const fallbackGreeting = context.customerName ? `Hi ${context.customerName}!` : "Hello!";
@@ -173,6 +175,7 @@ Respond with JSON array of exactly 3 campaigns in this format:
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[openai] campaign suggestions failed: ${msg}`);
+    await logServiceError('openai', 'chat.completions.create/campaignSuggestions', msg, { businessName: context.businessName });
     return [
       {
         title: "Weekly Stock Update",
@@ -265,6 +268,7 @@ Respond with JSON in this format:
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[openai] message timing optimisation failed: ${msg}`);
+    await logServiceError('openai', 'chat.completions.create/messageTiming', msg, { customerGroup: context.customerGroup });
     return {
       recommendedTime: "10:00",
       recommendedDay: "Tuesday",

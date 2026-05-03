@@ -1,5 +1,6 @@
 import { MailService } from '@sendgrid/mail';
 import { wrapCustomerEmail, emailHeading, emailCard, emailButton, getEmailLogoUrl } from '../email-templates';
+import { logServiceError } from '../utils/logServiceError';
 
 if (!process.env.SENDGRID_API_KEY) {
   throw new Error("SENDGRID_API_KEY environment variable must be set");
@@ -41,8 +42,16 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
 
     console.log(`Welcome email sent successfully to ${customerEmail}`);
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('SendGrid email error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const statusCode = (error instanceof Error && (error as Record<string, unknown>)?.response)
+      ? ((error as Record<string, unknown>).response as Record<string, unknown>)?.status
+      : undefined;
+    await logServiceError('sendgrid', 'sendWelcomeEmail', msg, {
+      to: params.customerEmail,
+      statusCode,
+    });
     return false;
   }
 }

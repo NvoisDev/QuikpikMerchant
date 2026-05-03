@@ -1552,6 +1552,34 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  // GET /api/admin/service-errors — last 50 structured service error log entries
+  app.get('/api/admin/service-errors', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const entries = await db
+        .select()
+        .from(systemErrorLogs)
+        .where(inArray(systemErrorLogs.errorType, ['sendgrid', 'twilio', 'openai']))
+        .orderBy(desc(systemErrorLogs.createdAt))
+        .limit(50);
+
+      res.json({ errors: entries.map(e => ({
+        id: e.id,
+        service: e.errorType,
+        endpoint: (e.context as Record<string, unknown>)?.endpoint ?? null,
+        message: e.message,
+        severity: e.severity,
+        context: e.context,
+        wholesalerId: e.wholesalerId,
+        timestamp: e.createdAt?.toISOString(),
+      })) });
+    } catch (error) {
+      console.error('Admin service-errors error:', error);
+      res.status(500).json({ error: 'Failed to fetch service error log' });
+    }
+  });
+
   // ── Subscription Plan Management (admin-only) ────────────────────────────────
 
   // GET /api/admin/plans — list all plans with subscriber count + MRR

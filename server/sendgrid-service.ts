@@ -1,4 +1,5 @@
 import { MailService } from '@sendgrid/mail';
+import { logServiceError } from './utils/logServiceError';
 
 if (!process.env.SENDGRID_API_KEY) {
   throw new Error("SENDGRID_API_KEY environment variable must be set");
@@ -57,6 +58,11 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     if (error.response?.body) {
       console.error('📋 Full SendGrid response body:', JSON.stringify(error.response.body, null, 2));
     }
+    await logServiceError('sendgrid', 'send', error?.message || String(error), {
+      to: params.to,
+      subject: params.subject,
+      statusCode: error?.response?.status,
+    });
     return false;
   }
 }

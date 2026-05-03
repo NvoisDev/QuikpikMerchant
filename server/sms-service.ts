@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { logServiceError, extractErrorMessage } from './utils/logServiceError';
 
 // SMS Service with comprehensive debugging and fallback support
 export class ReliableSMSService {
@@ -15,8 +16,10 @@ export class ReliableSMSService {
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         );
-      } catch (error) {
+      } catch (error: unknown) {
+        const msg = extractErrorMessage(error);
         console.error('❌ Twilio client initialization failed:', error);
+        logServiceError('twilio', 'initialize', msg).catch(() => {});
         this.twilioClient = null;
       }
     }
@@ -98,6 +101,11 @@ export class ReliableSMSService {
         const errorMessage = errorMessages[error.code] || 'Unknown SMS error';
         console.error(`Error details: ${errorMessage}`);
       }
+
+      await logServiceError('twilio', 'sendVerificationSMS', error.message || 'SMS sending failed', {
+        twilioCode: error.code,
+        to: phoneNumber,
+      });
       
       return {
         success: false,
@@ -151,7 +159,11 @@ export class ReliableSMSService {
       };
     } catch (error: any) {
       console.error('❌ Stock alert SMS sending failed:', error.message);
-      
+      await logServiceError('twilio', 'sendStockAlertSMS', error.message || 'Stock alert SMS sending failed', {
+        twilioCode: error.code,
+        to: phoneNumber,
+        wholesalerId,
+      });
       return {
         success: false,
         error: error.message || 'Stock alert SMS sending failed'
@@ -180,6 +192,10 @@ export class ReliableSMSService {
       });
       return { success: true, messageId: twilioMessage.sid };
     } catch (error: any) {
+      await logServiceError('twilio', 'sendMarketingSMS', error.message || 'SMS sending failed', {
+        twilioCode: error.code,
+        to: phoneNumber,
+      });
       return { success: false, error: error.message || 'SMS sending failed' };
     }
   }
