@@ -34,7 +34,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       // Get all cancelled orders
       const allOrders = await storage.getOrders(wholesalerId);
       const cancelledOrders = allOrders.filter(o => 
-        o.status === 'cancelled' && new Date(o.createdAt) >= startDate
+        o.status === 'cancelled' && new Date(o.createdAt ?? '') >= startDate
       );
       
       // Get cancellation requests
@@ -67,7 +67,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
       
       // Calculate cancellation rate
-      const totalOrders = allOrders.filter(o => new Date(o.createdAt) >= startDate).length;
+      const totalOrders = allOrders.filter(o => new Date(o.createdAt ?? '') >= startDate).length;
       const cancellationRate = totalOrders > 0 ? (totalCancelled / totalOrders * 100).toFixed(1) : '0';
       
       res.json({
@@ -832,7 +832,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           current.paidOrderCount++;
         }
         
-        const orderDate = new Date(order.createdAt);
+        const orderDate = new Date(order.createdAt ?? '');
         if (!current.firstOrderDate || orderDate < current.firstOrderDate) {
           current.firstOrderDate = orderDate;
         }
@@ -851,7 +851,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       let returningCustomers = 0;
       let atRiskCustomers = 0;
       
-      for (const [customerId, data] of customerOrderMap) {
+      for (const [customerId, data] of Array.from(customerOrderMap.entries())) {
         if (data.firstOrderDate && data.firstOrderDate >= thirtyDaysAgo) {
           newCustomers++;
         } else if (data.lastOrderDate && data.lastOrderDate >= thirtyDaysAgo) {
@@ -867,8 +867,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           const customer = customers.find(c => c.id === customerId);
           return {
             id: customerId,
-            name: customer?.name || data.customerName || 'Unknown Customer',
-            phone: customer?.phone || '',
+            name: customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : customer?.businessName || data.customerName || 'Unknown Customer',
+            phone: customer?.phoneNumber || '',
             orderCount: data.orderCount,
             totalSpent: Math.round(data.totalSpent * 100) / 100,
             lastOrderDate: data.lastOrderDate?.toISOString().split('T')[0] || '',
@@ -990,7 +990,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             price: parseFloat(product.price || '0'),
             quantitySold: sales.quantity,
             daysSinceLastSale: sales.quantity > 0 ? 
-              Math.floor((Date.now() - new Date(product.updatedAt || product.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 
+              Math.floor((Date.now() - new Date((product.updatedAt ?? product.createdAt) ?? '').getTime()) / (1000 * 60 * 60 * 24)) : 
               999,
             stockValue: Math.round((product.stock || 0) * parseFloat(product.price || '0') * 100) / 100
           };

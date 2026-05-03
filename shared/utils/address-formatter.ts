@@ -23,7 +23,7 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         address.state,
         address.postalCode,
         address.country
-      ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null' && part !== null && part !== undefined);
+      ].filter((part): part is string => !!part && part.trim() !== '' && part !== 'undefined' && part !== 'null');
     }
     
     // If it's a JSON string, parse it first
@@ -36,7 +36,7 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         parsed.state,
         parsed.postalCode,
         parsed.country
-      ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null' && part !== null && part !== undefined);
+      ].filter((part): part is string => !!part && part.trim() !== '' && part !== 'undefined' && part !== 'null');
     }
     
     // If it's already a comma-separated string, split it and filter properly

@@ -165,6 +165,8 @@ export interface OrderEmailData {
     total: string;
     sellingType?: string;
     packDescriptor?: string;
+    appliedOfferLabel?: string | null;
+    freeItems?: number;
   }>;
   wholesaler: {
     id?: string | null;
@@ -200,8 +202,8 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
   }
 
   const itemRows = data.items.map(item => {
-    const promoNote = (item as any).appliedOfferLabel ? ' 🎁 ' + (item as any).appliedOfferLabel : '';
-    const freeNote = (item as any).freeItems > 0 ? ' (+' + (item as any).freeItems + ' free)' : '';
+    const promoNote = item.appliedOfferLabel ? ' 🎁 ' + item.appliedOfferLabel : '';
+    const freeNote = (item.freeItems ?? 0) > 0 ? ' (+' + item.freeItems + ' free)' : '';
     const packBadge = item.packDescriptor
       ? '<br><span style="color:#6b7280;font-size:11px;">' + item.packDescriptor + '</span>'
       : '';

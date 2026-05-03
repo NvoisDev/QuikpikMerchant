@@ -290,7 +290,7 @@ export class SubscriptionService {
         subscriptionPeriodStart: updatedSubscription.current_period_start ? new Date(updatedSubscription.current_period_start * 1000) : null,
         subscriptionPeriodEnd: updatedSubscription.current_period_end ? new Date(updatedSubscription.current_period_end * 1000) : null,
         updatedAt: new Date()
-      }).where(eq(users.id, user.id));
+      } as Partial<typeof users.$inferInsert>).where(eq(users.id, user.id));
 
       // Update or create user subscription record immediately
       const existingSub = await db.select().from(userSubscriptions)
@@ -910,7 +910,7 @@ export class SubscriptionService {
       }
 
       // Check plan limits
-      const limits = plan.limits as any;
+      const limits = plan.limits as Record<string, unknown>;
       if (!limits || !limits[feature]) {
         return true; // No limit defined = unlimited access
       }
@@ -921,7 +921,7 @@ export class SubscriptionService {
       }
 
       if (value !== undefined) {
-        return value <= limit;
+        return value <= (limit as number);
       }
 
       return true;

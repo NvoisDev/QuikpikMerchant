@@ -227,8 +227,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 // New auth middleware that allows both wholesalers and retailers (for subscriptions, etc.)
 export const requireAnyAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const sessionUser = (req.session as any)?.user;
-    const sessionUserId = (req.session as any)?.userId;
+    const sessionUser = req.session?.user;
+    const sessionUserId = req.session?.userId;
 
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
@@ -243,7 +243,7 @@ export const requireAnyAuth = async (req: Request, res: Response, next: NextFunc
       const user = await storage.getUser(sessionUserId);
       if (user) {
         // Update session for consistency
-        (req.session as any).user = user;
+        req.session.user = user;
         req.user = user;
         return next();
       }
@@ -271,8 +271,8 @@ export const requireAnyAuth = async (req: Request, res: Response, next: NextFunc
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const sessionUser = (req.session as any)?.user;
-    const sessionUserId = (req.session as any)?.userId;
+    const sessionUser = req.session?.user;
+    const sessionUserId = req.session?.userId;
 
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
@@ -290,7 +290,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         // Handle admin impersonation via server-issued token (proves audited start)
         const impersonateHeader = req.headers['x-admin-impersonate'] as string | undefined;
         const impersonateToken = req.headers['x-impersonate-token'] as string | undefined;
-        const sessionToken = (req.session as any).impersonationToken as { token: string; wholesalerId: string; adminEmail: string; expiresAt?: number } | undefined;
+        const sessionToken = req.session.impersonationToken;
         if (
           impersonateHeader && impersonateToken && ADMIN_EMAILS.includes(user.email || '') &&
           sessionToken &&
@@ -300,8 +300,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         ) {
           const wholesalerUser = await storage.getUser(impersonateHeader);
           if (wholesalerUser && wholesalerUser.role === 'wholesaler') {
-            (req as any)._adminEmail = user.email;
-            (req as any)._impersonatingBusinessName = wholesalerUser.businessName;
+            req._adminEmail = user.email;
+            req._impersonatingBusinessName = wholesalerUser.businessName;
             req.user = wholesalerUser;
             console.log(`🎭 Admin ${user.email} impersonating wholesaler ${wholesalerUser.email} (${req.method} ${req.url})`);
             return next();
@@ -315,7 +315,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           try {
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
-            if (member) (req.user as any).teamMemberRole = member.role;
+            if (member) req.user.teamMemberRole = member.role;
           } catch (err) {
             console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
           }
@@ -341,7 +341,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         // Handle admin impersonation via server-issued token (proves audited start)
         const impersonateHeaderLegacy = req.headers['x-admin-impersonate'] as string | undefined;
         const impersonateTokenLegacy = req.headers['x-impersonate-token'] as string | undefined;
-        const sessionTokenLegacy = (req.session as any).impersonationToken as { token: string; wholesalerId: string; expiresAt?: number } | undefined;
+        const sessionTokenLegacy = req.session.impersonationToken;
         if (
           impersonateHeaderLegacy && impersonateTokenLegacy && ADMIN_EMAILS.includes(user.email || '') &&
           sessionTokenLegacy &&
@@ -351,8 +351,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         ) {
           const wholesalerUser = await storage.getUser(impersonateHeaderLegacy);
           if (wholesalerUser && wholesalerUser.role === 'wholesaler') {
-            (req as any)._adminEmail = user.email;
-            (req as any)._impersonatingBusinessName = wholesalerUser.businessName;
+            req._adminEmail = user.email;
+            req._impersonatingBusinessName = wholesalerUser.businessName;
             req.user = wholesalerUser;
             return next();
           }
@@ -364,20 +364,20 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           try {
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
-            if (member) (req.user as any).teamMemberRole = member.role;
+            if (member) req.user.teamMemberRole = member.role;
           } catch (err) {
             console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
           }
         }
         // Update session for consistency
-        (req.session as any).user = user;
+        req.session.user = user;
         return next();
       }
     }
 
     // Check for Replit OAuth session (Passport.js integration)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      const user = req.user as any;
+      const user = req.user!;
       
       // SECURITY: Block customer/retailer access to wholesaler dashboard
       if (user.role === 'retailer' || user.role === 'customer') {
@@ -434,7 +434,7 @@ export async function authenticateSession(req: any): Promise<{
     // Get session data directly from the database
     const sessionResult = await db.execute(
       sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
-    );
+    ) as unknown as Array<{ sess: unknown }>;
 
     if (sessionResult.length === 0) {
       return {

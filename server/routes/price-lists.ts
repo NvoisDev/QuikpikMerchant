@@ -4,7 +4,7 @@ import {
   priceLists, priceListItems, priceListAssignments,
   products, customerGroups, customerGroupMembers,
   wholesalerCustomerRelationships,
-  PLAN_ENFORCEMENT_LIMITS,
+  PLAN_ENFORCEMENT_LIMITS, getPlanLimits,
 } from "./shared";
 import { eq, and, inArray, count as drizzleCount } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
@@ -72,13 +72,13 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
       discountPercentage: item.discountPercentage,
     });
     const customPalletPrice =
-      (item as any).customPalletPrice != null
-        ? parseFloat((item as any).customPalletPrice)
+      item.customPalletPrice != null
+        ? parseFloat(item.customPalletPrice)
         : null;
     priceListMap.set(item.productId, { unitPrice, customPalletPrice });
   }
 
-  const allProducts = ((await storage.getProducts(wholesalerId)) as any[])
+  const allProducts = (await storage.getProducts(wholesalerId))
     .filter((p) => p.status === "active")
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
@@ -182,9 +182,9 @@ export function registerPriceListRoutes(app: Express): void {
             .where(inArray(priceListAssignments.priceListId, lists.map((l) => l.id)))
         : [];
 
-      const groupIds = [...new Set(allAssignments
+      const groupIds = Array.from(new Set(allAssignments
         .filter((a) => a.customerGroupId !== null)
-        .map((a) => a.customerGroupId as number))];
+        .map((a) => a.customerGroupId as number)));
 
       const allGroupMembers = groupIds.length > 0
         ? await db.select().from(customerGroupMembers)
@@ -205,10 +205,10 @@ export function registerPriceListRoutes(app: Express): void {
           }
         }
 
-        for (const cid of customerIds) {
+        for (const cid of Array.from(customerIds)) {
           if (!summary[cid]) summary[cid] = { count: 0, names: [], ids: [] };
           summary[cid].count += 1;
-          summary[cid].names.push(list.name);
+          summary[cid].names.push(list.name as string);
           summary[cid].ids.push(list.id);
         }
       }
@@ -288,7 +288,7 @@ export function registerPriceListRoutes(app: Express): void {
       // Enforce plan limit
       const user = await storage.getUser(wholesalerId);
       const tier = user?.subscriptionTier || 'free';
-      const tierLimits = PLAN_ENFORCEMENT_LIMITS[tier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+      const tierLimits = getPlanLimits(tier);
       if (tierLimits.priceLists !== -1) {
         const [countRow] = await db.select({ value: drizzleCount() }).from(priceLists)
           .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isLocked, false)));
@@ -627,7 +627,7 @@ export function registerPriceListRoutes(app: Express): void {
       let whatsappSent = 0;
       let errors = 0;
 
-      for (const customerId of customerIds) {
+      for (const customerId of Array.from(customerIds)) {
         const customer = await storage.getUser(customerId);
         if (!customer) continue;
 

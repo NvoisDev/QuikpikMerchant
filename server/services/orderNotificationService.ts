@@ -152,7 +152,7 @@ export class OrderNotificationService {
           const orderItems = await storage.getOrderItems(order.id);
           if (orderItems.length > 0) {
             const itemRows = await Promise.all(orderItems.map(async (oi) => {
-              const product = await storage.getProduct(oi.productId);
+              const product = await storage.getProduct(oi.productId ?? 0);
               const descriptor = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
               const name = (product?.name || `Product #${oi.productId}`) + (descriptor ? ` (${descriptor})` : '');
               return [name, String(oi.quantity)];

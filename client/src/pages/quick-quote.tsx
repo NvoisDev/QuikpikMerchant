@@ -416,14 +416,14 @@ export default function QuickQuote() {
         customPrice: price,
         quantity: 1,
         sellingType,
-        unitsPerPallet: product.unitsPerPallet,
+        unitsPerPallet: product.unitsPerPallet ?? undefined,
         promotionalOffers: product.promotionalOffers || [],
         costPrice: baseCost,
         weightKg,
-        packQuantity: getPackQuantity(product) > 1 ? getPackQuantity(product) : undefined,
+        packQuantity: (getPackQuantity(product) ?? 0) > 1 ? (getPackQuantity(product) ?? undefined) : undefined,
         unitSize: (product.sizePerUnit || product.unitSize) ?? undefined,
         unitOfMeasure: product.unitOfMeasure ?? undefined,
-      }]);
+      } as QuoteItem]);
       setInputValues(prev => ({
         ...prev,
         [stableKey]: { price: price.toString(), qty: '1' }
@@ -493,7 +493,7 @@ export default function QuickQuote() {
   // Pre-fill delivery charge from wholesaler flat rate when switching to delivery
   useEffect(() => {
     if (fulfillmentType === 'delivery' && deliveryCharge === '') {
-      const flatRate = (user as any)?.deliveryFlatRate;
+      const flatRate = user?.deliveryFlatRate;
       if (flatRate) setDeliveryCharge(flatRate.toString());
     }
     if (fulfillmentType === 'pickup') {
@@ -908,7 +908,7 @@ export default function QuickQuote() {
                   <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                   {selectedCustomer ? (
                     <span className="flex flex-col items-start min-w-0">
-                      <span className="truncate">{(selectedCustomer as any).businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || selectedCustomer.phoneNumber || 'Unknown'}</span>
+                      <span className="truncate">{selectedCustomer.businessName || `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || selectedCustomer.phoneNumber || 'Unknown'}</span>
                       <span className="text-xs text-gray-500">{selectedCustomer.phoneNumber}</span>
                     </span>
                   ) : (
@@ -932,7 +932,7 @@ export default function QuickQuote() {
                       const filtered = customers.filter((c) => {
                         if (!customerSearch) return true;
                         const q = customerSearch.toLowerCase();
-                        const name = ((c as any).businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
+                        const name = (c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
                         const phone = (c.phoneNumber || '').toLowerCase();
                         return name.includes(q) || phone.includes(q);
                       });
@@ -958,7 +958,7 @@ export default function QuickQuote() {
                             className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
                           />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-medium truncate">{(customer as any).businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.phoneNumber || 'Unknown'}</span>
+                            <span className="font-medium truncate">{customer.businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.phoneNumber || 'Unknown'}</span>
                             <span className="text-xs text-gray-500">{customer.phoneNumber}</span>
                           </div>
                         </button>
@@ -1648,7 +1648,7 @@ export default function QuickQuote() {
                     <span className="text-xs text-gray-400">editable per invoice</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {(user as any)?.deliveryFlatRate ? `Default rate: ${formatCurrency((user as any).deliveryFlatRate)}` : 'No default rate set in settings'}
+                    {user?.deliveryFlatRate ? `Default rate: ${formatCurrency(user.deliveryFlatRate)}` : 'No default rate set in settings'}
                   </p>
                 </div>
               )}

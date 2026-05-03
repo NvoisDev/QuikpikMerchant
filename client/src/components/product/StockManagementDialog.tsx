@@ -136,7 +136,7 @@ export default function StockManagementDialog({
 
             {/* Shared FEFO-sorted batch list */}
             {(() => {
-              const hasBatches = ((stockProduct as any).batchCount ?? 0) > 0;
+              const hasBatches = ((stockProduct as (typeof stockProduct & { batchCount?: number })).batchCount ?? 0) > 0;
               if (!hasBatches) return null;
               const sortedBatches = [...((modalBatches as ProductBatch[]) || [])].sort((a: ProductBatch, b: ProductBatch) => {
                 if (!a.expiryDate && !b.expiryDate) return 0;
@@ -379,7 +379,7 @@ export default function StockManagementDialog({
               </div>
             ) : (
               /* Remove Stock — batch-aware when batches exist, global otherwise */
-              ((stockProduct as any).batchCount ?? 0) > 0 ? (() => {
+              ((stockProduct as (typeof stockProduct & { batchCount?: number })).batchCount ?? 0) > 0 ? (() => {
                 const activeBatchList = (modalBatches as ProductBatch[]) ?? [];
                 const selectedBatch = activeBatchList.find((b: ProductBatch) => b.id === selectedBatchId) ?? null;
                 return (

@@ -2,12 +2,13 @@
 import { storage } from '../storage';
 
 export interface AddressData {
-  addressLine1?: string;   // Match storage layer return format
-  addressLine2?: string;   // Match storage layer return format
-  city?: string;
-  state?: string;
-  postalCode?: string;     // Match storage layer return format
-  country?: string;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  [key: string]: unknown;
 }
 
 export interface Order {
@@ -15,6 +16,7 @@ export interface Order {
   deliveryAddress?: string;
   wholesalerId: string;
   fulfillmentType?: string;
+  customerId?: string;
 }
 
 /**
@@ -25,7 +27,7 @@ export async function getCompleteDeliveryAddress(order: Order): Promise<string> 
   // STEP 1: Always prioritize live address data from database
   if (order.deliveryAddressId) {
     try {
-      const addresses = await storage.getDeliveryAddresses(order.customerId, order.wholesalerId);
+      const addresses = await storage.getDeliveryAddresses(order.customerId || '');
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
@@ -140,7 +142,7 @@ export async function getEmailDeliveryAddress(order: Order): Promise<{
   // Try live data first
   if (order.deliveryAddressId) {
     try {
-      const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+      const addresses = await storage.getDeliveryAddresses(order.customerId || '');
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
@@ -207,9 +209,9 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
   if (order.deliveryAddressId) {
     try {
       console.log(`🏠 FETCHING ADDRESS: deliveryAddressId=${order.deliveryAddressId}, customerId=${order.customerId}, wholesalerId=${order.wholesalerId}`);
-      const addresses = await storage.getDeliveryAddresses(order.customerId, order.wholesalerId);
+      const addresses = await storage.getDeliveryAddresses(order.customerId || '');
       console.log(`🏠 FOUND ${addresses.length} addresses for customer ${order.customerId}`);
-      const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
+      const fullAddress = (addresses.find((addr: any) => addr.id === order.deliveryAddressId)) as any;
       
       if (fullAddress) {
         console.log(`🏠 RAW DATABASE OBJECT:`, JSON.stringify(fullAddress, null, 2));

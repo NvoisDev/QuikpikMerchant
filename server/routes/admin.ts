@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import { getProductLimit } from "../utils/plan-tier";
@@ -450,7 +451,7 @@ export function registerAdminRoutes(app: Express): void {
         }
       }
 
-      const wholesalerIds = [...new Set(customers.map(c => c.wholesalerId).filter(Boolean))] as string[];
+      const wholesalerIds = Array.from(new Set(customers.map(c => c.wholesalerId).filter(Boolean))) as string[];
       let wholesalerMap: Record<string, string> = {};
       if (wholesalerIds.length > 0) {
         const ws = await db
@@ -462,7 +463,7 @@ export function registerAdminRoutes(app: Express): void {
         }
       }
 
-      function deriveType(role: string, customerType: string | null): string | null {
+      const deriveType = (role: string, customerType: string | null): string | null => {
         if (customerType) return customerType;
         if (role === 'wholesaler') return 'wholesale';
         if (role === 'retailer') return 'retail';
@@ -786,8 +787,8 @@ export function registerAdminRoutes(app: Express): void {
       const syncProductLimit = syncLimits.products;
 
       // Safely parse period timestamps — newer Stripe API versions may return undefined
-      const rawPeriodEnd = (syncSub as any).current_period_end;
-      const rawPeriodStart = (syncSub as any).current_period_start;
+      const rawPeriodEnd = syncSub.current_period_end;
+      const rawPeriodStart = syncSub.current_period_start;
       const syncPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const syncPeriodStart = rawPeriodStart ? new Date(rawPeriodStart * 1000) : new Date();
       const isPeriodValid = !isNaN(syncPeriodEnd.getTime()) && !isNaN(syncPeriodStart.getTime());
@@ -880,7 +881,7 @@ export function registerAdminRoutes(app: Express): void {
         for (const row of counts) { if (row.retailerId) orderCountMap[row.retailerId] = Number(row.cnt); }
       }
 
-      const wholesalerIds = [...new Set(customerList.map(c => c.wholesalerId).filter(Boolean))] as string[];
+      const wholesalerIds = Array.from(new Set(customerList.map(c => c.wholesalerId).filter(Boolean))) as string[];
       let wholesalerMap: Record<string, string> = {};
       if (wholesalerIds.length > 0) {
         const ws = await db.select({ id: users.id, businessName: users.businessName, firstName: users.firstName, lastName: users.lastName })
@@ -1029,14 +1030,14 @@ export function registerAdminRoutes(app: Express): void {
           .from(orders).leftJoin(users, eq(orders.wholesalerId, users.id))
           .where(and(eq(orders.status, 'processing'), lte(orders.createdAt, oneDayAgo)))
           .orderBy(asc(orders.createdAt)).limit(20),
-        db.select({ id: productBatches.id, productId: productBatches.productId, expiryDate: productBatches.expiryDate, batchCode: productBatches.batchCode, quantity: productBatches.quantity })
+        db.select({ id: productBatches.id, productId: productBatches.productId, expiryDate: productBatches.expiryDate, batchCode: productBatches.batchNumber, quantity: productBatches.quantity })
           .from(productBatches)
           .where(and(sql`${productBatches.expiryDate} IS NOT NULL`, sql`${productBatches.expiryDate} >= ${todayStr}`, sql`${productBatches.expiryDate} <= ${sevenDaysOutStr}`))
           .orderBy(asc(productBatches.expiryDate)).limit(20),
-        db.select({ id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId, createdAt: subscriptionAuditLogs.createdAt })
+        db.select({ id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId, createdAt: subscriptionAuditLogs.timestamp })
           .from(subscriptionAuditLogs)
-          .where(and(eq(subscriptionAuditLogs.eventType, 'payment_failed'), gte(subscriptionAuditLogs.createdAt, thirtyDaysAgo)))
-          .orderBy(desc(subscriptionAuditLogs.createdAt)).limit(20),
+          .where(and(eq(subscriptionAuditLogs.eventType, 'payment_failed'), gte(subscriptionAuditLogs.timestamp, thirtyDaysAgo)))
+          .orderBy(desc(subscriptionAuditLogs.timestamp)).limit(20),
       ]);
 
       res.json({
@@ -1242,19 +1243,18 @@ export function registerAdminRoutes(app: Express): void {
       if (!ADMIN_EMAILS.includes(adminEmail)) return res.status(403).json({ error: 'Forbidden' });
 
       const { wholesalerId: bodyWholesalerId } = req.body as { wholesalerId?: string };
-      const session = req.session as any;
 
       // Always prefer the server-authoritative session token for the audit write;
       // reject client-supplied wholesalerId if it doesn't match the session (tamper-resistance)
-      const sessionWholesalerId = session.impersonationToken?.wholesalerId;
+      const sessionWholesalerId = req.session?.impersonationToken?.wholesalerId;
       if (bodyWholesalerId && sessionWholesalerId && bodyWholesalerId !== sessionWholesalerId) {
-        delete session.impersonationToken;
+        delete req.session!.impersonationToken;
         return res.status(400).json({ error: 'Wholesaler ID mismatch' });
       }
       const resolvedWholesalerId = sessionWholesalerId || bodyWholesalerId;
 
       // Clear the session token so the impersonation proof is invalidated
-      delete session.impersonationToken;
+      delete req.session!.impersonationToken;
 
       if (resolvedWholesalerId) {
         await db.insert(adminAuditLogs).values({
@@ -1288,7 +1288,7 @@ export function registerAdminRoutes(app: Express): void {
       // Token expires after 30 minutes for defence-in-depth
       const token = crypto.randomUUID();
       const expiresAt = Date.now() + 30 * 60 * 1000;
-      (req.session as any).impersonationToken = { token, wholesalerId: target.id, adminEmail: effectiveAdminEmail, expiresAt };
+      req.session!.impersonationToken = { token, wholesalerId: target.id, adminEmail: effectiveAdminEmail, expiresAt };
 
       await db.insert(adminAuditLogs).values({
         adminEmail: effectiveAdminEmail,
@@ -1314,7 +1314,7 @@ export function registerAdminRoutes(app: Express): void {
       res.json({
         impersonating: !!impersonateHeader,
         wholesalerId: impersonateHeader || null,
-        businessName: (req as any)._impersonatingBusinessName || null,
+        businessName: req.headers["x-impersonating-business"] as string | undefined || null,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get impersonation status' });
@@ -1394,7 +1394,7 @@ export function registerAdminRoutes(app: Express): void {
       ]);
 
       // User lookup for subscription events
-      const subUserIds = [...new Set(subLogs.map(l => l.userId))];
+      const subUserIds = Array.from(new Set(subLogs.map(l => l.userId)));
       const subUsers: Record<string, string> = {};
       if (subUserIds.length > 0) {
         const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, subUserIds));
@@ -1496,7 +1496,7 @@ export function registerAdminRoutes(app: Express): void {
       ]);
 
       // Enrich payment failures with user info
-      const failureUserIds = [...new Set(paymentFailures.map(f => f.userId))];
+      const failureUserIds = Array.from(new Set(paymentFailures.map(f => f.userId)));
       const failureUsers: Record<string, string> = {};
       if (failureUserIds.length > 0) {
         const fetched = await db.select({ id: users.id, email: users.email, businessName: users.businessName }).from(users).where(inArray(users.id, failureUserIds));
@@ -1868,7 +1868,7 @@ export function registerAdminRoutes(app: Express): void {
       ]);
 
       // Resolve wholesaler names for customers
-      const custWholesalerIds = [...new Set(matchedCustomers.map(c => c.wholesalerId).filter(Boolean))] as string[];
+      const custWholesalerIds = Array.from(new Set(matchedCustomers.map(c => c.wholesalerId).filter(Boolean))) as string[];
       const custWholesalers: Record<string, string> = {};
       if (custWholesalerIds.length > 0) {
         const ws = await db.select({ id: users.id, businessName: users.businessName }).from(users).where(inArray(users.id, custWholesalerIds));
@@ -2167,7 +2167,7 @@ export function registerAdminRoutes(app: Express): void {
       // Build the TRUNCATE target list — everything else in the schema.
       // This automatically includes any legacy tables in prod that reference
       // our current tables, so CASCADE handles them without needing to name them.
-      const truncateTargets = [...existing].filter(t => !preservedTables.has(t));
+      const truncateTargets = Array.from(existing).filter(t => !preservedTables.has(t));
 
       // ── Pre-count rows for the success response ────────────────────────────
       // Capture counts before wiping so the response mirrors the preview breakdown
@@ -2327,8 +2327,6 @@ export function registerAdminRoutes(app: Express): void {
         role: 'wholesaler',
         isTestAccount: true,
         isFirstLogin: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       }, password);
 
       const appUrl = process.env.APP_URL || 'https://quikpik.co';

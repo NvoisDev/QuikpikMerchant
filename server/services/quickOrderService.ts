@@ -84,12 +84,12 @@ export class QuickOrderService {
         if (!orderCombinations.has(signature)) {
           orderCombinations.set(signature, {
             items: items,
-            dates: [order.createdAt],
+            dates: [order.createdAt!],
             orderIds: [order.id]
           });
         } else {
           const existing = orderCombinations.get(signature)!;
-          existing.dates.push(order.createdAt);
+          existing.dates.push(order.createdAt!);
           existing.orderIds.push(order.id);
         }
       }
@@ -98,11 +98,11 @@ export class QuickOrderService {
       const templates: QuickOrderTemplate[] = [];
       let templateId = 1;
 
-      for (const [signature, combination] of orderCombinations.entries()) {
+      for (const [signature, combination] of Array.from(orderCombinations.entries())) {
         if (combination.dates.length >= 2) { // Only include if ordered at least twice
-          const lastOrderDate = new Date(Math.max(...combination.dates.map(d => d.getTime())));
+          const lastOrderDate = new Date(Math.max(...combination.dates.map((d: Date) => d.getTime())));
           const estimatedTotal = combination.items.reduce(
-            (sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0
+            (sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0
           );
 
           templates.push({
@@ -110,7 +110,7 @@ export class QuickOrderService {
             name: this.generateTemplateName(combination.items),
             customerId,
             wholesalerId,
-            items: combination.items.map(item => ({
+            items: combination.items.map((item: any) => ({
               productId: item.productId,
               productName: item.productName || 'Unknown Product',
               quantity: item.quantity,
@@ -183,17 +183,18 @@ export class QuickOrderService {
           .where(eq(orderItems.orderId, order.id));
 
         for (const item of items) {
+          if (item.productId === null) continue;
           if (!productPatterns.has(item.productId)) {
             productPatterns.set(item.productId, {
               productName: item.productName || 'Unknown Product',
               quantities: [item.quantity],
-              orderDates: [order.createdAt],
+              orderDates: [order.createdAt!],
               sellingTypes: [item.sellingType || 'units']
             });
           } else {
             const pattern = productPatterns.get(item.productId)!;
             pattern.quantities.push(item.quantity);
-            pattern.orderDates.push(order.createdAt);
+            pattern.orderDates.push(order.createdAt!);
             pattern.sellingTypes.push(item.sellingType || 'units');
           }
         }
@@ -202,12 +203,12 @@ export class QuickOrderService {
       // Convert to customer order patterns
       const patterns: CustomerOrderPattern[] = [];
 
-      for (const [productId, pattern] of productPatterns.entries()) {
+      for (const [productId, pattern] of Array.from(productPatterns.entries())) {
         if (pattern.quantities.length >= 2) { // Only include if ordered at least twice
           const averageQuantity = Math.round(
-            pattern.quantities.reduce((sum, qty) => sum + qty, 0) / pattern.quantities.length
+            pattern.quantities.reduce((sum: number, qty: number) => sum + qty, 0) / pattern.quantities.length
           );
-          const lastOrderDate = new Date(Math.max(...pattern.orderDates.map(d => d.getTime())));
+          const lastOrderDate = new Date(Math.max(...pattern.orderDates.map((d: Date) => d.getTime())));
           const mostCommonSellingType = this.getMostFrequent(pattern.sellingTypes) as 'units' | 'pallets';
 
           patterns.push({
@@ -251,7 +252,7 @@ export class QuickOrderService {
         return null;
       }
 
-      const orderItems = await db
+      const currentOrderItems = await db
         .select({
           productId: orderItems.productId,
           quantity: orderItems.quantity,
@@ -266,8 +267,8 @@ export class QuickOrderService {
         .where(eq(orderItems.orderId, lastOrder[0].id));
 
       // Filter out unavailable products and adjust quantities based on current stock
-      const availableItems = orderItems.filter(item => 
-        item.productStatus === 'active' && item.productStock > 0
+      const availableItems = currentOrderItems.filter(item => 
+        item.productStatus === 'active' && (item.productStock ?? 0) > 0
       ).map(item => ({
         productId: item.productId,
         productName: item.productName || 'Unknown Product',

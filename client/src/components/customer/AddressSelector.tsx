@@ -8,19 +8,19 @@ import { MapPin, Plus, Star, ChevronDown, Home, Building, Truck } from "lucide-r
 import { DeliveryAddressManager } from "./DeliveryAddressManager";
 
 interface DeliveryAddress {
-  id: number;
-  customerId: string;
+  id?: number;
+  customerId?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
   state?: string;
   postalCode: string;
-  country: string;
+  country?: string;
   label?: string;
   instructions?: string;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AddressSelectorProps {

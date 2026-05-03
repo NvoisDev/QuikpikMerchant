@@ -12,18 +12,24 @@ export type ExtendedProduct = ProductType & {
   unitsPerPallet?: number | null;
   palletWeight?: string | null;
   image?: string;
+  customPrice?: string;
+  standardPrice?: string;
+  hasPriceList?: boolean;
+  isExpiringSoon?: boolean;
 };
 
 export type CartItem = {
   product: ExtendedProduct;
   quantity: number;
   sellingType: "units" | "pallets";
+  computedTotal?: number;
+  promoLabel?: string;
 };
 
 export interface Product {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   price: string;
   moq: number;
   stock: number;
@@ -90,8 +96,13 @@ export interface WholesalerPortal {
   logoUrl?: string;
   email?: string;
   phone?: string;
+  phoneNumber?: string;
   currency?: string;
   allowPayLater?: boolean;
+  streetAddress?: string;
+  city?: string;
+  postalCode?: string;
+  enableDelivery?: boolean;
 }
 
 export interface AuthenticatedCustomer {
@@ -125,8 +136,10 @@ export interface PromotionalPricing {
 }
 
 export interface QuantitySuggestion {
-  quantity: number;
+  value: number;
   label: string;
+  type: string;
+  description?: string;
   savings?: string;
   discount?: string;
 }

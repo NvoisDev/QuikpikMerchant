@@ -19,6 +19,35 @@ import {
   db, getUserPlanLimits, inArray, sql, storage, priceListItems, requireAuth,
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
+
+interface RawProductRow {
+  id: unknown;
+  wholesaler_id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  currency: string;
+  moq: number;
+  stock: number;
+  image_url: string | null;
+  images: unknown;
+  category: string | null;
+  price_visible: boolean | null;
+  pack_quantity: unknown;
+  unit_of_measure: unknown;
+  unit_size: unknown;
+  selling_format: string | null;
+  delivery_excluded: boolean | null;
+  units_per_pallet: unknown;
+  pallet_price: unknown;
+  pallet_moq: unknown;
+  pallet_stock: unknown;
+  pallet_weight: unknown;
+  promotional_offers: unknown;
+  created_at: unknown;
+  nearest_expiry: unknown;
+  business_name: unknown;
+}
 import {
   computeEffectivePrice,
   resolveActivePriceListIds,
@@ -95,7 +124,7 @@ export function registerBrowsingRoutes(app: Express): void {
 
       // 🔒 SUBSCRIPTION FEATURE GATING: Check wholesaler's subscription limits
       const limits = await getUserPlanLimits(wholesalerId);
-      const productLimit = limits.products;
+      const productLimit = limits.limits.products;
 
       // Use direct SQL query with subscription-based limits
       const queryStart = Date.now();
@@ -126,7 +155,7 @@ export function registerBrowsingRoutes(app: Express): void {
           LIMIT ${effectiveLimit}
         `);
 
-        const rows = result.rows as any[];
+        const rows = result.rows as unknown as RawProductRow[];
         const queryTime = Date.now() - queryStart;
 
         if (rows.length === 0) {
@@ -194,7 +223,7 @@ export function registerBrowsingRoutes(app: Express): void {
           createdAt: row.created_at,
           isExpiringSoon: (() => {
             if (!row.nearest_expiry) return false;
-            const expiry = new Date(row.nearest_expiry);
+            const expiry = new Date(String(row.nearest_expiry));
             const now = new Date();
             const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             return diffDays <= 30;
@@ -205,12 +234,22 @@ export function registerBrowsingRoutes(app: Express): void {
             defaultCurrency: row.currency || 'GBP',
             rating: 4.5
           }
-          });
+          }) as {
+            id: unknown; wholesalerId: string; name: string; description: string; price: string;
+            currency: string; moq: number; stock: number; imageUrl: unknown; images: unknown[];
+            category: string; status: string; priceVisible: boolean; packQuantity: unknown;
+            unitOfMeasure: unknown; unitSize: unknown; sellingFormat: string; deliveryExcluded: boolean;
+            unitsPerPallet: unknown; palletPrice: unknown; palletMoq: unknown; palletStock: unknown;
+            palletWeight: unknown; promoPrice: string | null; promoActive: boolean;
+            promotionalOffers: unknown[]; createdAt: unknown; isExpiringSoon: boolean;
+            wholesaler: { id: string; businessName: unknown; defaultCurrency: string; rating: number };
+            customPrice?: string; standardPrice?: string; hasPriceList?: boolean;
+          };
         });
 
         // Inject custom prices from price lists if customer is authenticated
         try {
-          const customerId = (req.session as any)?.customerAuth?.customerId;
+          const customerId = req.session?.customerAuth?.customerId;
           if (customerId) {
             const listIds = await resolveActivePriceListIds(wholesalerId, customerId);
             if (listIds.length > 0) {
@@ -250,14 +289,15 @@ export function registerBrowsingRoutes(app: Express): void {
                 }
               }
 
-              for (const product of formattedProducts as any[]) {
-                const override = priceOverrides[product.id];
+              for (const product of formattedProducts) {
+                const productId = product.id as number;
+                const override = priceOverrides[productId];
                 if (override !== undefined && override !== parseFloat(product.price || '0')) {
                   product.customPrice = override.toFixed(2);
                   product.standardPrice = product.price;
                   product.hasPriceList = true;
                 }
-                const palletOverride = palletPriceOverrides[product.id];
+                const palletOverride = palletPriceOverrides[productId];
                 if (palletOverride !== undefined) {
                   product.palletPrice = palletOverride.toFixed(2);
                 }
@@ -270,7 +310,7 @@ export function registerBrowsingRoutes(app: Express): void {
 
         // Strip all pricing data for unauthenticated guest requests
         if (req.query.guest === 'true') {
-          stripGuestPricingDataFromProducts(formattedProducts as any[]);
+          stripGuestPricingDataFromProducts(formattedProducts as Parameters<typeof stripGuestPricingDataFromProducts>[0]);
         }
 
         res.json(formattedProducts);
@@ -382,7 +422,7 @@ export function registerBrowsingRoutes(app: Express): void {
       res.json(wholesaler);
     } catch (error) {
       console.error("=== Error in wholesaler profile route ===");
-      console.error("Error type:", (error as any).constructor?.name);
+      console.error("Error type:", error instanceof Error ? error.constructor?.name : typeof error);
       console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
       console.error("Full error:", error);
       console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
@@ -417,7 +457,7 @@ export function registerBrowsingRoutes(app: Express): void {
       }
 
       // Resolve custom price list pricing if customer is authenticated
-      const detailCustomerId = (req.session as any)?.customerAuth?.customerId;
+      const detailCustomerId = req.session?.customerAuth?.customerId;
       let customPriceOverride: { customPrice: string; standardPrice: string; hasPriceList: true } | null = null;
       if (detailCustomerId) {
         customPriceOverride = await resolveCustomerProductPrice({

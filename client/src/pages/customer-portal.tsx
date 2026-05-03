@@ -149,7 +149,7 @@ export default function CustomerPortal() {
   const { data: switcherStores = [], isLoading: switcherStoresLoading } = useQuery({
     queryKey: ["/api/customer-accessible-wholesalers/switcher", authenticatedCustomer?.phone],
     queryFn: async () => {
-      const phoneNumber = encodeURIComponent(authenticatedCustomer!.phone);
+      const phoneNumber = encodeURIComponent(authenticatedCustomer!.phone ?? '');
       const res = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
         credentials: "include",
       });
@@ -352,7 +352,7 @@ export default function CustomerPortal() {
   };
 
   // Fetch available wholesalers for search - registration-aware for authenticated customers
-  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
+  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery<{ id: string; businessName?: string; firstName?: string; lastName?: string; logoType?: string; logoUrl?: string; storeTagline?: string; location?: string; isAccessible?: boolean; canRequestAccess?: boolean }[]>({
     queryKey: [
       authenticatedCustomer?.phone ? "/api/customer-accessible-wholesalers" : "/api/marketplace/wholesalers", 
       authenticatedCustomer?.phone, 
@@ -370,7 +370,7 @@ export default function CustomerPortal() {
         });
         if (!accessibleResponse.ok) throw new Error("Failed to fetch accessible wholesalers");
         const accessibleWholesalers = await accessibleResponse.json();
-        const accessibleIds = accessibleWholesalers.map((w) => w.id);
+        const accessibleIds = accessibleWholesalers.map((w: { id: string }) => w.id);
         
         // Then get all marketplace wholesalers for discovery
         const params = new URLSearchParams();
@@ -382,14 +382,14 @@ export default function CustomerPortal() {
         const allWholesalers = await marketplaceResponse.json();
         
         // Combine and mark accessibility status
-        const combinedWholesalers = allWholesalers.map((wholesaler) => ({
+        const combinedWholesalers = allWholesalers.map((wholesaler: { id: string; businessName?: string; isAccessible?: boolean; canRequestAccess?: boolean; [key: string]: unknown }) => ({
           ...wholesaler,
           isAccessible: accessibleIds.includes(wholesaler.id),
           canRequestAccess: !accessibleIds.includes(wholesaler.id)
         }));
         
         // Sort: accessible first, then by business name
-        combinedWholesalers.sort((a, b) => {
+        combinedWholesalers.sort((a: { businessName?: string; isAccessible?: boolean }, b: { businessName?: string; isAccessible?: boolean }) => {
           if (a.isAccessible && !b.isAccessible) return -1;
           if (!a.isAccessible && b.isAccessible) return 1;
           return (a.businessName || '').localeCompare(b.businessName || '');
@@ -406,7 +406,7 @@ export default function CustomerPortal() {
         });
         if (!response.ok) throw new Error("Failed to fetch wholesalers");
         const wholesalers = await response.json();
-        return wholesalers.map((w) => ({ ...w, isAccessible: false, canRequestAccess: false }));
+        return wholesalers.map((w: { id: string; businessName?: string; [key: string]: unknown }) => ({ ...w, isAccessible: false, canRequestAccess: false }));
       }
     },
     enabled: showWholesalerSearch, // Only fetch when search is open
@@ -655,7 +655,7 @@ export default function CustomerPortal() {
     refetchOnWindowFocus: false,
   });
 
-  const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
+  const calculatePromotionalPricing = (product: Product | ExtendedProduct, quantity: number = 1) => {
     // Use custom price list price if the customer has one assigned
     const hasCustomPrice = !!product.customPrice;
     const basePrice = hasCustomPrice
@@ -1245,7 +1245,7 @@ export default function CustomerPortal() {
     const maxQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
     
     if (editQuantity >= minQuantity && editQuantity <= maxQuantity) {
-      addToCart(selectedProduct, editQuantity, selectedSellingType);
+      addToCart(selectedProduct as unknown as ExtendedProduct, editQuantity, selectedSellingType);
       setShowQuantityEditor(false);
       setSelectedProduct(null);
     }
@@ -1867,7 +1867,7 @@ export default function CustomerPortal() {
                           size="sm"
                           variant="outline"
                           className="text-xs h-8 px-3"
-                          onClick={(e) => { e.stopPropagation(); handleRequestAccess(wholesalerItem); }}
+                          onClick={(e) => { e.stopPropagation(); handleRequestAccess({ id: wholesalerItem.id, businessName: wholesalerItem.businessName || '' }); }}
                         >
                           Request Access
                         </Button>

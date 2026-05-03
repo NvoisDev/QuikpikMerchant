@@ -64,8 +64,7 @@ async function buildAndSaveCustomerSession(req: any, res: any, customer: any, wh
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   };
 
-  if (!req.session) req.session = {} as any;
-  (req.session as any).customerAuth = sessionData;
+  req.session!.customerAuth = sessionData;
 
   await new Promise<void>((resolve) => {
     if (req.session && typeof req.session.save === 'function') {
@@ -205,10 +204,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Store a short-lived session nonce to prove OTP was completed.
       // The nonce includes the code itself so complete-phone-login can bind to
       // this specific session — preventing cross-session auth bypass.
-      const sessionAny = req.session as any;
-      sessionAny.verifiedPhone = normalised;
-      sessionAny.verifiedCode = trimmedCode; // bound to this session
-      sessionAny.verifiedPhoneExpiry = Date.now() + 10 * 60 * 1000; // 10-minute window
+      req.session!.verifiedPhone = normalised;
+      req.session!.verifiedCode = trimmedCode; // bound to this session
+      req.session!.verifiedPhoneExpiry = Date.now() + 10 * 60 * 1000; // 10-minute window
       await new Promise<void>((resolve) => {
         if (req.session && typeof req.session.save === 'function') {
           req.session.save((err: any) => {
@@ -252,12 +250,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       // Validate OTP proof via session nonce — session-bound, prevents cross-session bypass.
       // The nonce stores verifiedPhone + verifiedCode + expiry set by verify-phone-otp.
-      const sessionAny = req.session as any;
       const sessionNonceValid =
-        sessionAny?.verifiedPhone === normalised &&
-        sessionAny?.verifiedCode === trimmedCode &&
-        sessionAny?.verifiedPhoneExpiry &&
-        Date.now() < sessionAny.verifiedPhoneExpiry;
+        req.session?.verifiedPhone === normalised &&
+        req.session?.verifiedCode === trimmedCode &&
+        req.session?.verifiedPhoneExpiry &&
+        Date.now() < (req.session?.verifiedPhoneExpiry ?? 0);
 
       if (!sessionNonceValid) {
         return res.status(403).json({ error: 'Phone verification required or expired. Please verify your code first.' });
@@ -295,9 +292,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
           LIMIT 1
         `);
         if (groupRows.rows.length > 0) {
-          const row = groupRows.rows[0] as any;
+          const row = groupRows.rows[0] as { group_id?: unknown; group_name?: unknown };
           groupId = row.group_id ? String(row.group_id) : null;
-          groupName = row.group_name || '';
+          groupName = row.group_name ? String(row.group_name) : '';
         }
       } catch (groupErr) {
         console.warn('⚠️ Could not fetch group info:', groupErr);
@@ -313,9 +310,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
       };
 
       // Clear the full OTP nonce before creating the full session
-      sessionAny.verifiedPhone = undefined;
-      sessionAny.verifiedCode = undefined;
-      sessionAny.verifiedPhoneExpiry = undefined;
+      req.session!.verifiedPhone = undefined;
+      req.session!.verifiedCode = undefined;
+      req.session!.verifiedPhoneExpiry = undefined;
 
       // Stamp login time on the customer record — real login, always update all three fields
       if (match.customerId) {
@@ -391,11 +388,10 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.get('/api/customer-auth/check-session', async (req, res) => {
     try {
       // Try session-based auth
-      const sessionAny = req.session as any;
-      if (sessionAny?.customerAuth?.wholesalerId && sessionAny?.customerAuth?.customerId) {
-        const expiry = sessionAny.customerAuth.expiresAt ? new Date(sessionAny.customerAuth.expiresAt) : null;
+      if (req.session?.customerAuth?.wholesalerId && req.session?.customerAuth?.customerId) {
+        const expiry = req.session.customerAuth.expiresAt ? new Date(req.session.customerAuth.expiresAt) : null;
         if (!expiry || expiry > new Date()) {
-          return res.json({ authenticated: true, wholesalerId: sessionAny.customerAuth.wholesalerId });
+          return res.json({ authenticated: true, wholesalerId: req.session.customerAuth.wholesalerId });
         }
       }
       // Try cookie-based auth
@@ -627,11 +623,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Ensure session exists and store customer session
       if (!req.session) {
         console.error("Session not initialized - regenerating session");
-        req.session = {} as any;
+        // session already initialized
       }
       
       // Set customer authentication data in session
-      (req.session as any).customerAuth = sessionData;
+      req.session!.customerAuth = sessionData;
       
       // Force session save using callback method with timeout
       const saveSession = () => {
@@ -699,7 +695,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.get('/api/customer-auth/check/:wholesalerId', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth = req.session?.customerAuth;
       
       // If session auth fails, try fallback cookie
       if (!customerAuth) {
@@ -713,6 +709,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             phone: cookieData.phone || '',
             groupId: cookieData.groupId || null,
             groupName: cookieData.groupName || '',
+            authenticatedAt: new Date().toISOString(),
             expiresAt: new Date(cookieData.expires).toISOString(),
           };
         }
@@ -735,7 +732,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       
       if (now > expiresAt) {
         // Clear expired session and cookie
-        delete (req.session as any)?.customerAuth;
+        delete req.session?.customerAuth;
         res.clearCookie('customer_auth');
         return res.status(401).json({ authenticated: false, message: "Session expired" });
       }
@@ -769,7 +766,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.post('/api/customer-auth/switch-wholesaler', async (req, res) => {
     try {
       const { targetWholesalerId } = req.body;
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth = req.session?.customerAuth;
       
       // Fallback to cookie if session not found
       if (!customerAuth) {
@@ -783,6 +780,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             phone: cookieData.phone || '',
             groupId: cookieData.groupId || null,
             groupName: cookieData.groupName || '',
+            authenticatedAt: new Date().toISOString(),
             expiresAt: new Date(cookieData.expires).toISOString(),
           };
         }
@@ -811,7 +809,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       };
       
       // Update session
-      (req.session as any).customerAuth = updatedSessionData;
+      req.session!.customerAuth = updatedSessionData;
       
       // Update cookie — include timestamp for consistency with buildAndSaveCustomerSession
       const cookieData = {
@@ -842,7 +840,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   // POST /api/customer-auth/logout
   app.post('/api/customer-auth/logout', async (req, res) => {
     try {
-      const customerAuth = (req.session as any)?.customerAuth;
+      const customerAuth = req.session?.customerAuth;
       if (customerAuth) {
       }
 
@@ -852,7 +850,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       // Delete customerAuth from session first as a safety net: if session.destroy
       // fails below, the auth data is already gone and the next request won't be
       // authenticated via the stale session entry.
-      delete (req.session as any).customerAuth;
+      delete req.session?.customerAuth;
 
       // Destroy the full session (covers both cookie and session-based auth).
       const destroyErr = await new Promise<any>((resolve) => {
@@ -874,7 +872,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   app.put('/api/customer-profile/update', async (req, res) => {
     try {
       // Get customer from session or fallback auth
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth = req.session?.customerAuth;
       
       // If session auth fails, try fallback cookie
       if (!customerAuth) {
@@ -882,9 +880,14 @@ export function registerCustomerAuthRoutes(app: Express): void {
         if (cookieData) {
           customerAuth = {
             customerId: cookieData.customerId,
+            wholesalerId: cookieData.wholesalerId || '',
             name: cookieData.name,
             email: cookieData.email || '',
             phone: cookieData.phone || '',
+            groupId: cookieData.groupId || null,
+            groupName: cookieData.groupName || '',
+            authenticatedAt: new Date().toISOString(),
+            expiresAt: new Date(cookieData.expires).toISOString(),
           };
         }
       }
@@ -937,7 +940,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
   // GET /api/registration-requests
   app.get('/api/registration-requests', requireAuth, async (req, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user!.id;
       
       const requests = await storage.getAllRegistrationRequests(userId);
       
@@ -977,7 +980,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
     try {
       const { requestId } = req.params;
       const { action, responseMessage, customerGroupId } = req.body;
-      const userId = (req as any).user.id;
+      const userId = req.user!.id;
       
       if (!['approve', 'reject'].includes(action)) {
         return res.status(400).json({ error: 'Invalid action. Must be approve or reject' });
@@ -1179,7 +1182,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       // Require an authenticated customer session and verify the caller owns this customerId.
       // Without this check any client could modify any customer's profile by guessing an ID.
-      const sessionAuth = (req.session as any)?.customerAuth;
+      const sessionAuth = req.session?.customerAuth;
       const cookieAuth = !sessionAuth ? parseCustomerCookie(req.cookies?.customer_auth) : null;
       const authedCustomerId = sessionAuth?.customerId || cookieAuth?.customerId;
       if (!authedCustomerId || authedCustomerId !== customerId) {
@@ -1299,9 +1302,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
           LIMIT 1
         `);
         if (groupRows.rows.length > 0) {
-          const row = groupRows.rows[0] as any;
+          const row = groupRows.rows[0] as { group_id?: unknown; group_name?: unknown };
           groupId = row.group_id ? String(row.group_id) : null;
-          groupName = row.group_name || '';
+          groupName = row.group_name ? String(row.group_name) : '';
         }
       } catch (groupErr) {
         console.warn('⚠️ Could not fetch group info for email-verified customer:', groupErr);
@@ -1322,9 +1325,9 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       // Ensure session exists and store customer session
       if (!req.session) {
-        req.session = {} as any;
+        // session already initialized
       }
-      (req.session as any).customerAuth = sessionData;
+      req.session!.customerAuth = sessionData;
 
       // Force session save
       const saveSession = () => new Promise<void>((resolve, reject) => {

@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Global error middleware — captures unhandled route errors and persists them to system_error_logs
   app.use(async (err: Error, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[server] Unhandled route error ${req.method} ${req.url}:`, err);
-    const user = (req as any).user as { id?: string } | undefined;
+    const user = req.user as { id?: string } | undefined;
     await logServerError("server_error", err.message || "Unknown error", {
       context: { method: req.method, url: req.url, stack: err.stack?.slice(0, 500) },
       wholesalerId: user?.id,

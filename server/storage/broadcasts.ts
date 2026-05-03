@@ -96,14 +96,14 @@ export class BroadcastStorage extends CustomerStorage {
   }
 
   async createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast> {
-    const [newBroadcast] = await db.insert(broadcasts).values(broadcast).returning();
+    const [newBroadcast] = await db.insert(broadcasts).values(broadcast as typeof broadcasts.$inferInsert).returning();
     return newBroadcast;
   }
 
   async updateBroadcast(id: number, updates: Partial<InsertBroadcast>): Promise<Broadcast> {
     const [updatedBroadcast] = await db
       .update(broadcasts)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() } as Partial<typeof broadcasts.$inferInsert>)
       .where(eq(broadcasts.id, id))
       .returning();
     
@@ -284,7 +284,7 @@ export class BroadcastStorage extends CustomerStorage {
         templateId: newTemplate.id
       }));
       
-      await db.insert(templateProducts).values(templateProductsData);
+      await db.insert(templateProducts).values(templateProductsData as (typeof templateProducts.$inferInsert)[]);
     }
 
     return newTemplate;
@@ -329,7 +329,7 @@ export class BroadcastStorage extends CustomerStorage {
   }
 
   async createTemplateProduct(templateProduct: InsertTemplateProduct): Promise<TemplateProduct> {
-    const [newTemplateProduct] = await db.insert(templateProducts).values(templateProduct).returning();
+    const [newTemplateProduct] = await db.insert(templateProducts).values(templateProduct as typeof templateProducts.$inferInsert).returning();
     return newTemplateProduct;
   }
 
@@ -482,7 +482,7 @@ export class BroadcastStorage extends CustomerStorage {
   }
 
   async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null; businessProfileName?: string | null })[]> {
-    return await db
+    const result = await db
       .select({
         id: stockMovements.id,
         productId: stockMovements.productId,
@@ -505,10 +505,12 @@ export class BroadcastStorage extends CustomerStorage {
       .leftJoin(businessProfiles, eq(stockMovements.businessProfileId, businessProfiles.id))
       .where(eq(stockMovements.productId, productId))
       .orderBy(desc(stockMovements.createdAt));
+
+    return result as (StockMovement & { orderNumber?: string | null; businessProfileName?: string | null })[];
   }
 
   async getStockMovementsByWholesaler(wholesalerId: string, limit = 50): Promise<(StockMovement & { product: Product })[]> {
-    return await db
+    const result = await db
       .select({
         id: stockMovements.id,
         productId: stockMovements.productId,
@@ -529,6 +531,8 @@ export class BroadcastStorage extends CustomerStorage {
       .where(eq(stockMovements.wholesalerId, wholesalerId))
       .orderBy(desc(stockMovements.createdAt))
       .limit(limit);
+
+    return result as (StockMovement & { product: Product })[];
   }
 
   async getStockSummary(productId: number): Promise<{

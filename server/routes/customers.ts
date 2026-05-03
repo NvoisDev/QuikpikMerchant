@@ -291,7 +291,7 @@ export function registerCustomerRoutes(app: Express): void {
         isNewCustomer = true;
         // Create WCR for this wholesaler with the per-wholesaler name
         await db.insert(wholesalerCustomerRelationships).values({
-          customerId: customer.id,
+          customerId: customer!.id,
           wholesalerId: targetUserId,
           status: 'active',
           displayName: displayNameValue,
@@ -323,7 +323,7 @@ export function registerCustomerRoutes(app: Express): void {
       }
 
       // Add customer to the group
-      await storage.addCustomerToGroup(groupId, customer.id);
+      await storage.addCustomerToGroup(groupId, customer!.id);
 
       // Send multi-channel welcome notifications to new customers
       if (isNewCustomer) {
@@ -367,13 +367,13 @@ export function registerCustomerRoutes(app: Express): void {
           }
 
           // 2. Send email notification if customer has email
-          if (customer.email) {
+          if (customer!.email) {
             try {
               const emailSubject = `Welcome to ${businessName} - Your Wholesale Portal Access`;
               const welcomeBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${name},</p><p style="margin:0 0 20px">You've been successfully added to our wholesale customer network. We're delighted to have you on board!</p>${emailCard(`${emailHeading('Your Benefits', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">Browse our complete product catalog</li><li style="margin-bottom:6px">Access special wholesale pricing</li><li style="margin-bottom:6px">Place orders 24/7 through our customer portal</li><li style="margin-bottom:6px">Track your order status and delivery</li><li>Receive instant stock updates and promotions</li></ul>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(`${emailHeading('Getting Started', { size: '16px' })}<p style="margin:0;font-size:14px;color:#374151;white-space:pre-line">${accessInstructions}</p>`)}${emailCard(`${emailHeading('What You Can Do', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">View real-time product availability</li><li style="margin-bottom:6px">Compare prices and specifications</li><li style="margin-bottom:6px">Manage your order history</li><li style="margin-bottom:6px">Update your delivery preferences</li><li>Access your account information</li></ul>`)}<p style="margin:20px 0 0">If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!</p>`;
 
               const emailSuccess = await sendEmail({
-                to: customer.email,
+                to: customer!.email!,
                 from: 'hello@quikpik.co',
                 subject: emailSubject,
                 html: wrapCustomerEmail(welcomeBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Welcome to ${businessName} - your wholesale portal is ready` })
@@ -385,7 +385,7 @@ export function registerCustomerRoutes(app: Express): void {
               } else {
               }
             } catch (emailError) {
-              console.error(`Email notification error for ${customer.email}:`, emailError);
+              console.error(`Email notification error for ${customer!.email}:`, emailError);
             }
           }
 
@@ -394,10 +394,10 @@ export function registerCustomerRoutes(app: Express): void {
             const whatsappMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! 👋\n\nYou've been added to our customer network and can now:\n\n🛒 Browse our latest products\n📱 Receive instant stock updates\n💬 Place orders directly via WhatsApp\n🚚 Track your deliveries\n💰 Access special wholesale pricing\n\n🌐 **Shop Online**: ${portalUrl}\nVisit our customer portal to browse products, place orders, and track deliveries!\n\n${accessInstructions}\n\nWe'll keep you updated with:\n• New product arrivals\n• Special promotions\n• Stock availability alerts\n\nQuestions? Just reply to this message!\n\n✨ This message was powered by Quikpik Merchant`;
 
             const user = await storage.getUserById(targetUserId);
-            if ((user as any)?.whatsappEnabled && (wholesaler as any)?.whatsappAccessToken && (wholesaler as any)?.whatsappBusinessPhoneId) {
+            if (user?.whatsappEnabled && wholesaler?.whatsappAccessToken && wholesaler?.whatsappBusinessPhoneId) {
               await whatsAppBusinessService.sendMessage(formattedPhoneNumber, whatsappMessage, {
-                accessToken: (wholesaler as any).whatsappAccessToken,
-                phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
+                accessToken: wholesaler.whatsappAccessToken || '',
+                phoneNumberId: wholesaler.whatsappBusinessPhoneId || ''
               });
               notificationResults.whatsapp = true;
             }
@@ -425,8 +425,8 @@ export function registerCustomerRoutes(app: Express): void {
         success: true,
         message: isNewCustomer ? `${name} added to ${group.name} and welcome message sent!` : `${name} added to ${group.name} successfully`,
         customer: {
-          id: customer.id,
-          name: customer.firstName,
+          id: customer!.id,
+          name: customer!.firstName,
           phoneNumber: formattedPhoneNumber,
         }
       });
@@ -743,7 +743,7 @@ export function registerCustomerRoutes(app: Express): void {
         // Create the wholesaler-customer relationship for multi-wholesaler platform
         
         await db.insert(wholesalerCustomerRelationships).values({
-          customerId: customer.id,
+          customerId: customer!.id,
           wholesalerId: targetUserId,
           status: 'active',
         });
@@ -752,7 +752,7 @@ export function registerCustomerRoutes(app: Express): void {
       // Optional: Add customer to specified group if groupId is provided
       if (groupId && groupId > 0) {
         try {
-          await storage.addCustomerToGroup(groupId, customer.id);
+          await storage.addCustomerToGroup(groupId, customer!.id);
         } catch (groupError) {
           console.warn(`⚠️ Failed to add customer to group ${groupId}:`, groupError);
           // Don't fail the entire operation if group assignment fails
@@ -776,7 +776,7 @@ export function registerCustomerRoutes(app: Express): void {
             customerPhone: formattedPhone,
             wholesalerName,
             wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-            wholesalerPhone: wholesaler.phoneNumber,
+            wholesalerPhone: wholesaler.phoneNumber ?? undefined,
             wholesalerAccountName: `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'IBK',
             portalUrl,
             wholesalerId: wholesaler.id,
@@ -803,7 +803,7 @@ export function registerCustomerRoutes(app: Express): void {
               emailSent: false,
               smsSent: false,
               whatsappSent: false,
-              errors: [`Failed to send welcome messages: ${welcomeError.message}`]
+              errors: [`Failed to send welcome messages: ${welcomeError instanceof Error ? welcomeError.message : String(welcomeError)}`]
             }
           });
         }
@@ -820,7 +820,7 @@ export function registerCustomerRoutes(app: Express): void {
       }
     } catch (error) {
       console.error('Error creating customer:', error);
-      res.status(500).json({ error: 'Failed to create customer', details: error.message });
+      res.status(500).json({ error: 'Failed to create customer', details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -853,11 +853,11 @@ export function registerCustomerRoutes(app: Express): void {
       try {
         const welcomeResult = await sendWelcomeMessages({
           customerName,
-          customerEmail: customer.email,
-          customerPhone: customer.phoneNumber,
+          customerEmail: customer.email ?? undefined,
+          customerPhone: customer.phoneNumber ?? undefined,
           wholesalerName,
           wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-          wholesalerPhone: wholesaler.phoneNumber,
+          wholesalerPhone: wholesaler.phoneNumber ?? undefined,
           portalUrl,
           wholesalerId: wholesaler.id,
           wholesalerLogoType: wholesaler.logoType,
@@ -879,12 +879,12 @@ export function registerCustomerRoutes(app: Express): void {
         res.status(500).json({
           success: false,
           error: 'Failed to send welcome messages',
-          details: welcomeError.message
+          details: welcomeError instanceof Error ? welcomeError.message : String(welcomeError)
         });
       }
     } catch (error) {
       console.error('❌ Error in manual welcome message endpoint:', error);
-      res.status(500).json({ error: 'Failed to send welcome message', details: error.message });
+      res.status(500).json({ error: 'Failed to send welcome message', details: error instanceof Error ? error.message : String(error) });
     }
   });
 

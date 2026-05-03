@@ -129,7 +129,7 @@ export async function cachedApiRequest(
     // Clean old cache entries
     if (requestCache.size > 100) {
       const cutoff = Date.now() - CACHE_DURATION;
-      for (const [key, value] of requestCache.entries()) {
+      for (const [key, value] of Array.from(requestCache.entries())) {
         if (value.timestamp < cutoff) {
           requestCache.delete(key);
         }

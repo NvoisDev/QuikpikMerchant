@@ -392,7 +392,7 @@ export default function OrderDetail() {
           setReturnItems(data.items.map((item: OrderItem) => ({
             productId: item.productId,
             quantity: item.quantity,
-            sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
+            sellingType: (item as unknown as Record<string, unknown>).sellingType as string || 'units',
             maxQty: item.quantity
           })));
           setCancelReasonCategory('customer_request');
@@ -411,7 +411,7 @@ export default function OrderDetail() {
   const buildShareMessage = (o: Order): string => {
     const orderRef = o.orderNumber || `#${o.id}`;
     const liveRetailerName = o.retailer
-      ? (`${(o.retailer as any).firstName || ''} ${(o.retailer as any).lastName || ''}`.trim() || (o.retailer as any).businessName || '')
+      ? (`${o.retailer?.firstName || ''} ${o.retailer?.lastName || ''}`.trim() || o.retailer?.businessName || '')
       : '';
     const customerFirstName = (liveRetailerName || o.customerName || 'there').split(' ')[0] || 'there';
     const businessName =
@@ -1446,7 +1446,7 @@ export default function OrderDetail() {
                           setReturnItems(order.items.map(item => ({
                             productId: item.productId,
                             quantity: item.quantity,
-                            sellingType: (item as Record<string, unknown>).sellingType as string || 'units',
+                            sellingType: (item as unknown as Record<string, unknown>).sellingType as string || 'units',
                             maxQty: item.quantity
                           })));
                         }

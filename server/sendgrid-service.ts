@@ -45,7 +45,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       ...(params.attachments && params.attachments.length > 0
         ? { attachments: params.attachments }
         : {}),
-    } as any);
+    } as Parameters<typeof mailService.send>[0]);
     
     console.log('✅ Email sent successfully via SendGrid');
     return true;

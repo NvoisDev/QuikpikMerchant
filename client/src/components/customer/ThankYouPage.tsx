@@ -8,28 +8,10 @@ import { getPackQuantity } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 import type { PromotionalOffer } from "@shared/schema";
+import type { CartItem } from "@/components/customer/portal-types";
 // Image removed for production - using icon instead
 
-interface CartItem {
-  product: {
-    id: number;
-    name: string;
-    price: string;
-    image?: string;
-    promoPrice?: string;
-    promoActive?: boolean;
-    promotionalOffers?: PromotionalOffer[];
-    palletPrice?: string;
-    packQuantity?: number;
-    quantityInPack?: number;
-    unitSize?: string | null;
-    unitOfMeasure?: string | null;
-  };
-  quantity: number;
-  sellingType: "units" | "pallets";
-  computedTotal?: number;
-  promoLabel?: string;
-}
+
 
 interface ThankYouPageProps {
   orderNumber: string;
@@ -37,7 +19,7 @@ interface ThankYouPageProps {
   customerData: {
     name: string;
     email: string;
-    shippingOption: "pickup" | "delivery";
+    shippingOption?: "pickup" | "delivery";
     selectedShippingService?: {
       serviceName: string;
       price: number;

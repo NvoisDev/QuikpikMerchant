@@ -149,10 +149,20 @@ export const users = pgTable("users", {
   
   // WhatsApp Integration - Simple Setup
   // WhatsApp Business API credentials (user's own)
+  whatsappEnabled: boolean("whatsapp_enabled").default(false),
   whatsappAccessToken: varchar("whatsapp_access_token"),
   whatsappBusinessPhoneId: varchar("whatsapp_business_phone_id"),
   whatsappBusinessName: varchar("whatsapp_business_name"),
-  
+  whatsappAppId: varchar("whatsapp_app_id"),
+  whatsappProvider: varchar("whatsapp_provider").default("twilio"),
+  whatsappBusinessPhone: varchar("whatsapp_business_phone"),
+
+  // Twilio SMS/WhatsApp integration
+  twilioAccountSid: varchar("twilio_account_sid"),
+  twilioAuthToken: varchar("twilio_auth_token"),
+  twilioPhoneNumber: varchar("twilio_phone_number"),
+
+
   // Settings
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
   timezone: varchar("timezone").default("UTC"),

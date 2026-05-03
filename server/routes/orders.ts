@@ -53,12 +53,13 @@ import {
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendWhatsAppMessage, sgMail, sql, stockMovements, storage, sum,
   getStripeClient, isLiveMode,
-  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate
+  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate, MailDataRequired
 } from "./shared";
 import { productBatches, businessProfiles } from "@shared/schema";
 import type { CancellationRefundType } from "./shared";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
+import { RefundLineItem } from "../email-templates";
 
 /**
  * Batch-aware unit stock restock helper.
@@ -160,11 +161,11 @@ export function registerOrderRoutes(app: Express): void {
       const { deliveryAddressId } = req.body;
       
       // Get customer from session or fallback auth
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
-        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
+        if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId } as unknown as typeof customerAuth;
       }
       
       if (!customerAuth) {
@@ -196,7 +197,7 @@ export function registerOrderRoutes(app: Express): void {
       
       // Verify the new address belongs to the customer
       const newAddress = await storage.getDeliveryAddress(parseInt(deliveryAddressId));
-      if (!newAddress || newAddress.customerId !== customerAuth.customerId || newAddress.wholesalerId !== order.wholesalerId) {
+      if (!newAddress || newAddress.customerId !== customerAuth.customerId) {
         return res.status(403).json({ error: "Address not found or access denied" });
       }
       
@@ -317,7 +318,7 @@ export function registerOrderRoutes(app: Express): void {
             orderNumber: updated.orderNumber,
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
-            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
+            businessPhone: (wholesaler.businessPhone || wholesaler.phoneNumber) ?? undefined,
             businessAddress: emailCollAddr,
             collectionAddressName: emailCollAddrName,
             deliveryAddress: updated.deliveryAddress || null,
@@ -486,7 +487,7 @@ export function registerOrderRoutes(app: Express): void {
             orderNumber: order.orderNumber,
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
-            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
+            businessPhone: (wholesaler.businessPhone || wholesaler.phoneNumber) ?? undefined,
             businessAddress: resendCollAddr,
             collectionAddressName: resendCollAddrName,
             deliveryAddress: order.deliveryAddress || null,
@@ -560,7 +561,7 @@ export function registerOrderRoutes(app: Express): void {
         updateData.customerTransactionFee = '0.00';
         const subtotal = parseFloat(order.subtotal || '0');
         const delivery = parseFloat(order.deliveryCost || '0');
-        const vatAmount = parseFloat((order as any).vatAmount || '0');
+        const vatAmount = parseFloat(order.vatAmount || '0');
         updateData.total = (subtotal + vatAmount + delivery).toFixed(2);
       }
 
@@ -1157,7 +1158,7 @@ export function registerOrderRoutes(app: Express): void {
 
       // Calculate totals
       let subtotal = 0;
-      const orderItems = [];
+      let orderItems: any[] = [];
 
       for (const item of items) {
         const product = await storage.getProduct(item.productId);
@@ -1448,7 +1449,7 @@ export function registerOrderRoutes(app: Express): void {
       } else {
         // Full cancellation - restore all items
         for (const item of orderItems) {
-          const product = await storage.getProduct(item.productId);
+          const product = await storage.getProduct(item.productId!);
           if (product) {
             if (!skipRestock) {
               if (item.sellingType === 'pallets') {
@@ -1470,7 +1471,7 @@ export function registerOrderRoutes(app: Express): void {
                   businessProfileId: order.businessProfileId ?? null,
                 });
               } else if (item.productId) {
-                await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
+                await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
               }
               stockRestoredCount += item.quantity;
             }
@@ -1615,7 +1616,7 @@ export function registerOrderRoutes(app: Express): void {
             for (const ri of returnedItems) {
               const oi = orderItems.find(o => o.productId === ri.productId);
               if (oi) {
-                const product = await storage.getProduct(ri.productId);
+                const product = await storage.getProduct(ri.productId!);
                 const returnQty = Math.min(ri.quantity, oi.quantity);
                 refundLineItems.push({
                   productName: product?.name || `Product #${ri.productId}`,
@@ -1639,7 +1640,7 @@ export function registerOrderRoutes(app: Express): void {
             for (const oi of orderItems) {
               const ri = returnedItems.find((r: any) => r.productId === oi.productId);
               if (!ri) {
-                const product = await storage.getProduct(oi.productId);
+                const product = await storage.getProduct(oi.productId!);
                 retainedLineItems.push({
                   productName: product?.name || `Product #${oi.productId}`,
                   quantity: oi.quantity,
@@ -1651,7 +1652,7 @@ export function registerOrderRoutes(app: Express): void {
             }
           } else {
             for (const oi of orderItems) {
-              const product = await storage.getProduct(oi.productId);
+              const product = await storage.getProduct(oi.productId!);
               refundLineItems.push({
                 productName: product?.name || `Product #${oi.productId}`,
                 quantity: oi.quantity,
@@ -1975,7 +1976,7 @@ export function registerOrderRoutes(app: Express): void {
           
           if (!skipCustRestock) {
             for (const item of orderItems) {
-              const product = await storage.getProduct(item.productId);
+              const product = await storage.getProduct(item.productId!);
               if (product) {
                 if (item.sellingType === 'pallets') {
                   const stockBefore = product.palletStock || 0;
@@ -1996,7 +1997,7 @@ export function registerOrderRoutes(app: Express): void {
                     businessProfileId: order.businessProfileId ?? null,
                   });
                 } else {
-                  await restockUnitsToOrigin(item.batchId ?? null, item.productId, item.quantity, order.wholesalerId, order.id, order.orderNumber, order.businessProfileId ?? null);
+                  await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity, order.wholesalerId, order.id, order.orderNumber, order.businessProfileId ?? null);
                 }
               }
             }
@@ -2059,16 +2060,16 @@ export function registerOrderRoutes(app: Express): void {
         const order = await storage.getOrder(request.orderId);
         const wholesaler = await storage.getUser(request.wholesalerId);
         const businessName = wholesaler?.businessName || 'the seller';
-        const customerPhone = (order as any)?.customerPhone;
-        const customerEmail = (order as any)?.customerEmail;
-        const customerName = (order as any)?.customerName || 'Customer';
+        const customerPhone = order?.customerPhone;
+        const customerEmail = order?.customerEmail;
+        const customerName = order?.customerName || 'Customer';
         
         // Build itemised data for the approved cancellation email
         let cancelledLineItems: RefundLineItem[] = [];
         if (approved && order) {
           const cancOrderItems = await storage.getOrderItems(order.id);
           for (const oi of cancOrderItems) {
-            const product = await storage.getProduct(oi.productId);
+            const product = await storage.getProduct(oi.productId!);
             cancelledLineItems.push({
               productName: product?.name || `Product #${oi.productId}`,
               quantity: oi.quantity,
@@ -2223,9 +2224,9 @@ export function registerOrderRoutes(app: Express): void {
         // Restore stock for refunded orders
         const orderItems = await storage.getOrderItems(id);
         for (const item of orderItems) {
-          const product = await storage.getProduct(item.productId);
+          const product = await storage.getProduct(item.productId!);
           if (product) {
-            await storage.updateProductStock(item.productId, product.stock + item.quantity);
+            await storage.updateProductStock(item.productId!, (product.stock ?? 0) + (item.quantity ?? 0));
           }
         }
       } else {
@@ -2682,9 +2683,9 @@ export function registerOrderRoutes(app: Express): void {
 
       const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
 
-      const pdfAmountPaid = (order as any).amountPaid ? parseFloat((order as any).amountPaid) : undefined;
-      const pdfAmountOutstanding = (order as any).amountOutstanding ? parseFloat((order as any).amountOutstanding) : undefined;
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, (order as any).paymentMethod === 'payment_link' || (!!(order as any).stripePaymentIntentId && !(order as any).paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
+      const pdfAmountPaid = order.amountPaid ? parseFloat(order.amountPaid) : undefined;
+      const pdfAmountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : undefined;
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -2746,7 +2747,7 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       const customerName = order.retailer
-        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || (order.retailer as any).businessName || order.customerName || 'Customer')
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.businessName || order.customerName || 'Customer')
         : (order.customerName || 'Customer');
       const businessName = effectiveWholesaler.businessName || 'Your Supplier';
       const orderRef = order.orderNumber || `#${order.id}`;
@@ -2828,7 +2829,7 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       const customerName = order.retailer
-        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || (order.retailer as any).businessName || order.customerName || 'there')
+        ? ((`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim()) || order.retailer.businessName || order.customerName || 'there')
         : (order.customerName || 'there');
       const businessName = effectiveWholesaler.businessName || wholesaler.businessName || 'Your Supplier';
       const portalLink = `https://quikpik.app/store/${order.wholesalerId}?tab=orders`;
@@ -2881,8 +2882,9 @@ export function registerOrderRoutes(app: Express): void {
 
       let customerInfo;
       try {
+        const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
         // Retrieve payment intent from Stripe to get customer data
-        const paymentIntent = await stripe!.paymentIntents.retrieve(order.stripePaymentIntentId);
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
         
         if (paymentIntent.metadata) {
           customerInfo = {
@@ -2934,7 +2936,7 @@ export function registerOrderRoutes(app: Express): void {
 
     } catch (error) {
       console.error("Error sending receipt:", error);
-      res.status(500).json({ message: "Failed to send receipt: " + error.message });
+      res.status(500).json({ message: "Failed to send receipt: " + (error instanceof Error ? error.message : String(error)) });
     }
   });
 
@@ -2963,8 +2965,10 @@ export function registerOrderRoutes(app: Express): void {
       }
 
       try {
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        const stripe = getStripeClient(Boolean(wholesaler?.isTestAccount));
         // Retrieve payment intent from Stripe to get customer data
-        const paymentIntent = await stripe!.paymentIntents.retrieve(order.stripePaymentIntentId);
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
         
         const customerData = {
           customerName: paymentIntent.metadata?.customerName || order.customerName || null,

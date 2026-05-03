@@ -306,7 +306,7 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(settingsPlansData?.plans ?? []).filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map(plan => {
               const price = parseFloat(plan.monthlyPrice as string);
-              const productLimit = (plan.limits as any)?.products;
+              const productLimit = plan.limits?.['products'];
               const productLabel = productLimit === -1 ? "Unlimited products" : productLimit > 0 ? `Up to ${productLimit} products` : "—";
               const isFree = price === 0;
               const isPremium = plan.planId === "premium";

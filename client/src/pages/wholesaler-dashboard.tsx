@@ -49,6 +49,13 @@ import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynami
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
+interface DashboardStats { totalRevenue?: number; revenueChange?: number; ordersCount?: number; ordersChange?: number; activeProducts?: number; }
+interface BroadcastStats { recipientsReached?: number; }
+interface TopProduct { id: number; name: string; description?: string; images?: string[]; totalRevenue?: number; unitsOrdered?: number; revenue?: number; totalQuantitySold?: number; orderCount?: number; price?: number; }
+interface StripeConnectStatus { paymentsEnabled?: boolean; accountStatus?: string; }
+interface ChartDataPoint { revenue?: number; orders?: number; date?: string; }
+interface CustomerInsights { topCustomers?: { id: string; name?: string; businessName?: string; totalSpend?: number; orderCount?: number }[] }
+
 interface MarginSegment {
   revenue: number;
   cost: number;
@@ -266,7 +273,7 @@ export default function WholesalerDashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showFloatingMenu]);
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
     queryKey: ["/api/analytics/stats"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -282,7 +289,7 @@ export default function WholesalerDashboard() {
     enabled: !!user,
   });
 
-  const { data: topProducts, isLoading: productsLoading, error: productsError } = useQuery({
+  const { data: topProducts, isLoading: productsLoading, error: productsError } = useQuery<TopProduct[]>({
     queryKey: ["/api/analytics/top-products"],
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes
@@ -290,7 +297,7 @@ export default function WholesalerDashboard() {
     enabled: !!user,
   });
 
-  const { data: broadcastStats, isLoading: broadcastStatsLoading, error: broadcastError } = useQuery({
+  const { data: broadcastStats, isLoading: broadcastStatsLoading, error: broadcastError } = useQuery<BroadcastStats>({
     queryKey: ["/api/broadcasts/stats"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -317,7 +324,7 @@ export default function WholesalerDashboard() {
     enabled: !!user,
   });
 
-  const { data: customerInsights, isLoading: customerInsightsLoading } = useQuery({
+  const { data: customerInsights, isLoading: customerInsightsLoading } = useQuery<CustomerInsights>({
     queryKey: ["/api/analytics/customers"],
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
@@ -340,7 +347,7 @@ export default function WholesalerDashboard() {
   });
 
   // Stripe Connect status for payment setup notifications
-  const { data: stripeStatus } = useQuery({
+  const { data: stripeStatus } = useQuery<StripeConnectStatus>({
     queryKey: ["/api/stripe/connect-status"],
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
@@ -400,7 +407,7 @@ export default function WholesalerDashboard() {
   // Share store functionality
   const handleShareStore = async () => {
     // Use team member's parent wholesaler ID if user is team member
-    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
     const customerPortalUrl = `https://quikpik.app/customer/${effectiveUserId}`;
     const businessName = user?.businessName || "My Store";
     
@@ -422,7 +429,7 @@ export default function WholesalerDashboard() {
       } catch (error) {
         // User cancelled sharing or sharing failed
         // Don't show error toast if user just cancelled
-        if ((error as any)?.name !== 'AbortError') {
+        if (!(error instanceof Error && error.name === 'AbortError')) {
           console.warn("Share API error:", error);
         }
       }
@@ -538,7 +545,7 @@ export default function WholesalerDashboard() {
         {/* Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {/* Priority Stripe Setup Notification */}
-          {(user?.role === 'wholesaler' && stripeStatus && !((stripeStatus as any)?.paymentsEnabled)) && (
+          {(user?.role === 'wholesaler' && !!stripeStatus && !(stripeStatus?.paymentsEnabled)) && (
             <div className="mb-6 sm:mb-8">
               <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-400 rounded-lg p-4 sm:p-6 shadow-lg">
                 <div className="flex items-start">
@@ -595,10 +602,10 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {(stats as any)?.revenueChange !== undefined 
-                          ? `${(stats as any).revenueChange >= 0 ? '+' : ''}${(stats as any).revenueChange.toFixed(1)}% from last month`
+                        {stats?.revenueChange !== undefined 
+                          ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
                           : 'No change data'}
                       </p>
                     </div>
@@ -625,10 +632,10 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Total Orders</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {(stats as any)?.ordersChange !== undefined 
-                          ? `${(stats as any).ordersChange >= 0 ? '+' : ''}${(stats as any).ordersChange.toFixed(1)}% from last month`
+                        {stats?.ordersChange !== undefined 
+                          ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
                           : 'No change data'}
                       </p>
                     </div>
@@ -650,7 +657,7 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
                       </p>
@@ -668,7 +675,7 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/80 text-xs sm:text-sm font-medium">WhatsApp Reach</p>
-                    <p className="text-xl sm:text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber((broadcastStats as any)?.recipientsReached || 0)}</p>
+                    <p className="text-xl sm:text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">Customers reached</p>
                   </div>
                   <div className="bg-white/20 p-2 sm:p-3 rounded-full">
@@ -693,7 +700,7 @@ export default function WholesalerDashboard() {
                       icon={Package}
                       title="Manage Products"
                       description="Add, edit and organize your inventory"
-                      metric={`${formatNumber((stats as any)?.activeProducts || 0)} Active`}
+                      metric={`${formatNumber(stats?.activeProducts || 0)} Active`}
                       colorClass="from-blue-500 to-blue-600"
                       gradientFrom="from-blue-50"
                       gradientTo="to-blue-100"
@@ -745,7 +752,7 @@ export default function WholesalerDashboard() {
                       icon={ShoppingCart}
                       title="View Orders"
                       description="Track customer purchases"
-                      metric={`${formatNumber((stats as any)?.ordersCount || 0)} Orders`}
+                      metric={`${formatNumber(stats?.ordersCount || 0)} Orders`}
                       colorClass="from-purple-500 to-purple-600"
                       gradientFrom="from-purple-50"
                       gradientTo="to-purple-100"
@@ -806,15 +813,15 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
-                ) : topProducts && (topProducts as any).length > 0 ? (
+                ) : topProducts && topProducts.length > 0 ? (
                   <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
                     {/* Product Image */}
                     <div className="flex-shrink-0">
                       <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                        {(topProducts as any)[0].images && (topProducts as any)[0].images.length > 0 ? (
+                        {topProducts[0].images && topProducts[0].images.length > 0 ? (
                           <img 
-                            src={(topProducts as any)[0].images[0]} 
-                            alt={(topProducts as any)[0].name}
+                            src={topProducts[0].images[0]} 
+                            alt={topProducts[0].name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -827,32 +834,32 @@ export default function WholesalerDashboard() {
 
                     {/* Product Details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{(topProducts as any)[0].name}</h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{(topProducts as any)[0].description}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{topProducts[0].name}</h3>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{topProducts[0].description}</p>
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            {formatCurrency((topProducts as any)[0].revenue || 0)}
+                            {formatCurrency(topProducts[0].revenue || 0)}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-xs text-blue-600 font-medium">Units Sold</p>
                           <p className="text-lg font-bold text-blue-700">
-                            {formatNumber((topProducts as any)[0].totalQuantitySold || 0)}
+                            {formatNumber(topProducts[0].totalQuantitySold || 0)}
                           </p>
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-xs text-purple-600 font-medium">Orders</p>
                           <p className="text-lg font-bold text-purple-700">
-                            {formatNumber((topProducts as any)[0].orderCount || 0)}
+                            {formatNumber(topProducts[0].orderCount || 0)}
                           </p>
                         </div>
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            {formatCurrency((topProducts as any)[0].price || 0)}
+                            {formatCurrency(topProducts[0].price || 0)}
                           </p>
                         </div>
                       </div>
@@ -889,7 +896,7 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-emerald-600">
-                      {chartLoading ? '...' : formatCurrency((chartData as any[])?.reduce((sum: number, d: any) => sum + (d.revenue || 0), 0) || 0)}
+                      {chartLoading ? '...' : formatCurrency((chartData as ChartDataPoint[] | undefined)?.reduce((sum: number, d: ChartDataPoint) => sum + (d.revenue || 0), 0) || 0)}
                     </p>
                   </div>
                 </div>
@@ -964,7 +971,7 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-blue-600">
-                      {chartLoading ? '...' : ((chartData as any[])?.reduce((sum: number, d: any) => sum + (d.orders || 0), 0) || 0)} orders
+                      {chartLoading ? '...' : ((chartData as ChartDataPoint[] | undefined)?.reduce((sum: number, d: ChartDataPoint) => sum + (d.orders || 0), 0) || 0)} orders
                     </p>
                   </div>
                 </div>
@@ -1027,9 +1034,9 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
-                ) : customerInsights && (customerInsights as any).topCustomers?.length > 0 ? (
+                ) : customerInsights && (customerInsights.topCustomers?.length ?? 0) > 0 ? (
                   <div className="space-y-3">
-                    {((customerInsights as any).topCustomers || []).slice(0, 5).map((customer: any, index: number) => (
+                    {(customerInsights.topCustomers || []).slice(0, 5).map((customer: any, index: number) => (
                       <div key={customer.id || index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-400' : 'bg-blue-400'}`}>
@@ -1137,12 +1144,12 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {((orders as any) || []).slice(0, 5).map((order: any) => (
+                    {(Array.isArray(orders) ? orders : []).slice(0, 5).map((order: { id: number; orderNumber?: string; customerName?: string; createdAt?: string; total?: string; status?: string; retailer?: { businessName?: string; firstName?: string; lastName?: string } }) => (
                       <div key={order.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                         <div>
                           <p className="font-medium text-blue-600">{order.orderNumber || `#${order.id}`}</p>
-                          <p className="text-sm text-gray-600">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">{order.retailer?.businessName || (`${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={({
@@ -1154,8 +1161,8 @@ export default function WholesalerDashboard() {
                             cancelled: 'bg-red-100 text-red-800 border-0',
                             ready_for_collection: 'bg-orange-100 text-orange-800 border-0',
                             items_prepared: 'bg-teal-100 text-teal-800 border-0',
-                          } as Record<string, string>)[order.status] || 'bg-gray-100 text-gray-800 border-0'}>
-                            {order.status.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          } as Record<string, string>)[(order.status ?? '')] || 'bg-gray-100 text-gray-800 border-0'}>
+                            {(order.status ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                           </Badge>
                           <Link href={`/orders?id=${order.id}`}>
                             <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -1166,7 +1173,7 @@ export default function WholesalerDashboard() {
                         </div>
                       </div>
                     ))}
-                    {((orders as any) || []).length === 0 && (
+                    {(Array.isArray(orders) ? orders : []).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p>No orders yet</p>
@@ -1199,7 +1206,7 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {((topProducts as any) || []).length === 0 ? (
+                    {(topProducts || []).length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p>No sales data yet</p>

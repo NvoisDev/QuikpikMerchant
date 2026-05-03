@@ -206,7 +206,7 @@ export class ProductStorage extends UserStorageBase {
           nearestExpiry: bs?.nearestExpiry ?? null,
           batchCount: bs?.batchCount ?? 0,
         };
-      }) as Product[];
+      }) as unknown as Product[];
     }
     
     // General query optimization for all products
@@ -301,8 +301,8 @@ export class ProductStorage extends UserStorageBase {
         totalBatchStock: bs?.totalBatchStock ?? null,
         nearestExpiry: bs?.nearestExpiry ?? null,
         batchCount: bs?.batchCount ?? 0,
-      };
-    }) as Product[];
+      } as unknown as Product;
+    });
   }
 
   async getExpiringProducts(wholesalerId: string): Promise<Product[]> {
@@ -385,7 +385,7 @@ export class ProductStorage extends UserStorageBase {
         expiryDate: row.expiry_date ? String(row.expiry_date) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null,
-      });
+      }) as Product;
     });
   }
 
@@ -404,14 +404,14 @@ export class ProductStorage extends UserStorageBase {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values([product]).returning();
+    const [newProduct] = await db.insert(products).values([product as typeof products.$inferInsert]).returning();
     return newProduct;
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
     const [updatedProduct] = await db
       .update(products)
-      .set({ ...product, updatedAt: new Date() })
+      .set({ ...product, updatedAt: new Date() } as Partial<typeof products.$inferInsert>)
       .where(eq(products.id, id))
       .returning();
     return updatedProduct;
@@ -427,8 +427,7 @@ export class ProductStorage extends UserStorageBase {
     await db.delete(productPerformanceSummary).where(eq(productPerformanceSummary.productId, id));
     await db.delete(stockUpdateNotifications).where(eq(stockUpdateNotifications.productId, id));
     // Clear nullable FK references in analytics tables
-    await db.update(users).set({ mostOrderedProductId: null })
-      .where(eq(users.mostOrderedProductId, id));
+    await db.execute(sql`UPDATE users SET most_ordered_product_id = NULL WHERE most_ordered_product_id = ${id}`);
     // Finally delete the product
     await db.delete(products).where(eq(products.id, id));
   }
@@ -710,7 +709,7 @@ export class ProductStorage extends UserStorageBase {
       .returning({ productId: productBatches.productId });
 
     // Sync product.stock for every affected product
-    const affectedProductIds = [...new Set(expired.map(r => r.productId))];
+    const affectedProductIds = Array.from(new Set(expired.map(r => r.productId)));
     for (const productId of affectedProductIds) {
       await this._syncProductStockFromBatches(productId);
     }

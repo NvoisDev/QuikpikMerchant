@@ -46,6 +46,11 @@ import BatchBreakdownPanel from "@/components/product/BatchBreakdownPanel";
 import StockManagementDialog from "@/components/product/StockManagementDialog";
 import type { BulkUploadRow, ProductBatch, StockMovement } from "@/components/product/types";
 
+type ProductWithBatches = Product & {
+  batchCount?: number;
+  nearestExpiry?: string | null;
+};
+
 const productCategories = [
   "Groceries & Food",
   "Fresh Produce",
@@ -149,10 +154,10 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [navigateBackTo, setNavigateBackTo] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductWithBatches | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
-  const [stockProduct, setStockProduct] = useState<Product | null>(null);
+  const [stockProduct, setStockProduct] = useState<ProductWithBatches | null>(null);
   const [stockAdjustmentType, setStockAdjustmentType] = useState<"increase" | "decrease">("increase");
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockReason, setStockReason] = useState("");
@@ -305,7 +310,7 @@ export default function ProductManagement() {
             costPrice: String(editingProduct.costPrice || ""),
           };
           
-          form.reset(safeData);
+          form.reset(safeData as Parameters<typeof form.reset>[0]);
 
           // Auto-fill unit weight on load if it's blank
           // Priority 1: derive from totalPackageWeight ÷ packQuantity (works for any unit)
@@ -752,7 +757,7 @@ export default function ProductManagement() {
     onChange(updatedImages);
   };
 
-  const { data: products, isLoading, error } = useQuery<Product[]>({
+  const { data: products, isLoading, error } = useQuery<ProductWithBatches[]>({
     queryKey: ["/api/products"],
     queryFn: async () => {
       const response = await fetch(`/api/products`, {
@@ -1062,7 +1067,7 @@ export default function ProductManagement() {
         palletWeight: String(product.palletWeight || ""),
         // Promotional offers  
         promotionalOffers: Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [],
-      });
+      } as Parameters<typeof form.reset>[0]);
     } catch (error) {
       console.error('❌ Duplicate form reset failed:', error);
       form.reset();
@@ -1111,8 +1116,8 @@ export default function ProductManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
       const qty = variables.quantity;
       const newStock = variables.adjustmentType === 'increase'
-        ? stockProduct.stock + qty
-        : Math.max(0, stockProduct.stock - qty);
+        ? (stockProduct?.stock ?? 0) + qty
+        : Math.max(0, (stockProduct?.stock ?? 0) - qty);
       setStockProduct((prev) => prev ? { ...prev, stock: newStock } : null);
       toast({ title: "Stock updated", description: `Stock ${stockAdjustmentType === 'increase' ? 'increased' : 'decreased'} by ${stockQuantity} units` });
       setStockQuantity("");
@@ -1373,7 +1378,7 @@ export default function ProductManagement() {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-          processUploadedData(results.data);
+          processUploadedData(results.data as Record<string, string>[]);
         },
         error: (error) => {
           toast({
@@ -1392,7 +1397,7 @@ export default function ProductManagement() {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          processUploadedData(jsonData);
+          processUploadedData(jsonData as Record<string, string>[]);
         } catch (error) {
           toast({
             title: "Error",
@@ -1791,7 +1796,7 @@ export default function ProductManagement() {
       return marginSort === "asc" ? ma - mb : mb - ma;
     }
     if (statusFilter === "expiring") {
-      const getExpiryTime = (p: Product): number => {
+      const getExpiryTime = (p: ProductWithBatches): number => {
         const fromExpiryDate = p.expiryDate ? new Date(p.expiryDate).getTime() : Infinity;
         const fromNearestExpiry = p.nearestExpiry ? new Date(p.nearestExpiry).getTime() : Infinity;
         return Math.min(fromExpiryDate, fromNearestExpiry);
@@ -1816,11 +1821,11 @@ export default function ProductManagement() {
     <>
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Products" description="Manage your inventory, pricing, and product details.">
-        {alertsData?.count > 0 && (
+        {(alertsData?.count ?? 0) > 0 && (
           <Link href="/stock-alerts">
             <Button variant="outline" size="sm" className="flex items-center gap-2 border-amber-300 text-amber-700 hover:bg-amber-50">
               <AlertTriangle className="h-4 w-4" />
-              {alertsData.count} Stock Alert{alertsData.count !== 1 ? "s" : ""}
+              {alertsData?.count} Stock Alert{(alertsData?.count ?? 0) !== 1 ? "s" : ""}
             </Button>
           </Link>
         )}
@@ -2246,7 +2251,7 @@ export default function ProductManagement() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Stock</FormLabel>
-                              {editingProduct?.batchCount > 0 ? (
+                              {(editingProduct?.batchCount ?? 0) > 0 ? (
                                 <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
                                   <span className="text-sm font-medium text-gray-700">{field.value || 0}</span>
                                   <p className="text-xs text-gray-400 mt-0.5">Managed by batches — use Manage Stock to adjust</p>
@@ -2289,11 +2294,11 @@ export default function ProductManagement() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Expiry Date <span className="text-gray-400 font-normal">(optional)</span></FormLabel>
-                            {editingProduct?.batchCount > 0 ? (
+                            {(editingProduct?.batchCount ?? 0) > 0 ? (
                               <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
                                 <span className="text-sm font-medium text-gray-700">
-                                  {editingProduct.nearestExpiry
-                                    ? new Date(editingProduct.nearestExpiry).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                  {editingProduct?.nearestExpiry
+                                    ? new Date(editingProduct?.nearestExpiry ?? '').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
                                     : 'No batch expiry set'}
                                 </span>
                                 <p className="text-xs text-gray-400 mt-0.5">Set per batch — manage in Manage Stock</p>
@@ -3084,7 +3089,7 @@ export default function ProductManagement() {
                           <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             <Badge variant="secondary" className="text-xs">{product.category}</Badge>
                             {(() => {
-                              const effectiveExpiry = product.batchCount > 0
+                              const effectiveExpiry = (product.batchCount ?? 0) > 0
                                 ? (product.nearestExpiry || product.expiryDate)
                                 : product.expiryDate;
                               if (!effectiveExpiry) return null;
@@ -3169,9 +3174,9 @@ export default function ProductManagement() {
                               <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
                                 {formatNumber(product.stock)} units
                               </div>
-                              {product.batchCount > 0 && (
+                              {(product.batchCount ?? 0) > 0 && (
                                 <div className="text-xs text-gray-400 mt-0.5">
-                                  {product.batchCount} batch{product.batchCount !== 1 ? 'es' : ''}
+                                  {product.batchCount} batch{(product.batchCount ?? 0) !== 1 ? 'es' : ''}
                                   {product.nearestExpiry && (() => {
                                     const exp = new Date(product.nearestExpiry);
                                     const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -3231,14 +3236,14 @@ export default function ProductManagement() {
                             >
                               <PackagePlus className="h-4 w-4" />
                             </Button>
-                            {product.batchCount > 0 && (
+                            {(product.batchCount ?? 0) > 0 && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700"
                                 onClick={(e) => { e.stopPropagation(); setExpandedBatchProductId(prev => prev === product.id ? null : product.id); }}
                               >
-                                {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${product.batchCount !== 1 ? 'es' : ''}`}
+                                {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${(product.batchCount ?? 0) !== 1 ? 'es' : ''}`}
                               </Button>
                             )}
                           </div>

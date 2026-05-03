@@ -94,17 +94,17 @@ export default function Analytics() {
     enabled: !!user,
   });
 
-  const { data: revenueData = [] } = useQuery({
+  const { data: revenueData = [] } = useQuery<{ date: string; amount: number }[]>({
     queryKey: ["/api/analytics/revenue", timeRange],
     enabled: !!user,
   });
 
-  const { data: customerData = [] } = useQuery({
+  const { data: customerData = [] } = useQuery<{ date: string; count: number }[]>({
     queryKey: ["/api/analytics/customers", timeRange],
     enabled: !!user,
   });
 
-  const { data: productPerformance = [] } = useQuery({
+  const { data: productPerformance = [] } = useQuery<{ name: string; revenue: number; quantity: number; orders?: number }[]>({
     queryKey: ["/api/analytics/products", timeRange],
     enabled: !!user,
   });

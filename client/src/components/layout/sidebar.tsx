@@ -79,7 +79,7 @@ export default function Sidebar() {
   });
   const pendingOrderCount = pendingOrderData?.count ?? 0;
 
-  const planTier = getBaseTier(subscriptionData?.user?.currentPlan);
+  const planTier = getBaseTier((subscriptionData as { user?: { currentPlan?: string } } | undefined)?.user?.currentPlan);
   const isPremiumUser = planTier === "premium";
   const isStandardUser = planTier === "standard";
   const isFreeUser = planTier === "free";
@@ -355,7 +355,7 @@ export default function Sidebar() {
                     "w-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 h-9",
                     dc ? "lg:justify-center lg:px-0 justify-start" : "justify-start"
                   )}
-                  onClick={logout}
+                  onClick={() => logout()}
                 >
                   <LogOut className={cn("h-4 w-4", dc ? "lg:mr-0 mr-2.5" : "mr-2.5")} />
                   <span className={cn(dc && "lg:hidden")}>Logout</span>

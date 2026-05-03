@@ -54,14 +54,12 @@ export function registerSystemRoutes(app: Express): void {
       
     } catch (error) {
       console.error('❌ Error getting upload URL:', error);
-      console.error('❌ Full error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+      if (error instanceof Error) {
+        console.error('❌ Full error details:', { message: error.message, stack: error.stack, name: error.name });
+      }
       res.status(500).json({ 
         error: 'Failed to get upload URL',
-        details: error.message 
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -79,7 +77,7 @@ export function registerSystemRoutes(app: Express): void {
         return res.status(401).json({ error: 'Authentication required' });
       }
       
-      const updatedUser = await storage.updateUserSettings(req.user.id, {
+      const updatedUser = await storage.updateUserSettings(req.user!.id, {
         logoUrl: logoUrl,
         logoType: 'custom'
       });
@@ -112,7 +110,7 @@ export function registerSystemRoutes(app: Express): void {
       // Convert base64 to data URL format
       const dataUrl = `data:${fileType};base64,${imageData}`;
       
-      const updatedUser = await storage.updateUserSettings(req.user.id, {
+      const updatedUser = await storage.updateUserSettings(req.user!.id, {
         logoUrl: dataUrl,
         logoType: 'custom'
       });
@@ -138,7 +136,7 @@ export function registerSystemRoutes(app: Express): void {
       }
       
       // Clear the logo settings for the authenticated user
-      const updatedUser = await storage.updateUserSettings(req.user.id, {
+      const updatedUser = await storage.updateUserSettings(req.user!.id, {
         logoUrl: null,
         logoType: 'business' // Reset to business initials
       });

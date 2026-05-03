@@ -114,7 +114,7 @@ export default function Signup() {
       ? ["firstName", "lastName", "email", "password", "confirmPassword"]
       : [];
     
-    const isValid = await form.trigger(fieldsToValidate as any);
+    const isValid = await form.trigger(fieldsToValidate as (keyof SignupForm)[]);
     if (isValid) {
       setCurrentStep(currentStep + 1);
     }

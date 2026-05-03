@@ -35,9 +35,9 @@ describe('phone OTP auth security contract', () => {
     );
     // Session nonce check must include verifiedCode
     expect(handler).toContain('verifiedCode');
-    expect(handler).toContain('sessionAny?.verifiedCode === trimmedCode');
+    expect(handler).toContain('req.session?.verifiedCode === trimmedCode');
     // Must check phone matches nonce
-    expect(handler).toContain('sessionAny?.verifiedPhone === normalised');
+    expect(handler).toContain('req.session?.verifiedPhone === normalised');
     // Must check expiry
     expect(handler).toContain('verifiedPhoneExpiry');
     // Must NOT use findRecentlyUsedPhoneVerification as a login bypass
@@ -50,9 +50,9 @@ describe('phone OTP auth security contract', () => {
       "// Store a short-lived session nonce to prove OTP was completed",
       "await new Promise<void>",
     );
-    expect(verifyHandler).toContain('sessionAny.verifiedPhone = normalised');
-    expect(verifyHandler).toContain('sessionAny.verifiedCode = trimmedCode');
-    expect(verifyHandler).toContain('sessionAny.verifiedPhoneExpiry = Date.now()');
+    expect(verifyHandler).toContain('req.session!.verifiedPhone = normalised');
+    expect(verifyHandler).toContain('req.session!.verifiedCode = trimmedCode');
+    expect(verifyHandler).toContain('req.session!.verifiedPhoneExpiry = Date.now()');
   });
 
   it('verify-phone-otp increments attempts on wrong code', () => {
@@ -182,7 +182,7 @@ describe('logout auto-login regression', () => {
       "// POST /api/customer-auth/logout",
       "res.json({ success: true, message: \"Logged out successfully\" })",
     );
-    expect(handler).toContain('delete (req.session as any).customerAuth');
+    expect(handler).toContain('delete req.session?.customerAuth');
     expect(handler).toContain('req.session.destroy');
   });
 

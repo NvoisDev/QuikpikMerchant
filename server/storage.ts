@@ -559,14 +559,12 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       throw new Error('User not found');
     }
 
-    const progress = user.onboardingProgress as any || {
-      completedSteps: [],
-      currentMilestone: 'getting_started',
-      progressPercentage: 0
-    };
-
+    interface OnboardingProgress { completedSteps?: string[]; currentMilestone?: string; progressPercentage?: number; }
+    const rawProgress = (user.onboardingProgress as OnboardingProgress | null) || {};
     return {
-      ...progress,
+      completedSteps: rawProgress.completedSteps ?? [],
+      currentMilestone: rawProgress.currentMilestone ?? 'getting_started',
+      progressPercentage: rawProgress.progressPercentage ?? 0,
       experiencePoints: user.experiencePoints || 0,
       currentLevel: user.currentLevel || 1,
       totalBadges: user.totalBadges || 0
@@ -586,7 +584,8 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       throw new Error('User not found');
     }
 
-    const currentProgress = user.onboardingProgress as any || {
+    interface OnboardingProgress { completedSteps?: string[]; currentMilestone?: string; progressPercentage?: number; }
+    const currentProgress = (user.onboardingProgress as OnboardingProgress | null) || {
       completedSteps: [],
       currentMilestone: 'getting_started',
       progressPercentage: 0
@@ -869,39 +868,41 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       ORDER BY business_name
     `);
 
-    const activeWholesalerIds = new Set((activeRows.rows as any[]).map(r => r.wholesaler_id));
+    type WholesalerRow = { customer_id?: string; wholesaler_id: string; business_name?: string; logo_url?: string | null; logo_type?: string | null };
 
-    const active = (activeRows.rows as any[]).map(r => ({
+    const activeWholesalerIds = new Set((activeRows.rows as WholesalerRow[]).map(r => r.wholesaler_id));
+
+    const active = (activeRows.rows as WholesalerRow[]).map(r => ({
       customerId: r.customer_id as string,
-      wholesalerId: r.wholesaler_id as string,
-      businessName: (r.business_name || 'Wholesaler') as string,
-      logoUrl: r.logo_url as string | null,
-      logoType: r.logo_type as string | null,
+      wholesalerId: r.wholesaler_id,
+      businessName: r.business_name || 'Wholesaler',
+      logoUrl: r.logo_url ?? null,
+      logoType: r.logo_type ?? null,
       status: 'active' as const,
     }));
 
     // Only include pending requests for wholesalers the customer doesn't already have active access to
-    const pending = (pendingRows.rows as any[])
+    const pending = (pendingRows.rows as WholesalerRow[])
       .filter(r => !activeWholesalerIds.has(r.wholesaler_id))
       .map(r => ({
         customerId: null,
-        wholesalerId: r.wholesaler_id as string,
-        businessName: (r.business_name || 'Wholesaler') as string,
-        logoUrl: r.logo_url as string | null,
-        logoType: r.logo_type as string | null,
+        wholesalerId: r.wholesaler_id,
+        businessName: r.business_name || 'Wholesaler',
+        logoUrl: r.logo_url ?? null,
+        logoType: r.logo_type ?? null,
         status: 'pending' as const,
       }));
 
     // Pending takes precedence over rejected — exclude rejected for any wholesaler already represented
     const pendingWholesalerIds = new Set(pending.map(r => r.wholesalerId));
-    const rejected = (rejectedRows.rows as any[])
+    const rejected = (rejectedRows.rows as WholesalerRow[])
       .filter(r => !activeWholesalerIds.has(r.wholesaler_id) && !pendingWholesalerIds.has(r.wholesaler_id))
       .map(r => ({
         customerId: null,
-        wholesalerId: r.wholesaler_id as string,
-        businessName: (r.business_name || 'Wholesaler') as string,
-        logoUrl: r.logo_url as string | null,
-        logoType: r.logo_type as string | null,
+        wholesalerId: r.wholesaler_id,
+        businessName: r.business_name || 'Wholesaler',
+        logoUrl: r.logo_url ?? null,
+        logoType: r.logo_type ?? null,
         status: 'rejected' as const,
       }));
 
@@ -1154,7 +1155,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       }
 
       // Check if user role is in allowed roles
-      return tabPermission.allowedRoles.includes(effectiveRole);
+      return (tabPermission.allowedRoles as string[]).includes(effectiveRole);
     } catch (error) {
       console.error("Error checking tab access:", error);
       // failOpen=true (default): used for sidebar visibility — missing tab just disappears, not an error.
@@ -1189,33 +1190,27 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
     const data = inventoryData.rows[0];
 
     return {
-      totalProducts: parseInt(data.total_products) || 0,
-      inStockProducts: parseInt(data.in_stock_products) || 0,
-      lowStockProducts: parseInt(data.low_stock_products) || 0,
-      outOfStockProducts: parseInt(data.out_of_stock_products) || 0,
-      totalStockValue: parseFloat(data.total_stock_value) || 0,
-      averageStockLevel: parseFloat(data.average_stock_level) || 0,
+      totalProducts: parseInt(data.total_products as string) || 0,
+      inStockProducts: parseInt(data.in_stock_products as string) || 0,
+      lowStockProducts: parseInt(data.low_stock_products as string) || 0,
+      outOfStockProducts: parseInt(data.out_of_stock_products as string) || 0,
+      totalStockValue: parseFloat(data.total_stock_value as string) || 0,
+      averageStockLevel: parseFloat(data.average_stock_level as string) || 0,
       lastUpdated: new Date()
     };
   }
 
   async getStockAlerts(wholesalerId: string, unreadOnly: boolean = false): Promise<(StockAlert & { product: Product })[]> {
-    let query = db
+    const whereCondition = unreadOnly
+      ? and(eq(stockAlerts.wholesalerId, wholesalerId), eq(stockAlerts.isResolved, false), eq(stockAlerts.isRead, false))
+      : and(eq(stockAlerts.wholesalerId, wholesalerId), eq(stockAlerts.isResolved, false));
+
+    const results = await db
       .select()
       .from(stockAlerts)
       .innerJoin(products, eq(stockAlerts.productId, products.id))
-      .where(
-        and(
-          eq(stockAlerts.wholesalerId, wholesalerId),
-          eq(stockAlerts.isResolved, false)
-        )
-      );
-
-    if (unreadOnly) {
-      query = query.where(eq(stockAlerts.isRead, false));
-    }
-
-    const results = await query.orderBy(desc(stockAlerts.createdAt));
+      .where(whereCondition)
+      .orderBy(desc(stockAlerts.createdAt));
 
     return results.map(row => ({
       ...row.stock_alerts,
@@ -1281,7 +1276,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
           AND o.status IN ('paid', 'processing', 'shipped', 'fulfilled', 'completed')
       `);
 
-      const totalSold = parseInt(salesData.rows[0]?.total_sold) || 0;
+      const totalSold = parseInt(salesData.rows[0]?.total_sold as string) || 0;
       const dailyVelocity = totalSold / 30;
       
       if (dailyVelocity > 0) {
@@ -1299,7 +1294,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       lastMovement: lastMovement ? {
         type: lastMovement.movementType,
         quantity: lastMovement.quantity,
-        date: lastMovement.createdAt
+        date: lastMovement.createdAt!
       } : undefined
     };
   }

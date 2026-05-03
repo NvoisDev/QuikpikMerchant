@@ -123,8 +123,9 @@ export function registerAuthRoutes(app: Express): void {
             return res.status(400).json({ success: false, message: "That URL is reserved and cannot be used. Please choose a different one." });
           }
           // Check uniqueness
-          const { db, sql: dbSql } = await import('../db.js');
-          const existing = await db.execute(dbSql`SELECT id FROM users WHERE store_slug = ${slug} AND id != ${user.id} LIMIT 1`);
+          const { db } = await import('../db.js');
+          const { sql: drizzleSql } = await import('drizzle-orm');
+          const existing = await db.execute<{ id: string }>(drizzleSql`SELECT id FROM users WHERE store_slug = ${slug} AND id != ${user.id} LIMIT 1`);
           if (existing.rows.length > 0) {
             return res.status(409).json({ success: false, message: "That store URL is already taken. Please choose a different one." });
           }
@@ -165,7 +166,7 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null;
       if (returnTo) {
-        (req.session as any).returnTo = returnTo;
+        req.session!.returnTo = returnTo;
       }
       const authUrl = getGoogleAuthUrl();
       res.json({ authUrl });
@@ -209,7 +210,7 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       // Preserve returnTo before regenerating the session
-      const returnTo = (req.session as any).returnTo;
+      const returnTo = req.session?.returnTo;
 
       // Regenerate session ID before writing auth data to prevent session fixation
       req.session.regenerate((regenErr: any) => {
@@ -219,15 +220,15 @@ export function registerAuthRoutes(app: Express): void {
         }
 
         // Set user session in passport format for compatibility
-        (req.session as any).passport = {
+        req.session!.passport = {
           user: {
             sub: user.id,
             email: user.email,
             claims: user
           }
         };
-        (req.session as any).userId = user.id;
-        (req.session as any).user = user;
+        req.session!.userId = user.id;
+        req.session!.user = user;
 
         // CRITICAL: Save session before redirect to ensure persistence
         req.session.save((err: any) => {
@@ -249,7 +250,7 @@ export function registerAuthRoutes(app: Express): void {
           }
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Google auth callback error:', error);
       
       // More specific error handling
@@ -316,7 +317,7 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       // Update session with new user data
-      (req.session as any).user = {
+      req.session!.user = {
         ...req.user,
         ...updatedUser,
         isFirstLogin: false
@@ -405,8 +406,8 @@ export function registerAuthRoutes(app: Express): void {
         isTeamMember: false
       };
 
-      (req.session as any).userId = user.id;
-      (req.session as any).user = sessionUser;
+      req.session!.userId = user.id;
+      req.session!.user = sessionUser;
 
       req.session.save((err: any) => {
         if (err) {
@@ -1602,7 +1603,7 @@ export function registerAuthRoutes(app: Express): void {
       const newUser = await storage.createUserWithPassword(userData, password);
 
       // Create session for the new user
-      (req.session as any).user = {
+      req.session!.user = {
         id: newUser.id,
         email: newUser.email,
         firstName: newUser.firstName,
@@ -1713,14 +1714,14 @@ export function registerAuthRoutes(app: Express): void {
       await storage.setPasswordResetToken(email, hashedToken, expiresAt);
       
       // Send password reset email with PLAIN token
-      await sendPasswordResetEmail(email, token, user.firstName, { businessName: user.businessName, logoUrl: getEmailLogoUrl(user.id, user.logoType, user.logoUrl) });
+      await sendPasswordResetEmail(email as string, token as string, (user.firstName as string | null) ?? "", { businessName: user.businessName ?? undefined, logoUrl: getEmailLogoUrl(user.id, user.logoType ?? undefined, user.logoUrl ?? undefined) });
       
       res.json({ 
         success: true, 
         message: "If an account with that email exists, we've sent a password reset link." 
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Password reset request error:', error);
       res.status(500).json({ error: "Failed to process password reset request" });
     }

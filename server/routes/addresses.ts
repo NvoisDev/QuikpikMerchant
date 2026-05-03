@@ -10,7 +10,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { addressId } = req.params;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
         if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
@@ -69,7 +69,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { customerId, wholesalerId } = req.params;
       
-      const authenticatedWholesalerId = (req.user as any)?.id;
+      const authenticatedWholesalerId = req.user?.id;
       if (authenticatedWholesalerId !== wholesalerId) {
         return res.status(403).json({ error: "Access denied" });
       }
@@ -198,7 +198,7 @@ export function registerAddressRoutes(app: Express): void {
   // GET /api/customer/delivery-addresses — clean endpoint (no wholesalerId in URL)
   app.get('/api/customer/delivery-addresses', async (req, res) => {
     try {
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
@@ -223,7 +223,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { wholesalerId } = req.params;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
@@ -252,7 +252,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { wholesalerId, addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
@@ -297,7 +297,7 @@ export function registerAddressRoutes(app: Express): void {
       const { addressId } = req.params;
       const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
         if (cookieData) customerAuth = { customerId: cookieData.customerId, wholesalerId: cookieData.wholesalerId };
@@ -341,7 +341,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { addressId } = req.params;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
@@ -371,7 +371,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { addressId } = req.params;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);
@@ -402,7 +402,7 @@ export function registerAddressRoutes(app: Express): void {
     try {
       const { wholesalerId } = req.params;
       
-      let customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth: { customerId: string; wholesalerId?: string } | undefined = req.session?.customerAuth;
       
       if (!customerAuth) {
         const cookieData = parseCustomerCookie(req.cookies?.customer_auth);

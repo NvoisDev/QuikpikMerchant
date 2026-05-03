@@ -81,7 +81,7 @@ export async function resolveActivePriceListIds(
       );
   }
 
-  const allIds = [...new Set([...directRows, ...groupRows].map((r) => r.id))];
+  const allIds = Array.from(new Set([...directRows, ...groupRows].map((r) => r.id)));
   return allIds;
 }
 

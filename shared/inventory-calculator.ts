@@ -13,6 +13,7 @@ export interface ProductInventoryData {
   palletStock: number;          // Pallet stock
   quantityInPack: number;       // Base units per pack
   unitsPerPallet: number;       // Number of PACKS per pallet (not base units)
+  baseUnitStock?: number;       // Optional alias for total base unit stock
 }
 
 export interface DerivedInventoryCalculations {
@@ -35,7 +36,8 @@ export class InventoryCalculator {
    * Calculate derived inventory values from base unit stock
    */
   static calculateDerivedInventory(data: ProductInventoryData): DerivedInventoryCalculations {
-    const { baseUnitStock, quantityInPack, unitsPerPallet } = data;
+    const { quantityInPack, unitsPerPallet } = data;
+    const baseUnitStock = data.baseUnitStock ?? data.stock;
     
     // Validate inputs
     if (quantityInPack <= 0 || unitsPerPallet <= 0) {
@@ -98,11 +100,12 @@ export class InventoryCalculator {
     const decrement = this.calculateOrderDecrement(orderQuantity, sellingType, data);
     const derived = this.calculateDerivedInventory(data);
     
-    if (decrement.baseUnitsToSubtract > data.baseUnitStock) {
+    const baseUnitStock = data.baseUnitStock ?? data.stock;
+    if (decrement.baseUnitsToSubtract > baseUnitStock) {
       let availableQuantity: number;
       
       if (sellingType === 'units') {
-        availableQuantity = data.baseUnitStock;
+        availableQuantity = baseUnitStock;
       } else if (sellingType === 'pallets') {
         availableQuantity = derived.availablePallets;
       } else {

@@ -34,7 +34,7 @@ const PaymentFormContent = ({
   shippingCost,
   wholesaler,
 }: {
-  onSuccess: (orderData?: Record<string, unknown>) => void;
+  onSuccess: StripeCheckoutFormProps['onSuccess'];
   totalAmount: number;
   subtotal: number;
   customerTransactionFee: number;
@@ -149,7 +149,7 @@ const PaymentFormContent = ({
         onSuccess({
           orderNumber: "Processing…",
           cart: [],
-          customerData: {},
+          customerData: { name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: '', notes: '', shippingOption: undefined },
           totalAmount,
           subtotal,
           customerTransactionFee,
@@ -184,7 +184,7 @@ const PaymentFormContent = ({
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
               cart: [],
-              customerData: {},
+              customerData: { name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: '', notes: '', shippingOption: undefined },
               totalAmount: orderData.totalAmount ?? totalAmount,
               subtotal: orderData.subtotal ?? subtotal,
               customerTransactionFee: orderData.customerTransactionFee ?? customerTransactionFee,
@@ -202,7 +202,7 @@ const PaymentFormContent = ({
             onSuccess({
               orderNumber: "Confirming…",
               cart: [],
-              customerData: {},
+              customerData: { name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: '', notes: '', shippingOption: undefined },
               totalAmount,
               subtotal,
               customerTransactionFee,
@@ -220,7 +220,7 @@ const PaymentFormContent = ({
           onSuccess({
             orderNumber: "Confirming…",
             cart: [],
-            customerData: {},
+            customerData: { name: '', email: '', phone: '', address: '', city: '', state: '', postalCode: '', country: '', notes: '', shippingOption: undefined },
             totalAmount,
             subtotal,
             customerTransactionFee,

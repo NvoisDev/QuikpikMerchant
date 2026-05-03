@@ -72,7 +72,7 @@ describe('guest browsing regression coverage', () => {
     expect(guestCatalogue).toContain('<span>{row.text}</span>');
     expect(guestCatalogue).toContain('PriceDisplay price={null}');
     expect(guestCatalogue).toContain('isGuestMode={true}');
-    expect(guestStripBlock).toContain('stripGuestPricingDataFromProducts(formattedProducts as any[])');
+    expect(guestStripBlock).toContain('stripGuestPricingDataFromProducts(formattedProducts');
   });
 
   it('keeps public help copy aligned with guest browsing, OTP, and fee rules', () => {

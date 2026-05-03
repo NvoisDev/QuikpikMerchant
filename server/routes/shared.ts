@@ -251,6 +251,11 @@ export function generateStockUpdateMessage(product: any, notificationType: strin
   const businessName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim();
   const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
 
+  const fmtNum = (val: any) => {
+    const n = parseFloat(String(val || '0'));
+    return n.toLocaleString('en-GB');
+  };
+
   let message = `📢 *Stock Update Alert*\n\n`;
   message += `Product: *${product.name}*\n\n`;
 
@@ -263,9 +268,9 @@ export function generateStockUpdateMessage(product: any, notificationType: strin
 
     case 'low_stock':
       message += `⚠️ *LOW STOCK ALERT*\n`;
-      message += `Only ${formatNumber(product.stock || 0)} units remaining!\n\n`;
+      message += `Only ${fmtNum(product.stock || 0)} units remaining!\n\n`;
       message += `💰 Price: ${product.price}\n`;
-      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `📦 MOQ: ${fmtNum(product.moq)} units\n\n`;
       message += `🛒 Order now to secure your stock!\n\n`;
       message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
@@ -273,9 +278,9 @@ export function generateStockUpdateMessage(product: any, notificationType: strin
     case 'restocked':
       message += `✅ *BACK IN STOCK*\n`;
       message += `Great news! This product is available again.\n\n`;
-      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
+      message += `📦 Stock: ${fmtNum(product.stock || 0)} units available\n`;
       message += `💰 Price: ${product.price}\n`;
-      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `📦 MOQ: ${fmtNum(product.moq)} units\n\n`;
       message += `🛒 Place your order now!\n\n`;
       message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
@@ -283,8 +288,8 @@ export function generateStockUpdateMessage(product: any, notificationType: strin
     case 'price_change':
       message += `💰 *PRICE UPDATE*\n`;
       message += `New price: ${product.price}\n`;
-      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
-      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
+      message += `📦 Stock: ${fmtNum(product.stock || 0)} units available\n`;
+      message += `📦 MOQ: ${fmtNum(product.moq)} units\n\n`;
       message += `📞 Questions? Contact us:\n${businessName}\n📱 ${phone}`;
       break;
   }
@@ -362,7 +367,7 @@ export async function refundAcrossPaymentIntents(
     if (remainingPence <= 0) break;
     try {
       const pi = await stripeClient.paymentIntents.retrieve(piId);
-      const chargeId = (pi as any).latest_charge as string | null;
+      const chargeId = typeof pi.latest_charge === 'string' ? pi.latest_charge : (pi.latest_charge as Stripe.Charge | null)?.id ?? null;
       let refundablePence = remainingPence;
       if (chargeId) {
         const charge = await stripeClient.charges.retrieve(chargeId);
@@ -370,7 +375,7 @@ export async function refundAcrossPaymentIntents(
       }
       if (refundablePence <= 0) { continue; }
       const refundThisPence = Math.min(remainingPence, refundablePence);
-      const refundParams: Record<string, unknown> = {
+      const refundParams: Stripe.RefundCreateParams = {
         payment_intent: piId,
         amount: refundThisPence,
         reason: 'requested_by_customer',
@@ -381,7 +386,7 @@ export async function refundAcrossPaymentIntents(
       const requestOptions = idempotencyKey
         ? { idempotencyKey: `${idempotencyKey}-${piId}` }
         : undefined;
-      const refund = await stripeClient.refunds.create(refundParams as any, requestOptions);
+      const refund = await stripeClient.refunds.create(refundParams, requestOptions);
       totalRefundedPence += refund.amount;
       remainingPence -= refund.amount;
     } catch (e: any) {
@@ -475,7 +480,7 @@ export { getPlanLimits };
 export async function enforceNewPlanLimits(
   userId: string, targetTier: string
 ): Promise<{ productsLocked: number; teamMembersSuspended: number; groupsArchived: number; priceListsLocked: number }> {
-  const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+  const limits = getPlanLimits(targetTier) ?? PLAN_ENFORCEMENT_LIMITS.free;
   let productsLocked = 0, teamMembersSuspended = 0, groupsArchived = 0, priceListsLocked = 0;
   if (limits.products !== -1) {
     try {
@@ -559,7 +564,7 @@ export async function unlockForUpgrade(userId: string): Promise<{ productsUnlock
 export async function getProjectedDowngradeImpact(
   userId: string, targetTier: string
 ): Promise<{ productsToLock: number; totalProducts: number; teamMembersToSuspend: number; groupsToArchive: number; priceListsToLock: number }> {
-  const limits = PLAN_ENFORCEMENT_LIMITS[targetTier] ?? PLAN_ENFORCEMENT_LIMITS.free;
+  const limits = getPlanLimits(targetTier) ?? PLAN_ENFORCEMENT_LIMITS.free;
   try {
     const [nonLockedProductRows, activeMemberRows, activeGroupRows, unlockedPriceListRows] = await Promise.all([
       db.select({ id: products.id }).from(products).where(and(eq(products.wholesalerId, userId), inArray(products.status, ['active', 'inactive']))),
@@ -603,7 +608,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   const currencySymbol = getCurrencySymbol(currency);
   const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
   const customerName = order.retailer
-    ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || (order.retailer as any).businessName || order.customerName || 'Customer')
+    ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || order.retailer.businessName || order.customerName || 'Customer')
     : (order.customerName || 'Customer');
   const businessName = wholesaler.businessName || 'Quikpik Merchant';
   const invoiceRef = order.orderNumber || `#${order.id}`;
@@ -975,7 +980,13 @@ export async function createStripeRefundReceipt(order: any, refund: any, wholesa
       const invoices = await stripeClient.invoices.list({ customer: customer.email, limit: 10 }, { stripeAccount: wholesaler.stripeAccountId });
       const originalInvoice = invoices.data.find(inv => inv.metadata?.order_id === order.id.toString());
       if (originalInvoice) {
-        const creditNote = await stripeClient.creditNotes.create({ invoice: originalInvoice.id, amount: refund.amount, reason: 'requested_by_customer', memo: reason || 'Refund processed', metadata: { order_id: order.id.toString(), refund_id: refund.id, refund_reason: reason || 'Customer requested refund' } }, { stripeAccount: wholesaler.stripeAccountId });
+        const creditNote = await stripeClient.creditNotes.create({ 
+          invoice: (originalInvoice.id as string) ?? '', 
+          amount: refund.amount, 
+          reason: 'requested_by_customer' as Stripe.CreditNoteCreateParams.Reason, 
+          memo: reason || 'Refund processed', 
+          metadata: { order_id: order.id.toString(), refund_id: refund.id, refund_reason: reason || 'Customer requested refund' } 
+        }, { stripeAccount: wholesaler.stripeAccountId });
         return creditNote;
       }
     }

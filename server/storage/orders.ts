@@ -116,12 +116,9 @@ export class OrderStorage extends ProductStorage {
       );
     }
     
-    if (conditions.length > 0) {
-      orderQuery = orderQuery.where(and(...conditions));
-    }
-    
-    orderQuery = orderQuery.orderBy(desc(orders.createdAt));
-    const orderResults = await orderQuery;
+    const orderResults = await (conditions.length > 0
+      ? db.select().from(orders).where(and(...conditions)).orderBy(desc(orders.createdAt))
+      : db.select().from(orders).orderBy(desc(orders.createdAt)));
 
     console.log(`📊 Orders base query took ${Date.now() - startTime}ms, found ${orderResults.length} orders`);
     
@@ -141,7 +138,7 @@ export class OrderStorage extends ProductStorage {
       .where(sql`${users.id} IN (${sql.join(allUserIds.map(id => sql`${id}`), sql`, `)})`);
     
     // Create user lookup map
-    const userMap = allUsers.reduce((acc, user) => {
+    const userMap = allUsers.reduce((acc: any, user: any) => {
       acc[user.id] = user;
       return acc;
     }, {} as Record<string, any>);
@@ -277,7 +274,7 @@ export class OrderStorage extends ProductStorage {
     });
     
     console.log(`✅ Orders query complete in ${Date.now() - startTime}ms`);
-    return ordersWithItems;
+    return ordersWithItems as unknown as (Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[];
   }
 
   async getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User; businessProfileName?: string | null }) | undefined> {
@@ -326,7 +323,7 @@ export class OrderStorage extends ProductStorage {
         ...item.order_items,
         product: item.products!
       }))
-    };
+    } as Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User; businessProfileName?: string | null; collectionAddress: typeof collectionAddress };
   }
 
   async getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]> {
@@ -423,13 +420,13 @@ export class OrderStorage extends ProductStorage {
       } catch (error) {
         console.error(`❌ CRITICAL: Order insertion failed:`, error);
         console.error(`❌ Clean order data that failed:`, cleanOrderData);
-        console.error(`❌ Full error details:`, {
-          name: (error as any).name,
-          message: (error as any).message,
-          stack: (error as any).stack,
-          position: (error as any).position,
-          code: (error as any).code
-        });
+        if (error instanceof Error) {
+          const dbErr = error as Error & { position?: string; code?: string };
+          console.error(`❌ Full error details:`, {
+            name: dbErr.name, message: dbErr.message, stack: dbErr.stack,
+            position: dbErr.position, code: dbErr.code
+          });
+        }
         throw error;
       }
       
@@ -447,7 +444,7 @@ export class OrderStorage extends ProductStorage {
         const [currentProduct] = await tx
           .select()
           .from(products)
-          .where(eq(products.id, item.productId));
+          .where(eq(products.id, item.productId!));
 
         const orderedQuantity = item.quantity;
         const sellingType = item.sellingType || 'units';
@@ -462,7 +459,7 @@ export class OrderStorage extends ProductStorage {
             .from(productBatches)
             .where(
               and(
-                eq(productBatches.productId, item.productId),
+                eq(productBatches.productId, item.productId!),
                 eq(productBatches.status, 'active'),
                 or(
                   isNull(productBatches.expiryDate),
@@ -498,7 +495,7 @@ export class OrderStorage extends ProductStorage {
             : orderedQuantity;
 
           // Pre-check: abort if total batch stock is insufficient
-          const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
+          const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
           if (totalAvailable < baseUnitsNeeded) {
             throw new Error(
               `Insufficient batch stock for product ${item.productId} (${currentProduct.name}): ` +
@@ -544,7 +541,7 @@ export class OrderStorage extends ProductStorage {
             .from(productBatches)
             .where(
               and(
-                eq(productBatches.productId, item.productId),
+                eq(productBatches.productId, item.productId!),
                 eq(productBatches.status, 'active'),
                 or(
                   isNull(productBatches.expiryDate),
@@ -572,7 +569,7 @@ export class OrderStorage extends ProductStorage {
         // Read refreshed stock for low-stock console warnings
         if (currentProduct) {
           const [refreshed] = await tx.select({ stock: products.stock, palletStock: products.palletStock })
-            .from(products).where(eq(products.id, item.productId));
+            .from(products).where(sql`${products.id} = ${item.productId}`);
           const newUnitStock = refreshed?.stock ?? 0;
           const newPalletStock = refreshed?.palletStock ?? 0;
 
@@ -826,7 +823,7 @@ export class OrderStorage extends ProductStorage {
         const [currentProduct] = await trx
           .select()
           .from(products)
-          .where(eq(products.id, item.productId));
+          .where(eq(products.id, item.productId!));
         
         if (currentProduct) {
           console.log(`📦 PRODUCT: ${currentProduct.name} (ID: ${item.productId})`);
@@ -834,7 +831,7 @@ export class OrderStorage extends ProductStorage {
 
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;
-          const freeItemsQty = (item as any).freeItems || 0;
+          const freeItemsQty = item.freeItems ?? 0;
           const totalStockToReduce = orderedQuantity + freeItemsQty;
 
           if (freeItemsQty > 0) {
@@ -849,7 +846,7 @@ export class OrderStorage extends ProductStorage {
             .from(productBatches)
             .where(
               and(
-                eq(productBatches.productId, item.productId),
+                eq(productBatches.productId, item.productId!),
                 eq(productBatches.status, 'active'),
                 or(
                   isNull(productBatches.expiryDate),
@@ -869,7 +866,7 @@ export class OrderStorage extends ProductStorage {
           const baseUnitsNeeded = sellingType === 'pallets'
             ? totalStockToReduce * unitsPerPallet * quantityInPack
             : totalStockToReduce;
-          const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
+          const totalAvailable = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
 
           // Abort if no active batches exist
           if (activeBatches.length === 0) {
@@ -930,7 +927,7 @@ export class OrderStorage extends ProductStorage {
             .from(productBatches)
             .where(
               and(
-                eq(productBatches.productId, item.productId),
+                eq(productBatches.productId, item.productId!),
                 eq(productBatches.status, 'active'),
                 or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
               )
@@ -944,7 +941,7 @@ export class OrderStorage extends ProductStorage {
           await trx
             .update(products)
             .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
-            .where(eq(products.id, item.productId));
+            .where(sql`${products.id} = ${item.productId}`);
 
           console.log(`✅ FEFO STOCK: product ${item.productId} → ${newUnitStock} units / ${newPalletStock} pallets (batch #${primaryBatchId})`);
           // ────────────────────────────────────────────────────────────────────

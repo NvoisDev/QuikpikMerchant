@@ -517,7 +517,7 @@ export default function Settings() {
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(user as any)?.businessName || 'store'}-qr-code.png`;
+    a.download = `${user?.businessName || 'store'}-qr-code.png`;
     a.click();
   };
 
@@ -528,7 +528,7 @@ export default function Settings() {
     const storeUrl = storeShareUrl;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.tagline{font-size:14px;font-weight:600;color:#374151;margin-top:8px;text-align:center}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${(user as any)?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="tagline">Scan to sign up for my store</div><div class="url">${storeUrl}</div></body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>Store QR Code</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff}.business{font-size:20px;font-weight:bold;margin-bottom:12px}.tagline{font-size:14px;font-weight:600;color:#374151;margin-top:8px;text-align:center}.url{font-size:12px;color:#666;margin-top:12px;word-break:break-all;max-width:240px;text-align:center}</style></head><body><div class="business">${user?.businessName || 'My Store'}</div><img src="${url}" width="240" height="240"/><div class="tagline">Scan to sign up for my store</div><div class="url">${storeUrl}</div></body></html>`);
     win.document.close();
     win.onload = () => { win.print(); };
   };
@@ -559,16 +559,16 @@ export default function Settings() {
 
   // Initialise slug input from user data
   useEffect(() => {
-    if ((user as any)?.storeSlug) setSlugInput((user as any).storeSlug);
-  }, [(user as any)?.storeSlug]);
+    if (user?.storeSlug) setSlugInput(user.storeSlug);
+  }, [user?.storeSlug]);
 
-  const storeIdentifier = (user as any)?.storeSlug || (user as any)?.id || '';
+  const storeIdentifier = user?.storeSlug || user?.id || '';
   const storeShareUrl = `https://quikpik.app/customer/${storeIdentifier}`;
 
   const checkSlugAvailability = useCallback((value: string) => {
     if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
     const trimmed = value.toLowerCase().trim();
-    if (!trimmed || trimmed === (user as any)?.storeSlug) { setSlugStatus('idle'); return; }
+    if (!trimmed || trimmed === user?.storeSlug) { setSlugStatus('idle'); return; }
     if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(trimmed)) { setSlugStatus('invalid'); return; }
     setSlugStatus('checking');
     slugCheckTimer.current = setTimeout(async () => {
@@ -578,14 +578,14 @@ export default function Settings() {
         setSlugStatus(data.available ? 'available' : 'taken');
       } catch { setSlugStatus('idle'); }
     }, 400);
-  }, [(user as any)?.storeSlug]);
+  }, [user?.storeSlug]);
 
   const saveSlugMutation = useMutation({
     mutationFn: async (slug: string) => apiRequest('PUT', '/api/user/profile', { storeSlug: slug || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setSlugStatus('idle');
-      toast({ title: 'Store URL saved', description: `Your store link is now quikpik.app/customer/${slugInput.trim() || (user as any)?.id}` });
+      toast({ title: 'Store URL saved', description: `Your store link is now quikpik.app/customer/${slugInput.trim() || user?.id}` });
     },
     onError: (err: any) => {
       const msg = err?.message || 'Failed to save store URL.';
@@ -639,15 +639,15 @@ export default function Settings() {
   });
 
   const [useCustomCollectionAddress, setUseCustomCollectionAddress] = useState(!!user?.pickupAddress);
-  const [deliveryEnabled, setDeliveryEnabled] = useState((user as any)?.enableDelivery ?? true);
-  const [deliveryFlatRate, setDeliveryFlatRateState] = useState((user as any)?.deliveryFlatRate || '');
-  const [deliveryNote, setDeliveryNote] = useState((user as any)?.deliveryNote || '');
+  const [deliveryEnabled, setDeliveryEnabled] = useState(user?.enableDelivery ?? true);
+  const [deliveryFlatRate, setDeliveryFlatRateState] = useState(user?.deliveryFlatRate || '');
+  const [deliveryNote, setDeliveryNote] = useState(user?.deliveryNote || '');
   const [savingDelivery, setSavingDelivery] = useState(false);
-  const [allowPayLater, setAllowPayLater] = useState((user as any)?.allowPayLater ?? false);
+  const [allowPayLater, setAllowPayLater] = useState(user?.allowPayLater ?? false);
   const [savingPayLater, setSavingPayLater] = useState(false);
-  const [vatEnabled, setVatEnabled] = useState((user as any)?.vatEnabled ?? false);
+  const [vatEnabled, setVatEnabled] = useState(user?.vatEnabled ?? false);
   const [vatRateInput, setVatRateInput] = useState(
-    (user as any)?.vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20'
+    user?.vatRate ? String(Math.round(parseFloat(user.vatRate) * 100)) : '20'
   );
   const [savingVat, setSavingVat] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -738,12 +738,12 @@ export default function Settings() {
         companyRegistrationNumber: user.companyRegistrationNumber || '',
       });
       setUseCustomCollectionAddress(!!user.pickupAddress);
-      setDeliveryEnabled((user as any).enableDelivery ?? true);
-      setDeliveryFlatRateState((user as any).deliveryFlatRate || '');
-      setDeliveryNote((user as any).deliveryNote || '');
-      setAllowPayLater((user as any).allowPayLater ?? false);
-      setVatEnabled((user as any).vatEnabled ?? false);
-      setVatRateInput((user as any).vatRate ? String(Math.round(parseFloat((user as any).vatRate) * 100)) : '20');
+      setDeliveryEnabled(user.enableDelivery ?? true);
+      setDeliveryFlatRateState(user.deliveryFlatRate || '');
+      setDeliveryNote(user.deliveryNote || '');
+      setAllowPayLater(user.allowPayLater ?? false);
+      setVatEnabled(user.vatEnabled ?? false);
+      setVatRateInput(user.vatRate ? String(Math.round(parseFloat(user.vatRate) * 100)) : '20');
     }
   }, [user]);
 
@@ -1798,9 +1798,9 @@ export default function Settings() {
                       {slugStatus === 'taken' && <p className="text-xs text-red-600">That URL is already taken — try another one.</p>}
                       {slugStatus === 'invalid' && <p className="text-xs text-amber-600">Must be at least 3 characters, letters/numbers/hyphens only, no leading or trailing hyphens.</p>}
                       {slugStatus === 'available' && <p className="text-xs text-green-600">Available! Hit Save to use this URL.</p>}
-                      {(user as any)?.storeSlug && (
+                      {user?.storeSlug && (
                         <p className="text-xs text-gray-400">
-                          Old link still works: quikpik.app/customer/{(user as any)?.id}
+                          Old link still works: quikpik.app/customer/{user?.id}
                         </p>
                       )}
                     </div>
@@ -1817,11 +1817,11 @@ export default function Settings() {
                       <div className="p-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm flex flex-col items-center">
                         {(() => {
                           const logoSrc = (() => {
-                            if ((user as any)?.logoType === 'custom' && (user as any)?.logoUrl) {
-                              return (user as any).logoUrl as string;
+                            if (user?.logoType === 'custom' && user?.logoUrl) {
+                              return user.logoUrl as string;
                             }
-                            if ((user as any)?.businessName) {
-                              return generateInitialsDataUrl((user as any).businessName);
+                            if (user?.businessName) {
+                              return generateInitialsDataUrl(user.businessName);
                             }
                             return null;
                           })();

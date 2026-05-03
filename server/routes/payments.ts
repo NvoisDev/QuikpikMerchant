@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import Stripe from "stripe";
 import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
 import { formatDateTime } from "../../shared/utils/date";
@@ -25,8 +26,8 @@ export function registerPaymentRoutes(app: Express): void {
 
     // Method 1: Check Passport authentication (Google OAuth/Replit auth)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      const passportUser = req.user as any;
-      const userId = passportUser.claims?.sub;
+      const passportUser = req.user;
+      const userId = passportUser?.claims?.sub as string | undefined;
       
       if (userId) {
         authenticatedUser = await storage.getUser(userId);
@@ -35,7 +36,7 @@ export function registerPaymentRoutes(app: Express): void {
 
     // Method 2: Check email-based session authentication
     if (!authenticatedUser) {
-      const sessionUser = (req.session as any)?.user;
+      const sessionUser = req.session?.user;
       if (sessionUser?.id) {
         authenticatedUser = await storage.getUser(sessionUser.id);
       }
@@ -43,7 +44,7 @@ export function registerPaymentRoutes(app: Express): void {
 
     // Method 3: Check legacy session userId
     if (!authenticatedUser) {
-      const sessionUserId = (req.session as any)?.userId;
+      const sessionUserId = req.session?.userId;
       if (sessionUserId) {
         authenticatedUser = await storage.getUser(sessionUserId);
       }
@@ -665,7 +666,7 @@ export function registerPaymentRoutes(app: Express): void {
             const { subject, html, text } = generateDowngradeEffectiveEmail({
               firstName: affectedUser.firstName || '',
               email: affectedUser.email,
-              businessName: affectedUser.businessName || affectedUser.name || 'Quikpik',
+              businessName: affectedUser.businessName || 'Quikpik',
               productsLocked: enforcementResult.productsLocked || undefined,
               teamMembersSuspended: enforcementResult.teamMembersSuspended || undefined,
               groupsArchived: enforcementResult.groupsArchived || undefined,
@@ -788,10 +789,7 @@ export function registerPaymentRoutes(app: Express): void {
           : typeof invoice.customer === 'object' && invoice.customer !== null
             ? invoice.customer.id
             : null;
-        const invSubId = typeof invoice.subscription === 'string'
-          ? invoice.subscription
-          : typeof invoice.subscription === 'object' && invoice.subscription !== null
-            ? invoice.subscription.id
+        const invSubId = typeof invoice.subscription === 'string' ? invoice.subscription : typeof invoice.subscription === 'object' && invoice.subscription !== null ? invoice.subscription.id
             : null;
         if (!invCustId || !invSubId) return res.json({ received: true, type: event.type });
 
@@ -1287,7 +1285,7 @@ export function registerPaymentRoutes(app: Express): void {
       //   5. Universal fallback → match by exact net amount + wholesaler + date window
       const transactions = await Promise.all(
         chargeTxns.map(async (t) => {
-          const sourceId = typeof t.source === 'string' ? t.source : (t.source as any)?.id ?? null;
+          const sourceId = typeof t.source === 'string' ? t.source : (t.source as { id?: string } | null)?.id ?? null;
           let order: Awaited<ReturnType<typeof storage.getOrderByTransferId>> | undefined;
 
           // Helper: try to find order via a Transfer ID (DB lookup then PI fallback)
@@ -1301,7 +1299,7 @@ export function registerPaymentRoutes(app: Express): void {
               });
               const sourceTxn = transfer.source_transaction;
               const rawPi = sourceTxn && typeof sourceTxn === 'object'
-                ? (sourceTxn as any).payment_intent
+                ? (sourceTxn as Stripe.Charge).payment_intent
                 : null;
               const piId: string | null = typeof rawPi === 'string'
                 ? rawPi
@@ -1314,7 +1312,7 @@ export function registerPaymentRoutes(app: Express): void {
                 }
               }
             } catch (e) {
-              console.warn(`⚠️ Could not expand Transfer ${trId}:`, (e as any)?.message ?? e);
+              console.warn(`⚠️ Could not expand Transfer ${trId}:`, e instanceof Error ? e.message : String(e));
             }
             return found;
           };
@@ -1332,12 +1330,12 @@ export function registerPaymentRoutes(app: Express): void {
               const rawTr = charge.source_transfer;
               const trId: string | null = typeof rawTr === 'string'
                 ? rawTr
-                : (rawTr && typeof rawTr === 'object' ? (rawTr as any).id : null);
+                : (rawTr && typeof rawTr === 'object' ? (rawTr as Stripe.Transfer).id : null);
               if (trId) {
                 order = await findByTransferId(trId);
               }
             } catch (e) {
-              console.warn(`⚠️ Could not retrieve charge ${sourceId}:`, (e as any)?.message ?? e);
+              console.warn(`⚠️ Could not retrieve charge ${sourceId}:`, e instanceof Error ? e.message : String(e));
             }
           } else if (sourceId?.startsWith('pi_')) {
             order = await storage.getOrderByPaymentIntentId(sourceId);
@@ -1628,7 +1626,7 @@ export function registerPaymentRoutes(app: Express): void {
             const { subject, html, text } = generateDowngradeScheduledEmail({
               firstName: downgradedUser.firstName || '',
               email: downgradedUser.email,
-              businessName: downgradedUser.businessName || downgradedUser.name || 'Quikpik',
+              businessName: downgradedUser.businessName || 'Quikpik',
               currentPlan: currentSubscription.currentPlan || 'standard', // captured before proratedFreeDowngrade mutated the DB
               effectiveDate: new Date(), // immediate cancellation — effective today
               productsToLock: enforcedNow.productsLocked || undefined,
@@ -1730,7 +1728,7 @@ export function registerPaymentRoutes(app: Express): void {
             const { subject, html, text } = generateDowngradeScheduledEmail({
               firstName: user.firstName || '',
               email: user.email,
-              businessName: user.businessName || user.name || 'Quikpik',
+              businessName: user.businessName || 'Quikpik',
               currentPlan: user.currentPlan || 'standard',
               effectiveDate,
               productsToLock: cancelProjectedImpact.productsToLock || undefined,
@@ -1984,15 +1982,14 @@ export function registerPaymentRoutes(app: Express): void {
         try {
           const savedAddress = await storage.createDeliveryAddress({
             customerId,
-            wholesalerId,
             addressLine1: customAddressFields.addressLine1,
-            addressLine2: null,
+            addressLine2: customAddressFields.addressLine2 ?? undefined,
             city: customAddressFields.city,
-            state: customAddressFields.state || null,
+            state: customAddressFields.state || undefined,
             postalCode: customAddressFields.postalCode,
             country: 'United Kingdom',
-            label: customAddressFields.label || null,
-            instructions: null,
+            label: customAddressFields.label || undefined,
+            instructions: undefined,
             isDefault: false,
           });
           resolvedDeliveryAddressId = savedAddress.id;
@@ -2069,10 +2066,10 @@ export function registerPaymentRoutes(app: Express): void {
           let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
           try {
             orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
-              stock: product.stock,
-              palletStock: product.palletStock,
-              quantityInPack: product.quantityInPack,
-              unitsPerPallet: product.unitsPerPallet
+              stock: product.stock ?? 0,
+              palletStock: product.palletStock ?? 0,
+              quantityInPack: product.quantityInPack ?? 1,
+              unitsPerPallet: product.unitsPerPallet ?? 1
             });
           } catch (stockErr: unknown) {
             const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
@@ -2176,7 +2173,7 @@ export function registerPaymentRoutes(app: Express): void {
           const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
 
           // Base session params (no Connect routing) — used as fallback if transfer_data fails
-          const baseSessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+          const baseSessionParams: any = {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
@@ -2207,7 +2204,7 @@ export function registerPaymentRoutes(app: Express): void {
                     destination: wholesaler.stripeAccountId!,
                     amount: wholesalerDepositAmount,
                   },
-                },
+                } as Stripe.Checkout.SessionCreateParams['payment_intent_data'],
               });
             } catch (connectSessionErr: any) {
               console.error(`❌ Quote session with Connect routing failed — type: ${connectSessionErr.type}, code: ${connectSessionErr.code}, message: ${connectSessionErr.message}`);
@@ -2459,7 +2456,7 @@ export function registerPaymentRoutes(app: Express): void {
           const wholesalerOutstanding = isDeposit ? subtotal - wholesalerDeposit : 0;
           const quoteEmailBody = `${emailHeading('Invoice Created', { size: '22px', color: '#10b981' })}<p style="margin:0 0 4px">Order <b>${orderNumber}</b></p><p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>${emailCard(`<p style="margin:0 0 4px"><b>Customer:</b> ${`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}</p>${customer.businessName ? `<p style="margin:0 0 4px"><b>Business:</b> ${customer.businessName}</p>` : ''}${customer.phoneNumber ? `<p style="margin:0 0 4px"><b>Phone:</b> ${customer.phoneNumber}</p>` : ''}${customer.email ? `<p style="margin:0 0 4px"><b>Email:</b> ${customer.email}</p>` : ''}${deliveryLineHtml}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:4px 0">Products:</td><td style="padding:4px 0;text-align:right">£${productSubtotal.toFixed(2)}</td></tr>${deliveryRowHtml}${wholesalerWeightRowHtml}${isDeposit ? `<tr><td style="padding:4px 0">Deposit (${validDepositPercentage}%):</td><td style="padding:4px 0;text-align:right">£${wholesalerDeposit.toFixed(2)}</td></tr><tr><td style="padding:4px 0">Outstanding:</td><td style="padding:4px 0;text-align:right">£${wholesalerOutstanding.toFixed(2)}</td></tr>` : ''}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${subtotal.toFixed(2)}</td></tr></table><p style="margin:16px 0 4px"><b>Sent via:</b> ${sendVia === 'sms' ? 'SMS' : 'WhatsApp'}</p><p style="margin:0 0 4px"><b>Payment:</b> ${paymentStatusText}</p>${paymentLinkUrl ? emailButton('View Payment Link', paymentLinkUrl, '#059669') : ''}${emailButton('View in Dashboard', `${process.env.APP_URL || 'https://quikpik.app'}/orders`)}`;
           const customerDisplayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || customer.phoneNumber || 'Customer';
-          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Invoice ${orderNumber} sent to ${customerDisplayName} - £${subtotal.toFixed(2)}` });
+          const quoteHtml = wrapCustomerEmail(quoteEmailBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) }, { preheader: `Invoice ${orderNumber} sent to ${customerDisplayName} - £${subtotal.toFixed(2)}` });
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
@@ -2621,6 +2618,7 @@ export function registerPaymentRoutes(app: Express): void {
       // (avoids needing to actually restore stock before validation).
       const restoredStockMap: Record<number, { units: number; pallets: number }> = {};
       for (const item of existingItems) {
+        if (item.productId === null) continue;
         const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
         if (!product) continue; // product removed — skip; stock restore will also skip it
         const sellingType = item.sellingType || 'units';
@@ -2729,7 +2727,7 @@ export function registerPaymentRoutes(app: Express): void {
           const sessionChargeForConnect = isPartPaid ? newAmountOutstanding : depositAmount;
           const wholesalerSessionAmount = Math.round(sessionChargeForConnect * (wholesalerTotal / (total || 1)) * 100);
           const baseUrl = process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
-          const baseSessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+          const baseSessionParams: any = {
             payment_method_types: ['card'], line_items: lineItems, mode: 'payment',
             success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/store/${wholesalerId}`,
@@ -2759,10 +2757,10 @@ export function registerPaymentRoutes(app: Express): void {
       const timestamp = new Date().toISOString();
 
       // Resolve product names so audit entries and the customer email are human-readable
-      const auditAllProductIds = [...new Set([
-        ...existingItems.map(i => i.productId),
+      const auditAllProductIds = Array.from(new Set([
+        ...existingItems.map(i => i.productId).filter((id): id is number => id !== null),
         ...items.map(i => i.productId),
-      ])];
+      ]));
       const auditProductRows = auditAllProductIds.length > 0
         ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, auditAllProductIds))
         : [];
@@ -2772,6 +2770,7 @@ export function registerPaymentRoutes(app: Express): void {
       const changeList: string[] = [];
       const restoredProductWarnings: string[] = [];
       for (const oldItem of existingItems) {
+        if (oldItem.productId === null) continue;
         const sellingTypeOld = oldItem.sellingType || 'units';
         const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
         if (!inNew) changeList.push(`Removed ${auditPName(oldItem.productId)} (${sellingTypeOld})`);
@@ -2796,6 +2795,7 @@ export function registerPaymentRoutes(app: Express): void {
       await db.transaction(async (trx) => {
         // 7a. Restore stock from old items
         for (const item of existingItems) {
+          if (item.productId === null) continue;
           const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
           if (!product) {
             console.warn(`Quote edit: product ${item.productId} no longer exists, skipping stock restore`);
@@ -2837,7 +2837,7 @@ export function registerPaymentRoutes(app: Express): void {
             err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = product.stock || 0; err.requested = item.quantity;
             throw err;
           }
-          const orderResult = InventoryCalculator.processOrder(item.quantity, sellingType as 'units' | 'pallets', { stock: product.stock, palletStock: product.palletStock, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
+          const orderResult = InventoryCalculator.processOrder(item.quantity, sellingType as 'units' | 'pallets', { stock: product.stock ?? 0, palletStock: product.palletStock ?? 0, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
           const { newUnitStock, newPalletStock } = orderResult;
           await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
           await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: sellingType === 'pallets' ? 'pallets' : 'units', stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0), stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock, reason: `Invoice edit — allocating ${item.quantity} ${sellingType}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
@@ -2867,10 +2867,10 @@ export function registerPaymentRoutes(app: Express): void {
       (async () => {
         try {
           // Resolve product names for human-readable log entries
-          const allProductIds = [...new Set([
-            ...existingItems.map(i => i.productId),
+          const allProductIds = Array.from(new Set([
+            ...existingItems.map(i => i.productId).filter((id): id is number => id !== null),
             ...items.map(i => i.productId),
-          ])];
+          ]));
           const productRows = allProductIds.length > 0
             ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, allProductIds))
             : [];
@@ -2903,6 +2903,7 @@ export function registerPaymentRoutes(app: Express): void {
 
           // Per-item diff logs
           for (const oldItem of existingItems) {
+            if (oldItem.productId === null) continue;
             const sellingTypeOld = oldItem.sellingType || 'units';
             const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
             if (!inNew) {
@@ -2979,13 +2980,13 @@ export function registerPaymentRoutes(app: Express): void {
           const changeSummary = changeList.length > 0
             ? changeList.map(c => `<li style="margin:4px 0">${c}</li>`).join('')
             : '<li style="margin:4px 0">Invoice items reviewed — no line-item changes</li>';
-          const branding = { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) };
+          const branding = { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt) };
           const emailBody = [
             emailHeading('Your Invoice Has Been Updated', { size: '22px', color: '#10b981' }),
             `<p style="margin:0 0 4px">Order <b>${existingOrder.orderNumber}</b></p>`,
             `<p style="margin:0 0 16px;font-size:14px;color:#6b7280">${formatDateTime(new Date())}</p>`,
             emailCard(
-              `<p style="margin:0 0 8px"><b>${wholesaler.businessName || wholesaler.name || 'Your wholesaler'}</b> has updated your invoice.</p>` +
+              `<p style="margin:0 0 8px"><b>${wholesaler.businessName || 'Your wholesaler'}</b> has updated your invoice.</p>` +
               `<p style="margin:0 0 4px"><b>Changes:</b></p><ul style="margin:4px 0 8px;padding-left:20px">${changeSummary}</ul>` +
               `<p style="margin:8px 0 0"><b>New total: £${total.toFixed(2)}</b></p>`,
               { borderColor: '#dbeafe', bgColor: '#eff6ff' }

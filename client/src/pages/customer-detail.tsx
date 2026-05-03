@@ -60,6 +60,7 @@ interface Customer {
   phoneNumber: string;
   businessName?: string;
   streetAddress?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
   postalCode?: string;
@@ -115,7 +116,7 @@ export default function CustomerDetail() {
   const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
 
   const handleShareStore = async () => {
-    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
     const url = `https://quikpik.app/customer/${effectiveUserId}`;
     const name = user?.businessName || "My Store";
     if (navigator.share) {
@@ -296,7 +297,7 @@ export default function CustomerDetail() {
       phoneNumber: customer.phoneNumber || "",
       businessName: customer.businessName || "",
       streetAddress: customer.streetAddress || "",
-      addressLine2: (customer as any).addressLine2 || "",
+      addressLine2: customer.addressLine2 || "",
       city: customer.city || "",
       postalCode: customer.postalCode || "",
       country: customer.country || "",
@@ -499,13 +500,13 @@ export default function CustomerDetail() {
     if (!customer) return "?";
     const nameInitials = `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase();
     if (nameInitials) return nameInitials;
-    if ((customer as any).businessName) return (customer as any).businessName.slice(0, 2).toUpperCase();
+    if (customer.businessName) return customer.businessName.slice(0, 2).toUpperCase();
     if (customer.phoneNumber) return customer.phoneNumber.replace(/\D/g, '').slice(-2);
     return "?";
   };
 
   const fullName = customer ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim() : "Loading...";
-  const displayName = (customer as any)?.businessName || fullName || customer?.phoneNumber || "Unknown";
+  const displayName = customer?.businessName || fullName || customer?.phoneNumber || "Unknown";
 
   if (!match) return null;
 
@@ -676,7 +677,7 @@ export default function CustomerDetail() {
         </Avatar>
         <div>
           <h1 className="text-xl font-bold">{displayName}</h1>
-          {(customer as any).businessName && fullName && (
+          {customer.businessName && fullName && (
             <p className="text-sm text-gray-600">{fullName}</p>
           )}
           <p className="text-sm text-muted-foreground">

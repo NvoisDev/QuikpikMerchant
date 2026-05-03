@@ -117,7 +117,7 @@ export default function TeamManagement() {
 
   // Subscription system removed
   // Subscription system removed - defaulting to premium tier
-  const simpleTier = 'premium';
+  let simpleTier: 'free' | 'basic' | 'premium' = 'premium';
   const simpleIsActive = true;
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -340,7 +340,7 @@ export default function TeamManagement() {
   };
 
   const handleCopyInviteLink = (member: TeamMember) => {
-    const token = (member as any).inviteToken || member.id;
+    const token = member.inviteToken || member.id;
     const inviteLink = `${window.location.origin}/team-invitation?token=${encodeURIComponent(token)}&email=${encodeURIComponent(member.email)}`;
     navigator.clipboard.writeText(inviteLink);
     toast({
@@ -670,7 +670,7 @@ export default function TeamManagement() {
                 Team Members: {currentTeamCount} / {teamLimit === -1 ? "unlimited" : teamLimit}
               </p>
             </div>
-            {simpleTier === 'free' && (
+            {(simpleTier as string) === 'free' && (
               <Button 
                 onClick={() => setShowUpgradeModal(true)}
                 variant="outline"
@@ -756,12 +756,12 @@ export default function TeamManagement() {
                 <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <h3 className="text-base font-semibold text-gray-900 mb-1">No team members yet</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  {simpleTier === 'free'
+                  {(simpleTier as string) === 'free'
                     ? "Upgrade your plan to invite team members and collaborate on your wholesale platform."
                     : "Invite team members to help manage your wholesale platform."
                   }
                 </p>
-                {simpleTier !== 'free' && user?.role !== 'team_member' && (
+                {(simpleTier as string) !== 'free' && user?.role !== 'team_member' && (
                   <Button
                     onClick={() => setIsInviteDialogOpen(true)}
                     className="bg-emerald-600 hover:bg-emerald-700"
@@ -788,7 +788,7 @@ export default function TeamManagement() {
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
                         {member.firstName} {member.lastName}
-                        {isOnline(member.lastSeenAt) && (
+                        {isOnline(member.lastSeenAt ? String(member.lastSeenAt) : null) && (
                           <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Online" />
                         )}
                       </h3>
@@ -834,7 +834,7 @@ export default function TeamManagement() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-400 hidden sm:block">
-                        {formatLastLogin((member as any).lastLoginAt)}
+                        {formatLastLogin(member.lastLoginAt ? String(member.lastLoginAt) : null)}
                       </p>
                     </div>
 

@@ -12,13 +12,13 @@ export function WhatsAppSetupAlert() {
   const [dismissed, setDismissed] = useState(false);
   
   // Check WhatsApp integration status
-  const { data: whatsappStatus } = useQuery({
+  const { data: whatsappStatus } = useQuery<{ isConfigured?: boolean; provider?: string; platformCapable?: boolean; userActivated?: boolean; phoneNumberId?: string }>({
     queryKey: ["/api/whatsapp/status"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Don't show if dismissed or WhatsApp is already configured
-  if (dismissed || (whatsappStatus as any)?.isConfigured) {
+  if (dismissed || whatsappStatus?.isConfigured) {
     return null;
   }
 
@@ -79,7 +79,7 @@ export function WhatsAppSetupAlert() {
 }
 
 export function WhatsAppStatusIndicator() {
-  const { data: whatsappStatus, isLoading } = useQuery({
+  const { data: whatsappStatus, isLoading } = useQuery<{ isConfigured?: boolean; provider?: string }>({
     queryKey: ["/api/whatsapp/status"],
     staleTime: 5 * 60 * 1000,
   });
@@ -88,12 +88,12 @@ export function WhatsAppStatusIndicator() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      {(whatsappStatus as any)?.isConfigured ? (
+      {whatsappStatus?.isConfigured ? (
         <>
           <CheckCircle className="h-4 w-4 text-green-500" />
           <span className="text-green-700">WhatsApp Connected</span>
           <Badge variant="outline" className="text-green-700 border-green-200">
-            {(whatsappStatus as any).provider === 'twilio' ? 'Twilio' : 'Direct'}
+            {whatsappStatus.provider === 'twilio' ? 'Twilio' : 'Direct'}
           </Badge>
         </>
       ) : (

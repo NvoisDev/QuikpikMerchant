@@ -177,7 +177,7 @@ export class UserStorageBase {
   async createUser(userData: Partial<UpsertUser>): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(userData as any)
+      .values(userData as typeof users.$inferInsert)
       .returning();
     return user;
   }
@@ -195,7 +195,7 @@ export class UserStorageBase {
     
     const [user] = await db
       .insert(users)
-      .values(userDataWithPassword as any)
+      .values(userDataWithPassword as typeof users.$inferInsert)
       .returning();
     onProgress?.('user_insert_done');
     return user;

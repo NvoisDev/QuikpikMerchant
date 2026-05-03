@@ -50,6 +50,7 @@ export interface Order {
   platformFee: string;
   subtotal: string;
   items: OrderItem[];
+  wholesalerId?: string;
   wholesaler: {
     businessName: string;
     firstName: string;

@@ -89,8 +89,8 @@ Respond with JSON in this exact format:
 
   } catch (error) {
     console.error('OpenAI API Error details:', error);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : undefined);
     
     // Always return fallback message instead of throwing error
     const fallbackGreeting = context.customerName ? `Hi ${context.customerName}!` : "Hello!";

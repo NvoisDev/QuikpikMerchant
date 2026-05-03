@@ -54,6 +54,7 @@ interface ProductDetail {
   packQuantity: number | null;
   unitOfMeasure: string | null;
   sizePerUnit: string | null;
+  unitSize?: string | null;
   temperatureRequirement: string | null;
   contentCategory: string | null;
   specialHandling: { fragile?: boolean; perishable?: boolean; hazardous?: boolean } | null;

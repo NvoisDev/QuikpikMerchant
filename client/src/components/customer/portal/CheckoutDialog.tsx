@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@shared/utils/currency";
 import { calculateCustomerFee } from "@shared/utils/fees";
 import { getPackQuantity } from "@shared/utils/product";
-import type { CartItem, CustomerData, WholesalerPortal, AuthenticatedCustomer, PromotionalPricing, CollectionAddress, CompletedOrder, ExtendedProduct } from "@/components/customer/portal-types";
+import type { CartItem, CustomerData, WholesalerPortal, AuthenticatedCustomer, PromotionalPricing, CollectionAddress, CompletedOrder, ExtendedProduct, Product } from "@/components/customer/portal-types";
 
 interface CheckoutDialogProps {
   showCheckout: boolean;

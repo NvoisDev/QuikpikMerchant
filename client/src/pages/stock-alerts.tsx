@@ -60,7 +60,7 @@ export default function StockAlerts() {
   const [defaultThreshold, setDefaultThreshold] = useState<string>("");
 
   // Fetch stock alerts
-  const { data: alerts = [], isLoading } = useQuery({
+  const { data: alerts = [], isLoading } = useQuery<StockAlert[]>({
     queryKey: ['/api/stock-alerts'],
   });
 

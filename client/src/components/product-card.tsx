@@ -25,33 +25,33 @@ import {
 interface Product {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   price: string;
-  currency?: string;
+  currency?: string | null;
   costPrice?: string | null;
-  moq: number;
-  stock: number;
-  imageUrl?: string;
-  images?: string[];
-  category?: string;
-  status: "active" | "inactive" | "out_of_stock" | "locked";
-  priceVisible: boolean;
-  editCount?: number;
-  createdAt?: string;
-  lowStockThreshold?: number;
-  packQuantity?: number;
-  unitSize?: string;
-  unitOfMeasure?: string;
-  sellingFormat?: "units" | "pallets" | "both";
-  unitsPerPallet?: number;
-  palletPrice?: number;
-  palletMoq?: number;
-  palletStock?: number;
-  palletWeight?: number;
+  moq: number | null;
+  stock: number | null;
+  imageUrl?: string | null;
+  images?: string[] | null;
+  category?: string | null;
+  status: "active" | "inactive" | "out_of_stock" | "locked" | string;
+  priceVisible: boolean | null;
+  editCount?: number | null;
+  createdAt?: string | Date | null;
+  lowStockThreshold?: number | null;
+  packQuantity?: number | null;
+  unitSize?: string | null;
+  unitOfMeasure?: string | null;
+  sellingFormat?: "units" | "pallets" | "both" | string | null;
+  unitsPerPallet?: number | null;
+  palletPrice?: string | number | null;
+  palletMoq?: string | number | null;
+  palletStock?: string | number | null;
+  palletWeight?: string | number | null;
   totalPackageWeight?: string | null;
   expiryDate?: string | null;
-  promotionalOffers?: PromotionalOffer[];
-  batchCount?: number;
+  promotionalOffers?: PromotionalOffer[] | null;
+  batchCount?: number | null;
   nearestExpiry?: string | null;
   totalBatchStock?: number | null;
 }
@@ -168,8 +168,9 @@ function ProductCard({
 
   const getStockStatus = () => {
     const threshold = product.lowStockThreshold || 50;
-    if (product.stock === 0) return { color: "text-red-600", text: "Out of stock", isAlert: true };
-    if (product.stock <= threshold) return { color: "text-orange-600", text: "Low stock", isAlert: true };
+    const stockVal = product.stock ?? 0;
+    if (stockVal === 0) return { color: "text-red-600", text: "Out of stock", isAlert: true };
+    if (stockVal <= threshold) return { color: "text-orange-600", text: "Low stock", isAlert: true };
     return { color: "text-green-600", text: "In stock", isAlert: false };
   };
 
@@ -313,13 +314,13 @@ function ProductCard({
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">MOQ</span>
                 <span className="text-gray-700">
-                  {formatNumber(product.moq)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+                  {formatNumber(product.moq ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Stock</span>
                 <span className={`font-medium ${stockStatus.color}`}>
-                  {formatNumber(product.stock)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+                  {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
                 </span>
               </div>
               {expiryInfo && (

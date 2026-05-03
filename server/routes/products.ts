@@ -97,7 +97,7 @@ export function registerProductRoutes(app: Express): void {
         const [newProduct] = await tx.insert(products).values({
           ...productData,
           baseUnitStock: initialStock,
-        }).returning();
+        } as typeof products.$inferInsert).returning();
 
         // Auto-create an initial batch so the product is immediately FEFO-trackable
         if (initialStock > 0) {
@@ -170,7 +170,7 @@ export function registerProductRoutes(app: Express): void {
         // Update the product row
         const [updatedProduct] = await tx
           .update(products)
-          .set({ ...productData, updatedAt: new Date() })
+          .set({ ...productData, updatedAt: new Date() } as Partial<typeof products.$inferSelect>)
           .where(eq(products.id, id))
           .returning();
 
@@ -558,7 +558,7 @@ export function registerProductRoutes(app: Express): void {
       
       if (includeAlerts === 'true') {
         const stockAlerts = await storage.getStockAlerts(targetUserId);
-        (inventoryStatus as any).alerts = stockAlerts;
+        return res.json({ ...inventoryStatus, alerts: stockAlerts });
       }
       
       res.json(inventoryStatus);
@@ -915,7 +915,9 @@ export function registerProductRoutes(app: Express): void {
         return res.status(400).json({ message: "Business name is required" });
       }
 
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
 
       const prompt = `Generate 5 compelling taglines for a B2B wholesale business with these details:
 
@@ -954,8 +956,8 @@ Return only the taglines, one per line, without numbers or formatting.`;
       const generatedText = response.choices[0].message.content || "";
       const taglines = generatedText
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0 && !line.match(/^\d+\./))
+        .map((line: any) => line.trim())
+        .filter((line: any) => line.length > 0 && !line.match(/^\d+\./))
         .slice(0, 5);
 
       if (taglines.length === 0) {

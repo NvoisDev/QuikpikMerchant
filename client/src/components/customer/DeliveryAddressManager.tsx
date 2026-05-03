@@ -13,19 +13,19 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface DeliveryAddress {
-  id: number;
-  customerId: string;
+  id?: number;
+  customerId?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
   state?: string;
   postalCode: string;
-  country: string;
+  country?: string;
   label?: string;
   instructions?: string;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface DeliveryAddressManagerProps {
@@ -218,10 +218,10 @@ export function DeliveryAddressManager({
       city: address.city,
       state: address.state || "",
       postalCode: address.postalCode,
-      country: address.country,
+      country: address.country || '',
       label: address.label || "",
       instructions: address.instructions || "",
-      isDefault: address.isDefault,
+      isDefault: address.isDefault ?? false,
     });
   };
 
@@ -243,7 +243,7 @@ export function DeliveryAddressManager({
     }
 
     if (editingAddress) {
-      updateAddressMutation.mutate({ id: editingAddress.id, data: formData });
+      updateAddressMutation.mutate({ id: editingAddress.id ?? 0, data: formData });
     } else {
       createAddressMutation.mutate(formData);
     }
@@ -328,7 +328,7 @@ export function DeliveryAddressManager({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setDefaultMutation.mutate(address.id);
+                              setDefaultMutation.mutate(address.id ?? 0);
                             }}
                             disabled={setDefaultMutation.isPending}
                           >
@@ -600,7 +600,7 @@ export function DeliveryAddressManager({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => addressToDelete && deleteAddressMutation.mutate(addressToDelete.id)}
+              onClick={() => addressToDelete && deleteAddressMutation.mutate(addressToDelete.id ?? 0)}
               disabled={deleteAddressMutation.isPending}
             >
               {deleteAddressMutation.isPending ? 'Deleting...' : 'Delete Address'}

@@ -5,21 +5,11 @@ import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
 import { PLAN_LIMITS, getPlanLimits } from '../config/plan-limits';
 
-// Extend Request type to include user
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    role?: string;
-    currentPlan?: string;
-    subscriptionStatus?: string;
-  }
-}
-
 /**
  * Feature gating middleware - checks if user has access to specific features
  */
 export function requireFeatureAccess(feature: string, maxValue?: number) {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({ 
@@ -30,14 +20,14 @@ export function requireFeatureAccess(feature: string, maxValue?: number) {
       }
 
       // Team members inherit their wholesaler's subscription plan
-      const userId = (req.user.role === 'team_member' && (req.user as any).wholesalerId)
-        ? (req.user as any).wholesalerId
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
         : req.user.id;
       const hasAccess = await SubscriptionService.checkFeatureAccess(userId, feature, maxValue);
 
       if (!hasAccess) {
         const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
-        const limits = plan?.limits || getDefaultLimits();
+        const limits = (plan?.limits || getDefaultLimits()) as Record<string, number | undefined>;
         
         return res.status(403).json({
           error: 'Feature access denied - subscription upgrade required',
@@ -74,7 +64,7 @@ export async function checkFeatureLimits(userId: string, feature: string, curren
 }> {
   try {
     const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
-    const limits = plan?.limits || getDefaultLimits();
+    const limits = (plan?.limits || getDefaultLimits()) as Record<string, number | undefined>;
     const limit = limits[feature] ?? -1; // -1 = unlimited
     
     const allowed = limit === -1 || currentCount < limit;
@@ -102,7 +92,7 @@ export async function checkFeatureLimits(userId: string, feature: string, curren
  * Middleware to validate product creation limits
  */
 export function requireProductLimits() {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -136,7 +126,7 @@ export function requireProductLimits() {
  * Middleware to validate broadcast/campaign limits
  */
 export function requireBroadcastLimits() {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -170,7 +160,7 @@ export function requireBroadcastLimits() {
  * Middleware to validate team member limits
  */
 export function requireTeamMemberLimits() {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });

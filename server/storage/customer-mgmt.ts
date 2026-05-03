@@ -142,7 +142,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       groupMap.get(gm.customerId)!.push({ groupId: gm.groupId, groupName: gm.groupName });
     }
 
-    return customerRelationships.map(row => {
+    return (customerRelationships.map(row => {
       const stats = statsMap.get(row.user.id);
       const groups = groupMap.get(row.user.id) || [];
 
@@ -163,10 +163,10 @@ export class CustomerMgmtStorage extends BroadcastStorage {
         totalOrders: Number(stats?.totalOrders ?? 0),
         totalSpent: Number(stats?.totalSpent ?? 0),
         totalUnpaid: Number(stats?.totalUnpaid ?? 0),
-        lastOrderDate: stats?.lastOrderDate ?? null,
+        lastOrderDate: (stats?.lastOrderDate as Date | null) ?? null,
         groupIds: groups.map(g => g.groupId)
       };
-    });
+    })) as unknown as (User & { groupNames: string[]; totalOrders: number; totalSpent: number; totalUnpaid: number; lastOrderDate?: Date; groupIds: number[] })[];
   }
 
   async getCustomerDetails(customerId: string, wholesalerId: string): Promise<(User & { 
@@ -268,7 +268,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       ORDER BY u.first_name ASC
     `);
 
-    return customers.rows.map((customer: any) => ({
+    return (customers.rows as any[]).map((customer: any) => ({
       id: customer.id,
       firstName: customer.first_name,
       lastName: customer.last_name,
@@ -285,7 +285,13 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       totalOrders: 0,
       groupNames: [],
       groupIds: [],
-    }));
+      // missing properties for User type
+      wholesalerId: null,
+      profileImageUrl: null,
+      googleId: null,
+      customFeePercentage: null,
+      updatedAt: null,
+    })) as unknown as User[];
   }
 
   async bulkUpdateCustomers(customerUpdates: { customerId: string; updates: Partial<User> }[]): Promise<void> {
@@ -373,9 +379,9 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     `);
 
     return {
-      totalCustomers: parseInt(totalCustomersResult.rows[0]?.total || '0'),
-      activeCustomers: parseInt(activeCustomersResult.rows[0]?.active || '0'),
-      newCustomersThisMonth: parseInt(newCustomersResult.rows[0]?.new_customers || '0'),
+      totalCustomers: parseInt(((totalCustomersResult.rows[0] as Record<string,unknown>)?.total as string) || '0'),
+      activeCustomers: parseInt(((activeCustomersResult.rows[0] as Record<string,unknown>)?.active as string) || '0'),
+      newCustomersThisMonth: parseInt(((newCustomersResult.rows[0] as Record<string,unknown>)?.new_customers as string) || '0'),
       topCustomers: topCustomersResult.rows.map((customer: any) => ({
         customerId: customer.customer_id,
         name: customer.name,
@@ -427,7 +433,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       variants.add('0' + e164.slice(3));
     }
     // If local 0X… form, E.164 is already added above
-    return [...variants];
+    return Array.from(variants);
   }
 
   async getCustomerRegistrationRequest(wholesalerId: string, customerPhone: string) {
@@ -615,7 +621,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
       .where(eq(customerGroupMembers.customerId, customerId));
       
-    return results.map(r => r.wholesalerId);
+    return Array.from(new Set(results.map(r => r.wholesalerId)));
   }
 
 }

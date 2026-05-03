@@ -67,6 +67,7 @@ interface Order {
   cancelledAt?: string;
   stockRestored?: boolean;
   stockRestoredCount?: number;
+  retailer?: { firstName?: string | null; lastName?: string | null; businessName?: string | null; phoneNumber?: string | null; [key: string]: unknown };
   cancellationRequest?: {
     id: number;
     status: 'pending' | 'approved' | 'rejected';
@@ -331,9 +332,9 @@ export default function OrdersFresh() {
 
     loadCancellationRequests();
     if (!customerIdParam) {
-      loadOrderStats(initialTab as any);
+      loadOrderStats(initialTab as 'active' | 'archived' | 'all');
     }
-    loadOrders(1, searchParam || '', initialTab as any);
+    loadOrders(1, searchParam || '', initialTab as 'active' | 'archived' | 'all');
   }, []);
 
   const isInitialMount = useRef(true);
@@ -1188,7 +1189,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="text-xs">
                         <div>
-                          <div className="font-medium">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
+                          <div className="font-medium">{order.retailer?.businessName || (`${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
                           <div className="text-xs text-gray-500">{order.customerEmail}</div>
                         </div>
                       </TableCell>
@@ -1357,7 +1358,7 @@ export default function OrdersFresh() {
                       </div>
 
                       <div className="mb-2">
-                        <div className="font-medium text-sm">{(order.retailer as any)?.businessName || (`${(order.retailer as any)?.firstName || ''} ${(order.retailer as any)?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
+                        <div className="font-medium text-sm">{order.retailer?.businessName || (`${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
                         <div className="text-xs text-gray-500">{order.customerEmail}</div>
                       </div>
 

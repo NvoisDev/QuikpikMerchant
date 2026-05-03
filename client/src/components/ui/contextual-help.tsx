@@ -380,9 +380,9 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
                               <p className="text-sm text-gray-600 mt-1">
                                 {resource.description}
                               </p>
-                              {resource.duration && (
+                              {(resource as HelpResource).duration && (
                                 <span className="inline-block mt-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                                  {resource.duration}
+                                  {(resource as HelpResource).duration}
                                 </span>
                               )}
                             </div>

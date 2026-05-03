@@ -128,7 +128,7 @@ export default function TabPermissionsManager() {
       console.error('Permission update error:', error);
       toast({
         title: "Error",
-        description: `Failed to update permissions: ${error.message || 'Unknown error'}`,
+        description: `Failed to update permissions: ${(error as Error).message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {

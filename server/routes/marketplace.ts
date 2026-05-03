@@ -15,6 +15,7 @@ import {
   whatsAppBusinessService, wrapCustomerEmail,
   priceLists, priceListItems, priceListAssignments, customerGroupMembers,
   wholesalerCustomerRelationships,
+  type OrderEmailData,
 } from "./shared";
 import {
   computeEffectivePrice,
@@ -59,7 +60,7 @@ async function resolveCustomerAuth(
   req: any,
   wholesalerId: string
 ): Promise<{ customerId: string; wholesalerId: string; phone: string } | null> {
-  const sessionAuth = (req.session as any)?.customerAuth;
+  const sessionAuth = req.session?.customerAuth;
   if (sessionAuth && sessionAuth.wholesalerId === wholesalerId) {
     return sessionAuth;
   }
@@ -142,7 +143,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         .where(and(
           or(
             eq(orders.retailerId, customerId),
-            or.apply(null, phoneConditions as any)
+            or(...phoneConditions)
           ),
           eq(orders.wholesalerId, wholesalerId)
         ))
@@ -185,7 +186,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName || ''} ${wholesalerUser.lastName || ''}`.trim(),
           wholesalerEmail: wholesalerUser.email || '',
           wholesalerPhone: wholesalerUser.businessPhone || '',
-          deliveryNote: (wholesalerUser as any).deliveryNote || null,
+          deliveryNote: wholesalerUser.deliveryNote || null,
           legalBusinessName: wholesalerUser.legalBusinessName || null,
           vatNumber: wholesalerUser.vatNumber || null,
           companyRegistrationNumber: wholesalerUser.companyRegistrationNumber || null,
@@ -253,7 +254,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         // For offline orders, total = subtotal + vatAmount + delivery only (no fee).
         // Override any incorrectly-stored DB total to ensure transparency.
         const deliveryCost = parseFloat(order.deliveryCost || '0');
-        const orderVatAmount = parseFloat((order as any).vatAmount || '0');
+        const orderVatAmount = parseFloat(order.vatAmount || '0');
         const correctedTotal = isOnline ? total : (subtotal + orderVatAmount + deliveryCost);
         
         // Platform fee paid by wholesaler: 4.6% of product subtotal (not shown to customers but calculated for completeness)
@@ -261,7 +262,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         
         return {
           id: order.id,
-          orderNumber: order.orderNumber || order.order_number || `#${order.id}`, // Use actual order number (SF-120) not ID
+          orderNumber: order.orderNumber || `#${order.id}`,
           date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short', 
@@ -433,7 +434,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             businessType || null;
           const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${wholesaler.firstName || 'Wholesaler'}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${req.body.businessName || 'Not provided'}</p>${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${businessTypeLabel}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${customerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${customerEmail || 'Not provided'}</p>${productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${productsInterested}</p>` : ''}${orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${orderFrequency}</p>` : ''}${requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
-          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
+          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
@@ -466,7 +467,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.get('/api/quick-order-templates/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      const sessionAuth = (req.session as any)?.customerAuth;
+      const sessionAuth = req.session?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
@@ -482,7 +483,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.get('/api/frequently-ordered/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      const sessionAuth = (req.session as any)?.customerAuth;
+      const sessionAuth = req.session?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
@@ -498,7 +499,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   app.get('/api/last-order-reorder/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      const sessionAuth = (req.session as any)?.customerAuth;
+      const sessionAuth = req.session?.customerAuth;
       if (!sessionAuth || sessionAuth.wholesalerId !== wholesalerId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
@@ -537,7 +538,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         .where(and(
           or(
             eq(orders.retailerId, customerId),
-            or.apply(null, phoneConditions as any)
+            or(...phoneConditions)
           ),
           eq(orders.wholesalerId, wholesalerId)
         ))
@@ -677,7 +678,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         const sellingType = item.sellingType || 'units';
         const isPalletOrder = sellingType === 'pallets';
         const isUnitOrder = !isPriceListOrder && sellingType === 'units' && Math.abs(parseFloat(item.unitPrice) - basePrice) < 0.001;
-        const hasActivePromos = product.promoActive && Array.isArray((product as any).promotionalOffers) && (product as any).promotionalOffers.length > 0;
+        const hasActivePromos = product.promoActive && Array.isArray(product.promotionalOffers) && product.promotionalOffers.length > 0;
         const isPromotionalOrder = !isPriceListOrder && sellingType === 'units' && !isUnitOrder && hasActivePromos;
         
         // Smart MOQ validation: Allow purchasing remaining stock even if below MOQ
@@ -751,7 +752,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           };
 
           // Apply promotional pricing if product has active promotions
-          const offers = Array.isArray((product as any).promotionalOffers) ? (product as any).promotionalOffers : [];
+          const offers = Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [];
           const now = new Date();
           for (const offer of offers) {
             if (!offer.isActive) continue;
@@ -937,7 +938,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       let paymentIntent;
       try {
-        const paymentConfig: any = {
+        const paymentConfig: Parameters<typeof stripe.paymentIntents.create>[0] = {
           amount: stripeAmountFinal, // VAT-inclusive total the customer pays
           currency: 'gbp',
           receipt_email: customerEmail,
@@ -954,7 +955,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             useConnect = false; // Fallback to direct payment
           } else {
             paymentConfig.transfer_data = {
-              destination: wholesaler.stripeAccountId,
+              destination: wholesaler.stripeAccountId!,
               amount: stripeWholesalerAmountFinal // Amount wholesaler receives (VAT pass-through + subtotal net)
             };
           }
@@ -1142,7 +1143,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
 
       // Parse the selected delivery address from metadata
-      let selectedDeliveryAddress = null;
+      let selectedDeliveryAddress: any = null;
       if (selectedDeliveryAddressJson) {
         try {
           selectedDeliveryAddress = JSON.parse(selectedDeliveryAddressJson);
@@ -1178,7 +1179,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             const wholesaler = await storage.getUser(wholesalerId);
             if (wholesaler) {
               const customerName = `${firstName || ''} ${lastName || ''}`.trim();
-              const portalUrl = `https://quikpik.app/customer/${userId}`;
+              const portalUrl = `https://quikpik.app/customer/${customer!.id}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
               const welcomeResult = await sendWelcomeMessages({
@@ -1263,30 +1264,30 @@ export function registerMarketplaceRoutes(app: Express): void {
             if (explicitlySelectedAddress) {
               selectedDeliveryAddress = {
                 id: explicitlySelectedAddress.id,
-                addressLine1: explicitlySelectedAddress.address_line1 || '',
-                addressLine2: explicitlySelectedAddress.address_line2 || null,
+                addressLine1: explicitlySelectedAddress.addressLine1 || '',
+                addressLine2: explicitlySelectedAddress.addressLine2 || null,
                 city: explicitlySelectedAddress.city || '',
                 state: explicitlySelectedAddress.state || null,
-                postalCode: explicitlySelectedAddress.postal_code || '',
+                postalCode: explicitlySelectedAddress.postalCode || '',
                 country: explicitlySelectedAddress.country || 'United Kingdom'
               };
             } else {
               console.warn(`⚠️ MARKETPLACE: Customer selected address ID ${selectedDeliveryAddressId} not found in database. Attempting fallback from all customer addresses...`);
               try {
-                const allCustomerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
-                const fallbackAddr = allCustomerAddresses.find((addr: any) => !addr.is_default) || allCustomerAddresses[0];
+                const allCustomerAddresses = await storage.getDeliveryAddresses(customer!.id);
+                const fallbackAddr = allCustomerAddresses.find((addr: any) => !addr.isDefault) || allCustomerAddresses[0];
                 if (fallbackAddr) {
                   selectedDeliveryAddress = {
                     id: fallbackAddr.id,
-                    addressLine1: fallbackAddr.address_line1 || '',
-                    addressLine2: fallbackAddr.address_line2 || null,
+                    addressLine1: fallbackAddr.addressLine1 || '',
+                    addressLine2: fallbackAddr.addressLine2 || null,
                     city: fallbackAddr.city || '',
                     state: fallbackAddr.state || null,
-                    postalCode: fallbackAddr.postal_code || '',
+                    postalCode: fallbackAddr.postalCode || '',
                     country: fallbackAddr.country || 'United Kingdom'
                   };
                 } else {
-                  console.warn(`⚠️ MARKETPLACE: No addresses found for customer ${customer.id}. Proceeding without address snapshot.`);
+                  console.warn(`⚠️ MARKETPLACE: No addresses found for customer ${customer!.id}. Proceeding without address snapshot.`);
                 }
               } catch (addrErr) {
                 console.error('❌ MARKETPLACE: Failed to fetch fallback addresses:', addrErr);
@@ -1339,7 +1340,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             const orderData = {
               orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
               wholesalerId,
-              retailerId: customer.id,
+              retailerId: customer!.id,
               customerName, // Store customer name
               customerEmail, // Store customer email
               customerPhone, // Store customer phone
@@ -1491,17 +1492,17 @@ export function registerMarketplaceRoutes(app: Express): void {
         }
 
         // Send WhatsApp notification to wholesaler with wholesale reference
-        if (wholesaler && (wholesaler as any).twilioAuthToken && (wholesaler as any).twilioPhoneNumber) {
+        if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
           const currencySymbol = getCurrencySymbol(wholesaler.preferredCurrency || 'GBP');
           const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
           
           try {
             // WhatsApp notification (simplified)
-            if ((wholesaler as any).whatsappEnabled) {
-              if ((wholesaler as any).whatsappAccessToken && (wholesaler as any).whatsappBusinessPhoneId) {
-                await whatsAppBusinessService.sendMessage((wholesaler as any).businessPhone, message, {
-                  accessToken: (wholesaler as any).whatsappAccessToken,
-                  phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
+            if (wholesaler.whatsappEnabled) {
+              if (wholesaler.whatsappAccessToken && wholesaler.whatsappBusinessPhoneId) {
+                await whatsAppBusinessService.sendMessage(wholesaler.businessPhone || '', message, {
+                  accessToken: wholesaler.whatsappAccessToken,
+                  phoneNumberId: wholesaler.whatsappBusinessPhoneId
                 });
               }
             }
@@ -1584,7 +1585,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              shippingAddress: shippingAddress,
+              shippingAddress: shippingAddress ?? undefined,
               total: correctTotal,
               subtotal: productSubtotal,
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
@@ -1892,7 +1893,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       const orderData = {
         orderNumber,
         wholesalerId,
-        retailerId: customer.id,
+        retailerId: customer!.id,
         customerName,
         customerEmail,
         customerPhone,
@@ -1948,7 +1949,7 @@ export function registerMarketplaceRoutes(app: Express): void {
         try {
           const savedItems = await storage.getOrderItems(order.id);
           const enrichedItems = await Promise.all(savedItems.map(async (item) => {
-            const prod = await storage.getProduct(item.productId);
+            const prod = await storage.getProduct(item.productId ?? 0);
             return { ...item, productName: prod?.name || `Product #${item.productId}`, packDescriptor: formatPackDescriptor(prod?.packQuantity || prod?.quantityInPack, prod?.sizePerUnit || prod?.unitSize, prod?.unitOfMeasure), product: prod ? { name: prod.name, packQuantity: prod.packQuantity, quantityInPack: prod.quantityInPack, sizePerUnit: prod.sizePerUnit, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null };
           }));
           await sendCustomerInvoiceEmail(
@@ -2142,13 +2143,13 @@ export function registerMarketplaceRoutes(app: Express): void {
       }
       
       // Verify customer owns this order by comparing phone numbers directly
-      const orderCustomerPhone = (order as any).customerPhone;
+      const orderCustomerPhone = order.customerPhone;
       if (!orderCustomerPhone || orderCustomerPhone !== customerPhone) {
         return res.status(403).json({ message: "Not authorized to cancel this order" });
       }
       
       // Check if order is within 24-hour window
-      const orderDate = new Date(order.createdAt);
+      const orderDate = new Date(order.createdAt ?? new Date());
       const now = new Date();
       const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
       
@@ -2190,7 +2191,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       // Notify wholesaler about the cancellation request via SMS and email
       try {
         const wholesaler = await storage.getUser(order.wholesalerId);
-        const customerName = (order as any).customerName || customerPhone;
+        const customerName = order.customerName || customerPhone;
         
         // WhatsApp notification to wholesaler
         if (wholesaler?.phoneNumber) {
@@ -2211,7 +2212,7 @@ export function registerMarketplaceRoutes(app: Express): void {
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `Cancellation Request for Order ${order.orderNumber}`,
-            html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || wholesaler.name || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
+            html: wrapCustomerEmail(cancelRequestBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `${customerName} has requested to cancel order ${order.orderNumber}` }),
           });
         }
       } catch (error) {
@@ -2245,7 +2246,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       
       // Verify customer owns this order by comparing phone numbers directly
       // Orders store the customer phone, so we can validate ownership directly
-      const orderCustomerPhone = (order as any).customerPhone;
+      const orderCustomerPhone = order.customerPhone;
       if (!orderCustomerPhone || orderCustomerPhone !== customerPhone) {
         return res.json({ canCancel: false, reason: "Not authorized" });
       }
@@ -2269,7 +2270,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       }
       
       // Check if order is within 24-hour window
-      const orderDate = new Date(order.createdAt);
+      const orderDate = new Date(order.createdAt ?? new Date());
       const now = new Date();
       const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
       const hoursRemaining = Math.max(0, 24 - hoursSinceOrder);
@@ -2366,7 +2367,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           const wholesaler = await storage.getUser(product.wholesalerId);
           if (wholesaler) {
             const customerName = `${firstName || ''} ${lastName || ''}`.trim();
-            const portalUrl = `https://quikpik.app/customer/${userId}`;
+            const portalUrl = `https://quikpik.app/customer/${customer!.id}`;
             const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
             
             const welcomeResult = await sendWelcomeMessages({
@@ -2375,7 +2376,7 @@ export function registerMarketplaceRoutes(app: Express): void {
               customerPhone: formattedPhoneNumber,
               wholesalerName,
               wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-              wholesalerPhone: wholesaler.phoneNumber,
+              wholesalerPhone: wholesaler.phoneNumber ?? undefined,
               portalUrl,
               wholesalerId: wholesaler.id,
               wholesalerLogoType: wholesaler.logoType,
@@ -2419,7 +2420,7 @@ export function registerMarketplaceRoutes(app: Express): void {
       const orderData = {
         orderNumber: await generateOrderNumber(product.wholesalerId),
         wholesalerId: product.wholesalerId,
-        retailerId: customer.id,
+        retailerId: customer!.id,
         customerName, // Store customer name
         customerEmail, // Store customer email
         customerPhone: formattedPhoneNumber, // Store formatted phone number
@@ -2470,11 +2471,11 @@ export function registerMarketplaceRoutes(app: Express): void {
         }
       }
       
-      // Send WhatsApp notification to wholesaler if configured
-      try {
-        const wholesaler = await storage.getUser(product.wholesalerId);
-        if (wholesaler?.twilioAccountSid && wholesaler?.twilioAuthToken && wholesaler?.twilioPhoneNumber) {
-          const message = `🔔 New Order Alert!
+        // Send WhatsApp notification to wholesaler if configured
+        try {
+          const wholesaler = await storage.getUser(product.wholesalerId);
+          if (wholesaler && wholesaler.twilioAccountSid && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+            const message = `🔔 New Order Alert!
 
 Customer: ${customerName}
 Phone: ${formattedPhoneNumber}
@@ -2489,15 +2490,19 @@ Please contact the customer to confirm this order.
 
 ✨ Powered by Quikpik Merchant`;
 
-          // Send WhatsApp notification if enabled
-          if (wholesaler.whatsappEnabled) {
-            await simpleWhatsAppService.sendMessage(
-              wholesaler.businessPhone || wholesaler.phoneNumber || '',
-              message
-            );
+            // Send WhatsApp notification if enabled
+            if (wholesaler.whatsappEnabled) {
+              await whatsAppBusinessService.sendMessage(
+                wholesaler.businessPhone || wholesaler.phoneNumber || '',
+                message,
+                {
+                  accessToken: wholesaler.whatsappAccessToken || '',
+                  phoneNumberId: wholesaler.whatsappBusinessPhoneId || ''
+                }
+              );
+            }
           }
-        }
-      } catch (notificationError) {
+        } catch (notificationError) {
         console.warn("Failed to send order notification:", notificationError);
         // Don't fail the order creation if notification fails
       }
@@ -2550,7 +2555,7 @@ Please contact the customer to confirm this order.
             const wholesaler = await storage.getUser(firstProduct.wholesalerId);
             if (wholesaler) {
               const customerName = `${firstName || ''} ${lastName || ''}`.trim();
-              const portalUrl = `https://quikpik.app/customer/${userId}`;
+              const portalUrl = `https://quikpik.app/customer/${customer.id}`;
               const wholesalerName = wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
               
               const welcomeResult = await sendWelcomeMessages({
@@ -2559,7 +2564,7 @@ Please contact the customer to confirm this order.
                 customerPhone: customerPhone,
                 wholesalerName,
                 wholesalerEmail: wholesaler.email || 'hello@quikpik.co',
-                wholesalerPhone: wholesaler.phoneNumber,
+                wholesalerPhone: wholesaler.phoneNumber ?? undefined,
                 portalUrl,
                 wholesalerId: wholesaler.id,
                 wholesalerLogoType: wholesaler.logoType,
@@ -2662,7 +2667,10 @@ Please contact the customer to confirm this order.
           const message = generateOrderNotificationMessage(order, customer, items);
           // Send WhatsApp notification if enabled
           if (wholesaler.whatsappEnabled) {
-            await simpleWhatsAppService.sendMessage(wholesaler.businessPhone, message);
+            await whatsAppBusinessService.sendMessage(wholesaler.businessPhone, message, {
+              accessToken: wholesaler.whatsappAccessToken || '',
+              phoneNumberId: wholesaler.whatsappBusinessPhoneId || ''
+            });
           }
         }
       } catch (error) {
@@ -2874,7 +2882,7 @@ Please contact the customer to confirm this order.
 
       const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
       
-      const productIds = items.map(i => i.productId);
+      const productIds = items.map(i => i.productId).filter((id): id is number => id !== null);
       const productResults = await db.select().from(products).where(inArray(products.id, productIds));
       const productMap = new Map(productResults.map(p => [p.id, p]));
 
@@ -2921,6 +2929,7 @@ Please contact the customer to confirm this order.
       }
 
       const previewItems = items.map(item => {
+        if (item.productId === null) return null;
         const product = productMap.get(item.productId);
         let currentUnitPrice: number;
         if (!product) {
@@ -2934,21 +2943,21 @@ Please contact the customer to confirm this order.
         } else {
           currentUnitPrice = priceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
         }
-        const currentTotal = currentUnitPrice * item.quantity;
+        const currentTotal = currentUnitPrice * (item.quantity ?? 0);
         return {
           productName: product?.name || 'Unknown Product',
           quantity: item.quantity,
           unitPrice: currentUnitPrice.toFixed(2),
           total: currentTotal.toFixed(2),
           sellingType: item.sellingType || 'units',
-          inStock: product ? (product.stock || 0) >= item.quantity : false,
+          inStock: product ? (product.stock || 0) >= (item.quantity ?? 0) : false,
           totalPackageWeight: product?.totalPackageWeight || null,
           palletWeight: product?.palletWeight || null,
           packQuantity: product?.quantityInPack ?? null,
           unitSize: product?.unitSize ?? null,
           unitOfMeasure: product?.unitOfMeasure ?? null,
         };
-      });
+      }).filter((i): i is NonNullable<typeof i> => i !== null);
 
       const subtotal = previewItems.reduce((sum, item) => sum + parseFloat(item.total), 0);
       const previewFeeConfig = await getCurrentFeeConfig();
@@ -3020,7 +3029,7 @@ Please contact the customer to confirm this order.
       }
 
       // Fetch current product prices
-      const reorderProductIds = originalItems.map(i => i.productId);
+      const reorderProductIds = originalItems.map(i => i.productId).filter((id): id is number => id !== null);
       const reorderProductResults = await db.select().from(products).where(inArray(products.id, reorderProductIds));
       const reorderProductMap = new Map(reorderProductResults.map(p => [p.id, p]));
 
@@ -3040,7 +3049,7 @@ Please contact the customer to confirm this order.
                 customPalletPrice: priceListItems.customPalletPrice,
               })
               .from(priceListItems)
-              .where(and(inArray(priceListItems.priceListId, listIds), inArray(priceListItems.productId, reorderProductIds)));
+              .where(and(inArray(priceListItems.priceListId, listIds), inArray(priceListItems.productId, reorderProductIds.filter((id): id is number => id !== null))));
             for (const row of plItems) {
               if (row.productId === null) continue;
               const baseProduct = reorderProductMap.get(row.productId);
@@ -3070,6 +3079,7 @@ Please contact the customer to confirm this order.
 
       // Recalculate each item at current prices (price list takes priority over catalog price)
       const pricedItems = originalItems.map(item => {
+        if (item.productId === null) return null;
         const product = reorderProductMap.get(item.productId);
         let currentUnitPrice: number;
         if (!product) {
@@ -3083,8 +3093,8 @@ Please contact the customer to confirm this order.
         } else {
           currentUnitPrice = reorderPriceOverrides[item.productId] ?? parseFloat(product.promoPrice || product.price);
         }
-        return { ...item, currentUnitPrice, currentTotal: currentUnitPrice * item.quantity };
-      });
+        return { ...item, currentUnitPrice, currentTotal: currentUnitPrice * (item.quantity ?? 0) };
+      }).filter((i): i is NonNullable<typeof i> => i !== null);
 
       const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
       const platformFee = calculatePlatformFee(subtotal);
@@ -3135,12 +3145,13 @@ Please contact the customer to confirm this order.
       };
 
       const newOrderItems = pricedItems.map(item => ({
+        orderId: 0, // placeholder — overwritten by createOrderWithTransaction
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.currentUnitPrice.toFixed(2),
         total: item.currentTotal.toFixed(2),
         sellingType: item.sellingType || 'units',
-        appliedOfferLabel: null,
+        appliedOfferLabel: null as string | null,
         freeItems: 0,
       }));
 

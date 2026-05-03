@@ -67,7 +67,8 @@ export default function Integrations() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: whatsappStatus, refetch: refetchWhatsApp } = useQuery({
+  type WhatsAppStatus = { isConfigured?: boolean; userActivated?: boolean; platformCapable?: boolean; provider?: string; phoneNumberId?: string; businessName?: string; accessToken?: string };
+  const { data: whatsappStatus, refetch: refetchWhatsApp } = useQuery<WhatsAppStatus>({
     queryKey: ["/api/whatsapp/status"],
     staleTime: 30 * 1000,
   });
@@ -184,7 +185,7 @@ export default function Integrations() {
     try {
       setIsConnectingWhatsApp(true);
 
-      if ((whatsappStatus as any)?.userActivated) {
+      if (whatsappStatus?.userActivated) {
         toast({
           title: "WhatsApp Already Active",
           description: "Your WhatsApp messaging is already active and ready to use for campaigns.",
@@ -192,7 +193,7 @@ export default function Integrations() {
         return;
       }
 
-      if (!(whatsappStatus as any)?.platformCapable) {
+      if (!whatsappStatus?.platformCapable) {
         toast({
           title: "WhatsApp Not Available",
           description: "WhatsApp platform capability is not currently available. Please contact support.",
@@ -412,7 +413,7 @@ export default function Integrations() {
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-3 mb-2">
                       <h3 className="text-xl font-bold text-gray-900">WhatsApp Messaging</h3>
-                      {(whatsappStatus as any)?.isConfigured ? (
+                      {whatsappStatus?.isConfigured ? (
                         <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-medium"><CheckCircle className="h-3 w-3" /> Connected</span>
                       ) : (
                         <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> Setup Required</span>
@@ -428,7 +429,7 @@ export default function Integrations() {
                   <div><p className="text-sm font-semibold text-gray-800">Global</p><p className="text-xs text-gray-500 mt-0.5">Coverage</p></div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
-                  {(whatsappStatus as any)?.isConfigured ? (
+                  {whatsappStatus?.isConfigured ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
                       <div className="flex items-start gap-3">
                         <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
@@ -441,9 +442,9 @@ export default function Integrations() {
                             <li>• Share promotional offers directly</li>
                           </ul>
                           <div className="mt-3 text-xs text-green-700 bg-green-100 p-2 rounded">
-                            <p><strong>Phone Number ID:</strong> {(whatsappStatus as any)?.phoneNumberId}</p>
-                            {(whatsappStatus as any)?.businessName && <p><strong>Business Name:</strong> {(whatsappStatus as any)?.businessName}</p>}
-                            <p><strong>Access Token:</strong> {(whatsappStatus as any)?.accessToken}</p>
+                            <p><strong>Phone Number ID:</strong> {whatsappStatus?.phoneNumberId}</p>
+                            {whatsappStatus?.businessName && <p><strong>Business Name:</strong> {whatsappStatus?.businessName}</p>}
+                            <p><strong>Access Token:</strong> {whatsappStatus?.accessToken}</p>
                           </div>
                         </div>
                       </div>
@@ -479,7 +480,7 @@ export default function Integrations() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">Status:</span>
-                      {(whatsappStatus as any)?.isConfigured ? (
+                      {whatsappStatus?.isConfigured ? (
                         <span className="text-green-600 font-medium text-sm">✅ Connected via WhatsApp Business API</span>
                       ) : (
                         <span className="text-blue-600 font-medium text-sm">⚡ Ready to configure your WhatsApp Business API</span>
@@ -490,7 +491,7 @@ export default function Integrations() {
                       disabled={isConnectingWhatsApp}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span className="text-sm">{(whatsappStatus as any)?.isConfigured ? 'Reconfigure WhatsApp' : 'Connect WhatsApp Business API'}</span>
+                      <span className="text-sm">{whatsappStatus?.isConfigured ? 'Reconfigure WhatsApp' : 'Connect WhatsApp Business API'}</span>
                       <MessageSquare className="h-4 w-4" />
                     </button>
                   </div>

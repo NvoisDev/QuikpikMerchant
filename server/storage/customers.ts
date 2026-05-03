@@ -74,13 +74,15 @@ import { InventoryCalculator } from "../../shared/inventory-calculator.js";
 import { OrderStorage } from './orders';
 
 export class CustomerStorage extends OrderStorage {
+  private _customerShippingChoices = new Map<string, 'pickup' | 'delivery'>();
+
   async setCustomerShippingChoice(customerId: string, shippingChoice: 'pickup' | 'delivery'): Promise<void> {
-    this.customerShippingChoices.set(customerId, shippingChoice);
+    this._customerShippingChoices.set(customerId, shippingChoice);
     console.log(`🚚 Stored shipping choice for customer ${customerId}: ${shippingChoice}`);
   }
 
   async getCustomerShippingChoice(customerId: string): Promise<'pickup' | 'delivery' | null> {
-    const choice = this.customerShippingChoices.get(customerId) || null;
+    const choice = this._customerShippingChoices.get(customerId) || null;
     console.log(`🚚 Retrieved shipping choice for customer ${customerId}: ${choice}`);
     return choice;
   }
@@ -481,7 +483,7 @@ export class CustomerStorage extends OrderStorage {
     country?: string;
     wholesalerId?: string;
     customerType?: string;
-  }): Promise<User> {
+  }): Promise<any> {
     // Prevent duplicates: if a user with this phone number already exists, return them
     const existing = await db
       .select()
@@ -834,6 +836,24 @@ export class CustomerStorage extends OrderStorage {
     }
   }
 
+  async checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void> {
+    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+    if (!product) return;
+
+    const threshold = product.lowStockThreshold || 50;
+    if (newStock <= threshold) {
+      await db.insert(stockAlerts).values({
+        productId,
+        wholesalerId,
+        alertType: newStock === 0 ? 'out_of_stock' : 'low_stock',
+        currentStock: newStock,
+        threshold,
+        isRead: false,
+        isResolved: false,
+      });
+    }
+  }
+
   // Order notes operations
   async updateOrderNotes(orderId: number, notes: string): Promise<void> {
     await db
@@ -1023,7 +1043,7 @@ export class CustomerStorage extends OrderStorage {
     }));
   }
 
-  async getRecentOrders(wholesalerId: string, limit = 10): Promise<(Order & { retailer: User })[]> {
+  async getRecentOrders(wholesalerId: string, limit = 10): Promise<any[]> {
     const result = await db
       .select()
       .from(orders)
@@ -1061,11 +1081,11 @@ export class CustomerStorage extends OrderStorage {
   }
 
   async getUserProductCount(userId: string): Promise<number> {
-    const products = await db
+    const userProducts = await db
       .select()
       .from(products)
       .where(eq(products.wholesalerId, userId));
-    return products.length;
+    return userProducts.length;
   }
 
   async checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }> {
@@ -1118,7 +1138,8 @@ export class CustomerStorage extends OrderStorage {
         SELECT * FROM products 
         WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
       `);
-      const productsList = productsResult.rows as any[];
+      type MarketplaceProductRow = Record<string, unknown> & { price: string; created_at: unknown; wholesaler: { rating?: number } };
+      const productsList = productsResult.rows as MarketplaceProductRow[];
       console.log('Products found:', productsList.length);
 
       // Get unique wholesaler IDs
@@ -1136,7 +1157,7 @@ export class CustomerStorage extends OrderStorage {
         LIMIT 1
       `);
 
-      const wholesalers = wholesalersResult.rows as any[];
+      const wholesalers = wholesalersResult.rows as (Record<string, unknown>)[];
       console.log('Wholesalers found:', wholesalers.length);
 
       // Create wholesaler lookup map
@@ -1223,7 +1244,7 @@ export class CustomerStorage extends OrderStorage {
             case 'price_high':
               return parseFloat(b.price) - parseFloat(a.price);
             case 'newest':
-              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+              return new Date(String(b.createdAt ?? '')).getTime() - new Date(String(a.createdAt ?? '')).getTime();
             case 'rating':
               return (b.wholesaler.rating || 0) - (a.wholesaler.rating || 0);
             default:
@@ -1233,7 +1254,7 @@ export class CustomerStorage extends OrderStorage {
       }
 
       console.log('Results prepared:', results.length);
-      return results;
+      return results as unknown as (Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[];
     } catch (error: any) {
       console.error('Error in getMarketplaceProducts:', error);
       throw new Error(`Failed to get marketplace products: ${error.message}`);
@@ -1280,18 +1301,12 @@ export class CustomerStorage extends OrderStorage {
         const allRelevantIds = [wholesaler.id, ...teamMemberIds.map(tm => tm.userId)];
         
         // Include products from parent company AND team members
-        const wholesalerProducts = await db
-          .select()
-          .from(products)
-          .where(
-            and(
-              allRelevantIds.length === 1 
-                ? eq(products.wholesalerId, wholesaler.id)
-                : or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
-              eq(products.status, 'active')
-            )
-          )
-          .limit(6); // Limit to latest 6 products for display
+        const wholesalerProducts = await db.execute(sql`
+          SELECT * FROM products 
+          WHERE wholesaler_id IN (${sql.join(allRelevantIds.map(id => sql`${id}`), sql`, `)}) 
+          AND status = 'active' 
+          LIMIT 6
+        `).then(res => res.rows);
 
         return {
           ...wholesaler,
@@ -1302,7 +1317,7 @@ export class CustomerStorage extends OrderStorage {
       })
     );
 
-    return wholesalersWithProducts;
+    return wholesalersWithProducts as unknown as (User & { products: Product[]; rating?: number; totalOrders?: number })[];
   }
 
   async getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined> {
@@ -1322,7 +1337,8 @@ export class CustomerStorage extends OrderStorage {
         return undefined;
       }
 
-      const wholesaler = wholesalerResult.rows[0] as any;
+      type WholesalerRow = Record<string, unknown>;
+      const wholesaler = wholesalerResult.rows[0] as WholesalerRow;
       console.log('Wholesaler found:', wholesaler.business_name);
 
       // Use the resolved internal ID for related queries (not the slug param)
@@ -1334,8 +1350,9 @@ export class CustomerStorage extends OrderStorage {
         WHERE wholesaler_id = ${resolvedId} AND status = 'active'
       `);
 
+      type WholesalerProductRow = Record<string, unknown>;
       const wholesalerProducts = (productsResult.rows || []).map(row => {
-        const product = row as any;
+        const product = row as WholesalerProductRow;
         
         // Handle image URL conversion - prioritize images array over image_url field
         let imageUrl = product.image_url || undefined;
@@ -1445,7 +1462,7 @@ export class CustomerStorage extends OrderStorage {
         products: wholesalerProducts,
         rating: 4.5,
         totalOrders: 50,
-      };
+      } as unknown as ReturnType<typeof Object.assign>;
     } catch (error) {
       console.error('Error in getWholesalerProfile:', error);
       throw error;

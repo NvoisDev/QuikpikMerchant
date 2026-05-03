@@ -127,12 +127,12 @@ export function registerCampaignRoutes(app: Express): void {
           undefined,
           undefined,
           undefined,
-          (result as any).error
+          undefined
         );
         
         res.status(400).json({
           success: false,
-          error: (result as any).error,
+          error: 'Broadcast failed',
           broadcastId: broadcast.id
         });
       }
@@ -642,24 +642,25 @@ export function registerCampaignRoutes(app: Express): void {
           quantity: broadcast.quantity, // Add the quantity field
           promotionalOffers: (() => {
             try {
-              if (!broadcast.promotionalOffers) {
+              const rawOffers: unknown = broadcast.promotionalOffers;
+              if (!rawOffers) {
                 return [];
               }
               // Handle array objects directly
-              if (Array.isArray(broadcast.promotionalOffers)) {
-                return broadcast.promotionalOffers;
+              if (Array.isArray(rawOffers)) {
+                return rawOffers;
               }
               // Skip parsing for empty arrays or null strings
-              if (broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null' || broadcast.promotionalOffers === '[]') {
+              if (rawOffers === '' || rawOffers === 'null' || rawOffers === '[]') {
                 return [];
               }
               // Parse string JSON
-              if (typeof broadcast.promotionalOffers === 'string') {
+              if (typeof rawOffers === 'string') {
                 // Don't parse empty strings or arrays
-                if (broadcast.promotionalOffers.trim() === '' || broadcast.promotionalOffers === '[]') {
+                if (rawOffers.trim() === '' || rawOffers === '[]') {
                   return [];
                 }
-                const parsed = JSON.parse(broadcast.promotionalOffers);
+                const parsed = JSON.parse(rawOffers);
                 return Array.isArray(parsed) ? parsed : [];
               }
               return [];
@@ -713,16 +714,17 @@ export function registerCampaignRoutes(app: Express): void {
             promotionalOffers: (() => {
               try {
                 const offers = product.promotionalOffers;
-                if (!offers || offers === '' || offers === 'null' || offers === '[]') {
+                const rawProdOffers: unknown = offers;
+                if (!rawProdOffers || rawProdOffers === '' || rawProdOffers === 'null' || rawProdOffers === '[]') {
                   return [];
                 }
                 // Handle array objects directly
-                if (Array.isArray(offers)) {
-                  return offers;
+                if (Array.isArray(rawProdOffers)) {
+                  return rawProdOffers;
                 }
                 // Parse string JSON - handle double-escaped JSON
-                if (typeof offers === 'string') {
-                  let dataToparse = offers;
+                if (typeof rawProdOffers === 'string') {
+                  let dataToparse = rawProdOffers;
                   
                   // Handle double-escaped JSON strings
                   if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
@@ -810,11 +812,8 @@ export function registerCampaignRoutes(app: Express): void {
         
         if (campaignFilter === 'promotional') {
           try {
-            const offers = broadcast.promotionalOffers;
-            const hasOffers = offers && 
-              offers !== '[]' && 
-              offers !== 'null' &&
-              (Array.isArray(offers) ? offers.length > 0 : (typeof offers === 'string' && offers.length > 0));
+            const rawBcOffers: unknown = broadcast.promotionalOffers;
+            const hasOffers = rawBcOffers && rawBcOffers !== '[]' && rawBcOffers !== 'null' && (Array.isArray(rawBcOffers) ? rawBcOffers.length > 0 : (typeof rawBcOffers === 'string' && rawBcOffers.length > 0));
             return isInTimeRange && hasOffers;
           } catch (e) {
             return false;
@@ -831,11 +830,8 @@ export function registerCampaignRoutes(app: Express): void {
         if (campaignFilter === 'promotional') {
           const hasOffers = template.products.some(p => {
             try {
-              const offers = p.promotionalOffers;
-              return offers && 
-                offers !== '[]' && 
-                offers !== 'null' &&
-                (Array.isArray(offers) ? offers.length > 0 : (typeof offers === 'string' && offers.length > 0));
+              const rawTemplOffers: unknown = p.promotionalOffers;
+              return !!rawTemplOffers && rawTemplOffers !== '[]' && rawTemplOffers !== 'null' && (Array.isArray(rawTemplOffers) ? rawTemplOffers.length > 0 : (typeof rawTemplOffers === 'string' && rawTemplOffers.length > 0));
             } catch (e) {
               return false;
             }
@@ -1003,7 +999,7 @@ export function registerCampaignRoutes(app: Express): void {
           recipientCount: 0
         };
 
-        const broadcast = await storage.createBroadcast(broadcastData);
+        const broadcast = await storage.createBroadcast(broadcastData as unknown as import('@shared/schema').InsertBroadcast);
         
         res.json({
           id: `broadcast_${broadcast.id}`,
@@ -1106,7 +1102,7 @@ export function registerCampaignRoutes(app: Express): void {
                 productId: product.productId,
                 quantity: product.quantity,
                 specialPrice: product.specialPrice || null,
-                promotionalOffers: product.promotionalOffers ? JSON.stringify(product.promotionalOffers) : null,
+                promotionalOffers: product.promotionalOffers ?? null,
               });
             }
           }
@@ -1220,7 +1216,7 @@ export function registerCampaignRoutes(app: Express): void {
         let promotionalOffers = [];
         try {
           if (broadcast.promotionalOffers) {
-            promotionalOffers = JSON.parse(broadcast.promotionalOffers);
+            promotionalOffers = JSON.parse(broadcast.promotionalOffers as unknown as string);
           }
         } catch (e) {
           console.error('Error parsing promotional offers:', e);
@@ -1243,7 +1239,7 @@ export function registerCampaignRoutes(app: Express): void {
 
         res.json({
           success: result.success,
-          message: result.success ? `Broadcast sent to ${result.recipientCount || 0} customers` : result.error
+          message: result.success ? `Broadcast sent to ${result.recipientCount || 0} customers` : 'Broadcast failed'
         });
       } else if (type === 'template') {
         // Send multi-product template
@@ -1274,7 +1270,7 @@ export function registerCampaignRoutes(app: Express): void {
         const result = { success: true, recipientCount: 0, messageId: `sim_${Date.now()}` };
         
         // Apply promotional offers from template products to actual products
-        if (result.success && template.products) {
+        if (result.success && template?.products) {
           for (const templateProduct of template.products) {
             try {
               // Parse promotional offers from template product
@@ -1282,9 +1278,10 @@ export function registerCampaignRoutes(app: Express): void {
               
               if (templateProduct.promotionalOffers) {
                 try {
-                  let dataToparse = templateProduct.promotionalOffers;
+                  const rawTplOffers: unknown = templateProduct.promotionalOffers;
                   
-                  if (typeof dataToparse === 'string') {
+                  if (typeof rawTplOffers === 'string') {
+                    let dataToparse: string = rawTplOffers;
                     // Handle triple-escaped JSON strings like """[{...}]"""
                     if (dataToparse.startsWith('"""') && dataToparse.endsWith('"""')) {
                       dataToparse = dataToparse.slice(3, -3).replace(/\\"/g, '"');
@@ -1299,8 +1296,8 @@ export function registerCampaignRoutes(app: Express): void {
                     if (!Array.isArray(promotionalOffers)) {
                       promotionalOffers = [];
                     }
-                  } else if (Array.isArray(dataToparse)) {
-                    promotionalOffers = dataToparse;
+                  } else if (Array.isArray(rawTplOffers)) {
+                    promotionalOffers = rawTplOffers;
                   }
                 } catch (e) {
                   console.error('❌ Error parsing promotional offers for template product:', templateProduct.productId, e);
@@ -1318,7 +1315,7 @@ export function registerCampaignRoutes(app: Express): void {
         
         res.json({
           success: result.success,
-          message: result.success ? `Campaign sent to ${members.length} customers` : result.error
+          message: result.success ? `Campaign sent to ${members.length} customers` : 'Campaign failed'
         });
       } else {
         res.status(400).json({ message: "Invalid campaign type" });
@@ -1348,7 +1345,7 @@ export function registerCampaignRoutes(app: Express): void {
           return res.status(404).json({ message: "Wholesaler not found" });
         }
 
-        const message = `🛍️ Product: ${product.name}\nPrice: £${product.unitPrice}\nFrom: ${wholesaler.businessName}`;
+        const message = `🛍️ Product: ${product.name}\nPrice: £${product.price}\nFrom: ${wholesaler.businessName}`;
         
         res.json({
           type: 'single',
@@ -1375,7 +1372,7 @@ export function registerCampaignRoutes(app: Express): void {
         const baseUrl = 'https://quikpik.app';
         const campaignUrl = `${baseUrl}/marketplace?campaign=${Date.now()}${numericId}`;
         
-        const message = `📢 ${template.name}\n${template.content}\nFrom: ${wholesaler.businessName}`;
+        const message = `📢 ${template.name}\n${template.customMessage || template.description || ''}\nFrom: ${wholesaler.businessName}`;
         
         res.json({
           type: 'multi',
