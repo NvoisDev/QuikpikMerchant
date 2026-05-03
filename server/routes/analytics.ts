@@ -601,11 +601,17 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       const userId = req.user.id;
       const period = req.query.period || '3months';
-      
-      // Get comprehensive financial data
+
+      // Compute date bound for the selected period
+      const now = new Date();
+      const periodDays: Record<string, number> = { '30days': 30, '3months': 90, '6months': 180, '12months': 365 };
+      const lookbackDays = periodDays[period as string] ?? 90;
+      const periodStart = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+
+      // Get comprehensive financial data — orders bounded to the selected period
       const [stats, orders, products] = await Promise.all([
         storage.getWholesalerStats(userId),
-        storage.getOrders(userId),
+        storage.getOrdersForDateRange(userId, periodStart, now),
         storage.getProducts(userId)
       ]);
 
@@ -705,11 +711,17 @@ export function registerAnalyticsRoutes(app: Express): void {
     try {
       const userId = req.user.id;
       const { analysis_type, period } = req.body;
-      
-      // Get financial data for AI analysis
+
+      // Compute date bound — default to 3 months if no period specified
+      const now = new Date();
+      const periodDays: Record<string, number> = { '30days': 30, '3months': 90, '6months': 180, '12months': 365 };
+      const lookbackDays = periodDays[period as string] ?? 90;
+      const periodStart = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+
+      // Get financial data for AI analysis — orders bounded to the selected period
       const [stats, orders, products] = await Promise.all([
         storage.getWholesalerStats(userId),
-        storage.getOrders(userId),
+        storage.getOrdersForDateRange(userId, periodStart, now),
         storage.getProducts(userId)
       ]);
 
@@ -796,9 +808,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      
+
+      // 24-month lookback: captures all meaningful customer lifetime activity without unbounded scans
+      const now = new Date();
+      const twentyFourMonthsAgo = new Date(now.getTime() - 24 * 30 * 24 * 60 * 60 * 1000);
+
       const [allOrders, customers] = await Promise.all([
-        storage.getOrders(targetUserId),
+        storage.getOrdersForDateRange(targetUserId, twentyFourMonthsAgo, now),
         storage.getAllCustomers(targetUserId)
       ]);
 
@@ -921,10 +937,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      
+
+      // 12-month lookback for product performance — sufficient for ranking and trend analysis
+      const now = new Date();
+      const twelveMonthsAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
       const [products, orders] = await Promise.all([
         storage.getProducts(targetUserId),
-        storage.getOrders(targetUserId)
+        storage.getOrdersForDateRange(targetUserId, twelveMonthsAgo, now)
       ]);
 
       const validOrders = orders.filter(order => 
