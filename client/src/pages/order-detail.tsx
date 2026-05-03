@@ -25,6 +25,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 import { QuoteActivityLog } from "@/components/orders/QuoteActivityLog";
+import { EditQuoteView } from "@/components/orders/EditQuoteView";
+import { CancelOrderView } from "@/components/orders/CancelOrderView";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 
 interface OrderItem {
@@ -309,8 +311,6 @@ export default function OrderDetail() {
   const [editPaymentMethod, setEditPaymentMethod] = useState<string>('bank_transfer');
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
-  const [isSavingQuote, setIsSavingQuote] = useState(false);
-  const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
@@ -894,425 +894,65 @@ export default function OrderDetail() {
   }
 
   if (showEditMode && order) {
-    const editSubtotal = editItems.reduce((sum, item) => sum + item.customPrice * item.quantity, 0);
-    const deliveryCostVal = parseFloat(order.deliveryCost || '0');
-    const filteredEditProducts = editProducts.filter(p =>
-      p.name.toLowerCase().includes(editProductSearch.toLowerCase())
-    );
-    const hasInvalidItems = editItems.some(item => item.customPrice <= 0 || item.quantity < 1);
-
-    const handleSaveQuote = async () => {
-      setIsSavingQuote(true);
-      setEditSaveError(null);
-      try {
-        const response = await fetch(`/api/quotes/${order.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            items: editItems.map(item => ({
-              productId: item.productId,
-              customPrice: item.customPrice,
-              quantity: item.quantity,
-              sellingType: item.sellingType,
-            })),
-            paymentMethod: editPaymentMethod,
-          }),
-        });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          if (data.order) setOrder(data.order);
-          setShowEditMode(false);
-          setEditSaveError(null);
-          const warningText = data.warnings?.length ? ` Note: ${data.warnings.join('; ')}` : '';
-          toast({
-            title: data.warnings?.length ? 'Invoice updated (with warnings)' : 'Invoice updated successfully',
-            description: `Products total: ${formatMoney(parseFloat(data.order?.subtotal ?? data.total))} (fees may apply).${warningText}`,
-            variant: data.warnings?.length ? 'default' : 'default',
-          });
-        } else {
-          const errorMsg = data.error || 'Failed to update invoice';
-          setEditSaveError(errorMsg);
-          toast({ title: data.errorType === 'OUT_OF_STOCK' ? 'Stock Unavailable' : 'Error', description: errorMsg, variant: 'destructive' });
-        }
-      } catch {
-        const msg = 'Network error — please try again';
-        setEditSaveError(msg);
-        toast({ title: 'Error', description: msg, variant: 'destructive' });
-      } finally {
-        setIsSavingQuote(false);
-      }
-    };
-
     return (
-      <div className="bg-white min-h-screen">
-        <div className="max-w-lg mx-auto px-4 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="sm" onClick={() => setShowEditMode(false)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">Edit Invoice {order.orderNumber || `#${order.id}`}</h1>
-              <p className="text-xs text-gray-500">Adjust items, quantities, and prices</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 text-sm">
-            <div>
-              <h3 className="font-medium mb-2">Items</h3>
-              {editItems.length === 0 ? (
-                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed text-gray-500 text-sm">
-                  No items — add a product below
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {editItems.map((item, index) => (
-                    <div key={`${item.productId}-${item.sellingType}`} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="font-medium text-sm">{item.productName}</span>
-                        <button onClick={() => setEditItems(editItems.filter((_, i) => i !== index))} className="text-red-400 hover:text-red-600 flex-shrink-0">
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1">
-                            <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
-                              if (item.quantity <= 1) return;
-                              const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: updated[index].quantity - 1 };
-                              setEditItems(updated);
-                            }}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                            <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => {
-                              const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
-                              setEditItems(updated);
-                            }}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          {item.quantity < 1 && (
-                            <p className="text-xs text-red-600">Quantity must be at least 1</p>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500 text-xs">£</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.customPrice}
-                              onChange={(e) => {
-                                const updated = [...editItems];
-                                updated[index] = { ...updated[index], customPrice: parseFloat(e.target.value) || 0 };
-                                setEditItems(updated);
-                              }}
-                              className={`w-20 p-1 border rounded text-sm text-right ${item.customPrice <= 0 ? 'border-red-400 bg-red-50' : ''}`}
-                            />
-                            <span className="text-xs text-gray-500">/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}</span>
-                          </div>
-                          {item.customPrice <= 0 && (
-                            <p className="text-xs text-red-600">Price must be greater than £0</p>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium text-green-700 ml-auto">{formatMoney(item.customPrice * item.quantity)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Button variant="outline" className="w-full border-dashed" onClick={() => setEditProductDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Method of Payment</label>
-              <select
-                value={editPaymentMethod}
-                onChange={(e) => setEditPaymentMethod(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cash">Cash</option>
-                <option value="cheque">Cheque</option>
-                <option value="payment_link">Payment Link</option>
-                <option value="card">Card Payment</option>
-                <option value="pay_later">Pay Later</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Products subtotal:</span>
-                <span className="font-medium">{formatMoney(editSubtotal)}</span>
-              </div>
-              {deliveryCostVal > 0 && (
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Delivery (unchanged):</span>
-                  <span>{formatMoney(deliveryCostVal)}</span>
-                </div>
-              )}
-              <div className="border-t pt-2 mt-1 flex justify-between font-semibold">
-                <span>Estimated subtotal:</span>
-                <span className="text-green-700">{formatMoney(editSubtotal + deliveryCostVal)}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Final total recalculated on save (fees may apply).</p>
-            </div>
-
-            {hasInvalidItems && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
-                <X className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-amber-700">All items must have a price greater than £0 and a quantity of at least 1 before saving.</p>
-              </div>
-            )}
-
-            {editSaveError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-                <X className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-700">{editSaveError}</p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2 pt-2 border-t">
-              <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                onClick={handleSaveQuote}
-                disabled={isSavingQuote || editItems.length === 0 || hasInvalidItems}
-              >
-                {isSavingQuote ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
-              </Button>
-              <Button variant="ghost" className="w-full text-gray-500" onClick={() => setShowEditMode(false)}>
-                ← Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <Dialog open={editProductDialogOpen} onOpenChange={setEditProductDialogOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Add Product to Invoice</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={editProductSearch}
-                  onChange={(e) => setEditProductSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {filteredEditProducts.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">No products found</p>
-                ) : filteredEditProducts.map(product => {
-                  const hasUnits = !product.sellingFormat || product.sellingFormat === 'units' || product.sellingFormat === 'both';
-                  const hasPallets = (product.sellingFormat === 'pallets' || product.sellingFormat === 'both') && !!product.palletPrice;
-                  return (
-                    <div key={product.id} className="border rounded-lg p-3">
-                      <div className="font-medium text-sm mb-2">{product.name}</div>
-                      <div className="flex flex-wrap gap-2">
-                        {hasUnits && parseFloat(product.price) > 0 && (
-                          <button
-                            onClick={() => {
-                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
-                              if (existing >= 0) {
-                                const updated = [...editItems];
-                                updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
-                                setEditItems(updated);
-                              } else {
-                                setEditItems(prev => [...prev, { productId: product.id, productName: product.name, quantity: 1, customPrice: parseFloat(product.price), sellingType: 'units', imageUrl: product.imageUrl, stock: product.stock }]);
-                              }
-                              setEditProductDialogOpen(false);
-                              setEditProductSearch('');
-                            }}
-                            className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded hover:bg-green-100"
-                          >
-                            + Units — £{parseFloat(product.price).toFixed(2)} ({product.stock} in stock)
-                          </button>
-                        )}
-                        {hasPallets && product.palletPrice && (
-                          <button
-                            onClick={() => {
-                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
-                              if (existing >= 0) {
-                                const updated = [...editItems];
-                                updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
-                                setEditItems(updated);
-                              } else {
-                                setEditItems(prev => [...prev, { productId: product.id, productName: `${product.name} (Pallet)`, quantity: 1, customPrice: parseFloat(product.palletPrice!), sellingType: 'pallets', imageUrl: product.imageUrl, palletStock: product.palletStock }]);
-                              }
-                              setEditProductDialogOpen(false);
-                              setEditProductSearch('');
-                            }}
-                            className="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2 py-1 rounded hover:bg-blue-100"
-                          >
-                            + Pallet — £{parseFloat(product.palletPrice).toFixed(2)} ({product.palletStock || 0} in stock)
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <EditQuoteView
+        order={order}
+        editItems={editItems}
+        setEditItems={setEditItems}
+        editPaymentMethod={editPaymentMethod}
+        setEditPaymentMethod={setEditPaymentMethod}
+        editProductDialogOpen={editProductDialogOpen}
+        setEditProductDialogOpen={setEditProductDialogOpen}
+        editProductSearch={editProductSearch}
+        setEditProductSearch={setEditProductSearch}
+        editProducts={editProducts}
+        formatMoney={formatMoney}
+        onCancel={() => setShowEditMode(false)}
+        onSaved={(updatedOrder) => {
+          if (updatedOrder) setOrder(updatedOrder);
+          setShowEditMode(false);
+        }}
+      />
     );
   }
 
   if (showCancelForm) {
-    const totalPaid = parseFloat(order.amountPaid || '0');
-    const deliveryCostValue = parseFloat(order.deliveryCost || '0');
-    const itemsRefund = returnItems.length > 0
-      ? returnItems.reduce((sum, ri) => {
-          const oi = order.items?.find(i => i.productId === ri.productId);
-          return sum + (ri.quantity * parseFloat(oi?.unitPrice || '0'));
-        }, 0)
-      : totalPaid;
-    const calculatedRefund = Math.min(
-      itemsRefund + (returnItems.length > 0 && refundDelivery ? deliveryCostValue : 0),
-      totalPaid
-    );
-    const isPartial = returnItems.some(ri => ri.quantity < ri.maxQty);
-
     return (
-      <div className="bg-white min-h-screen">
-        <div className="max-w-lg mx-auto px-4 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="sm" onClick={() => setShowCancelForm(false)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-semibold">Cancel Order {order.orderNumber || `#${order.id}`}</h1>
-          </div>
-
-          <div className="space-y-4 text-sm">
-            <div>
-              <label className="text-sm font-medium">Reason for cancellation *</label>
-              <select
-                value={cancelReasonCategory}
-                onChange={(e) => setCancelReasonCategory(e.target.value)}
-                className="w-full mt-1 p-2 border rounded-md text-sm bg-white"
-              >
-                <option value="">Select a reason...</option>
-                {cancellationReasons.map((reason) => (
-                  <option key={reason.value} value={reason.value}>{reason.label}</option>
-                ))}
-              </select>
-              {!cancelReasonCategory && (
-                <p className="text-xs text-amber-600 mt-1">Please select a reason to continue</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Additional notes (optional)</label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Add any additional details..."
-                className="w-full mt-1 p-2 border rounded-md text-sm min-h-[60px]"
-              />
-            </div>
-
-            {order.items && order.items.length > 0 && (
-              <div>
-                <label className="text-sm font-medium">Items to return (adjust for partial return)</label>
-                <div className="mt-2 space-y-2">
-                  {returnItems.map((item, index) => {
-                    const orderItem = order.items?.find(oi => oi.productId === item.productId);
-                    return (
-                      <div key={item.productId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm truncate max-w-[140px]">{orderItem?.product?.name || `Product ${item.productId}`}</span>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => {
-                            const newItems = [...returnItems];
-                            newItems[index].quantity = Math.max(0, newItems[index].quantity - 1);
-                            setReturnItems(newItems);
-                          }}>-</Button>
-                          <span className="text-sm w-8 text-center">{item.quantity}</span>
-                          <Button variant="outline" size="sm" onClick={() => {
-                            const newItems = [...returnItems];
-                            newItems[index].quantity = Math.min(item.maxQty, newItems[index].quantity + 1);
-                            setReturnItems(newItems);
-                          }}>+</Button>
-                          <span className="text-xs text-gray-500">/ {item.maxQty}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900">Refund payments</h3>
-              {returnItems.length > 0 && deliveryCostValue > 0 && returnItems.some(ri => ri.quantity < ri.maxQty) && (
-                <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg bg-gray-50">
-                  <input type="checkbox" checked={refundDelivery} onChange={(e) => setRefundDelivery(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
-                  <span className="text-sm text-gray-700">Include delivery charge refund ({formatMoney(deliveryCostValue)})</span>
-                </label>
-              )}
-              <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${refundType === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`} onClick={() => { setRefundType('card'); setProcessRefund(true); }}>
-                <input type="radio" name="refundType" checked={refundType === 'card'} onChange={() => { setRefundType('card'); setProcessRefund(true); }} className="w-4 h-4 text-green-600" />
-                <div className="ml-3 flex-1">
-                  <span className="text-sm font-medium">Original payment method</span>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-xs text-gray-500">Refund {formatMoney(calculatedRefund)} to card</p>
-                    {isPartial && <span className="text-xs text-amber-600 font-medium">(partial refund)</span>}
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Staff note (optional)</label>
-              <textarea value={staffNote} onChange={(e) => setStaffNote(e.target.value)} placeholder="Internal notes — not visible to customer..." className="w-full mt-1 p-2 border rounded-md text-sm min-h-[50px]" />
-            </div>
-
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={restockInventory} onChange={(e) => setRestockInventory(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
-                <span className="text-sm text-gray-700">Restock inventory</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={sendNotification} onChange={(e) => setSendNotification(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-green-600" />
-                <span className="text-sm text-gray-700">Send a <span className="text-green-600">notification</span> to the customer</span>
-              </label>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-3 border-t">
-              <Button variant="destructive" className="w-full" onClick={cancelOrder} disabled={isCancelling || !cancelReasonCategory}>
-                {isCancelling ? 'Cancelling...' : 'Cancel order'}
-              </Button>
-              <Button variant="ghost" className="w-full text-gray-500" onClick={() => {
-                setShowCancelForm(false);
-                setCancelReasonCategory('');
-                setCancelReason('');
-                setProcessRefund(false);
-                setRefundType('card');
-                setRefundDelivery(false);
-                setRestockInventory(true);
-                setSendNotification(true);
-                setStaffNote('');
-              }}>
-                ← Back to order
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CancelOrderView
+        order={order}
+        returnItems={returnItems}
+        setReturnItems={setReturnItems}
+        cancelReasonCategory={cancelReasonCategory}
+        setCancelReasonCategory={setCancelReasonCategory}
+        cancelReason={cancelReason}
+        setCancelReason={setCancelReason}
+        processRefund={processRefund}
+        setProcessRefund={setProcessRefund}
+        refundType={refundType}
+        setRefundType={setRefundType}
+        refundDelivery={refundDelivery}
+        setRefundDelivery={setRefundDelivery}
+        restockInventory={restockInventory}
+        setRestockInventory={setRestockInventory}
+        sendNotification={sendNotification}
+        setSendNotification={setSendNotification}
+        staffNote={staffNote}
+        setStaffNote={setStaffNote}
+        isCancelling={isCancelling}
+        formatMoney={formatMoney}
+        onBack={() => {
+          setShowCancelForm(false);
+          setCancelReasonCategory('');
+          setCancelReason('');
+          setProcessRefund(false);
+          setRefundType('card');
+          setRefundDelivery(false);
+          setRestockInventory(true);
+          setSendNotification(true);
+          setStaffNote('');
+        }}
+        onConfirm={cancelOrder}
+      />
     );
   }
 
