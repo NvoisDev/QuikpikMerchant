@@ -21,12 +21,14 @@ export function registerProductRoutes(app: Express): void {
         targetUserId = req.user.id;
       }
       
-      let productList = await storage.getProducts(targetUserId);
-
-      // Customer-facing view: hide locked products
+      // Customer-facing view: hide locked products and cost price.
       // A request is a customer view if the requester is viewing someone else's products
       // (wholesaler admin views their own, team members use wholesalerId override above)
       const isCustomerView = req.user.role !== 'team_member' && targetUserId !== req.user.id;
+
+      // Only wholesaler/team-member paths receive cost price — customers never should.
+      let productList = await storage.getProducts(targetUserId, { includeCostPrice: !isCustomerView });
+
       if (isCustomerView) {
         productList = productList.filter(p => p.status !== 'locked');
       }

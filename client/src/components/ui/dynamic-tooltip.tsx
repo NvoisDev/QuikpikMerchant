@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { HelpCircle, Info, AlertTriangle, CheckCircle, Lightbulb, Star } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 interface TooltipPosition {
   top: number;
@@ -293,7 +294,7 @@ export const DynamicTooltip: React.FC<DynamicTooltipProps> = ({
             )}
             <div className={`text-sm leading-relaxed ${!title && showIcon ? 'flex items-start space-x-2' : ''}`}>
               {!title && showIcon && <span className={`${styles.iconColor} mt-0.5 flex-shrink-0`}>{icon}</span>}
-              <span dangerouslySetInnerHTML={{ __html: content }} />
+              <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
             </div>
           </div>
         </motion.div>

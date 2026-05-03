@@ -2189,25 +2189,35 @@ export function registerAdminRoutes(app: Express): void {
       // Discover every table currently in the public schema.
       const existing = await getExistingTables();
 
-      // Tables we deliberately exclude from the TRUNCATE list:
-      //  - 'users' / 'sessions' / 'session': handled separately with WHERE clauses
-      //    or must be preserved entirely.
-      //  - 'user_subscriptions': handled with a WHERE-clause DELETE so the admin's
-      //    own subscription row is kept; TRUNCATE would wipe it before we could filter.
-      //  - 'subscription_plans': platform config (free/standard/premium plan definitions)
-      //    — never test data and must never be wiped. Also prevents CASCADE from reaching
-      //    user_subscriptions via the planId FK (user_subscriptions.planId → subscription_plans).
-      const preservedTables = new Set([
-        'users', 'session', 'sessions',
-        'user_subscriptions',    // handled with WHERE DELETE — admin sub must survive
-        'subscription_plans',    // platform config; also blocks CASCADE into user_subscriptions
-        '__drizzle_migrations',  // migration bookkeeping — never test data
-      ]);
+      // Static whitelist of tables that are safe to TRUNCATE during a go-live reset.
+      // Tables excluded from this list are handled separately:
+      //  - 'users' / 'sessions' / 'session': WHERE-clause DELETEs after TRUNCATE
+      //  - 'user_subscriptions': WHERE DELETE to preserve the admin's own sub row
+      //  - 'subscription_plans': platform config — never test data
+      //  - '__drizzle_migrations': migration bookkeeping — never test data
+      // Using an explicit list (instead of dynamic DB introspection) removes any
+      // injection surface from table names discovered via pg_tables.
+      const TRUNCATE_WHITELIST = [
+        'orders', 'order_items', 'order_cancellation_requests',
+        'products', 'product_batches', 'stock_movements', 'stock_alerts', 'stock_update_notifications',
+        'broadcasts', 'message_templates', 'template_campaigns', 'template_products', 'campaign_orders',
+        'customer_groups', 'customer_group_members',
+        'wholesaler_customer_relationships', 'customer_invitation_tokens', 'customer_registration_requests',
+        'delivery_addresses', 'sms_verification_codes',
+        'onboarding_milestones', 'user_badges',
+        'team_members', 'tab_permissions',
+        'price_lists', 'price_list_items', 'price_list_assignments',
+        'customer_insights', 'business_intelligence', 'inventory_insights',
+        'financial_performance', 'product_performance_summary', 'promotion_analytics',
+        'customer_profile_update_notifications',
+        'admin_audit_logs', 'system_error_logs',
+        'business_profiles', 'collection_addresses',
+        'subscription_audit_logs',
+      ];
 
-      // Build the TRUNCATE target list — everything else in the schema.
-      // This automatically includes any legacy tables in prod that reference
-      // our current tables, so CASCADE handles them without needing to name them.
-      const truncateTargets = Array.from(existing).filter(t => !preservedTables.has(t));
+      // Only truncate tables that actually exist in the schema (guards against
+      // tables not yet migrated in older production databases).
+      const truncateTargets = TRUNCATE_WHITELIST.filter(t => existing.has(t));
 
       // ── Pre-count rows for the success response ────────────────────────────
       // Capture counts before wiping so the response mirrors the preview breakdown

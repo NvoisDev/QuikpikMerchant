@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, X, ChevronRight, Lightbulb, BookOpen, Video, ExternalLink } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Button } from './button';
 import { DynamicTooltip } from './dynamic-tooltip';
 
@@ -409,7 +410,7 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
                     
                     <div 
                       className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: selectedResource.content || '' }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedResource.content || '') }}
                     />
                   </div>
                 )}

@@ -100,7 +100,7 @@ function resolveLivePromo(offers: any[], basePrice: string): { promoActive: bool
 }
 
 export class ProductStorage extends UserStorageBase {
-  async getProducts(wholesalerId?: string, options?: { unpaginated?: boolean }): Promise<Product[]> {
+  async getProducts(wholesalerId?: string, options?: { unpaginated?: boolean; includeCostPrice?: boolean }): Promise<Product[]> {
     const startTime = Date.now();
     
     if (wholesalerId) {
@@ -217,7 +217,7 @@ export class ProductStorage extends UserStorageBase {
         shelfLife: null,
         contentCategory: null,
         expiryDate: row.expiry_date ? String(row.expiry_date) : null,
-        costPrice: row.cost_price ? String(row.cost_price) : null,
+        costPrice: options?.includeCostPrice ? (row.cost_price ? String(row.cost_price) : null) : null,
         createdAt: row.created_at ? new Date(String(row.created_at)) : null,
         updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       });
