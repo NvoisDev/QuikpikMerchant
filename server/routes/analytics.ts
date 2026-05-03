@@ -867,7 +867,6 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
 
       // Classify customers
-      const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       
       let newCustomers = 0;
