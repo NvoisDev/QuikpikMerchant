@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import { ilike } from "drizzle-orm";
 import { getProductLimit } from "../utils/plan-tier";
 import { getCurrentFeeConfig, saveFeeConfig, getFeeConfigHistory } from "../utils/fee-config";
@@ -24,6 +25,14 @@ import {
 function getAdminEmail(req: any): string | undefined {
   return req._adminEmail || req.user?.email;
 }
+
+const impersonateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many impersonation requests from this IP. Please try again later.' },
+});
 
 export function registerAdminRoutes(app: Express): void {
   // GET /api/admin/platform-stats
@@ -1272,7 +1281,7 @@ export function registerAdminRoutes(app: Express): void {
   });
 
   // POST /api/admin/impersonate/:wholesalerId — issue session token + log audit start
-  app.post('/api/admin/impersonate/:wholesalerId', requireAuth, async (req: any, res) => {
+  app.post('/api/admin/impersonate/:wholesalerId', impersonateLimiter, requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 

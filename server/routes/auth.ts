@@ -52,6 +52,30 @@ const googleOAuthLimiter = rateLimit({
   message: { error: 'Too many authentication requests from this IP. Please try again later.' },
 });
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts from this IP. Please try again later.' },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset requests from this IP. Please try again later.' },
+});
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset requests from this IP. Please try again later.' },
+});
+
 export function registerAuthRoutes(app: Express): void {
   // PUT /api/user/profile
   app.put('/api/user/profile', requireAuth, async (req: any, res) => {
@@ -1403,7 +1427,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/login
-  app.post('/api/auth/login', async (req: any, res) => {
+  app.post('/api/auth/login', loginLimiter, async (req: any, res) => {
     try {
       const { email, password } = req.body;
 
@@ -1653,7 +1677,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/forgot-password
-  app.post('/api/auth/forgot-password', async (req, res) => {
+  app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
     try {
       const { email } = req.body;
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
@@ -1768,7 +1792,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // POST /api/auth/reset-password
-  app.post('/api/auth/reset-password', async (req, res) => {
+  app.post('/api/auth/reset-password', resetPasswordLimiter, async (req, res) => {
     try {
       const { token, password } = req.body;
       
