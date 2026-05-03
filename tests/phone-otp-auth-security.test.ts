@@ -87,15 +87,15 @@ describe('phone OTP auth security contract', () => {
     expect(completeLoginFn).toContain('wholesalerId: opt.wholesalerId');
   });
 
-  it('legacy endpoints have console.warn deprecation notices', () => {
-    expect(customerAuthRouteSource).toContain(
-      "console.warn('⚠️  DEPRECATED: /api/customer-auth/verify"
+  it('legacy endpoints have been removed from the codebase', () => {
+    expect(customerAuthRouteSource).not.toContain(
+      "'/api/customer-auth/verify'"
     );
-    expect(customerAuthRouteSource).toContain(
-      "console.warn('⚠️  DEPRECATED: /api/customer-auth/request-sms"
+    expect(customerAuthRouteSource).not.toContain(
+      "'/api/customer-auth/request-sms'"
     );
-    expect(customerAuthRouteSource).toContain(
-      "console.warn('⚠️  DEPRECATED: /api/customer-auth/verify-sms"
+    expect(customerAuthRouteSource).not.toContain(
+      "'/api/customer-auth/verify-sms'"
     );
   });
 

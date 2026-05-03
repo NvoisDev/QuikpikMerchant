@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import rateLimit from "express-rate-limit";
 import {
   ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
@@ -7,6 +8,14 @@ import {
   users, validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
   wrapCustomerEmail, z
 } from "./shared";
+
+const invitationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many invitation requests, please try again later." },
+});
 
 export function registerCustomerRoutes(app: Express): void {
   // GET /api/wholesaler/customer-update-notifications
@@ -183,7 +192,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.id);
+      const groupId = parseInt(req.params.id, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const { name, description } = req.body;
 
       if (!name || typeof name !== 'string') {
@@ -217,7 +227,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.id);
+      const groupId = parseInt(req.params.id, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
 
       // Verify the user owns this customer group using parent company data
       const groups = await storage.getCustomerGroups(targetUserId);
@@ -248,7 +259,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const { phoneNumber, name } = req.body;
       
       if (!phoneNumber || !name) {
@@ -444,7 +456,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const customerId = req.params.customerId;
       
       // Get the customer group to verify ownership using parent company data
@@ -493,7 +506,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const search = req.query.search as string;
 
       // Verify group ownership using parent company data
@@ -526,7 +540,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const customerId = req.params.customerId;
 
       // Verify group ownership using parent company data
@@ -558,7 +573,8 @@ export function registerCustomerRoutes(app: Express): void {
         ? req.user.wholesalerId 
         : req.user.id;
       
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const customerId = req.params.customerId;
       const { firstName, lastName, phoneNumber, email, businessName } = req.body;
 
@@ -1143,7 +1159,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customer/accept-invitation
-  app.post('/api/customer/accept-invitation', async (req, res) => {
+  app.post('/api/customer/accept-invitation', invitationLimiter, async (req, res) => {
     try {
       const { token, email, phoneNumber, firstName, lastName } = req.body;
       

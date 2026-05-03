@@ -1671,13 +1671,15 @@ export function registerAdminRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
+      const planId = parseInt(req.params.id, 10);
+      if (isNaN(planId)) return res.status(400).json({ error: 'Invalid plan ID' });
       const planRecord = await db.select().from(subscriptionPlans)
-        .where(eq(subscriptionPlans.id, parseInt(req.params.id))).limit(1);
+        .where(eq(subscriptionPlans.id, planId)).limit(1);
       if (!planRecord[0]) return res.status(404).json({ error: 'Plan not found' });
 
       await db.update(subscriptionPlans)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(subscriptionPlans.id, parseInt(req.params.id)));
+        .where(eq(subscriptionPlans.id, planId));
 
       res.json({ success: true, planId: planRecord[0].planId });
     } catch (error) {

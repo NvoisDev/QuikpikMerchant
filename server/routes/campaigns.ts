@@ -436,7 +436,8 @@ export function registerCampaignRoutes(app: Express): void {
   // GET /api/message-templates/:id
   app.get('/api/message-templates/:id', requireAuth, async (req: any, res) => {
     try {
-      const templateId = parseInt(req.params.id);
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
       const template = await storage.getMessageTemplate(templateId);
       
       if (!template) {
@@ -482,7 +483,8 @@ export function registerCampaignRoutes(app: Express): void {
   // PATCH /api/message-templates/:id
   app.patch('/api/message-templates/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const templateId = parseInt(req.params.id);
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
       const updates = req.body;
 
       const template = await storage.updateMessageTemplate(templateId, updates);
@@ -497,7 +499,8 @@ export function registerCampaignRoutes(app: Express): void {
   app.delete('/api/message-templates/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
       const user = req.user;
-      const templateId = parseInt(req.params.id);
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       
       const deleted = await storage.deleteMessageTemplate(templateId, targetUserId);
