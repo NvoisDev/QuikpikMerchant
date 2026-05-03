@@ -2004,7 +2004,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           );
         } catch (emailError) {
           const msg = emailError instanceof Error ? emailError.message : String(emailError);
-          console.error(`❌ Email failed [service=SendGrid endpoint=pay-later-customer-invoice orderId=${order.id} to=${customerEmail}]: ${msg}`);
+          console.warn(`[sendgrid] pay-later customer invoice failed [orderId=${order.id} to=${customerEmail}]: ${msg}`);
         }
       }
 
@@ -2088,7 +2088,7 @@ export function registerMarketplaceRoutes(app: Express): void {
           });
         } catch (emailError) {
           const msg = emailError instanceof Error ? emailError.message : String(emailError);
-          console.error(`❌ Email failed [service=SendGrid endpoint=pay-later-wholesaler-notification orderId=${order.id} to=${wholesalerProfile?.email}]: ${msg}`);
+          console.warn(`[sendgrid] pay-later wholesaler notification failed [orderId=${order.id} to=${wholesalerProfile?.email}]: ${msg}`);
         }
       }
 

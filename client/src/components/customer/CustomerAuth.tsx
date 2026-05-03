@@ -143,7 +143,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
           setRegistrationPendingStatus('none');
         }
       })
-      .catch(() => setRegistrationPendingStatus('none'));
+      .catch((err) => {
+        console.error('[CustomerAuth] registration status check failed:', err);
+        setRegistrationPendingStatus('none');
+      });
   }, [wholesalerId]);
 
   useEffect(() => {

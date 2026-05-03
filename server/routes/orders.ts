@@ -340,8 +340,8 @@ export function registerOrderRoutes(app: Express): void {
           
         }
       } catch (emailError) {
-        console.error('❌ Failed to send ready for collection email:', emailError);
-        // Don't fail the API call if email fails
+        const msg = emailError instanceof Error ? emailError.message : String(emailError);
+        console.warn(`[sendgrid] ready-for-collection email failed: ${msg}`);
       }
 
       // Send SMS notification to customer

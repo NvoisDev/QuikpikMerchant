@@ -162,7 +162,7 @@ export function PriceListManagementDialog({
         .then((detail: PriceListDetail) => {
           setPriceListDetailCache((prev) => ({ ...prev, [priceListIdFromUrl]: detail }));
         })
-        .catch(() => {});
+        .catch((err) => { console.error('[PriceListManagementDialog] failed to load price list detail:', err); });
     }
   // priceListDetailCache intentionally omitted: autoExpandedRef guards against re-runs after cache updates
   // eslint-disable-next-line react-hooks/exhaustive-deps
