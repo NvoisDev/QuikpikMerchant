@@ -72,6 +72,7 @@ interface QuoteItem {
   packQuantity?: number;
   unitSize?: string;
   unitOfMeasure?: string;
+  stockCount?: number;
 }
 
 interface Customer {
@@ -423,6 +424,7 @@ export default function QuickQuote() {
         packQuantity: (getPackQuantity(product) ?? 0) > 1 ? (getPackQuantity(product) ?? undefined) : undefined,
         unitSize: (product.sizePerUnit || product.unitSize) ?? undefined,
         unitOfMeasure: product.unitOfMeasure ?? undefined,
+        stockCount: availableStock,
       } as QuoteItem]);
       setInputValues(prev => ({
         ...prev,
@@ -1318,6 +1320,11 @@ export default function QuickQuote() {
                           {item.weightKg > 0 && (
                             <span className="text-xs text-gray-400">
                               {formatWeight(item.weightKg)} kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
+                            </span>
+                          )}
+                          {item.stockCount !== undefined && (
+                            <span className="text-xs text-gray-400">
+                              {item.stockCount} {item.sellingType === 'pallets' ? 'pallet' : 'unit'}{item.stockCount !== 1 ? 's' : ''} in stock
                             </span>
                           )}
                           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
