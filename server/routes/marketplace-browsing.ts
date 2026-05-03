@@ -132,7 +132,9 @@ export function registerBrowsingRoutes(app: Express): void {
       try {
         // 🎯 CRITICAL: Apply subscription limits to customer-visible products
         // Customers should only see products within the wholesaler's subscription tier
-        const effectiveLimit = productLimit === -1 || !productLimit ? 1000 : productLimit; // Default to 1000 if unlimited or undefined
+        // Hard cap of 100: prevents a single request returning thousands of products
+        const rawLimit = productLimit === -1 || !productLimit ? 100 : productLimit;
+        const effectiveLimit = Math.min(rawLimit, 100);
 
         const result = await db.execute(sql`
           SELECT p.id, p.name, p.description, p.price, p.currency, p.moq, p.stock,
