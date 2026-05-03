@@ -423,7 +423,6 @@ export function registerCustomerAuthRoutes(app: Express): void {
     }
   });
 
-
   // GET /api/customer-auth/check/:wholesalerId
   app.get('/api/customer-auth/check/:wholesalerId', async (req, res) => {
     try {

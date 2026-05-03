@@ -583,7 +583,7 @@ export default function QuickQuote() {
       items: quoteItems,
       sendVia: sendMethod,
       depositPercentage,
-      balanceDueDays: depositPercentage === 100 || depositPercentage === 0 ? 0 : balanceDueDays,
+      balanceDueDays: depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
       paymentMethod: effectivePaymentMethod,
       ...(fulfillmentType === 'delivery' && {
@@ -1811,7 +1811,16 @@ export default function QuickQuote() {
                 </div>
               )}
 
-              {depositPercentage > 0 && depositPercentage < 100 && (
+              {depositPercentage === 100 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-700">Full Payment</span>
+                    <span className="font-semibold text-green-700">{formatCurrency(calculateTotal())}</span>
+                  </div>
+                </div>
+              )}
+
+              {depositPercentage > 0 && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Balance Due In</Label>
                   <div className="grid grid-cols-5 gap-1">
@@ -1835,18 +1844,11 @@ export default function QuickQuote() {
                   </div>
                   {balanceDueDays > 0 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      Customer will be reminded to pay the remaining {formatCurrency(calculateRemainingBalance())} within {balanceDueDays} days
+                      {depositPercentage === 100
+                        ? `Customer will be reminded to pay ${formatCurrency(calculateTotal())} within ${balanceDueDays} days`
+                        : `Customer will be reminded to pay the remaining ${formatCurrency(calculateRemainingBalance())} within ${balanceDueDays} days`}
                     </p>
                   )}
-                </div>
-              )}
-
-              {depositPercentage === 100 && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-700">Full Payment</span>
-                    <span className="font-semibold text-green-700">{formatCurrency(calculateTotal())}</span>
-                  </div>
                 </div>
               )}
             </CardContent>

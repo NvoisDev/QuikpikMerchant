@@ -2034,7 +2034,7 @@ export function registerPaymentRoutes(app: Express): void {
         quoteSentVia: sendVia,
         notes: 'Quick Quote - Custom pricing negotiated on-site',
         depositPercentage: validDepositPercentage,
-        balanceDueDays: validDepositPercentage === 100 ? 0 : ([0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0), // Enforce 0 for full payment, otherwise use request value
+        balanceDueDays: [0, 7, 14, 30, 60].includes(balanceDueDays) ? balanceDueDays : 0,
         amountPaid: '0.00',
         amountOutstanding: (validDepositPercentage === 0 ? productSubtotal + quoteVatAmount + quoteDeliveryCharge : total).toFixed(2),
         paymentStatus: 'unpaid',
@@ -2228,7 +2228,7 @@ export function registerPaymentRoutes(app: Express): void {
           paymentLinkUrl = session.url || '';
           paymentLinkId = session.id;
 
-          const expiryDays = validDepositPercentage < 100 ? Math.min((quoteOrder.balanceDueDays || 0) + 3, 30) : 1;
+          const expiryDays = (validDepositPercentage < 100 || (quoteOrder.balanceDueDays || 0) > 0) ? Math.min((quoteOrder.balanceDueDays || 0) + 3, 30) : 1;
           // Update order with payment link
           await db.update(orders)
             .set({
@@ -2301,7 +2301,15 @@ export function registerPaymentRoutes(app: Express): void {
           ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\n${offlineArrangement}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isDeposit 
           ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
-          : `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+          : (() => {
+            if (orderBalanceDueDays > 0) {
+              const fullDueDate = new Date();
+              fullDueDate.setDate(fullDueDate.getDate() + orderBalanceDueDays);
+              const formattedFullDueDate = fullDueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+              return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)} due by ${formattedFullDueDate}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            }
+            return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+          })();
         
         try {
           await sendWhatsAppMessage({
