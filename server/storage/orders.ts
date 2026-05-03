@@ -891,42 +891,47 @@ export class OrderStorage extends ProductStorage {
   }
 
   async getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
-    // Get orders by phone number
+    // Step 1: Fetch orders for this phone number
     const orderResults = await db
       .select()
       .from(orders)
       .where(eq(orders.customerPhone, phoneNumber))
       .orderBy(desc(orders.createdAt));
 
-    // Get detailed order information with items, retailer and wholesaler
-    const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
-      // Get order items with product details
-      const items = await db
-        .select()
-        .from(orderItems)
-        .leftJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(orderItems.orderId, order.id));
+    if (orderResults.length === 0) return [];
 
-      const orderItemsWithProducts = items.map(item => ({
-        ...item.order_items,
-        product: item.products!
-      }));
+    // Step 2: Batch-fetch all order items in a single query (eliminates N per-order DB hits)
+    const orderIds = orderResults.map(o => o.id);
+    const allItems = await db
+      .select()
+      .from(orderItems)
+      .leftJoin(products, eq(orderItems.productId, products.id))
+      .where(sql`${orderItems.orderId} IN (${sql.join(orderIds.map(id => sql`${id}`), sql`, `)})`);
 
-      // Get retailer and wholesaler information
-      const [retailer, wholesaler] = await Promise.all([
-        this.getUser(order.retailerId),
-        this.getUser(order.wholesalerId)
-      ]);
+    const itemsByOrderId = new Map<number, (OrderItem & { product: Product })[]>();
+    for (const item of allItems) {
+      const orderId = item.order_items.orderId!;
+      if (!itemsByOrderId.has(orderId)) itemsByOrderId.set(orderId, []);
+      itemsByOrderId.get(orderId)!.push({ ...item.order_items, product: item.products! });
+    }
 
-      return {
-        ...order,
-        items: orderItemsWithProducts,
-        retailer: retailer!,
-        wholesaler: wholesaler!
-      };
+    // Step 3: Batch-fetch all unique users (retailers + wholesalers) in a single query
+    const retailerIds = Array.from(new Set(orderResults.map(o => o.retailerId)));
+    const wholesalerIds = Array.from(new Set(orderResults.map(o => o.wholesalerId)));
+    const allUserIds = Array.from(new Set([...retailerIds, ...wholesalerIds]));
+    const allUsers = await db
+      .select()
+      .from(users)
+      .where(sql`${users.id} IN (${sql.join(allUserIds.map(id => sql`${id}`), sql`, `)})`);
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+    // Step 4: Assemble results without any further DB calls
+    return orderResults.map(order => ({
+      ...order,
+      items: itemsByOrderId.get(order.id) || [],
+      retailer: userMap.get(order.retailerId)!,
+      wholesaler: userMap.get(order.wholesalerId)!,
     }));
-
-    return ordersWithDetails;
   }
 
   // Simple customer shipping preference storage (in-memory for now)

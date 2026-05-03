@@ -88,6 +88,14 @@ const orderCreateLimiter = rateLimit({
   message: { error: "Too many order requests, please try again later." },
 });
 
+const customerActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+
 export function registerMarketplaceRoutes(app: Express): void {
   // GET /api/config/customer-fee — public, no auth required
   // Returns the live customer transaction fee config so the checkout dialog
@@ -343,7 +351,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/customer/shipping-choice
-  app.post("/api/customer/shipping-choice", async (req, res) => {
+  app.post("/api/customer/shipping-choice", customerActionLimiter, async (req, res) => {
     try {
       const { customerId, shippingChoice } = req.body;
       
@@ -385,7 +393,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/customer/request-wholesaler-access
-  app.post("/api/customer/request-wholesaler-access", async (req, res) => {
+  app.post("/api/customer/request-wholesaler-access", customerActionLimiter, async (req, res) => {
     try {
       const { wholesalerId, customerName, customerEmail, requestMessage, productsInterested, orderFrequency, customerType, businessType } = req.body;
       // Normalise to E.164 immediately so all formats of the same number are treated identically
@@ -593,7 +601,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/customer/create-payment
-  app.post('/api/customer/create-payment', async (req, res) => {
+  app.post('/api/customer/create-payment', customerActionLimiter, async (req, res) => {
     try {
       const { customerData, items, shippingInfo } = req.body;
       const { name: customerName, email: customerEmail, phone: customerPhone, address: customerAddress, selectedDeliveryAddress } = customerData || {};
@@ -2138,7 +2146,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   });
 
   // POST /api/customer/orders/:id/request-cancellation
-  app.post('/api/customer/orders/:id/request-cancellation', async (req: any, res) => {
+  app.post('/api/customer/orders/:id/request-cancellation', customerActionLimiter, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -2312,7 +2320,7 @@ export function registerMarketplaceRoutes(app: Express): void {
   registerBrowsingRoutes(app);
 
   // POST /api/marketplace/orders
-  app.post('/api/marketplace/orders', async (req, res) => {
+  app.post('/api/marketplace/orders', customerActionLimiter, async (req, res) => {
     try {
       const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes, sellingType, collectionAddressId } = req.body;
       
@@ -3003,7 +3011,7 @@ Please contact the customer to confirm this order.
   });
 
   // POST /api/customer/orders/:orderId/reorder/:phoneNumber
-  app.post('/api/customer/orders/:orderId/reorder/:phoneNumber', async (req: any, res) => {
+  app.post('/api/customer/orders/:orderId/reorder/:phoneNumber', customerActionLimiter, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.orderId);
       const customerPhone = decodeURIComponent(req.params.phoneNumber);

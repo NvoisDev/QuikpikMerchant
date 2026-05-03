@@ -93,7 +93,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       .where(eq(deliveryAddresses.customerId, customerId))
       .orderBy(desc(deliveryAddresses.isDefault), desc(deliveryAddresses.createdAt));
     
-    console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerId}`);
     return addresses;
   }
 
@@ -112,7 +111,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       .from(deliveryAddresses)
       .where(eq(deliveryAddresses.id, id));
     
-    console.log(`📍 STEP 2: Fetched address ID ${id} directly from database:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND');
     return address;
   }
 
@@ -125,7 +123,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
         eq(deliveryAddresses.customerId, customerId)
       ));
     
-    console.log(`🔒 SECURITY: Verified address ID ${id} belongs to customer ${customerId}:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND OR ACCESS DENIED');
     return address;
   }
 
@@ -154,7 +151,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       })
       .returning();
     
-    console.log(`📍 Created delivery address ${newAddress.id} for customer ${address.customerId}`);
     return newAddress;
   }
 
@@ -198,7 +194,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       throw new Error(`Address with id ${id} not found`);
     }
     
-    console.log(`🗑️ Deleted delivery address ${id}`);
   }
 
   async setDefaultDeliveryAddress(customerId: string, addressId: number): Promise<void> {
@@ -216,7 +211,6 @@ export class DeliveryStorage extends CustomerMgmtStorage {
         .where(eq(deliveryAddresses.id, addressId));
     }
     
-    console.log(`🎯 Set address ${addressId} as default for customer ${customerId}`);
   }
 
   async getDefaultDeliveryAddress(customerId: string): Promise<DeliveryAddress | undefined> {

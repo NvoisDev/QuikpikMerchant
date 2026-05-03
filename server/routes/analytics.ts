@@ -31,11 +31,18 @@ export function registerAnalyticsRoutes(app: Express): void {
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       }
       
-      // Get all cancelled orders
-      const allOrders = await storage.getOrders(wholesalerId);
-      const cancelledOrders = allOrders.filter(o => 
-        o.status === 'cancelled' && new Date(o.createdAt ?? '') >= startDate
-      );
+      // Date-bounded queries — avoids loading all orders into memory on every analytics request
+      const [cancelledOrders, [totalOrdersRow]] = await Promise.all([
+        db.select().from(orders).where(and(
+          eq(orders.wholesalerId, wholesalerId),
+          eq(orders.status, 'cancelled'),
+          gte(orders.createdAt, startDate)
+        )),
+        db.select({ count: count() }).from(orders).where(and(
+          eq(orders.wholesalerId, wholesalerId),
+          gte(orders.createdAt, startDate)
+        )),
+      ]);
       
       // Get cancellation requests
       const requests = await db.select()
@@ -67,7 +74,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
       
       // Calculate cancellation rate
-      const totalOrders = allOrders.filter(o => new Date(o.createdAt ?? '') >= startDate).length;
+      const totalOrders = Number(totalOrdersRow?.count ?? 0);
       const cancellationRate = totalOrders > 0 ? (totalCancelled / totalOrders * 100).toFixed(1) : '0';
       
       res.json({

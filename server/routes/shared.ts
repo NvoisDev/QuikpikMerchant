@@ -131,19 +131,8 @@ export {
 export type { MailDataRequired, OrderEmailData, ReadyForCollectionEmailData, RefundLineItem, CancellationRefundType, EmailRefundStatus };
 
 // ─── Singletons ───────────────────────────────────────────────────────────────
-/**
- * @deprecated Use `getStripeClient(Boolean(user.isTestAccount))` from stripeConfig instead.
- * This singleton has no per-request account context and always uses the platform-default
- * Stripe environment, which will be LIVE when STRIPE_ENVIRONMENT=live — causing test-account
- * wholesalers to hit live Stripe. All Stripe call-sites must derive a client with
- * getStripeClient(Boolean(user.isTestAccount)) and never import `stripe` from this file.
- */
 export { getStripeClient, stripeTest, stripeLive, isLiveMode, getPublishableKey } from "../stripeConfig";
 import { getStripeClient } from "../stripeConfig";
-export const DO_NOT_USE_stripe = (() => {
-  try { return getStripeClient(); }
-  catch { return null; }
-})();
 
 export const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -663,7 +652,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
         const rawBuffer = Buffer.from(base64Data, 'base64');
         logoBuffer = (mimeType === 'image/jpeg' || mimeType === 'image/png') ? rawBuffer : await sharp(rawBuffer).png().toBuffer();
       }
-    } catch (_) {}
+    } catch (e) { console.warn('[pdf-builder] Logo data URI decode failed:', e instanceof Error ? e.message : e); }
   } else if (logoUrl) {
     try {
       const resp = await fetch(logoUrl);
@@ -672,12 +661,12 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
         const ct = resp.headers.get('content-type') || '';
         logoBuffer = (ct.includes('jpeg') || ct.includes('png')) ? raw : await sharp(raw).png().toBuffer();
       }
-    } catch (_) {}
+    } catch (e) { console.warn('[pdf-builder] Logo URL fetch failed:', e instanceof Error ? e.message : e); }
   }
   // Resolve collection address BEFORE entering the sync Promise callback
   let linkedCollAddr: any = null;
   if (order.collectionAddressId) {
-    try { linkedCollAddr = await storage.getCollectionAddress(order.collectionAddressId); } catch (_) {}
+    try { linkedCollAddr = await storage.getCollectionAddress(order.collectionAddressId); } catch (e) { console.warn('[pdf-builder] Collection address lookup failed:', e instanceof Error ? e.message : e); }
   }
   const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
   const chunks: Buffer[] = [];

@@ -698,8 +698,6 @@ export class CustomerStorage extends OrderStorage {
 
   async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }> {
     try {
-      console.log('Starting customer merge process:', { primaryCustomerId, duplicateCustomerIds });
-      
       // Step 1: Get all customer records
       const primaryCustomer = await this.getUser(primaryCustomerId);
       if (!primaryCustomer) {
@@ -718,8 +716,6 @@ export class CustomerStorage extends OrderStorage {
         phoneNumber: primaryCustomer.phoneNumber, // Keep primary phone number
         updatedAt: new Date()
       };
-      
-      console.log('Merged customer data:', mergedCustomerData);
       
       // Step 3: Update primary customer with merged data
       const [updatedPrimaryCustomer] = await db
@@ -780,7 +776,7 @@ export class CustomerStorage extends OrderStorage {
           .where(eq(users.id, duplicateId));
       }
       
-      console.log('Customer merge completed successfully');
+      console.log(`✅ Customer merge complete: ${primaryCustomerId} absorbed ${duplicateCustomerIds.length} duplicate(s)`);
       return { mergedOrdersCount: duplicateCustomerIds.length };
       
     } catch (error) {
@@ -1096,13 +1092,8 @@ export class CustomerStorage extends OrderStorage {
     wholesalerId?: string;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
     try {
-      console.log('🔍 getMarketplaceProducts called with filters:', filters);
-      console.log('🔧 Database connection status:', !!db);
-      console.log('🌍 Environment:', process.env.NODE_ENV);
-      
       // Check if wholesalerId is provided
       if (!filters.wholesalerId) {
-        console.log('No wholesaler ID provided');
         return [];
       }
       

@@ -291,7 +291,6 @@ export class BroadcastStorage extends CustomerStorage {
   }
 
   async updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
-    console.log('updateMessageTemplate called with:', { id, idType: typeof id, template });
     const [updatedTemplate] = await db
       .update(messageTemplates)
       .set({ ...template, updatedAt: new Date() })

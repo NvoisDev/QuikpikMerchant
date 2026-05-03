@@ -101,7 +101,6 @@ function resolveLivePromo(offers: any[], basePrice: string): { promoActive: bool
 
 export class ProductStorage extends UserStorageBase {
   async getProducts(wholesalerId?: string): Promise<Product[]> {
-    console.log('⚡ PERFORMANCE: Ultra-optimized getProducts called for:', wholesalerId || 'all');
     const startTime = Date.now();
     
     if (wholesalerId) {

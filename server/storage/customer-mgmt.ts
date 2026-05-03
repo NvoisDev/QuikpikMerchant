@@ -83,8 +83,6 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
-    
     // Step 1: Get all active customers for this wholesaler in one query
     const customerRelationships = await db
       .select({

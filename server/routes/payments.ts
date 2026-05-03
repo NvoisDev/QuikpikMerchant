@@ -2737,7 +2737,7 @@ export function registerPaymentRoutes(app: Express): void {
             try {
               const acct = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
               if (acct.charges_enabled && acct.details_submitted) quoteUseConnect = true;
-            } catch {}
+            } catch (e) { console.warn('[payments] Stripe Connect account check failed (non-fatal):', e instanceof Error ? e.message : e); }
           }
           const wholesalerTotal = subtotal - platformFee;
           // Session charge amount (in pence): for part_paid it's the remaining outstanding, otherwise the deposit
@@ -2756,7 +2756,7 @@ export function registerPaymentRoutes(app: Express): void {
           if (quoteUseConnect && wholesalerSessionAmount > 0) {
             try {
               session = await stripe.checkout.sessions.create({ ...baseSessionParams, payment_intent_data: { transfer_data: { destination: wholesaler.stripeAccountId!, amount: wholesalerSessionAmount } } });
-            } catch {}
+            } catch (e) { console.warn('[payments] Stripe Connect session failed (falling back to direct):', e instanceof Error ? e.message : e); }
           }
           if (!session) session = await stripe.checkout.sessions.create(baseSessionParams);
           newPaymentLinkUrl = session.url || '';
