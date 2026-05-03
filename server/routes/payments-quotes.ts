@@ -14,6 +14,7 @@ import { getStripeClient } from "../stripeConfig";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
+import { resolveInvoiceWholesaler } from "./orders-read";
 
 // Local types for the quote-edit handler — avoids `any` casts in diff logic.
 interface QuoteEditItem {
@@ -1249,6 +1250,37 @@ export function registerQuoteRoutes(app: Express): void {
       }
       console.error('❌ Error updating quote:', error);
       res.status(500).json({ error: 'Failed to update invoice' });
+    }
+  });
+
+  // GET /api/quotes/:id — fetch a single quote by ID (wholesaler only)
+  app.get('/api/quotes/:id', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ error: 'Invalid invoice ID' });
+
+      const order = await storage.getOrder(quoteId);
+      if (!order) return res.status(404).json({ error: 'Invoice not found' });
+      if (!order.isQuote) return res.status(404).json({ error: 'Invoice not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Access denied' });
+
+      const wholesaler = await storage.getUser(wholesalerId);
+      const effectiveWholesaler = wholesaler
+        ? await resolveInvoiceWholesaler(order, wholesaler)
+        : null;
+
+      res.json({
+        ...order,
+        vatEnabled: effectiveWholesaler?.vatEnabled ?? false,
+        vatRate: effectiveWholesaler?.vatRate ?? '0.2000',
+      });
+    } catch (error) {
+      console.error(`❌ Error fetching quote ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch invoice details' });
     }
   });
 
