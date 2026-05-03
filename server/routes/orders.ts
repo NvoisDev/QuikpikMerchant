@@ -45,7 +45,7 @@ import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import { isImpersonating } from "../utils/isImpersonating";
 import {
-  SendGridAttachment, and, buildInvoicePdf, buildItemisedRefundEmail, campaignOrders, count,
+  SendGridAttachment, and, buildInvoicePdf, campaignOrders, count,
   createStripeRefundReceipt, db, desc, emailBadge, emailButton, emailCard, emailHeading, eq,
   formatPackDescriptor, generateOrderNumber, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
   inArray, insertOrderSchema, lt, multer, or, orderCancellationRequests, orderItems,
@@ -53,14 +53,12 @@ import {
   refundAcrossPaymentIntents, requireAuth, requireMemberPermission, requireNotViewer, sendCustomerInvoiceEmail, sendEmail,
   sendRefundReceipt, sendWhatsAppMessage, sgMail, sql, stockMovements, storage, sum,
   getStripeClient, isLiveMode,
-  wrapCustomerEmail, z, cancellationRefundTypeToEmailStatus, getWholesalerFeeRate, MailDataRequired,
+  wrapCustomerEmail, z, getWholesalerFeeRate, MailDataRequired,
   sendOrderStatusNotification,
 } from "./shared";
 import { productBatches, businessProfiles } from "@shared/schema";
-import type { CancellationRefundType } from "./shared";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
-import { RefundLineItem } from "../email-templates";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
 
 /**
@@ -1917,88 +1915,46 @@ export function registerOrderRoutes(app: Express): void {
       try {
         const order = await storage.getOrder(request.orderId);
         const wholesaler = await storage.getUser(request.wholesalerId);
-        const businessName = wholesaler?.businessName || 'the seller';
-        const customerPhone = order?.customerPhone;
-        const customerEmail = order?.customerEmail;
-        const customerName = order?.customerName || 'Customer';
-        
-        // Build itemised data for the approved cancellation email
-        let cancelledLineItems: RefundLineItem[] = [];
-        if (approved && order) {
-          const cancOrderItems = await storage.getOrderItems(order.id);
-          for (const oi of cancOrderItems) {
-            const product = await storage.getProduct(oi.productId!);
-            cancelledLineItems.push({
-              productName: product?.name || `Product #${oi.productId}`,
-              quantity: oi.quantity,
-              unitPrice: parseFloat(oi.unitPrice),
-              sellingType: oi.sellingType || 'units',
-              packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
-            });
-          }
-        }
 
-        // SMS notification
-        if (customerPhone && order) {
-          let message = '';
-          
-          if (approved) {
-            const totalCancelledQty = cancelledLineItems.reduce((sum, i) => sum + i.quantity, 0);
-            if (refundType === 'card' && custCancelStripeRefunded > 0) {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelStripeRefunded.toFixed(2)} processed — allow 5-10 business days.`;
-            } else if (refundType === 'card' && custCancelAmountPaid > 0) {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}. Refund of £${custCancelAmountPaid.toFixed(2)} pending.`;
-            } else {
-              message = `✅ Your cancellation request for order ${order.orderNumber} (${totalCancelledQty} item(s)) has been approved by ${businessName}.`;
-            }
-          } else {
-            message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
-          }
-          
-          await sendWhatsAppMessage({ to: customerPhone, message });
-        }
-        
-        // Email notification
-        if (customerEmail && order) {
-          if (approved) {
-            const custCancelDeliveryCost = parseFloat(order.deliveryCost || '0');
-            const actualRefundAmt = custCancelStripeRefunded > 0
-              ? custCancelStripeRefunded
-              : custCancelAmountPaid;
-            const custRefundType: CancellationRefundType = custCancelStripeRefunded > 0
-              ? 'card'
-              : custCancelAmountPaid > 0 ? 'later'
-              : 'none';
-            const custRefundStatus = cancellationRefundTypeToEmailStatus(custRefundType);
-            
-            const approvedEmailBody = buildItemisedRefundEmail({
-              customerName,
-              orderNumber: order.orderNumber,
+        if (order) {
+          if (approved && wholesaler) {
+            const orderItems = await storage.getOrderItems(order.id);
+            const customer = {
+              firstName: order.customerName,
+              phoneNumber: order.customerPhone,
+              email: order.customerEmail,
+            };
+            await sendCancellationNotification({
+              order,
+              orderItems,
+              customer,
+              wholesaler,
               isFullCancellation: true,
-              returnedItems: cancelledLineItems,
-              refundAmount: actualRefundAmt,
-              deliveryRefunded: custCancelDeliveryCost > 0 ? custCancelDeliveryCost : undefined,
-              refundStatus: custRefundStatus,
-              businessName,
-              businessPhone: wholesaler?.phoneNumber || undefined,
-              businessEmail: wholesaler?.email || undefined,
+              stripeRefundTotalPounds: custCancelStripeRefunded,
+              refundAmount: custCancelAmountPaid,
+              refundType: (refundType as 'card' | 'later' | 'none') ?? 'none',
+              emailSubject: `Cancellation Approved - Order ${order.orderNumber}`,
+              emailFrom: 'hello@quikpik.co',
+              emailPreheader: `Your order ${order.orderNumber} cancellation has been approved`,
             });
+          } else if (!approved) {
+            const businessName = wholesaler?.businessName || 'the seller';
+            const customerName = order.customerName || 'Customer';
 
-            await sendEmail({
-              to: customerEmail,
-              from: 'hello@quikpik.co',
-              subject: `Cancellation Approved - Order ${order.orderNumber}`,
-              html: wrapCustomerEmail(approvedEmailBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Your order ${order.orderNumber} cancellation has been approved` }),
-            });
-          } else {
-            const rejectedCancelBody = `${emailHeading('Cancellation Request Update', { size: '22px' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}${emailCard(`${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Your order remains active. If you have any questions or concerns, please contact us directly:</p><p style="margin:0 0 4px"><strong>${businessName}</strong></p>${wholesaler?.phoneNumber ? `<p style="margin:0 0 4px">Phone: ${wholesaler.phoneNumber}</p>` : ''}${wholesaler?.email ? `<p style="margin:0">Email: ${wholesaler.email}</p>` : ''}`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}`;
+            if (order.customerPhone) {
+              const message = `❌ Your cancellation request for order ${order.orderNumber} has been declined by ${businessName}.${responseMessage ? ` Reason: ${responseMessage}` : ''} Please contact the seller for more information.`;
+              await sendWhatsAppMessage({ to: order.customerPhone, message });
+            }
 
-            await sendEmail({
-              to: customerEmail,
-              from: 'hello@quikpik.co',
-              subject: `Order ${order.orderNumber} - Cancellation Request Update`,
-              html: wrapCustomerEmail(rejectedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your cancellation request for order ${order.orderNumber}` }),
-            });
+            if (order.customerEmail) {
+              const rejectedCancelBody = `${emailHeading('Cancellation Request Update', { size: '22px' })}<p style="margin:0 0 8px">Hi ${customerName},</p><p style="margin:0 0 20px">We regret to inform you that your cancellation request for <strong>Order ${order.orderNumber}</strong> has been declined.</p>${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' }) : ''}${emailCard(`${emailHeading("What's Next?", { size: '16px', color: '#EA580C' })}<p style="margin:0 0 8px">Your order remains active. If you have any questions or concerns, please contact us directly:</p><p style="margin:0 0 4px"><strong>${businessName}</strong></p>${wholesaler?.phoneNumber ? `<p style="margin:0 0 4px">Phone: ${wholesaler.phoneNumber}</p>` : ''}${wholesaler?.email ? `<p style="margin:0">Email: ${wholesaler.email}</p>` : ''}`, { borderColor: '#FED7AA', bgColor: '#FFF7ED' })}`;
+              await sendEmail({
+                to: order.customerEmail,
+                from: 'hello@quikpik.co',
+                subject: `Order ${order.orderNumber} - Cancellation Request Update`,
+                html: wrapCustomerEmail(rejectedCancelBody, { businessName, logoUrl: getEmailLogoUrl(wholesaler?.id, wholesaler?.logoType, wholesaler?.logoUrl) }, { preheader: `Update on your cancellation request for order ${order.orderNumber}` }),
+              });
+            }
           }
         }
       } catch (error) {

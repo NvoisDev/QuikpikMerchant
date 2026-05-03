@@ -54,6 +54,14 @@ export interface SendCancellationNotificationParams {
   refundDelivery?: boolean;
   stripeRefundTotalPounds: number;
   refundAmount: number;
+  /** When provided, suppresses the pending-refund SMS line unless the value is 'card'. */
+  refundType?: 'card' | 'later' | 'none' | null;
+  /** Override the email subject line. */
+  emailSubject?: string;
+  /** Override the email From address. */
+  emailFrom?: string;
+  /** Override the email preheader text. */
+  emailPreheader?: string;
 }
 
 export async function sendCancellationNotification(
@@ -69,6 +77,10 @@ export async function sendCancellationNotification(
     refundDelivery,
     stripeRefundTotalPounds,
     refundAmount,
+    refundType,
+    emailSubject: emailSubjectOverride,
+    emailFrom: emailFromOverride,
+    emailPreheader: emailPreheaderOverride,
   } = params;
 
   if (!wholesaler) return;
@@ -155,12 +167,16 @@ export async function sendCancellationNotification(
   if (customer?.phoneNumber) {
     let smsMsg = '';
     const totalReturnedQty = refundLineItems.reduce((sum, i) => sum + i.quantity, 0);
+    const smsPendingAmount = refundAmount > 0 ? refundAmount : amountPaid;
+    const showPendingRefund = refundType == null || refundType === 'card';
     if (isFullCancellation) {
       smsMsg = `Hi ${customer.firstName || customer.businessName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
       if (stripeRefundTotalPounds > 0) {
         smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${totalReturnedQty} item(s) has been processed. Allow 5-10 business days.`;
-      } else if (amountPaid > 0) {
-        smsMsg += ` A refund of £${amountPaid.toFixed(2)} for ${totalReturnedQty} item(s) is pending.`;
+      } else if (showPendingRefund && smsPendingAmount > 0) {
+        smsMsg += ` A refund of £${smsPendingAmount.toFixed(2)} for ${totalReturnedQty} item(s) is pending.`;
+      } else if (!showPendingRefund) {
+        // refundType is 'later' or 'none' — no refund detail in SMS
       } else {
         smsMsg += ` No payment was taken, so no refund is required.`;
       }
@@ -179,9 +195,13 @@ export async function sendCancellationNotification(
 
   if (customer?.email) {
     try {
-      const emailSubject = isFullCancellation
+      const defaultSubject = isFullCancellation
         ? `Order ${order.orderNumber} Cancelled - ${businessName}`
         : `Partial Return Processed - Order ${order.orderNumber}`;
+      const defaultPreheader = isFullCancellation
+        ? `Order ${order.orderNumber} has been cancelled`
+        : `Partial return for order ${order.orderNumber}`;
+      const defaultFrom = `${businessName} via Quikpik <hello@quikpik.co>`;
 
       const emailRefundType: CancellationRefundType = stripeRefundTotalPounds > 0
         ? 'card'
@@ -204,7 +224,7 @@ export async function sendCancellationNotification(
 
       await sendEmail({
         to: customer.email,
-        subject: emailSubject,
+        subject: emailSubjectOverride ?? defaultSubject,
         html: wrapCustomerEmail(
           emailBody,
           {
@@ -212,12 +232,10 @@ export async function sendCancellationNotification(
             logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl),
           },
           {
-            preheader: isFullCancellation
-              ? `Order ${order.orderNumber} has been cancelled`
-              : `Partial return for order ${order.orderNumber}`,
+            preheader: emailPreheaderOverride ?? defaultPreheader,
           },
         ),
-        from: `${businessName} via Quikpik <hello@quikpik.co>`,
+        from: emailFromOverride ?? defaultFrom,
       });
     } catch (emailError) {
       const msg = emailError instanceof Error ? emailError.message : String(emailError);
