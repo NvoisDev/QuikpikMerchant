@@ -1,0 +1,110 @@
+TASK: Run a full platform stability and risk audit WITHOUT modifying any working logic
+
+GOAL:
+Ensure the platform is safe, stable, and future-proof while keeping all existing functionality unchanged.
+
+STRICT RULES:
+- DO NOT refactor large files
+- DO NOT change business logic
+- DO NOT modify API behaviour
+- DO NOT restructure folders
+- DO NOT touch working payment or order flows
+- Only make SAFE, isolated improvements
+
+----------------------------------
+
+STEP 1: Identify Immediate Risks
+
+Scan the codebase and list:
+
+1. Any endpoints without:
+   - authentication checks
+   - role/ownership validation
+
+2. Any sensitive operations without:
+   - logging (admin actions, impersonation, payments)
+
+3. Any use of:
+   - console.log in production code
+   - hardcoded secrets or keys
+   - unsafe cookie handling
+
+----------------------------------
+
+STEP 2: Security Safe Fixes (Only Low Risk)
+
+Apply ONLY safe improvements:
+
+1. Cookies:
+   - Set `secure: true` where applicable
+   - Ensure `httpOnly: true`
+   - Confirm `sameSite` is set appropriately
+
+2. Add logging to:
+   - admin actions
+   - account recovery (if exists)
+   - impersonation usage
+
+3. Ensure all critical routes check:
+   - user authentication
+   - correct tenant (wholesaler isolation)
+
+----------------------------------
+
+STEP 3: Dead Code & Cleanup (Safe Only)
+
+1. Identify:
+   - unused imports
+   - unused files
+   - duplicate utilities
+
+2. REMOVE only if:
+   - confirmed unused across entire project
+   - not referenced dynamically
+
+3. Clean:
+   - console.log statements (replace with proper logger or remove)
+
+----------------------------------
+
+STEP 4: Config & Environment Safety
+
+1. Ensure:
+   - all secrets come from environment variables
+   - no API keys are hardcoded
+
+2. Add fallback checks:
+   - throw error if critical env vars missing (Stripe, auth, etc.)
+
+----------------------------------
+
+STEP 5: Light Performance Wins
+
+1. Check for:
+   - unnecessary repeated API calls
+   - large queries without limits
+   - missing indexes (if visible)
+
+2. Suggest improvements WITHOUT implementing risky changes
+
+----------------------------------
+
+STEP 6: Output Report (IMPORTANT)
+
+Provide a clear summary:
+
+1. 🔴 High Risk Issues (must fix)
+2. 🟠 Medium Risk (should fix soon)
+3. 🟢 Low Risk / Improvements
+4. ✅ What is already solid
+
+DO NOT auto-refactor anything large.
+
+----------------------------------
+
+SUCCESS CRITERIA:
+
+- No existing functionality is broken
+- No changes to order/payment flows
+- Platform remains fully operational
+- Only safe improvements applied
