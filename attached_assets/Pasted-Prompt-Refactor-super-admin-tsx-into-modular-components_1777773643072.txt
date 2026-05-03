@@ -1,0 +1,102 @@
+Prompt: Refactor super-admin.tsx into modular components (SAFE extraction only)
+
+We are continuing a proven refactor pattern already used successfully on:
+
+product-management.tsx
+customers.tsx
+Objective
+
+Reduce complexity of:
+client/src/pages/super-admin.tsx (~3,785 lines)
+
+WITHOUT changing behaviour.
+
+🚨 Rules (Critical)
+DO NOT change business logic
+DO NOT modify API calls or endpoints
+DO NOT alter permissions or role checks
+DO NOT introduce new state logic
+DO NOT change layout or styling
+Page must behave EXACTLY the same
+Step 1: Identify Sections
+
+Split the page into logical admin sections (based on sidebar/navigation tabs).
+
+Extract each into:
+
+client/src/components/admin/
+
+Suggested components:
+
+AdminUsersPanel.tsx
+AdminSubscriptionsPanel.tsx
+AdminSystemHealthPanel.tsx
+AdminImpersonationPanel.tsx
+AdminSettingsPanel.tsx
+AdminLogsPanel.tsx (if exists)
+AdminActionsPanel.tsx (bulk/system actions)
+Step 2: Extraction Rules
+
+For each component:
+
+Move JSX + minimal UI logic only
+Pass data via props
+Pass handlers from parent
+Keep ALL state in super-admin.tsx
+Step 3: Integration
+Replace inline sections with new components
+Keep routing/tab switching unchanged
+Ensure imports are clean
+Step 4: Validation Checklist
+Admin login works
+All tabs load correctly
+Impersonation still works
+Subscription changes still apply
+No permission leaks
+No console errors
+Expected Outcome
+Reduce super-admin.tsx by ~1,500–2,000 lines
+Improve readability
+Prepare for future admin features safely
+🔥 After That (Your Next 2 Moves)
+
+Once this is done, don’t jump randomly — follow this order:
+
+1. CustomerOrderHistory.tsx (2,334 lines)
+
+Why:
+
+It’s already isolated
+Easy to split into:
+Order list
+Filters
+Order item rows
+Pagination
+
+👉 Very clean win
+
+2. customer-portal.tsx (2,435 lines)
+
+Why:
+
+Already tab-based (perfect for splitting)
+Natural extraction points:
+HomeTab
+OrdersTab
+AccountTab
+ProductsTab (partially done)
+🚫 What NOT to Touch Yet
+
+Hold off on these for now:
+
+routes/orders.ts ❌
+routes/payments.ts ❌
+routes/marketplace.ts ❌
+
+These are:
+
+Revenue-critical
+State-heavy
+Easy to break subtly
+
+We’ll approach those differently (service-layer split, not just file split).
