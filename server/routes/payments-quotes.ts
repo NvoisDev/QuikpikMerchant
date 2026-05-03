@@ -364,7 +364,6 @@ export function registerQuoteRoutes(app: Express): void {
               const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
               if (connectAccount.charges_enabled && connectAccount.details_submitted) {
                 quoteUseConnect = true;
-              } else {
               }
             } catch (connectErr: any) {
               console.error(`❌ Quote Connect account validation failed: ${connectErr.message}`);

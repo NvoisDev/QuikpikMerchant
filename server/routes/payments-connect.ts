@@ -580,9 +580,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
                     : `[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
                 })
                 .where(eq(orders.id, order.id));
-            } else {
             }
-          } else {
           }
         }
 
@@ -930,15 +928,12 @@ export function registerPaymentConnectRoutes(app: Express): void {
         if (shouldAttemptSend) {
           try {
             const wholesaler = await storage.getUserByStripeAccountId(accountId);
-            if (!wholesaler || !wholesaler.email) {
-            } else if (wholesaler.role !== 'wholesaler') {
-            } else {
+            if (wholesaler && wholesaler.email && wholesaler.role === 'wholesaler') {
               // Atomically claim the send slot — sets stripe_verified_email_sent_at
               // only if it is currently NULL, preventing duplicate sends under
               // concurrent webhook deliveries or rapid retries.
               const claimed = await storage.claimStripeVerifiedEmailSend(wholesaler.id);
-              if (!claimed) {
-              } else {
+              if (claimed) {
                 const businessName =
                   wholesaler.businessName ||
                   `${wholesaler.firstName ?? ''} ${wholesaler.lastName ?? ''}`.trim() ||
@@ -947,8 +942,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
                   wholesalerEmail: wholesaler.email,
                   wholesalerName: businessName,
                 });
-                if (sent) {
-                } else {
+                if (!sent) {
                   // Roll back the claim so a future account.updated event (or internal retry) can try again.
                   await storage.updateUserSettings(wholesaler.id, { stripeVerifiedEmailSentAt: null });
                   console.error(`❌ account.updated: sendStripeVerifiedEmail failed for wholesaler ${wholesaler.id} — returning 200 so Stripe does not retry`);
