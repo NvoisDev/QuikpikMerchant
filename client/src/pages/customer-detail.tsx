@@ -168,16 +168,11 @@ export default function CustomerDetail() {
     enabled: !!customerId,
   });
 
-  const { data: allOrders = [] } = useQuery<Order[]>({
-    queryKey: ["/api/orders"],
-    staleTime: 5 * 60 * 1000,
+  const { data: customerOrders = [] } = useQuery<Order[]>({
+    queryKey: ["/api/customers", customerId, "orders"],
+    enabled: !!customerId,
+    staleTime: 2 * 60 * 1000,
   });
-
-  const customerOrders = useMemo(() =>
-    allOrders
-      .filter((o) => o.retailerId === customerId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [allOrders, customerId]);
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (updates: Partial<Customer>) => {
@@ -190,8 +185,12 @@ export default function CustomerDetail() {
       if (!response.ok) throw new Error("Failed to update customer");
       return response.json();
     },
-    onSuccess: (_, updates) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    onSuccess: (data, updates) => {
+      queryClient.setQueryData(["/api/customers"], (old: Customer[] | undefined) => {
+        if (!old) return old;
+        return old.map((c) => c.id === customerId ? { ...c, ...data } : c);
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"], refetchType: 'none' });
       const nameChanged =
         (updates.firstName !== undefined && updates.firstName !== (customer?.firstName || '')) ||
         (updates.lastName !== undefined && updates.lastName !== (customer?.lastName || ''));

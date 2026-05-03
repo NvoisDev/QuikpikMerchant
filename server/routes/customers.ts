@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, emailCard,
+  ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
   insertCustomerGroupSchema, multiWholesalerService, or, orders, parseCustomerName, products,
   requireAuth, requireMemberPermission, requireNotViewer, sendEmail, sendWelcomeMessages, storage, twilio,
@@ -964,6 +964,41 @@ export function registerCustomerRoutes(app: Express): void {
     } catch (error) {
       console.error('Error deleting customer:', error);
       res.status(500).json({ error: 'Failed to delete customer' });
+    }
+  });
+
+  // GET /api/customers/:id/orders — slim list for the customer detail page (no items/user objects)
+  app.get('/api/customers/:id/orders', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
+        ? req.user.wholesalerId
+        : req.user.id;
+      const customerId = req.params.id;
+
+      const rows = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          total: orders.total,
+          status: orders.status,
+          createdAt: orders.createdAt,
+          paymentStatus: orders.paymentStatus,
+          depositPercentage: orders.depositPercentage,
+          amountPaid: orders.amountPaid,
+          retailerId: orders.retailerId,
+          fulfillmentType: orders.fulfillmentType,
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.retailerId, customerId),
+          eq(orders.wholesalerId, targetUserId)
+        ))
+        .orderBy(desc(orders.createdAt));
+
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching customer orders:', error);
+      res.status(500).json({ error: 'Failed to fetch customer orders' });
     }
   });
 
