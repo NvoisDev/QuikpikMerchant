@@ -300,6 +300,11 @@ function BankDetailsSection() {
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const LIMITS: Record<keyof typeof form, number> = {
+    bankName: 100, accountName: 100, accountNumber: 100,
+    sortCode: 20, iban: 100, swift: 20,
+  };
+
   const field = (label: string, key: keyof typeof form, placeholder: string, hint?: string) => (
     <div>
       <Label className="text-xs text-gray-600">{label}</Label>
@@ -309,7 +314,7 @@ function BankDetailsSection() {
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
         placeholder={placeholder}
         className="mt-1"
-        maxLength={100}
+        maxLength={LIMITS[key]}
         disabled={!canManage}
       />
     </div>
