@@ -9,7 +9,7 @@ import {
   formatPackDescriptor, systemErrorLogs,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode, STRIPE_ENVIRONMENT } from "../stripeConfig";
-import { businessProfiles } from "@shared/schema";
+import { businessProfiles, stripeProcessedEvents } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
 
@@ -243,6 +243,24 @@ export function registerPaymentConnectRoutes(app: Express): void {
       console.error('❌ Stripe webhook signature verification failed (tried all secrets)');
       return res.status(400).json({ error: 'Invalid signature' });
     }
+
+    // ── Idempotency guard ────────────────────────────────────────────────────
+    // Attempt to record this event. If the event_id already exists (unique
+    // constraint violation) another delivery already processed it — return 200
+    // immediately so Stripe stops retrying without re-running side effects.
+    try {
+      await db.insert(stripeProcessedEvents).values({ eventId: event.id });
+    } catch (dedupErr: any) {
+      // Unique constraint violation codes: PostgreSQL "23505", generic fallback
+      if (dedupErr?.code === '23505' || String(dedupErr?.message).includes('unique')) {
+        console.log(`⚡ Stripe webhook duplicate skipped: ${event.id}`);
+        return res.status(200).json({ received: true, duplicate: true });
+      }
+      // Any other DB error: log and fall through to process normally (fail-safe)
+      console.error('⚠️ Stripe idempotency insert failed (processing anyway):', dedupErr?.message);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     try {
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;

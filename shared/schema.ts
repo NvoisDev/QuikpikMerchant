@@ -1829,6 +1829,13 @@ export type InsertCollectionAddress = z.infer<typeof insertCollectionAddressSche
 export type CollectionAddress = typeof collectionAddresses.$inferSelect;
 
 // Platform Fee Configuration — append-only audit log of customer fee changes
+// Stripe webhook idempotency — prevents duplicate event processing on retries
+export const stripeProcessedEvents = pgTable("stripe_processed_events", {
+  id: serial("id").primaryKey(),
+  eventId: varchar("event_id").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const platformFeeConfigs = pgTable("platform_fee_configs", {
   id: serial("id").primaryKey(),
   customerPercentageFee: decimal("customer_percentage_fee", { precision: 5, scale: 4 }).notNull(), // e.g. 0.0550 for 5.5%

@@ -37,7 +37,9 @@ export function registerProductRoutes(app: Express): void {
       // Fire-and-forget: clear stale promo_active flags in DB
       const staleIds = productList.filter(p => !p.promoActive).map(p => p.id);
       for (const staleId of staleIds) {
-        db.update(products).set({ promoActive: false, promoPrice: null }).where(eq(products.id, staleId)).catch(() => {});
+        db.update(products).set({ promoActive: false, promoPrice: null }).where(eq(products.id, staleId)).catch((error: Error) => {
+          console.error('Failed to deactivate stale promo', { productId: staleId, error: error.message });
+        });
       }
     } catch (error) {
       console.error("Error fetching products:", error);

@@ -15,6 +15,13 @@
       "when": 1746344400000,
       "tag": "0001_business_profiles_bank_details",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1746345600000,
+      "tag": "0002_stripe_processed_events",
+      "breakpoints": true
     }
   ]
 }
