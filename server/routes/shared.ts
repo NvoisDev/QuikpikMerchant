@@ -977,7 +977,8 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       const orderForPdf = { ...order, items: items?.length > 0 ? items : (order.items || []), retailer: order.retailer || customer };
       const pdfAmountPaid = amountPaid !== null ? amountPaid! : undefined;
       const pdfAmountOutstanding = amountOutstanding !== null ? amountOutstanding! : undefined;
-      const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
+      const emailBankProfile = wholesaler?.id ? await storage.getDefaultBusinessProfile(wholesaler.id).catch(() => undefined) : undefined;
+      const pdfBuffer = await buildInvoicePdf(orderForPdf, wholesaler, orderForPdf.paymentMethod === 'payment_link' || (!!orderForPdf.stripePaymentIntentId && !orderForPdf.paymentMethod), pdfAmountPaid, pdfAmountOutstanding, emailBankProfile ?? undefined);
       pdfAttachment = { content: pdfBuffer.toString('base64'), filename: `invoice-${order.orderNumber || order.id}.pdf`, type: 'application/pdf', disposition: 'attachment' };
     } catch (pdfError) { console.error('⚠️ Could not generate PDF for email (email still sends without it):', pdfError); }
     await sgMail.send({ to: customer.email, from: 'hello@quikpik.co', subject: `${emailTitle} ${orderRef} - ${businessName}`, html: emailHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
