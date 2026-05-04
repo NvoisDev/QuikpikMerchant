@@ -8,6 +8,13 @@
       "when": 1777815882393,
       "tag": "0000_misty_pretty_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1746344400000,
+      "tag": "0001_business_profiles_bank_details",
+      "breakpoints": true
     }
   ]
 }
