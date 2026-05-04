@@ -1,0 +1,95 @@
+Task: Add wholesaler bank details to Business Settings and display them on generated invoice PDFs.
+
+Context:
+This is a multi-tenant B2B wholesale platform. Each wholesaler has their own business profile, and invoices are generated as PDFs (PDFKit). Data is stored via Drizzle ORM and accessed through the storage layer.
+
+Goal:
+Allow wholesalers to save their bank/payment details in settings, and automatically include those details on all future invoice PDFs.
+
+Requirements:
+
+1. Database
+- Extend the business profile (or create a new table if more appropriate) to store:
+  - bankName (string)
+  - accountName (string)
+  - accountNumber (string)
+  - sortCode (string)
+  - iban (string, optional)
+  - swift (string, optional)
+- Ensure fields are nullable and scoped by wholesalerId
+- Add migration
+
+2. Backend (API)
+- Add/update endpoint:
+  PUT /api/business-profile/bank-details
+- Must:
+  - Require authentication (wholesaler only)
+  - Validate input (basic string validation)
+  - Persist via storage layer
+- Add GET endpoint (if not already available):
+  GET /api/business-profile
+  → include bank details in response
+
+3. Storage Layer
+- Add methods:
+  - updateBankDetails(wholesalerId, data)
+  - getBusinessProfile(wholesalerId) (ensure it returns bank fields)
+
+4. Frontend (Settings Page)
+- In Business Settings:
+  - Add a "Bank Details" section with form inputs:
+    - Bank Name
+    - Account Name
+    - Account Number
+    - Sort Code
+    - IBAN (optional)
+    - SWIFT/BIC (optional)
+- Use existing form patterns (React Query + mutation)
+- Save via API
+- Show success/error feedback
+
+5. Invoice PDF (Critical)
+- Update PDF generation logic (PDFKit):
+  - Fetch wholesaler business profile when generating invoice
+  - If bank details exist, render a "Payment Details" section at the bottom of the invoice
+  - Format cleanly:
+
+    Payment Details
+    ----------------
+    Bank: {bankName}
+    Account Name: {accountName}
+    Account Number: {accountNumber}
+    Sort Code: {sortCode}
+    IBAN: {iban}
+    SWIFT/BIC: {swift}
+
+- Only show fields that are populated (no empty labels)
+- Ensure layout does not break existing invoice formatting
+
+6. Backwards Compatibility
+- Existing invoices should still generate if no bank details exist
+- Feature must be non-breaking
+
+7. Validation & Edge Cases
+- Trim all inputs
+- Prevent extremely long strings (basic max length)
+- Handle missing business profile gracefully
+
+8. Testing
+- Add test:
+  - Saving bank details
+  - Invoice generation includes bank details when present
+  - Invoice generation excludes section when absent
+
+9. Code Quality
+- Do not add logic directly in route handlers
+- Follow existing pattern: route → service (if exists) → storage
+- Keep changes minimal and consistent with existing architecture
+
+Output:
+- Migration
+- Updated API routes
+- Storage methods
+- Frontend form
+- Updated invoice PDF generation logic
+- Tests (where applicable)

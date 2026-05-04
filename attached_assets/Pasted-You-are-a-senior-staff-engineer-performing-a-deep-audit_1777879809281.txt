@@ -1,0 +1,141 @@
+You are a senior staff engineer performing a deep audit of a production B2B SaaS platform.
+
+This is NOT a generic code review. Focus only on real risks, architectural weaknesses, and scale limitations.
+
+Context:
+- Multi-tenant wholesale marketplace (strict wholesaler isolation)
+- Node.js + Express backend (TypeScript)
+- PostgreSQL (Drizzle ORM)
+- React + Vite frontend
+- Stripe (dual-mode test/live), Twilio, SendGrid, WhatsApp, OpenAI integrations
+- ~70k LOC total
+- Domain-split routes exist but no consistent service layer
+- Tests exist (250+), focused on core flows
+- Platform is already in production
+
+---
+
+## 🔎 Audit Scope (Prioritised)
+
+### 1. Architecture (MOST IMPORTANT)
+Identify whether the system has a clean separation between:
+- Route layer (HTTP concerns)
+- Business logic (services)
+- Data access (storage)
+
+Specifically:
+- Where business logic is embedded directly in route handlers
+- Duplication of logic across routes (e.g. payments, order handling)
+- Absence or inconsistency of a service layer
+- Coupling between routes and storage
+
+👉 Output:
+- Concrete examples (file + pattern)
+- Impact on maintainability, testing, and correctness
+- Clear identification of the *root cause*, not just symptoms
+
+---
+
+### 2. Scale & Capacity Constraints
+Assess realistic limits under growth:
+
+Focus on:
+- Query patterns (especially unbounded reads, joins, aggregations)
+- Per-tenant scaling (orders per wholesaler, not total users)
+- Memory risks (loading large datasets into Node)
+- N+1 query patterns
+- Polling / repeated queries from frontend
+
+👉 Output:
+- Approximate safe thresholds (e.g. orders per wholesaler)
+- What breaks first and why
+- Which queries are the bottleneck
+
+---
+
+### 3. Data Isolation & Security (Critical Only)
+Ignore minor issues. Focus on real exploit paths:
+
+- Cross-tenant access risks (missing wholesalerId checks)
+- IDOR risks (sequential IDs, URL params misuse)
+- Auth gaps or inconsistent guards
+- Sensitive data exposure (logs, responses)
+
+👉 Output:
+- Only HIGH/CRITICAL findings
+- Must include exact file + route + exploit scenario
+
+---
+
+### 4. Reliability & Failure Handling
+Focus on production behaviour under failure:
+
+- External service failures (Stripe, Twilio, SendGrid, OpenAI)
+- Retry / idempotency gaps
+- Silent failures (fire-and-forget with no visibility)
+- Error handling patterns (leaking vs swallowing)
+
+---
+
+### 5. Codebase Maintainability (Root Causes Only)
+Do NOT just list large files.
+
+Instead identify:
+- Why files are large (structural issue vs unfinished refactor)
+- Whether growth is controlled or unbounded
+- Where patterns are inconsistent (e.g. dual services, mixed approaches)
+
+---
+
+### 6. Testing Strategy Quality
+Evaluate:
+- What critical paths are actually protected
+- Missing edge cases (not just missing files)
+- Whether architecture makes testing harder than it should be
+
+---
+
+## 🚫 What to Ignore
+- Cosmetic issues
+- Minor TypeScript warnings
+- Console.log volume (unless it exposes data)
+- Generic “should use best practices” advice
+
+---
+
+## 📊 Output Format
+
+### 1. Executive Summary
+- Overall score (0–10)
+- 2–3 sentences on *why*
+
+### 2. Top 5 Real Risks (ranked)
+For each:
+- What it is
+- Why it matters
+- Where it exists
+- Impact at scale
+
+### 3. Root Cause Analysis
+- The 1–2 underlying architectural problems driving most issues
+
+### 4. Scale Limits
+- Orders per wholesaler thresholds
+- What breaks first
+
+### 5. What’s Actually Strong
+- Call out genuinely well-designed parts
+
+### 6. Priority Actions
+Only 5 actions max:
+- Must be high leverage
+- Must be realistic to implement
+
+---
+
+## ⚠️ Critical Instructions
+- Be precise, not broad
+- Do not invent problems
+- Do not list low-value issues
+- Focus on how the system behaves under real production pressure
+- Think like someone responsible for uptime, not code style
