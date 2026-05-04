@@ -85,9 +85,9 @@ export function QuoteItemCard({
             </span>
           )}
           {item.stockCount !== undefined && (
-            <span className="text-xs text-gray-400">
+            <Badge variant="secondary" className="text-xs text-gray-500 bg-gray-100">
               {item.stockCount} {item.sellingType === 'pallets' ? 'pallet' : 'unit'}{item.stockCount !== 1 ? 's' : ''} in stock
-            </span>
+            </Badge>
           )}
           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
             const now = new Date();
