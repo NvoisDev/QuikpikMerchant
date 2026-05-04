@@ -117,8 +117,8 @@ Bank details are only shown to customers on invoices — they are never displaye
 
 #### Store & Branding — Custom Store URL
 Set a short, memorable URL for your store in **Settings → Store & Branding → Custom Store URL**:
-- Pick a slug (e.g. `my-wholesale`) — availability is checked as you type
-- Your store is then accessible at `/store/my-wholesale` as well as the original ID-based link (old links always remain valid)
+- Pick a slug (e.g. \`my-wholesale\`) — availability is checked as you type
+- Your store is then accessible at \`/store/my-wholesale\` as well as the original ID-based link (old links always remain valid)
 - A **QR code** is automatically generated from your store URL — download it and print it on packaging, business cards, or signage
 - The QR code and share link update automatically whenever you change your slug
         `
