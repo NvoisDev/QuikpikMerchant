@@ -123,6 +123,9 @@ export function registerBusinessProfileRoutes(app: Express): void {
   // GET /api/business-profile/bank-details — fetch bank details for the authenticated wholesaler
   app.get("/api/business-profile/bank-details", requireAuth, async (req: any, res) => {
     try {
+      if (req.user.role !== "wholesaler" && req.user.role !== "team_member") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const wholesalerId =
         req.user.role === "team_member" && req.user.wholesalerId
           ? req.user.wholesalerId
@@ -146,20 +149,29 @@ export function registerBusinessProfileRoutes(app: Express): void {
   // PUT /api/business-profile/bank-details — save bank details for the authenticated wholesaler
   app.put("/api/business-profile/bank-details", requireAuth, requireNotViewer, async (req: any, res) => {
     try {
+      if (req.user.role !== "wholesaler" && req.user.role !== "team_member") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const wholesalerId =
         req.user.role === "team_member" && req.user.wholesalerId
           ? req.user.wholesalerId
           : req.user.id;
 
-      const MAX = 100;
-      const fields = ["bankName", "accountName", "accountNumber", "sortCode", "iban", "swift"] as const;
-      for (const f of fields) {
+      const fieldLimits: Record<string, number> = {
+        bankName: 100,
+        accountName: 100,
+        accountNumber: 100,
+        sortCode: 20,
+        iban: 100,
+        swift: 20,
+      };
+      for (const [f, max] of Object.entries(fieldLimits)) {
         const val = req.body[f];
         if (val !== undefined && val !== null && typeof val !== "string") {
           return res.status(400).json({ error: `${f} must be a string` });
         }
-        if (typeof val === "string" && val.trim().length > MAX) {
-          return res.status(400).json({ error: `${f} must be ${MAX} characters or fewer` });
+        if (typeof val === "string" && val.trim().length > max) {
+          return res.status(400).json({ error: `${f} must be ${max} characters or fewer` });
         }
       }
 
