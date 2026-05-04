@@ -253,7 +253,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
       await db.insert(stripeProcessedEvents).values({ eventId: event.id });
     } catch (dedupErr: unknown) {
       const err = dedupErr as { code?: string; message?: string };
-      if (err?.code === '23505' || String(err?.message).includes('unique')) {
+      if (err?.code === '23505') {
         console.log(`⚡ Stripe webhook duplicate skipped: ${event.id}`);
         return res.status(200).json({ received: true, duplicate: true });
       }
