@@ -12,6 +12,7 @@ import {
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
+import { ReliableSMSService } from "../sms-service";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
@@ -33,7 +34,7 @@ export function registerQuoteRoutes(app: Express): void {
     try {
       const wholesalerId = resolveWholesalerId(req);
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null, sendSmsNotification = false } = req.body;
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
@@ -615,6 +616,21 @@ export function registerQuoteRoutes(app: Express): void {
             .where(eq(orders.id, quoteOrder.id));
         } catch (customerEmailError: any) {
           console.error('⚠️ Failed to send customer invoice email (offline payment):', customerEmailError?.message);
+        }
+      }
+
+      // Send optional SMS notification to customer
+      if (sendSmsNotification && customer.phoneNumber) {
+        try {
+          const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+          const customerGreeting = customer.firstName || customer.businessName || 'there';
+          const smsBody = `Hi ${customerGreeting}! ${businessName} has raised an invoice for you. Total: £${total.toFixed(2)}. Order ref: ${quoteOrder.orderNumber}. Please check your email for full details.`;
+          const result = await ReliableSMSService.sendMarketingSMS(customer.phoneNumber, smsBody);
+          if (!result.success) {
+            console.warn(`⚠️ Invoice SMS notification failed [orderId=${quoteOrder.id}]: ${result.error}`);
+          }
+        } catch (smsError: any) {
+          console.warn(`⚠️ Invoice SMS notification error [orderId=${quoteOrder.id}]:`, smsError?.message);
         }
       }
 

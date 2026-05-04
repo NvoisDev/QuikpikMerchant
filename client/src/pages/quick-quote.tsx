@@ -7,6 +7,7 @@ import { getPackQuantity } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -141,6 +142,7 @@ export default function QuickQuote() {
   const [productSearch, setProductSearch] = useState("");
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
+  const [sendSmsNotification, setSendSmsNotification] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<{
     id: number;
@@ -316,6 +318,7 @@ export default function QuickQuote() {
       customerId: string;
       items: QuoteItem[];
       sendVia: 'sms' | 'link';
+      sendSmsNotification: boolean;
       depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
       fulfillmentType: 'delivery' | 'pickup';
@@ -585,6 +588,7 @@ export default function QuickQuote() {
       customerId: selectedCustomer.id,
       items: quoteItems,
       sendVia: sendMethod,
+      sendSmsNotification,
       depositPercentage,
       balanceDueDays: depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
@@ -1688,6 +1692,14 @@ export default function QuickQuote() {
                   Link Only
                 </Button>
               </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={sendSmsNotification}
+                  onCheckedChange={(v) => setSendSmsNotification(Boolean(v))}
+                />
+                <span className="text-sm text-gray-600">Also send SMS notification to customer</span>
+              </label>
 
               <Button
                 className="w-full bg-green-600 hover:bg-green-700"
