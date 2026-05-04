@@ -1,0 +1,173 @@
+🧠 Prompt — Implement High-Impact Audit Fixes (Safe & Surgical)
+
+You are a senior backend engineer working on a production B2B SaaS platform (Quikpik).
+
+Your task is to implement 5 critical fixes identified in an engineering audit.
+
+⚠️ This is a live production system. Changes must be safe, minimal, and backwards-compatible.
+
+🎯 Goals
+
+Fix the following without introducing regressions:
+
+Stripe webhook idempotency
+Wholesaler ID resolution duplication
+Unbounded analytics queries
+Fee calculation duplication
+Silent failure in promo deactivation
+⚠️ Global Constraints
+❌ Do NOT refactor unrelated code
+❌ Do NOT change API responses or contracts
+❌ Do NOT move large blocks of code unnecessarily
+❌ Do NOT introduce new frameworks
+✅ Keep changes small, focused, and testable
+✅ All existing tests must pass
+✅ TypeScript must compile with zero errors
+🔴 TASK 1 — Stripe Webhook Idempotency (DO FIRST)
+Problem
+
+Duplicate Stripe webhook events can trigger duplicate side effects (notifications, stock updates).
+
+Implementation
+Create table:
+stripe_processed_events (
+  id SERIAL PRIMARY KEY,
+  event_id TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+)
+In:
+server/routes/payments-connect.ts
+Before processing webhook:
+Attempt to insert event.id
+If insert fails (duplicate) → RETURN early
+Rules
+Must be atomic
+Must not break existing webhook flow
+🟠 TASK 2 — Centralise Wholesaler Resolution
+Problem
+
+This logic is duplicated 30+ times:
+
+const targetUserId =
+  req.user.role === 'team_member' && req.user.wholesalerId
+    ? req.user.wholesalerId
+    : req.user.id;
+Implementation
+
+Create:
+
+server/utils/resolveWholesalerId.ts
+export function resolveWholesalerId(req: Request): number {
+  if (!req.user) throw new Error('User missing from request');
+
+  if (req.user.role === 'team_member' && req.user.wholesalerId) {
+    return req.user.wholesalerId;
+  }
+
+  return req.user.id;
+}
+Then:
+Replace ALL inline occurrences across route files
+Rules
+No behaviour change
+Must work for all roles
+🔴 TASK 3 — Fix Unbounded Analytics Queries
+Problem
+
+Analytics loads full orders into memory:
+
+getOrdersForDateRange()
+Required Fix
+In:
+server/storage/orders.ts
+Replace raw queries with aggregated queries:
+
+Examples:
+
+SELECT COUNT(*) FROM orders WHERE wholesaler_id = ?
+SELECT SUM(total) FROM orders WHERE wholesaler_id = ?
+SELECT DATE(created_at), SUM(total)
+GROUP BY DATE(created_at)
+Create functions:
+getOrderCounts()
+getRevenueSummary()
+getOrdersGroupedByDate()
+Update:
+server/routes/analytics.ts
+Rules
+NEVER return full order rows for analytics
+Max 1–2 DB queries per endpoint
+No in-memory aggregation loops
+🟠 TASK 4 — Extract OrderPricingService
+Problem
+
+Fee logic duplicated across 3 files.
+
+Implementation
+
+Create:
+
+server/services/orderPricingService.ts
+export function calculateOrderPricing({
+  subtotal,
+  feeConfig,
+}: {
+  subtotal: number;
+  feeConfig: FeeConfig;
+}) {
+  const customerFee = calculateCustomerFee(subtotal, feeConfig);
+  const platformFee = subtotal * feeConfig.percentage;
+
+  return {
+    customerFee,
+    platformFee,
+    total: subtotal + customerFee,
+    feeSnapshot: {
+      percentage: feeConfig.percentage,
+      fixed: feeConfig.fixed,
+    },
+  };
+}
+Then:
+Replace ALL inline fee calculations in:
+orders-lifecycle.ts
+payments-quotes.ts
+marketplace-orders-actions.ts
+Rules
+Must produce identical outputs as before
+No duplicated logic left behind
+🟡 TASK 5 — Fix Silent Promo Failure
+Problem
+
+This hides failures:
+
+.catch(() => {});
+Replace with:
+.catch((error) => {
+  console.error('Failed to deactivate stale promo', {
+    productId: staleId,
+    error: error.message,
+  });
+});
+Rule
+Never silently ignore pricing-related failures
+✅ Final Validation Checklist
+
+Before finishing:
+
+ Stripe webhooks cannot be processed twice
+ No duplicate wholesaler resolution logic remains
+ Analytics endpoints do NOT load full order datasets
+ Fee logic exists in exactly ONE place
+ No silent DB failures remain in pricing logic
+ All tests pass
+ TypeScript compiles cleanly
+🧠 Execution Strategy (Important)
+
+Implement in this order:
+
+Stripe idempotency
+Wholesaler resolver
+Analytics fix
+Pricing service
+Promo logging
