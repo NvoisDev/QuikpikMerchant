@@ -52,19 +52,24 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 1. **Complete Your Profile** - Add business information in Settings → Business Settings
 2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments for direct customer payments
-3. **Add Your Products** - Create your product catalog with images and AI descriptions in Product Management
-4. **Create Customer Groups** - Organise your customers into groups for price lists, communications, and targeted broadcasts when available
-5. **Configure WhatsApp** - Set up Twilio integration for customer notifications in Settings → WhatsApp
-6. **Preview Your Store** - Use "Preview Store" to see how customers view your products
-7. **Start Selling** - Share customer portal links and begin receiving orders with automatic invoicing
+3. **Add Bank Details** - Add your bank account details in Settings → Business Settings → Bank Details so they appear on invoices for Pay Later and offline orders
+4. **Add Your Products** - Create your product catalog with images and AI descriptions in Product Management
+5. **Set Your Custom Store URL** - Pick a short, memorable store slug in Settings → Store & Branding → Custom Store URL; your QR code updates automatically
+6. **Create Customer Groups** - Organise your customers into groups for price lists, communications, and targeted broadcasts when available
+7. **Configure WhatsApp** - Set up Twilio integration for customer notifications in Settings → WhatsApp
+8. **Preview Your Store** - Use "Preview Store" to see how customers view your products
+9. **Start Selling** - Share customer portal links and begin receiving orders with automatic invoicing
 
 ### Key Features
 
 - **Customer Portal**: Guests can browse your catalog where enabled, but prices and ordering require approved customer access
-- **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
+- **Custom Store URL & QR Code**: Set a memorable store slug and share or download a QR code that links directly to your store
+- **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers; bank details printed on invoices for Pay Later and offline orders
 - **WhatsApp Messaging**: Send supported customer notifications now and prepare groups for future broadcast campaigns
-- **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports
-- **Order Management**: Complete order lifecycle with status tracking and refund processing
+- **Price Lists**: Offer customer-specific or group-specific prices with shareable Excel exports; customers see a "Your Price" badge on assigned products
+- **Order Management**: Complete order lifecycle with status tracking, quote editing, quote activity log, and refund processing
+- **Pay Later Toggle**: Control whether customers can use Pay Later at checkout — turn it on or off in Settings → Pay Later
+- **Multiple Collection Addresses**: Add and manage named pickup locations; customers choose from the list at checkout
 - **Real-time Analytics**: Track sales, revenue, and business performance
 - **Mobile Responsive**: Works perfectly on all devices for you and your customers
 
@@ -100,6 +105,22 @@ You can customize your business logo in three ways:
 - **Custom Upload**: Upload your own logo image
 
 Click "Save Changes" to update your profile.
+
+#### Bank Details
+Add your bank details in **Settings → Business Settings → Bank Details**. These are printed on every invoice as payment instructions — essential for Pay Later and cash/bank-transfer orders so customers know exactly where to send payment. Fields include:
+- **Account holder name**
+- **Sort code**
+- **Account number**
+- **Bank name**
+
+Bank details are only shown to customers on invoices — they are never displayed in your public store.
+
+#### Store & Branding — Custom Store URL
+Set a short, memorable URL for your store in **Settings → Store & Branding → Custom Store URL**:
+- Pick a slug (e.g. `my-wholesale`) — availability is checked as you type
+- Your store is then accessible at `/store/my-wholesale` as well as the original ID-based link (old links always remain valid)
+- A **QR code** is automatically generated from your store URL — download it and print it on packaging, business cards, or signage
+- The QR code and share link update automatically whenever you change your slug
         `
       },
       {
@@ -234,6 +255,9 @@ The bell icon in the top-right of every page shows everything that needs your at
 - **Customer Requests**: New customers who have requested access to your wholesale store — click to approve or decline
 - **Stock Alerts**: Products running low or out of stock — click to go to the full Stock Alerts page
 - Clicking any item in the notification panel takes you directly to the relevant page to take action
+
+#### Cost Price on Product Cards
+When you set a cost price on a product (or its stock batches), a small cost figure appears on the product card in your product grid — visible only to you, never to customers. This lets you scan your margins at a glance without having to open each product. Products without a cost price will not show this figure; add one in the product form or when adding a stock batch to unlock it.
 
 #### Product Organisation Tips
 - Use clear, searchable product names
@@ -1085,8 +1109,9 @@ When customers place orders for collection/pickup, the platform **automatically 
 - **Order Dashboard**: Real-time order updates in your dashboard
 
 #### Collection Address Information
-- **Automatic Display**: Your business address is automatically included in all customer notifications
-- **Fallback Message**: If no address is set, shows "Please contact store for address"
+- **Multiple Collection Addresses**: If you have set up named pickup locations in Settings → Collection Addresses, customers see a list of your locations to choose from at checkout. The order records which address was selected.
+- **Single/Default Address**: If you have only one address (or have not set up multiple locations), your default business address is automatically included in all customer notifications
+- **Fallback Message**: If no address is set at all, customers see "Please contact store for address"
 - **Business Details**: Customer receives your business name, phone, and email for coordination
 
 #### Order Status Updates
@@ -1094,10 +1119,12 @@ When customers place orders for collection/pickup, the platform **automatically 
 - **Resend Notifications**: Resend confirmation emails with collection details anytime
 - **Customer Communication**: Direct contact information shared for easy coordination
 
-#### Setting Up Collection Address
-1. Go to **Settings → Business Settings**
-2. Add your **Business Address** - this will automatically appear in all collection notifications
-3. Ensure your **Business Phone** and **Email** are up to date for customer contact
+#### Setting Up Collection Addresses
+1. Go to **Settings → Collection Addresses** to create and manage multiple named pickup locations (e.g. "Main Warehouse", "City Branch")
+2. Set a default address — this is used when no specific address is chosen
+3. Add as many locations as you need — customers choose from the list at checkout and in Quick Quote
+4. If you only need a single address, go to **Settings → Business Settings** and add your **Business Address** — it will automatically appear in all collection notifications
+5. Ensure your **Business Phone** and **Email** are up to date for customer contact
 
 #### Processing Orders
 1. **View Orders** in the sidebar
@@ -1391,6 +1418,9 @@ Accurate cost prices make the Margin Overview a reliable tool for pricing decisi
   - Premium analytics dashboard
   - Help Hub access
 
+#### Annual Billing
+Standard and Premium plans are also available on **annual billing** at a discounted rate. Annual plans are billed once a year and offer a saving compared to paying month by month. Visit the **Subscription** page to see current annual pricing and compare it with the monthly rate.
+
 #### Upgrading Your Plan
 1. Go to **Subscription** in the sidebar
 2. Review available plans
@@ -1604,6 +1634,8 @@ Raise Invoice lets you create orders on behalf of a customer directly from the O
 - When payment is received, open the order and manually update the payment status
 - No automatic reminders are sent for Pay Later orders
 
+> **Note**: The Pay Later option at customer checkout is a **wholesaler-controlled setting**. Enable or disable it in **Settings → Pay Later**. When disabled, customers will not see the Pay Later tab during checkout — only the card payment option is available.
+
 #### Tracking Invoice Orders
 - Outstanding balances and due dates are visible in each order's payment summary
 - The order detail panel shows deposit %, amount paid, remaining balance, and balance due date
@@ -1725,6 +1757,156 @@ This keeps your order history accurate without requiring any Stripe transaction.
 - Use Pay Later for all walk-in, phone, or bank-transfer sales
 - The Share Invoice feature lets you send the customer a WhatsApp message with the order summary and amount owed — useful for following up on bank transfer payments
 - You can still cancel, refund (recorded manually), and update the status of offline orders just like any other order
+        `
+      },
+      {
+        title: "Pay Later Settings",
+        content: `
+### Controlling Pay Later for Your Customers
+
+Pay Later is a wholesaler-controlled feature. When enabled, customers see a **Pay Later** tab at checkout alongside the standard card-payment option. When disabled, that tab is hidden and customers can only pay by card.
+
+#### Enabling or Disabling Pay Later
+
+1. Go to **Settings → Pay Later**
+2. Toggle **Allow Pay Later** on or off
+3. Save — the change takes effect immediately for all future checkouts
+
+#### What Pay Later Orders Look Like
+
+- No Stripe payment link is generated — the customer is simply notified that their order has been placed
+- The order appears in your Orders page with a **Pay Later** label and an **Unpaid** payment status
+- No platform fee or customer service fee is charged unless you later take an online Stripe payment for the order
+- A customer transaction fee snapshot is still recorded on the order for reference
+
+#### When to Use Pay Later
+
+- You have a standing credit arrangement with the customer
+- The customer is paying by cash, bank transfer, or cheque
+- You want to confirm the order first and agree a payment date separately
+
+#### Marking a Pay Later Order as Paid
+
+Once you receive payment outside the platform:
+1. Open the order from the **Orders** page
+2. Click **"Mark as Paid"**
+3. The order payment status updates to **Paid**
+
+This keeps your order history accurate without requiring a Stripe transaction.
+        `
+      },
+      {
+        title: "Collection Addresses",
+        content: `
+### Managing Multiple Collection / Pickup Addresses
+
+Quikpik supports multiple named pickup locations per wholesaler. This is useful if you operate from more than one warehouse, depot, or branch and want customers to choose the right location at checkout.
+
+#### Setting Up Collection Addresses
+
+1. Go to **Settings → Collection Addresses**
+2. Click **"Add Address"**
+3. Give the location a clear name (e.g. "Main Warehouse", "City Branch", "East Depot")
+4. Enter the full address and any access notes
+5. Save — the address is available immediately
+
+#### Setting a Default Address
+
+Mark one address as the **default**. This address is used:
+- When a Quick Quote is created without explicitly selecting a pickup point
+- As the fallback if a customer somehow reaches checkout without a selection
+
+#### How Customers Experience Collection Addresses
+
+- At checkout, customers who choose **Collection** see a list of your named addresses with their full details
+- They select the location most convenient for them
+- The selected address is recorded on the order and included in all confirmation notifications
+- If you have only one address, it is shown automatically — no selection step is needed
+
+#### Quick Quote Integration
+
+When creating a Quick Quote, a pickup location selector is shown in the collection section. You can choose from any of your saved addresses. The selected address is stored on the quote and displayed in the order detail view.
+
+#### Fallback Behaviour
+
+If no named collection addresses are set up, the system falls back in this order:
+1. Legacy **Pickup Address** field (if set)
+2. **Business Address** from your profile
+3. **Street address / city** from your account
+4. "Please contact store for address"
+        `
+      },
+      {
+        title: "Editing a Quote Before Payment",
+        content: `
+### Making Changes to a Pending Quote
+
+After you raise a quote and send it to a customer, you may need to adjust items, quantities, or prices before the customer pays. The **Edit Quote** feature lets you do this without cancelling and recreating the order.
+
+#### When Edit Quote Is Available
+
+The **Edit Quote** button appears on the order detail page when:
+- The order is a quote (created via Raise Invoice)
+- The payment status is **not** paid (deposit or full payment not yet received)
+- You are logged in as the account owner, admin, or manager (not a viewer)
+
+#### What You Can Change
+
+- **Add products** — search and add new line items to the quote
+- **Remove products** — remove existing line items
+- **Change quantities** — increase or decrease any item's quantity
+- **Change unit prices** — adjust the price per unit for any item
+
+#### What Happens When You Save
+
+Saving a quote edit triggers the following automatically:
+1. **Stock is restored** for the previous version of the quote
+2. **New stock is reserved** for the updated quantities (if stock is insufficient, saving is blocked)
+3. **All fees are recalculated** — subtotal, platform fee, customer transaction fee
+4. **The previous Stripe checkout session is cancelled** (if one existed)
+5. **A new Stripe checkout session is created** with the updated total — the customer receives a fresh payment link
+6. **An audit note is appended** to the order with a timestamp and a summary of what changed
+
+#### Notifying the Customer
+
+After saving, share the updated payment link with the customer — copy it from the order detail page or send it via the Share Invoice option.
+        `
+      },
+      {
+        title: "Quote Activity Log",
+        content: `
+### Understanding the Quote Activity Log
+
+Every quote has an **Activity Log** — an append-only audit trail that records every significant event from creation through to payment or cancellation.
+
+#### Where to Find It
+
+Open any quote's detail page and scroll to the **Activity Log** section. It is collapsible — click the header to expand or collapse it.
+
+#### What Is Logged
+
+| Event | When It Is Recorded |
+|-------|---------------------|
+| **Quote created** | When the quote is first raised |
+| **Item added** | When a line item is added during an edit |
+| **Item removed** | When a line item is removed during an edit |
+| **Quantity changed** | When a quantity is adjusted, showing old → new |
+| **Price changed** | When a unit price is adjusted, showing old → new |
+| **Total updated** | When the overall quote total changes |
+| **Stock restored** | When stock is returned to inventory (on edit or cancel) |
+| **Payment initiated** | When a Stripe checkout session is created |
+| **Payment received** | When Stripe confirms the payment |
+| **Quote cancelled** | When the quote is cancelled |
+
+#### Why It Matters
+
+The activity log gives you and your team a clear, timestamped record of every change — useful for dispute resolution, auditing, and understanding how a quote evolved before payment.
+
+#### Notes
+
+- The log is **append-only** — entries are never deleted or edited
+- Each entry shows who performed the action and when
+- The log is only shown for quotes (orders created via Raise Invoice), not for standard customer portal orders
         `
       },
       {

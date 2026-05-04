@@ -39,6 +39,10 @@ const helpSections: HelpSection[] = [
       {
         question: "Can I add a note or special instruction to my order?",
         answer: "Yes — there's a notes field during checkout where you can add any special instructions for the seller."
+      },
+      {
+        question: "I see multiple pickup locations — which one should I choose?",
+        answer: "The seller has set up several named pickup points. Choose the location most convenient for you — the address details are shown next to each option. If you're unsure which to pick, contact the seller directly using the number or email on the Home tab."
       }
     ]
   },
@@ -78,6 +82,10 @@ const helpSections: HelpSection[] = [
       {
         question: "Where can I see the service fee before I pay?",
         answer: "The fee is shown as a separate line item labelled 'Service Fee' in your cart summary before you proceed to payment. The final total you see already includes this charge — there are no hidden costs added afterwards. For full details on how the fee is calculated, visit our Help Hub."
+      },
+      {
+        question: "The invoice shows bank account details — does that mean I pay by bank transfer?",
+        answer: "Not necessarily. If your order is Pay Later or the seller has arranged offline payment, the invoice includes their bank details so you can pay by bank transfer. For orders you've already paid by card through the portal, the invoice is just your receipt — no further payment is needed."
       }
     ]
   },
@@ -125,6 +133,10 @@ const helpSections: HelpSection[] = [
         question: "How does a Buy X Get Y Free promotion work?",
         answer: "When you add the qualifying quantity of a product, any free units are automatically included in your cart and shown clearly at checkout. You won't be charged for the free items."
       },
+      {
+        question: "I see a 'Your Price' badge on some products — what does that mean?",
+        answer: "The seller has assigned you a special price list. The price shown with the 'Your Price' badge is your negotiated price — not the standard price other customers see. It is applied automatically at checkout, so you don't need to do anything extra to get your special rate."
+      }
     ]
   },
   {
@@ -142,7 +154,7 @@ const helpSections: HelpSection[] = [
       },
       {
         question: "Can I reorder something I've bought before?",
-        answer: "Yes — in your Order History, open a previous order and tap the reorder button to add the same items to your cart again quickly."
+        answer: "Yes — in your Order History, open a previous order and tap the reorder button to add the same items to your cart again quickly. If you have a special price list assigned to you, the reorder cart automatically uses your negotiated price and shows a 'Your Price' badge so you can confirm the price before placing the order."
       },
       {
         question: "I can't see my order in Order History — what do I do?",
@@ -213,6 +225,10 @@ const helpSections: HelpSection[] = [
       {
         question: "Why does it say I'm not registered when I try to purchase?",
         answer: "You need to be added to this seller's customer list before you can see prices or place orders. Use Request Access where available, or contact the seller directly. They'll review your request and notify you when you can start purchasing."
+      },
+      {
+        question: "The seller declined my access request — can I apply again?",
+        answer: "Yes. If your circumstances have changed or you'd like to try again, you can submit a new access request from the seller's store page. The seller will receive it and review it again. You can also contact the seller directly using the phone number or email shown on the Home tab to discuss your application."
       }
     ]
   }
