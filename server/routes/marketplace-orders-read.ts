@@ -473,7 +473,8 @@ export function registerOrderReadRoutes(app: Express): void {
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
-      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod));
+      const bankProfile = await storage.getDefaultBusinessProfile(wholesalerId);
+      const pdfBuffer = await buildInvoicePdf(order, wholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), undefined, undefined, bankProfile ?? undefined);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

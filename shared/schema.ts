@@ -612,6 +612,13 @@ export const businessProfiles = pgTable("business_profiles", {
   logoUrl: varchar("logo_url"),
   address: text("address"),
   isDefault: boolean("is_default").default(false).notNull(),
+  // Bank / payment details — shown on invoice PDFs
+  bankName: varchar("bank_name", { length: 100 }),
+  accountName: varchar("account_name", { length: 100 }),
+  accountNumber: varchar("account_number", { length: 100 }),
+  sortCode: varchar("sort_code", { length: 20 }),
+  iban: varchar("iban", { length: 100 }),
+  swift: varchar("swift", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

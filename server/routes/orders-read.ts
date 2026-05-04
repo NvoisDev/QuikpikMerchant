@@ -448,10 +448,11 @@ export function registerOrderReadRoutes(app: Express): void {
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
 
       const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+      const bankProfile = await storage.getDefaultBusinessProfile(order.wholesalerId);
 
       const pdfAmountPaid = order.amountPaid ? parseFloat(order.amountPaid) : undefined;
       const pdfAmountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : undefined;
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding, bankProfile ?? undefined);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -477,11 +478,14 @@ export function registerOrderReadRoutes(app: Express): void {
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
 
-      const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
+      const [effectiveWholesaler, bankProfile] = await Promise.all([
+        resolveInvoiceWholesaler(order, wholesaler),
+        storage.getDefaultBusinessProfile(order.wholesalerId),
+      ]);
 
       const pdfAmountPaid = order.amountPaid ? parseFloat(order.amountPaid) : undefined;
       const pdfAmountOutstanding = order.amountOutstanding ? parseFloat(order.amountOutstanding) : undefined;
-      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding);
+      const pdfBuffer = await buildInvoicePdf(order, effectiveWholesaler, order.paymentMethod === 'payment_link' || (!!order.stripePaymentIntentId && !order.paymentMethod), pdfAmountPaid, pdfAmountOutstanding, bankProfile ?? undefined);
       const filename = `invoice-${order.orderNumber || order.id}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

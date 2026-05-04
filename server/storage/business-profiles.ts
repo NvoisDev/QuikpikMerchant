@@ -3,6 +3,15 @@ import { db } from "../db";
 import { eq, and } from "drizzle-orm";
 import { DeliveryStorage } from "./delivery";
 
+export interface BankDetails {
+  bankName?: string | null;
+  accountName?: string | null;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+}
+
 export class BusinessProfileStorage extends DeliveryStorage {
   async getBusinessProfiles(wholesalerId: string): Promise<BusinessProfile[]> {
     let profiles = await db
@@ -88,6 +97,31 @@ export class BusinessProfileStorage extends DeliveryStorage {
 
     await db.delete(businessProfiles).where(eq(businessProfiles.id, id));
     return true;
+  }
+
+  async getDefaultBusinessProfile(wholesalerId: string): Promise<BusinessProfile | undefined> {
+    const profiles = await this.getBusinessProfiles(wholesalerId);
+    return profiles.find(p => p.isDefault) ?? profiles[0];
+  }
+
+  async updateBankDetails(wholesalerId: string, data: BankDetails): Promise<BusinessProfile | undefined> {
+    const profile = await this.getDefaultBusinessProfile(wholesalerId);
+    if (!profile) return undefined;
+    const trim = (v: string | null | undefined) => (typeof v === 'string' ? v.trim() || null : null);
+    const [updated] = await db
+      .update(businessProfiles)
+      .set({
+        bankName: trim(data.bankName),
+        accountName: trim(data.accountName),
+        accountNumber: trim(data.accountNumber),
+        sortCode: trim(data.sortCode),
+        iban: trim(data.iban),
+        swift: trim(data.swift),
+        updatedAt: new Date(),
+      })
+      .where(eq(businessProfiles.id, profile.id))
+      .returning();
+    return updated;
   }
 
   async setDefaultBusinessProfile(

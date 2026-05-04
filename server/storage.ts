@@ -359,10 +359,12 @@ export interface IStorage {
   // Business Profile operations
   getBusinessProfiles(wholesalerId: string): Promise<import('@shared/schema').BusinessProfile[]>;
   getBusinessProfile(id: number): Promise<import('@shared/schema').BusinessProfile | undefined>;
+  getDefaultBusinessProfile(wholesalerId: string): Promise<import('@shared/schema').BusinessProfile | undefined>;
   createBusinessProfile(data: import('@shared/schema').InsertBusinessProfile): Promise<import('@shared/schema').BusinessProfile>;
   updateBusinessProfile(id: number, data: Partial<import('@shared/schema').InsertBusinessProfile>): Promise<import('@shared/schema').BusinessProfile | undefined>;
   deleteBusinessProfile(id: number, wholesalerId: string): Promise<boolean>;
   setDefaultBusinessProfile(id: number, wholesalerId: string): Promise<import('@shared/schema').BusinessProfile | undefined>;
+  updateBankDetails(wholesalerId: string, data: import('./storage/business-profiles').BankDetails): Promise<import('@shared/schema').BusinessProfile | undefined>;
 
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 

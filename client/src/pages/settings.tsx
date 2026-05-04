@@ -245,6 +245,115 @@ function BusinessProfilesSection() {
   );
 }
 
+interface BankDetailsData {
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string | null;
+  sortCode: string | null;
+  iban: string | null;
+  swift: string | null;
+}
+
+function BankDetailsSection() {
+  const { toast } = useToast();
+  const { user: authUser } = useAuth();
+  const canManage = authUser?.role !== 'team_member' || authUser?.teamMemberRole === 'admin';
+
+  const { data: saved, isLoading } = useQuery<BankDetailsData>({
+    queryKey: ["/api/business-profile/bank-details"],
+  });
+
+  const [form, setForm] = useState({ bankName: '', accountName: '', accountNumber: '', sortCode: '', iban: '', swift: '' });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (saved && !loaded) {
+      setForm({
+        bankName: saved.bankName || '',
+        accountName: saved.accountName || '',
+        accountNumber: saved.accountNumber || '',
+        sortCode: saved.sortCode || '',
+        iban: saved.iban || '',
+        swift: saved.swift || '',
+      });
+      setLoaded(true);
+    }
+  }, [saved, loaded]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const r = await apiRequest("PUT", "/api/business-profile/bank-details", {
+        bankName: data.bankName.trim() || null,
+        accountName: data.accountName.trim() || null,
+        accountNumber: data.accountNumber.trim() || null,
+        sortCode: data.sortCode.trim() || null,
+        iban: data.iban.trim() || null,
+        swift: data.swift.trim() || null,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-profile/bank-details"] });
+      toast({ title: "Bank details saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const field = (label: string, key: keyof typeof form, placeholder: string, hint?: string) => (
+    <div>
+      <Label className="text-xs text-gray-600">{label}</Label>
+      {hint && <p className="text-xs text-gray-400 mb-1">{hint}</p>}
+      <Input
+        value={form[key]}
+        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+        placeholder={placeholder}
+        className="mt-1"
+        maxLength={100}
+        disabled={!canManage}
+      />
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base sm:text-lg font-medium text-gray-900">Bank Details</h3>
+        <p className="text-sm text-gray-500 mt-0.5">
+          These details appear in the Payment Details section of every invoice PDF you generate. Leave fields blank to hide them.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-gray-400">Loading…</div>
+      ) : (
+        <div className="space-y-3">
+          {field('Bank Name', 'bankName', 'e.g. Barclays Bank')}
+          {field('Account Name', 'accountName', 'e.g. Acme Wholesale Ltd')}
+          <div className="grid grid-cols-2 gap-3">
+            {field('Account Number', 'accountNumber', 'e.g. 12345678')}
+            {field('Sort Code', 'sortCode', 'e.g. 20-00-00', 'UK — will format as XX-XX-XX')}
+          </div>
+          {field('IBAN', 'iban', 'e.g. GB29NWBK60161331926819')}
+          {field('SWIFT / BIC', 'swift', 'e.g. BARCGB22')}
+        </div>
+      )}
+
+      {canManage && (
+        <div className="flex justify-end pt-2">
+          <Button
+            size="sm"
+            onClick={() => saveMutation.mutate(form)}
+            disabled={saveMutation.isPending || isLoading}
+          >
+            {saveMutation.isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Saving…</> : <><Save className="h-4 w-4 mr-1.5" />Save Bank Details</>}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CollectionAddress {
   id: number;
   wholesalerId: string;
@@ -1575,6 +1684,11 @@ export default function Settings() {
                   {/* Collection Addresses Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <CollectionAddressesSection />
+                  </div>
+
+                  {/* Bank Details Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <BankDetailsSection />
                   </div>
 
                   {/* Delivery Settings Section */}

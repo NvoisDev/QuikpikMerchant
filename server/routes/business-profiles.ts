@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { storage, requireAuth, requireNotViewer, db, eq, users, z, ADMIN_EMAILS } from "./shared";
 import { insertBusinessProfileSchema, businessProfiles } from "@shared/schema";
+import type { BankDetails } from "../storage/business-profiles";
 
 function getAdminEmail(req: any): string | undefined {
   return req._adminEmail || req.user?.email;
@@ -116,6 +117,67 @@ export function registerBusinessProfileRoutes(app: Express): void {
     } catch (error) {
       console.error("Error setting default business profile:", error);
       res.status(500).json({ error: "Failed to set default profile" });
+    }
+  });
+
+  // GET /api/business-profile/bank-details — fetch bank details for the authenticated wholesaler
+  app.get("/api/business-profile/bank-details", requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId =
+        req.user.role === "team_member" && req.user.wholesalerId
+          ? req.user.wholesalerId
+          : req.user.id;
+      const profile = await storage.getDefaultBusinessProfile(wholesalerId);
+      if (!profile) return res.json({ bankName: null, accountName: null, accountNumber: null, sortCode: null, iban: null, swift: null });
+      res.json({
+        bankName: profile.bankName ?? null,
+        accountName: profile.accountName ?? null,
+        accountNumber: profile.accountNumber ?? null,
+        sortCode: profile.sortCode ?? null,
+        iban: profile.iban ?? null,
+        swift: profile.swift ?? null,
+      });
+    } catch (error) {
+      console.error("Error fetching bank details:", error);
+      res.status(500).json({ error: "Failed to fetch bank details" });
+    }
+  });
+
+  // PUT /api/business-profile/bank-details — save bank details for the authenticated wholesaler
+  app.put("/api/business-profile/bank-details", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId =
+        req.user.role === "team_member" && req.user.wholesalerId
+          ? req.user.wholesalerId
+          : req.user.id;
+
+      const MAX = 100;
+      const fields = ["bankName", "accountName", "accountNumber", "sortCode", "iban", "swift"] as const;
+      for (const f of fields) {
+        const val = req.body[f];
+        if (val !== undefined && val !== null && typeof val !== "string") {
+          return res.status(400).json({ error: `${f} must be a string` });
+        }
+        if (typeof val === "string" && val.trim().length > MAX) {
+          return res.status(400).json({ error: `${f} must be ${MAX} characters or fewer` });
+        }
+      }
+
+      const data: BankDetails = {
+        bankName: req.body.bankName ?? null,
+        accountName: req.body.accountName ?? null,
+        accountNumber: req.body.accountNumber ?? null,
+        sortCode: req.body.sortCode ?? null,
+        iban: req.body.iban ?? null,
+        swift: req.body.swift ?? null,
+      };
+
+      const updated = await storage.updateBankDetails(wholesalerId, data);
+      if (!updated) return res.status(404).json({ error: "No business profile found" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving bank details:", error);
+      res.status(500).json({ error: "Failed to save bank details" });
     }
   });
 

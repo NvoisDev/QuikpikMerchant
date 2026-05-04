@@ -592,7 +592,16 @@ export interface SendGridAttachment {
 }
 
 // ─── Invoice PDF builder ──────────────────────────────────────────────────────
-export async function buildInvoicePdf(order: any, wholesaler: any, showTransactionFee = false, amountPaid?: number, amountOutstanding?: number): Promise<Buffer> {
+export interface InvoiceBankDetails {
+  bankName?: string | null;
+  accountName?: string | null;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+}
+
+export async function buildInvoicePdf(order: any, wholesaler: any, showTransactionFee = false, amountPaid?: number, amountOutstanding?: number, bankDetails?: InvoiceBankDetails): Promise<Buffer> {
   const PDFDocument = (await import('pdfkit')).default;
   const currency = wholesaler.preferredCurrency || 'GBP';
   const currencySymbol = getCurrencySymbol(currency);
@@ -837,6 +846,33 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (order.totalWeight && parseFloat(order.totalWeight) > 0) {
       tY += 4;
       drawTotRow('Total Weight', `${parseFloat(order.totalWeight).toFixed(2)} kg`);
+    }
+    // ── Payment / bank details section ─────────────────────────────────────────
+    const hasBankDetails = bankDetails && (
+      bankDetails.bankName || bankDetails.accountName || bankDetails.accountNumber ||
+      bankDetails.sortCode || bankDetails.iban || bankDetails.swift
+    );
+    if (hasBankDetails) {
+      tY += 20;
+      if (tY + 100 > 841.89 - 60) { doc.addPage({ size: 'A4', margin: 0 }); tY = MARGIN; }
+      doc.moveTo(MARGIN, tY).lineTo(MARGIN + CONTENT_W, tY).strokeColor(BORDER).lineWidth(0.5).stroke();
+      tY += 14;
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK).text('Payment Details', MARGIN, tY);
+      tY += 15;
+      const formatSortCode = (sc: string) => sc.replace(/[^0-9]/g, '').replace(/(\d{2})(\d{2})(\d{2})/, '$1-$2-$3');
+      const bankRows: [string, string][] = [
+        bankDetails.bankName ? ['Bank', bankDetails.bankName] : null,
+        bankDetails.accountName ? ['Account Name', bankDetails.accountName] : null,
+        bankDetails.accountNumber ? ['Account Number', bankDetails.accountNumber] : null,
+        bankDetails.sortCode ? ['Sort Code', formatSortCode(bankDetails.sortCode)] : null,
+        bankDetails.iban ? ['IBAN', bankDetails.iban] : null,
+        bankDetails.swift ? ['SWIFT / BIC', bankDetails.swift] : null,
+      ].filter((r): r is [string, string] => r !== null);
+      for (const [label, value] of bankRows) {
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(label + ':', MARGIN, tY, { width: 100, continued: false });
+        doc.font('Helvetica').fontSize(9).fillColor(DARK).text(value, MARGIN + 105, tY, { width: CONTENT_W - 105 });
+        tY += 15;
+      }
     }
     const FOOTER_HEIGHT = 60, PAGE_H = 841.89;
     if (tY + 36 + FOOTER_HEIGHT > PAGE_H) { doc.addPage({ size: 'A4', margin: 0 }); tY = MARGIN; }
