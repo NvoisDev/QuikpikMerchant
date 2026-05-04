@@ -2,6 +2,7 @@ import type { Express } from "express";
 import crypto from "crypto";
 
 import { formatDateTime } from "../../shared/utils/date";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   SendGridAttachment, buildInvoicePdf, db, emailButton, emailCard, eq,
   formatPackDescriptor, generateReadyForCollectionEmail, getEmailLogoUrl,
@@ -113,9 +114,7 @@ export function registerOrderCommsRoutes(app: Express): void {
       const { orderId } = req.params;
       
       // Use authenticated wholesaler ID for proper data isolation
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       // Verify order belongs to this wholesaler
       const order = await storage.getOrder(parseInt(orderId));
@@ -142,9 +141,7 @@ export function registerOrderCommsRoutes(app: Express): void {
       const { imageUrl, filename, description } = req.body;
       
       // Use authenticated wholesaler ID for proper data isolation
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       // Verify order belongs to this wholesaler
       const order = await storage.getOrder(parseInt(orderId));
@@ -228,9 +225,7 @@ export function registerOrderCommsRoutes(app: Express): void {
         return res.status(400).json({ error: "No photo file provided" });
       }
 
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const order = await storage.getOrder(parseInt(orderId));
       if (!order || order.wholesalerId !== wholesalerId) {
@@ -293,9 +288,7 @@ export function registerOrderCommsRoutes(app: Express): void {
       const { orderId, imageId } = req.params;
       
       // Use authenticated wholesaler ID for proper data isolation
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       // Verify order belongs to this wholesaler
       const order = await storage.getOrder(parseInt(orderId));
@@ -817,9 +810,7 @@ export function registerOrderCommsRoutes(app: Express): void {
     try {
       const orderId = parseInt(req.params.orderId);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       // Get the order
       const [order] = await db.select().from(orders).where(eq(orders.id, orderId));

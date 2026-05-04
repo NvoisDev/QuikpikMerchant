@@ -6,6 +6,7 @@ import {
   storage, subscriptionPlans, unlockForUpgrade, userSubscriptions, users, z,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { getProductLimit } from "../utils/plan-tier";
 import { paymentLimiter } from "./payments-connect";
 
@@ -28,9 +29,7 @@ export function registerSubscriptionRoutes(app: Express): void {
   app.get('/api/subscriptions/current', requireAuth, async (req: any, res) => {
     try {
       // Team members inherit their wholesaler's subscription plan
-      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
-        ? req.user.wholesalerId
-        : req.user.id;
+      const userId = resolveWholesalerId(req);
       const subscription = await SubscriptionService.getUserSubscription(userId);
       res.json(subscription);
     } catch (error) {

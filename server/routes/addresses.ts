@@ -3,6 +3,7 @@ import {
   and, isAuthenticated, or, requireAuth, requireNotViewer, storage
 } from "./shared";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 
 export function registerAddressRoutes(app: Express): void {
   // GET /api/delivery-address/:addressId (customer-facing, by session auth)
@@ -42,9 +43,7 @@ export function registerAddressRoutes(app: Express): void {
   app.get('/api/wholesaler/delivery-address/:addressId', requireAuth, async (req: any, res) => {
     try {
       const { addressId } = req.params;
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       const address = await storage.getDeliveryAddress(parseInt(addressId));
       
@@ -91,7 +90,7 @@ export function registerAddressRoutes(app: Express): void {
   // GET /api/wholesaler/customers/:customerId/addresses
   app.get('/api/wholesaler/customers/:customerId/addresses', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { customerId } = req.params;
       
       const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);
@@ -110,7 +109,7 @@ export function registerAddressRoutes(app: Express): void {
   // POST /api/wholesaler/customers/:customerId/addresses
   app.post('/api/wholesaler/customers/:customerId/addresses', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { customerId } = req.params;
       const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
 
@@ -146,7 +145,7 @@ export function registerAddressRoutes(app: Express): void {
   // PUT /api/wholesaler/customers/:customerId/addresses/:addressId
   app.put('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { customerId, addressId } = req.params;
       const { addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
 
@@ -174,7 +173,7 @@ export function registerAddressRoutes(app: Express): void {
   // DELETE /api/wholesaler/customers/:customerId/addresses/:addressId
   app.delete('/api/wholesaler/customers/:customerId/addresses/:addressId', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { customerId, addressId } = req.params;
 
       const belongs = await storage.isCustomerOfWholesaler(customerId, wholesalerId);

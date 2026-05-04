@@ -5,6 +5,7 @@ import {
 } from "./shared";
 import { productBatches } from "@shared/schema";
 import { isImpersonating } from "../utils/isImpersonating";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -50,8 +51,7 @@ export function registerProductRoutes(app: Express): void {
   // GET /api/products/expiring
   app.get('/api/products/expiring', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const expiring = await storage.getExpiringProducts(targetUserId);
       res.json(expiring);
     } catch (error) {
@@ -87,9 +87,7 @@ export function registerProductRoutes(app: Express): void {
   app.post('/api/products', requireAuth, requireNotViewer, requireMemberPermission('products'), requireProductLimits(), async (req: any, res) => {
     try {
       // Use parent company ID for team members to ensure data inheritance
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const wholesalerUser = await storage.getUser(targetUserId);
       const defaultThreshold = wholesalerUser?.defaultLowStockThreshold ?? 50;
@@ -138,9 +136,7 @@ export function registerProductRoutes(app: Express): void {
 
   // PATCH /api/products/:id
   app.patch('/api/products/:id', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
-    const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-      ? req.user.wholesalerId 
-      : req.user.id;
+    const targetUserId = resolveWholesalerId(req);
     try {
       const id = parseInt(req.params.id);
       
@@ -286,9 +282,7 @@ export function registerProductRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id);
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       // Verify product belongs to user or their parent company
       const existingProduct = await storage.getProduct(id);
@@ -333,7 +327,7 @@ export function registerProductRoutes(app: Express): void {
   app.get('/api/promotions', requireAuth, requireMemberPermission('promotions'), async (req: any, res) => {
     try {
       const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const userProducts = await storage.getProducts(targetUserId);
       
       const promotions: any[] = [];
@@ -362,7 +356,7 @@ export function registerProductRoutes(app: Express): void {
   app.post('/api/products/:id/promotions', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const productId = parseInt(req.params.id);
       const product = await storage.getProduct(productId);
       
@@ -417,7 +411,7 @@ export function registerProductRoutes(app: Express): void {
   app.patch('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const productId = parseInt(req.params.id);
       const promoId = req.params.promoId;
       const product = await storage.getProduct(productId);
@@ -473,7 +467,7 @@ export function registerProductRoutes(app: Express): void {
   app.delete('/api/products/:id/promotions/:promoId', requireAuth, requireNotViewer, requireMemberPermission('products'), async (req: any, res) => {
     try {
       const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const productId = parseInt(req.params.id);
       const promoId = req.params.promoId;
       const product = await storage.getProduct(productId);
@@ -556,12 +550,8 @@ export function registerProductRoutes(app: Express): void {
   // GET /api/inventory/status
   app.get('/api/inventory/status', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { includeAlerts = 'true' } = req.query;
-      
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : userId;
       
       const inventoryStatus = await storage.getInventoryStatus(targetUserId);
       
@@ -580,12 +570,8 @@ export function registerProductRoutes(app: Express): void {
   // GET /api/inventory/alerts
   app.get('/api/inventory/alerts', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { unreadOnly = 'false' } = req.query;
-      
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : userId;
       
       const alerts = await storage.getStockAlerts(targetUserId, unreadOnly === 'true');
       res.json(alerts);

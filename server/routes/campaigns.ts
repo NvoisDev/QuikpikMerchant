@@ -6,6 +6,7 @@ import {
   requireAuth, requireBroadcastLimits, requireNotViewer, storage, sum, twilio,
   whatsAppBusinessService
 } from "./shared";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { getBroadcastProductMetrics } from "../services/analyticsService";
 
 export function registerCampaignRoutes(app: Express): void {
@@ -85,9 +86,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
       // Use parent company ID for team members
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       // Validate the request data
       const validatedData = insertBroadcastSchema.parse({
@@ -147,9 +146,7 @@ export function registerCampaignRoutes(app: Express): void {
   app.get('/api/broadcasts', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
         
       const broadcasts = await storage.getBroadcasts(wholesalerId);
       res.json(broadcasts);
@@ -163,9 +160,7 @@ export function registerCampaignRoutes(app: Express): void {
   app.get('/api/broadcasts/stats', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
         
       const stats = await storage.getBroadcastStats(wholesalerId);
       res.json(stats);
@@ -179,7 +174,7 @@ export function registerCampaignRoutes(app: Express): void {
   app.post('/api/ai/personalized-message', requireAuth, async (req: any, res) => {
     try {
       
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const userId = resolveWholesalerId(req);
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -213,7 +208,7 @@ export function registerCampaignRoutes(app: Express): void {
   // GET /api/ai/campaign-suggestions
   app.get('/api/ai/campaign-suggestions', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const userId = resolveWholesalerId(req);
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -258,7 +253,7 @@ export function registerCampaignRoutes(app: Express): void {
   app.post('/api/ai/optimize-timing', requireAuth, async (req: any, res) => {
     try {
       const { customerGroup, previousCampaignData } = req.body;
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const userId = resolveWholesalerId(req);
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -502,7 +497,7 @@ export function registerCampaignRoutes(app: Express): void {
       const user = req.user;
       const templateId = parseInt(req.params.id, 10);
       if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const deleted = await storage.deleteMessageTemplate(templateId, targetUserId);
       if (!deleted) {
@@ -576,7 +571,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       // Use parent company data for team members
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const campaigns = await storage.getTemplateCampaigns(targetUserId);
       res.json(campaigns);
     } catch (error) {
@@ -590,7 +585,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       // Use parent company data for team members
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       // Get both broadcasts and message templates, then unify them
       const [broadcasts, templates] = await Promise.all([
@@ -756,7 +751,7 @@ export function registerCampaignRoutes(app: Express): void {
   app.get('/api/campaigns/analytics', requireAuth, async (req: any, res) => {
     try {
       const user = req.user;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { timeFilter = '7d', campaignFilter = 'all' } = req.query;
 
       // Calculate date range based on timeFilter
@@ -922,7 +917,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       // Use parent company data for team members
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { campaignType, productId, products, specialPrice, quantity, promotionalOffers, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
@@ -986,7 +981,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       const campaignId = req.params.id;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
       // Parse campaign ID to determine type
@@ -1065,7 +1060,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       const campaignId = req.params.id;
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
 
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
@@ -1105,7 +1100,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const user = req.user;
       // Use parent company data for team members
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { campaignId, customerGroupId, customMessage } = req.body;
 
       // Check broadcast limits based on subscription tier
@@ -1340,7 +1335,7 @@ export function registerCampaignRoutes(app: Express): void {
       const campaignId = req.params.id;
       const user = req.user;
       // Use parent company data for team members
-      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const targetUserId = resolveWholesalerId(req);
       // No customer group needed for stock refresh - just update the data
 
       // Determine campaign type and get details

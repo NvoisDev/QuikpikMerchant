@@ -7,14 +7,13 @@ import {
   sgMail, sql, storage, users, verifyPassword,
   wrapCustomerEmail,
 } from "./shared";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 
 export function registerAuthTeamRoutes(app: Express): void {
   // GET /api/tab-permissions
   app.get('/api/tab-permissions', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const userId = resolveWholesalerId(req);
       const permissions = await storage.getTabPermissions(userId);
       res.json(permissions);
     } catch (error) {
@@ -50,9 +49,7 @@ export function registerAuthTeamRoutes(app: Express): void {
   app.get('/api/tab-permissions/check/:tabName', requireAuth, async (req: any, res) => {
     try {
       const { tabName } = req.params;
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const userId = resolveWholesalerId(req);
 
       let hasAccess = true;
       if (req.user.role === 'team_member') {
@@ -167,8 +164,7 @@ export function registerAuthTeamRoutes(app: Express): void {
   // PATCH /api/team-members/:id/phone
   app.patch('/api/team-members/:id/phone', requireAuth, async (req: any, res) => {
     try {
-      const ownerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId : req.user.id;
+      const ownerId = resolveWholesalerId(req);
       const { id } = req.params;
       const { phoneNumber } = req.body;
 
@@ -198,8 +194,7 @@ export function registerAuthTeamRoutes(app: Express): void {
   app.delete('/api/team-members/:id', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const requestingUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId : req.user.id;
+      const requestingUserId = resolveWholesalerId(req);
 
       const allMembers = await storage.getAllTeamMembers();
       const target = allMembers.find((m: any) => m.id === parseInt(id));
@@ -229,8 +224,7 @@ export function registerAuthTeamRoutes(app: Express): void {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const requestingUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId : req.user.id;
+      const requestingUserId = resolveWholesalerId(req);
 
       if (!['active', 'suspended'].includes(status)) {
         return res.status(400).json({ message: "Status must be 'active' or 'suspended'" });

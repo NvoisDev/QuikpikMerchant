@@ -336,6 +336,40 @@ export class OrderStorage extends ProductStorage {
     return orderList;
   }
 
+  /**
+   * Lightweight SQL-aggregated chart data — groups orders into hourly buckets
+   * and returns only the columns needed for chart rendering. This avoids loading
+   * every column of every order row into Node.js memory.
+   *
+   * Revenue = subtotal − platform_fee (mirrors the JS formula in analytics.ts).
+   */
+  async getChartDataAggregated(wholesalerId: string, fromDate: Date, toDate: Date): Promise<{ bucket: Date; orderCount: number; revenue: number }[]> {
+    const result = await db.execute(sql`
+      SELECT
+        date_trunc('hour', created_at AT TIME ZONE 'UTC') AS bucket,
+        COUNT(*)::int                                      AS "orderCount",
+        COALESCE(
+          SUM(
+            CAST(subtotal AS NUMERIC) -
+            CAST(COALESCE(platform_fee, '0') AS NUMERIC)
+          ), 0
+        )::float8                                          AS revenue
+      FROM orders
+      WHERE wholesaler_id = ${wholesalerId}
+        AND created_at  >= ${fromDate}
+        AND created_at  <= ${toDate}
+        AND status NOT IN ('cancelled', 'refunded')
+      GROUP BY date_trunc('hour', created_at AT TIME ZONE 'UTC')
+      ORDER BY bucket
+    `);
+
+    return (result.rows as any[]).map(row => ({
+      bucket: new Date(row.bucket as string),
+      orderCount: Number(row.orderCount),
+      revenue: Number(row.revenue),
+    }));
+  }
+
   // Generate unique order number for wholesaler using an atomic counter on the users row.
   // The counter never resets when orderNumberPrefix changes — sequence integrity is always preserved.
   async generateOrderNumber(wholesalerId: string): Promise<string> {

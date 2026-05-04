@@ -3,15 +3,14 @@ import {
   and, count, customerGroups, db, eq, gte, inArray, lte, openai, or, orderCancellationRequests,
   orderItems, orders, products, requireAuth, requireNotViewer, storage, sum
 } from "./shared";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { productBatches } from "@shared/schema";
 
 export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/cancellations
   app.get('/api/analytics/cancellations', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       const { timeRange = '30d' } = req.query;
       const now = new Date();
@@ -104,9 +103,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const { fromDate, toDate } = req.query;
       
@@ -139,10 +136,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/chart-data
   app.get('/api/analytics/chart-data', requireAuth, async (req: any, res) => {
     try {
-      // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { fromDate, toDate } = req.query;
       
       if (!fromDate || !toDate) {
@@ -156,8 +150,17 @@ export function registerAnalyticsRoutes(app: Express): void {
       // Ensure endDate doesn't exceed current time
       const actualEndDate = endDate > now ? now : endDate;
       
-      // Get orders within the date range
-      const orders = await storage.getOrdersForDateRange(targetUserId, startDate, actualEndDate);
+      // Fetch SQL-aggregated hourly buckets — avoids loading all order columns into memory
+      const dataPoints = await storage.getChartDataAggregated(targetUserId, startDate, actualEndDate);
+
+      // Helper: sum orderCount and revenue for aggregated points within a time window
+      const bucketSlice = (from: Date, to: Date) => {
+        const pts = dataPoints.filter(p => p.bucket >= from && p.bucket < to);
+        return {
+          orders: pts.reduce((s, p) => s + p.orderCount, 0),
+          revenue: Math.round(pts.reduce((s, p) => s + p.revenue, 0) * 100) / 100,
+        };
+      };
       
       // Calculate time span to determine chart granularity
       const hoursDifference = (actualEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
@@ -178,45 +181,28 @@ export function registerAnalyticsRoutes(app: Express): void {
       if (hoursDifference <= 24) {
         // Hourly — today or yesterday
         const isToday = actualEndDate.toDateString() === now.toDateString();
-        // Use elapsed hours from startDate so we stay timezone-safe
-        // (setHours would use server UTC and produce the wrong day for UTC-offset clients)
         const maxHour = isToday
           ? Math.floor((now.getTime() - startDate.getTime()) / 3_600_000)
           : 23;
 
         for (let hour = 0; hour <= maxHour; hour++) {
           const hourStart = new Date(startDate.getTime() + hour * 3_600_000);
-          const hourEnd   = new Date(startDate.getTime() + (hour + 1) * 3_600_000 - 1);
-
-          const hourOrders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            return orderDate >= hourStart && orderDate <= hourEnd;
-          });
-
-          chartData.push({
-            name: `${hour}:00`,
-            revenue: Math.round(hourOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total) - parseFloat(o.platformFee || '0'), 0) * 100) / 100,
-            orders: hourOrders.length
-          });
+          const hourEnd   = new Date(startDate.getTime() + (hour + 1) * 3_600_000);
+          const { orders, revenue } = bucketSlice(hourStart, hourEnd);
+          chartData.push({ name: `${hour}:00`, revenue, orders });
         }
       } else if (hoursDifference <= 168) {
         // Daily with weekday names — 2 to 7 days
         const daysDiff = Math.round((actualEndDate.getTime() - labelStart.getTime()) / 86_400_000) + 1;
         for (let i = 0; i < daysDiff; i++) {
           const dayStart = new Date(labelStart.getTime() + i * 86_400_000);
-          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000 - 1);
-
+          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000);
           if (dayStart > now) break;
-
-          const dayOrders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            return orderDate >= dayStart && orderDate <= dayEnd;
-          });
-
+          const { orders, revenue } = bucketSlice(dayStart, dayEnd);
           chartData.push({
             name: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
-            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total) - parseFloat(o.platformFee || '0'), 0) * 100) / 100,
-            orders: dayOrders.length
+            revenue,
+            orders,
           });
         }
       } else if (hoursDifference <= 744) {
@@ -224,19 +210,13 @@ export function registerAnalyticsRoutes(app: Express): void {
         const daysDiff = Math.round((actualEndDate.getTime() - labelStart.getTime()) / 86_400_000) + 1;
         for (let i = 0; i < daysDiff; i++) {
           const dayStart = new Date(labelStart.getTime() + i * 86_400_000);
-          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000 - 1);
-
+          const dayEnd   = new Date(labelStart.getTime() + (i + 1) * 86_400_000);
           if (dayStart > now) break;
-
-          const dayOrders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            return orderDate >= dayStart && orderDate <= dayEnd;
-          });
-
+          const { orders, revenue } = bucketSlice(dayStart, dayEnd);
           chartData.push({
             name: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            revenue: Math.round(dayOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total) - parseFloat(o.platformFee || '0'), 0) * 100) / 100,
-            orders: dayOrders.length
+            revenue,
+            orders,
           });
         }
       } else if (hoursDifference <= 2190) {
@@ -244,19 +224,13 @@ export function registerAnalyticsRoutes(app: Express): void {
         const weeks = Math.ceil((actualEndDate.getTime() - labelStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
         for (let i = 0; i < weeks; i++) {
           const weekStart = new Date(labelStart.getTime() + i * 7 * 86_400_000);
-          const weekEnd   = new Date(labelStart.getTime() + (i + 1) * 7 * 86_400_000 - 1);
-
+          const weekEnd   = new Date(labelStart.getTime() + (i + 1) * 7 * 86_400_000);
           if (weekStart > now) break;
-
-          const weekOrders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            return orderDate >= weekStart && orderDate <= weekEnd;
-          });
-
+          const { orders, revenue } = bucketSlice(weekStart, weekEnd);
           chartData.push({
             name: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            revenue: Math.round(weekOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total) - parseFloat(o.platformFee || '0'), 0) * 100) / 100,
-            orders: weekOrders.length
+            revenue,
+            orders,
           });
         }
       } else {
@@ -267,26 +241,14 @@ export function registerAnalyticsRoutes(app: Express): void {
 
         while (cursor <= actualEndDate) {
           if (cursor > now) break;
-
           const monthStart = new Date(cursor);
-          const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
-
-          const monthOrders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            return orderDate >= monthStart && orderDate <= monthEnd;
-          });
-
+          const monthEnd   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+          const { orders, revenue } = bucketSlice(monthStart, monthEnd);
           const label = multiYear
             ? monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
             : monthStart.toLocaleDateString('en-US', { month: 'short' });
-
-          chartData.push({
-            name: label,
-            revenue: Math.round(monthOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || o.total) - parseFloat(o.platformFee || '0'), 0) * 100) / 100,
-            orders: monthOrders.length
-          });
-
-          cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+          chartData.push({ name: label, revenue, orders });
+          cursor = monthEnd;
         }
       }
       
@@ -301,9 +263,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/top-products', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const { limit } = req.query;
       const topProducts = await storage.getTopProducts(targetUserId, limit ? parseInt(limit as string) : 5);
@@ -318,9 +278,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/recent-orders', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const { limit } = req.query;
       const recentOrders = await storage.getRecentOrders(targetUserId, limit ? parseInt(limit as string) : 10);
@@ -335,9 +293,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/broadcast-stats', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const broadcastStats = await storage.getBroadcastStats(targetUserId);
       res.json(broadcastStats);
@@ -350,9 +306,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/margin-summary
   app.get('/api/analytics/margin-summary', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
 
       const { fromDate, toDate } = req.query;
       if (!fromDate || !toDate) {
@@ -478,9 +432,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       }
 
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const { timeRange = '30d' } = req.query;
       
@@ -538,9 +490,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/revenue', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const { timeRange = '30d' } = req.query;
       
@@ -568,9 +518,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   app.get('/api/analytics/products', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const topProducts = await storage.getTopProducts(targetUserId, 10);
       
@@ -1060,9 +1008,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   // GET /api/stock-alerts
   app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const unreadOnly = req.query.unreadOnly === 'true';
 
       await storage.syncStockAlerts(wholesalerId);

@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   storage, db, requireAuth, requireNotViewer, requireMemberPermission,
   orders, orderCancellationRequests,
@@ -24,9 +25,7 @@ export function registerOrderReadRoutes(app: Express): void {
   // GET /api/orders/pending-count
   app.get('/api/orders/pending-count', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const result = await db.select({ count: sql<number>`count(*)` })
         .from(orders)
@@ -48,9 +47,7 @@ export function registerOrderReadRoutes(app: Express): void {
       const search = req.query.search; // search term
       
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       const ordersList = await storage.getOrders(wholesalerId, undefined, search);
       
@@ -140,9 +137,7 @@ export function registerOrderReadRoutes(app: Express): void {
       }
 
       // Verify the user has access to this order (data isolation)
-      const userId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const userId = resolveWholesalerId(req);
       
       if (order.wholesalerId !== userId && order.retailerId !== userId) {
         return res.status(403).json({ error: 'Access denied' });
@@ -191,9 +186,7 @@ export function registerOrderReadRoutes(app: Express): void {
       const fulfillmentTypeParam = req.query.fulfillmentType as string | undefined;
       const statusParam = req.query.status as string | undefined;
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       // Build search conditions - customerId takes priority over text search
       const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId)];
@@ -341,9 +334,7 @@ export function registerOrderReadRoutes(app: Express): void {
   app.get('/api/orders/stats', requireAuth, async (req: any, res) => {
     try {
       // Use authenticated user's ID for proper data isolation
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       // Aggregate directly in the database — no rows loaded into Node.js memory.
       const stats = await getOrderStats(wholesalerId, req.query.archiveTab as string || 'active');
@@ -361,9 +352,7 @@ export function registerOrderReadRoutes(app: Express): void {
   // GET /api/cancellation-requests
   app.get('/api/cancellation-requests', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const status = req.query.status as string || undefined;
       
       let query = db.select()
@@ -414,9 +403,7 @@ export function registerOrderReadRoutes(app: Express): void {
   // GET /api/cancellation-requests/pending-count
   app.get('/api/cancellation-requests/pending-count', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       const result = await db.select({ count: sql<number>`count(*)` })
         .from(orderCancellationRequests)

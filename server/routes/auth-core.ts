@@ -9,6 +9,7 @@ import {
   wrapCustomerEmail, GoogleAuthBlockedError,
 } from "./shared";
 import { isImpersonating } from "../utils/isImpersonating";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 
 const googleOAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -675,9 +676,7 @@ export function registerAuthCoreRoutes(app: Express): void {
   // GET /api/owner-profile
   app.get('/api/owner-profile', requireAuth, async (req: any, res) => {
     try {
-      const ownerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const ownerId = resolveWholesalerId(req);
       const owner = await storage.getUser(ownerId);
       if (!owner) return res.status(404).json({ message: 'Owner not found' });
       res.json({

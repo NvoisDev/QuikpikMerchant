@@ -3,6 +3,8 @@ import crypto from "crypto";
 
 import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
+import { calculateOrderPricing } from "../services/orderPricingService";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
@@ -218,9 +220,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return res.status(400).json({ error: 'Invalid order ID' });
       }
 
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const [order] = await db
         .select()
@@ -405,9 +405,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return res.status(400).json({ error: 'Amount must be greater than 0' });
       }
 
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
       if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -646,9 +644,6 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         });
       }
 
-      const feeConfig = await getCurrentFeeConfig();
-      const customerTransactionFee = calculateCustomerFee(subtotal, 0, feeConfig);
-
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
 
@@ -662,8 +657,14 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return res.json(existingOrder);
       }
 
+      const feeConfig = await getCurrentFeeConfig();
       const feeRate = await getWholesalerFeeRate(wholesalerId);
-      const platformFee = subtotal * feeRate;
+      const {
+        customerTransactionFee,
+        platformFee,
+        feePercentageUsed,
+        fixedFeeUsed,
+      } = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
 
       const wholesalerForVat = await storage.getUser(wholesalerId);
       const vatEnabled = wholesalerForVat?.vatEnabled ?? false;
@@ -694,8 +695,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        feePercentageUsed: feeConfig.percentage.toFixed(4),
-        fixedFeeUsed: feeConfig.fixed.toFixed(2),
+        feePercentageUsed,
+        fixedFeeUsed,
         vatAmount: vatAmount.toFixed(2),
         ...(vatRateApplied !== null ? { vatRateApplied: vatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),
@@ -756,9 +757,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return res.status(400).json({ error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
       }
 
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -803,9 +802,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { reason, reasonCategory, returnedItems, processRefund, refundType, refundDelivery } = req.body;
       const stripe = getStripeClient(Boolean(req.user.isTestAccount));
 
@@ -1038,9 +1035,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const order = await storage.getOrder(id);
       if (!order) return res.status(404).json({ message: "Order not found" });
@@ -1100,9 +1095,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const order = await storage.getOrder(id);
       if (!order) return res.status(404).json({ message: "Order not found" });
@@ -1139,9 +1132,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     try {
       const requestId = parseInt(req.params.id);
       if (isNaN(requestId)) return res.status(400).json({ error: 'Invalid request ID' });
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       const { approved, responseMessage, refundType } = req.body;
       const stripe = getStripeClient(Boolean(req.user.isTestAccount));
 

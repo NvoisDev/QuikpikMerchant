@@ -15,6 +15,7 @@
 import type { Express, RequestHandler } from "express";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
+import { calculateOrderPricing } from "../services/orderPricingService";
 import {
   and, db, eq, formatNumber, formatPackDescriptor, formatPhoneToInternational,
   generateOrderNotificationMessage, generateOrderNumber,
@@ -657,9 +658,13 @@ Please contact the customer to confirm this order.
       }).filter((i): i is NonNullable<typeof i> => i !== null);
 
       const subtotal = pricedItems.reduce((sum, item) => sum + item.currentTotal, 0);
-      const platformFee = calculatePlatformFee(subtotal);
       const reorderFeeConfig = await getCurrentFeeConfig();
-      const customerTransactionFee = calculateCustomerFee(subtotal, 0, reorderFeeConfig);
+      const {
+        customerTransactionFee,
+        platformFee,
+        feePercentageUsed: reorderFeePercentageUsed,
+        fixedFeeUsed: reorderFixedFeeUsed,
+      } = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig: reorderFeeConfig });
       const deliveryCost = parseFloat(order.deliveryCost || '0');
       const shippingTotal = parseFloat(order.shippingTotal || '0');
 
@@ -684,8 +689,8 @@ Please contact the customer to confirm this order.
         subtotal: subtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        feePercentageUsed: reorderFeeConfig.percentage.toFixed(4),
-        fixedFeeUsed: reorderFeeConfig.fixed.toFixed(2),
+        feePercentageUsed: reorderFeePercentageUsed,
+        fixedFeeUsed: reorderFixedFeeUsed,
         vatAmount: reorderVatAmount.toFixed(2),
         ...(reorderVatRateApplied !== null ? { vatRateApplied: reorderVatRateApplied.toFixed(4) } : {}),
         total: total.toFixed(2),

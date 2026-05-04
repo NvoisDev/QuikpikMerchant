@@ -2,6 +2,7 @@ import type { Express } from "express";
 import Stripe from "stripe";
 import { calculateCustomerFee } from "../../shared/utils/fees";
 import { getCurrentFeeConfig } from "../utils/fee-config";
+import { calculateOrderPricing } from "../services/orderPricingService";
 import { formatDateTime } from "../../shared/utils/date";
 import {
   InventoryCalculator, and, db, emailButton, emailCard, emailHeading, eq,
@@ -11,6 +12,7 @@ import {
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
@@ -29,9 +31,7 @@ export function registerQuoteRoutes(app: Express): void {
   // POST /api/quotes
   app.post('/api/quotes', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
       
       const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null } = req.body;
       
@@ -161,9 +161,15 @@ export function registerQuoteRoutes(app: Express): void {
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
       const feeConfig = await getCurrentFeeConfig();
-      const customerTransactionFee = isOffline ? 0 : calculateCustomerFee(subtotal, 0, feeConfig);
       const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
-      const platformFee = subtotal * feeRate; // per-wholesaler platform fee
+      const {
+        customerTransactionFee,
+        platformFee,
+        feePercentageUsed: quoteFeePercentageUsed,
+        fixedFeeUsed: quoteFixedFeeUsed,
+      } = isOffline
+        ? { customerTransactionFee: 0, platformFee: subtotal * feeRate, feePercentageUsed: '0.0000', fixedFeeUsed: '0.00' }
+        : calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
 
       // VAT calculation — wholesaler already fetched above
       const quoteVatEnabled = wholesaler?.vatEnabled ?? false;
@@ -214,8 +220,8 @@ export function registerQuoteRoutes(app: Express): void {
         subtotal: productSubtotal.toFixed(2),
         platformFee: platformFee.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        feePercentageUsed: isOffline ? '0.0000' : feeConfig.percentage.toFixed(4),
-        fixedFeeUsed: isOffline ? '0.00' : feeConfig.fixed.toFixed(2),
+        feePercentageUsed: quoteFeePercentageUsed,
+        fixedFeeUsed: quoteFixedFeeUsed,
         deliveryCost: quoteDeliveryCharge.toFixed(2),
         vatAmount: quoteVatAmount.toFixed(2),
         ...(quoteVatRateApplied !== null ? { vatRateApplied: quoteVatRateApplied.toFixed(4) } : {}),
@@ -746,9 +752,7 @@ export function registerQuoteRoutes(app: Express): void {
   // PATCH /api/quotes/:id — edit an existing quote before payment is completed
   app.patch('/api/quotes/:id', requireAuth, requireNotViewer, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const quoteId = parseInt(req.params.id);
       if (isNaN(quoteId)) {
@@ -1255,9 +1259,7 @@ export function registerQuoteRoutes(app: Express): void {
   // GET /api/quotes/:id — fetch a single quote by ID (wholesaler only)
   app.get('/api/quotes/:id', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const quoteId = parseInt(req.params.id);
       if (isNaN(quoteId)) return res.status(400).json({ error: 'Invalid invoice ID' });
@@ -1286,9 +1288,7 @@ export function registerQuoteRoutes(app: Express): void {
   // GET /api/quotes/:id/activity — paginated activity log for a quote (wholesaler only)
   app.get('/api/quotes/:id/activity', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const wholesalerId = resolveWholesalerId(req);
 
       const quoteId = parseInt(req.params.id);
       if (isNaN(quoteId)) return res.status(400).json({ error: 'Invalid invoice ID' });

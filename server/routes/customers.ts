@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
+import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
@@ -21,9 +22,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/wholesaler/customer-update-notifications
   app.get('/api/wholesaler/customer-update-notifications', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
 
       const limit = parseInt(req.query.limit as string) || 50;
       
@@ -73,9 +72,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.get('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
         
       const groups = await storage.getCustomerGroups(targetUserId);
       res.json(groups);
@@ -88,9 +85,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customer-groups/all-members
   app.get('/api/customer-groups/all-members', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const customerGroups = await storage.getCustomerGroups(targetUserId);
       
@@ -138,9 +133,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.post('/api/customer-groups', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const user = await storage.getUser(targetUserId);
       
@@ -188,9 +181,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.put('/api/customer-groups/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.id, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -223,9 +214,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.delete('/api/customer-groups/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.id, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -255,9 +244,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.post('/api/customer-groups/:groupId/members', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -452,9 +439,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -502,9 +487,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -536,9 +519,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -569,9 +550,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
@@ -626,9 +605,7 @@ export function registerCustomerRoutes(app: Express): void {
   // POST /api/customers/merge
   app.post('/api/customers/merge', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const { primaryCustomerId, duplicateCustomerIds, mergedData } = req.body;
 
@@ -654,7 +631,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customers
   app.get('/api/customers', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const customers = await storage.getAllCustomers(targetUserId);
       res.json(customers);
@@ -667,7 +644,7 @@ export function registerCustomerRoutes(app: Express): void {
   // POST /api/customers
   app.post('/api/customers', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const { firstName, lastName, email, phoneNumber, groupId, businessName, streetAddress, addressLine2, city, postalCode, country } = req.body;
       
@@ -844,7 +821,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.post('/api/customers/:id/send-welcome', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const customerId = req.params.id;
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       // Verify the customer belongs to this user
       const customers = await storage.getAllCustomers(targetUserId);
@@ -907,7 +884,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customers/search
   app.get('/api/customers/search', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const { q } = req.query;
       
       if (!q || typeof q !== 'string') {
@@ -925,7 +902,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customers/stats
   app.get('/api/customers/stats', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       const stats = await storage.getCustomerStats(targetUserId);
       res.json(stats);
@@ -939,7 +916,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.delete('/api/customers/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const customerId = req.params.id;
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       
       // Verify the customer belongs to this user
       const customers = await storage.getAllCustomers(targetUserId);
@@ -986,9 +963,7 @@ export function registerCustomerRoutes(app: Express): void {
   // GET /api/customers/:id/orders — slim list for the customer detail page (no items/user objects)
   app.get('/api/customers/:id/orders', requireAuth, async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const customerId = req.params.id;
 
       const rows = await db
@@ -1023,9 +998,7 @@ export function registerCustomerRoutes(app: Express): void {
   app.get('/api/customers/:id', requireAuth, async (req: any, res) => {
     try {
       const customerId = req.params.id;
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
 
       const customer = await storage.getCustomerDetails(customerId, targetUserId);
       if (!customer) {
@@ -1042,9 +1015,7 @@ export function registerCustomerRoutes(app: Express): void {
   // PATCH /api/customers/:id
   app.patch('/api/customers/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId
-        ? req.user.wholesalerId
-        : req.user.id;
+      const targetUserId = resolveWholesalerId(req);
       const customerId = req.params.id;
       const { firstName, lastName, businessName, ...nonNameUpdates } = req.body;
       

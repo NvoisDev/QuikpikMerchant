@@ -124,6 +124,7 @@ export interface IStorage {
   getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string, options?: { unpaginated?: boolean }): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
   getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
+  getChartDataAggregated(wholesalerId: string, fromDate: Date, toDate: Date): Promise<{ bucket: Date; orderCount: number; revenue: number }[]>;
   getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined>;
   getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined>;
