@@ -9,7 +9,7 @@
  */
 import type { Express, RequestHandler } from "express";
 import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { getFeeConfigForWholesaler } from "../utils/fee-config";
 import {
   db, formatPackDescriptor, generateOrderNumber,
   generateWholesalerOrderNotificationEmail,
@@ -229,7 +229,7 @@ export function registerOrderPayLaterRoutes(
       }
 
       // Pay Later orders: apply customer transaction fee (matches Pay Now behaviour)
-      const payLaterFeeConfig = await getCurrentFeeConfig();
+      const payLaterFeeConfig = await getFeeConfigForWholesaler(wholesalerId);
       const transactionFee = calculateCustomerFee(subtotal, shippingCost, payLaterFeeConfig);
       const platformFee = calculatePlatformFee(subtotal).toFixed(2);
 

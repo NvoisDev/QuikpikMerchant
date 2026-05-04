@@ -28,7 +28,10 @@ export interface WholesalerRow {
   archived: boolean; createdAt: string;
   orderCount: number; cancelledCount: number; totalOrderCount: number; cancellationRate: number;
   totalGMV: number; gmvWithFees: number; gmvWithoutFees: number; totalFeesEarned: number; lastOrderAt: string | null;
-  customFeePercentage: number | null; isTestAccount?: boolean;
+  customFeePercentage: number | null;
+  customerFeePercentage: number | null;
+  customerFixedFee: number | null;
+  isTestAccount?: boolean;
   lastLoginAt?: string | null;
   lastSeenAt?: string | null;
   lastRealUserActivityAt?: string | null;

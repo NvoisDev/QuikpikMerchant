@@ -194,6 +194,10 @@ export function registerAdminCoreRoutes(app: Express): void {
           lastOrderAt: stats.lastOrderAt,
           customFeePercentage: w.customFeePercentage !== null && w.customFeePercentage !== undefined
             ? parseFloat(w.customFeePercentage) : null,
+          customerFeePercentage: w.customerFeePercentage !== null && w.customerFeePercentage !== undefined
+            ? parseFloat(w.customerFeePercentage) : null,
+          customerFixedFee: w.customerFixedFee !== null && w.customerFixedFee !== undefined
+            ? parseFloat(w.customerFixedFee) : null,
           isTestAccount: w.isTestAccount ?? false,
           lastLoginAt: (() => {
             const ownerLogin = w.lastLoginAt ? new Date(w.lastLoginAt) : null;
@@ -294,6 +298,57 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin revenue error:', error);
       res.status(500).json({ error: 'Failed to fetch revenue data' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/customer-fee-override
+  // Sets or clears the per-wholesaler customer fee override.
+  // Body: { customerFeePercentage: number | null, customerFixedFee: number | null }
+  // customerFeePercentage is supplied as a human-friendly % (e.g. 2.0 for 2%) and stored as a decimal rate (0.0200).
+  app.patch('/api/admin/wholesalers/:id/customer-fee-override', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const [targetUser] = await db.select({ id: users.id, role: users.role })
+        .from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') return res.status(404).json({ error: 'Wholesaler not found' });
+
+      const { customerFeePercentage, customerFixedFee } = req.body as {
+        customerFeePercentage: number | null;
+        customerFixedFee: number | null;
+      };
+
+      if (customerFeePercentage !== null && customerFeePercentage !== undefined) {
+        if (typeof customerFeePercentage !== 'number' || customerFeePercentage < 0 || customerFeePercentage > 100) {
+          return res.status(400).json({ error: 'customerFeePercentage must be a number between 0 and 100' });
+        }
+      }
+      if (customerFixedFee !== null && customerFixedFee !== undefined) {
+        if (typeof customerFixedFee !== 'number' || customerFixedFee < 0 || customerFixedFee > 99) {
+          return res.status(400).json({ error: 'customerFixedFee must be a number between 0 and 99' });
+        }
+      }
+
+      // Convert human-friendly % to decimal rate for storage (e.g. 2.0 → "0.0200")
+      const pctValue = customerFeePercentage !== null && customerFeePercentage !== undefined
+        ? (customerFeePercentage / 100).toFixed(4)
+        : null;
+      const fixedValue = customerFixedFee !== null && customerFixedFee !== undefined
+        ? customerFixedFee.toFixed(2)
+        : null;
+
+      await db.update(users)
+        .set({ customerFeePercentage: pctValue, customerFixedFee: fixedValue })
+        .where(eq(users.id, req.params.id));
+
+      res.json({
+        id: req.params.id,
+        customerFeePercentage: pctValue !== null ? parseFloat(pctValue) : null,
+        customerFixedFee: fixedValue !== null ? parseFloat(fixedValue) : null,
+      });
+    } catch (error) {
+      console.error('Admin customer-fee-override error:', error);
+      res.status(500).json({ error: 'Failed to update customer fee override' });
     }
   });
 

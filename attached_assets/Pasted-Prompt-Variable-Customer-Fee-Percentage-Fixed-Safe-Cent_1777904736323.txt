@@ -1,0 +1,114 @@
+Prompt: Variable Customer Fee (Percentage + Fixed) — Safe, Centralised Implementation
+
+Implement wholesaler-level configurable customer fees with both:
+
+customerFeePercentage (e.g. 2.2%)
+customerFixedFee (e.g. £0.50)
+
+This must be implemented as a strictly additive, non-breaking change.
+
+1. Data Model (Non-breaking)
+Extend the existing fee configuration model (do NOT replace anything):
+Add nullable fields:
+customerFeePercentage
+customerFixedFee
+These should be optional overrides per wholesaler
+Existing default (2.2% + 50p) must remain the fallback
+2. Admin Panel बदलाव
+In the admin/wholesaler settings UI:
+Add inputs:
+Customer Fee % (number input)
+Customer Fixed Fee (currency input)
+Optional toggle:
+“Override default customer fee”
+If no values are set → system behaves exactly as today
+3. Centralised Fee Logic (Critical)
+
+⚠️ Do NOT duplicate logic in routes
+
+Update calculateOrderPricing (OrderPricingService) to be the single source of truth
+Logic:
+if (wholesaler.customerFeePercentage OR wholesaler.customerFixedFee exists):
+    use those values
+else:
+    use default (2.2% + 50p)
+Always calculate:
+customerFee
+platformFee (unchanged logic)
+Preserve:
+fee snapshot pattern on orders (feePercentageUsed, fixedFeeUsed)
+4. Replace Remaining Direct Calls (Important)
+
+Remove or refactor ALL direct usages of:
+
+calculateCustomerFee
+calculatePlatformFee
+
+Replace with:
+
+calculateOrderPricing
+
+Specifically ensure coverage in:
+
+orders-lifecycle.ts
+payments-quotes.ts
+marketplace-orders-*
+pay-later flows
+any fee preview endpoints (can still call service in “preview mode”)
+
+No parallel logic paths should remain.
+
+5. Invoice + PDF Output
+Ensure invoices use:
+stored snapshot values (NOT recalculated values)
+Update invoice rendering to display:
+percentage fee
+fixed fee
+Must reflect:
+wholesaler override OR default fallback
+6. Backwards Compatibility (Non-negotiable)
+Existing orders:
+must remain unchanged
+must use stored snapshot values
+Existing API responses:
+must not change shape
+No breaking changes to:
+routes
+storage methods
+Stripe flows
+7. Testing (Required)
+
+Add tests for:
+
+Happy paths
+
+Default fee applied when no override exists
+Custom % only
+Custom fixed fee only
+Custom % + fixed fee
+
+Edge cases
+
+0% fee
+0 fixed fee
+null / undefined values
+pay-later flow
+quote edit flow
+
+Regression
+
+Ensure totals match existing behaviour when no override is set
+8. Safety Constraints
+Do NOT modify:
+Stripe webhook logic
+existing order schema fields (only extend)
+idempotency logic
+Do NOT introduce new fee calculations outside the service
+Do NOT duplicate logic across routes
+9. Definition of Done
+All fee calculations go through calculateOrderPricing
+No duplicated fee logic remains
+Admin can configure per-wholesaler customer fees
+Invoices reflect correct values
+All existing flows behave exactly the same when overrides are not set
+Tests pass and cover new logic

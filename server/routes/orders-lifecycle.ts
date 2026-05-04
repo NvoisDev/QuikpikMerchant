@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import crypto from "crypto";
 
-import { calculateCustomerFee } from "../../shared/utils/fees";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { calculateOrderPricing } from "../services/orderPricingService";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";

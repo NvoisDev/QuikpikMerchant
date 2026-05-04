@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import Stripe from "stripe";
 import { calculateCustomerFee } from "../../shared/utils/fees";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
 import { calculateOrderPricing } from "../services/orderPricingService";
 import { formatDateTime } from "../../shared/utils/date";
 import {
@@ -160,7 +160,7 @@ export function registerQuoteRoutes(app: Express): void {
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
-      const feeConfig = await getCurrentFeeConfig();
+      const feeConfig = await getFeeConfigForWholesaler(wholesalerId);
       const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
       const {
         customerTransactionFee,
@@ -823,7 +823,7 @@ export function registerQuoteRoutes(app: Express): void {
       const depositPercentage = existingOrder.depositPercentage || 100;
       const isPayLaterEdit = depositPercentage === 0;
       const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
-      const feeConfigEdit = await getCurrentFeeConfig();
+      const feeConfigEdit = await getFeeConfigForWholesaler(wholesalerId);
       const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0, feeConfigEdit);
       const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
       const platformFee = subtotal * feeRate;

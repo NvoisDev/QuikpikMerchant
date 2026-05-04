@@ -45,6 +45,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   const [customPriceNote, setCustomPriceNote] = useState("");
   const [customPriceExpiry, setCustomPriceExpiry] = useState("");
   const [customFeeInput, setCustomFeeInput] = useState("");
+  const [customerFeeInput, setCustomerFeeInput] = useState({ percentage: "", fixed: "" });
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
   const [createTesterOpen, setCreateTesterOpen] = useState(false);
   const [testerForm, setTesterForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
@@ -127,6 +128,27 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
   });
 
+  const customerFeeOverrideMutation = useMutation({
+    mutationFn: async ({ id, percentage, fixed }: { id: string; percentage: number | null; fixed: number | null }) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/customer-fee-override`, {
+        customerFeePercentage: percentage,
+        customerFixedFee: fixed,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: async (_data, variables) => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
+      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
+      if (updated) {
+        const fresh = updated.find(w => w.id === variables.id);
+        if (fresh) setSelectedWholesaler(fresh);
+      }
+      toast({ title: variables.percentage === null && variables.fixed === null ? "Customer fee override removed" : "Customer fee override saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const customFeeMutation = useMutation({
     mutationFn: async ({ id, fee }: { id: string; fee: number | null }) => {
       const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-fee`, { customFeePercentage: fee });
@@ -204,6 +226,12 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   const openDrawer = (w: WholesalerRow) => {
     setSelectedWholesaler(w);
     setCustomFeeInput(w.customFeePercentage !== null && w.customFeePercentage !== undefined ? String(w.customFeePercentage) : "");
+    setCustomerFeeInput({
+      percentage: w.customerFeePercentage !== null && w.customerFeePercentage !== undefined
+        ? (w.customerFeePercentage * 100).toFixed(2) : "",
+      fixed: w.customerFixedFee !== null && w.customerFixedFee !== undefined
+        ? String(w.customerFixedFee) : "",
+    });
     setLegalInfoInput({ legalBusinessName: w.legalBusinessName || "", vatNumber: w.vatNumber || "", companyRegistrationNumber: w.companyRegistrationNumber || "" });
     setChangePlanId("");
     setCustomPriceId("");
@@ -459,6 +487,56 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Customer Fee Override */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <Percent className="h-3.5 w-3.5 text-emerald-500" />Customer Fee Override
+                </p>
+                <p className="text-xs text-gray-400 mb-2">
+                  {(selectedWholesaler.customerFeePercentage !== null || selectedWholesaler.customerFixedFee !== null)
+                    ? `Currently: ${selectedWholesaler.customerFeePercentage !== null ? `${(selectedWholesaler.customerFeePercentage * 100).toFixed(2)}%` : "system %"} + ${selectedWholesaler.customerFixedFee !== null ? `£${selectedWholesaler.customerFixedFee.toFixed(2)}` : "system fixed"} (custom)`
+                    : "Currently: system-wide default (no override)"}
+                </p>
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <input type="number" min="0" max="100" step="0.01" placeholder="e.g. 2.00"
+                      value={customerFeeInput.percentage}
+                      onChange={e => setCustomerFeeInput(p => ({ ...p, percentage: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-2 pr-6 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
+                    <input type="number" min="0" max="99" step="0.01" placeholder="e.g. 0.70"
+                      value={customerFeeInput.fixed}
+                      onChange={e => setCustomerFeeInput(p => ({ ...p, fixed: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                    disabled={customerFeeOverrideMutation.isPending || (customerFeeInput.percentage === "" && customerFeeInput.fixed === "")}
+                    onClick={() => {
+                      const pct = customerFeeInput.percentage !== "" ? parseFloat(customerFeeInput.percentage) : null;
+                      const fixed = customerFeeInput.fixed !== "" ? parseFloat(customerFeeInput.fixed) : null;
+                      if (pct !== null && (isNaN(pct) || pct < 0 || pct > 100)) { toast({ title: "Enter a valid percentage (0–100)", variant: "destructive" }); return; }
+                      if (fixed !== null && (isNaN(fixed) || fixed < 0 || fixed > 99)) { toast({ title: "Enter a valid fixed fee (0–99)", variant: "destructive" }); return; }
+                      customerFeeOverrideMutation.mutate({ id: selectedWholesaler.id, percentage: pct, fixed });
+                    }}>Set</Button>
+                  {(selectedWholesaler.customerFeePercentage !== null || selectedWholesaler.customerFixedFee !== null) && (
+                    <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200"
+                      disabled={customerFeeOverrideMutation.isPending}
+                      onClick={() => {
+                        customerFeeOverrideMutation.mutate({ id: selectedWholesaler.id, percentage: null, fixed: null });
+                        setCustomerFeeInput({ percentage: "", fixed: "" });
+                      }}>
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Leave a field blank to keep the platform default for that component.</p>
               </div>
 
               {/* Custom Platform Fee */}

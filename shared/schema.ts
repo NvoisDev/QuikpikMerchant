@@ -288,6 +288,12 @@ export const users = pgTable("users", {
   // Pay Later — wholesaler-controlled
   allowPayLater: boolean("allow_pay_later").default(false),
 
+  // Per-wholesaler customer fee override (null = fall back to platform-wide config)
+  // customerFeePercentage stored as decimal rate: 0.0200 = 2%
+  // customerFixedFee stored as pound amount:      0.70   = £0.70
+  customerFeePercentage: decimal("customer_fee_percentage", { precision: 6, scale: 4 }),
+  customerFixedFee: decimal("customer_fixed_fee", { precision: 6, scale: 2 }),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

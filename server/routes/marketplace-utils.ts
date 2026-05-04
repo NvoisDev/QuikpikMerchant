@@ -13,7 +13,7 @@
  *   GET  /api/customer/wholesalers
  */
 import type { Express, RequestHandler } from "express";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
 import {
   db, emailButton, emailCard, emailHeading, formatPhoneToInternational,
   getEmailLogoUrl, getStripeClient, multiWholesalerService,
@@ -40,8 +40,10 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
   // (true only when the wholesaler's Stripe account has charges_enabled && payouts_enabled).
   app.get('/api/config/customer-fee', async (req: any, res) => {
     try {
-      const config = await getCurrentFeeConfig();
       const { wholesalerId } = req.query as { wholesalerId?: string };
+      const config = wholesalerId
+        ? await getFeeConfigForWholesaler(wholesalerId)
+        : await getCurrentFeeConfig();
 
       let feesEnabled = false;
 
