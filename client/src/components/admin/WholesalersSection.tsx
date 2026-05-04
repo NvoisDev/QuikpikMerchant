@@ -539,10 +539,10 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 <p className="text-xs text-gray-400 mt-1.5">Leave a field blank to keep the platform default for that component.</p>
               </div>
 
-              {/* Custom Platform Fee */}
+              {/* Wholesaler Platform Fee */}
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-                  <Percent className="h-3.5 w-3.5 text-amber-500" />Custom Platform Fee
+                  <Percent className="h-3.5 w-3.5 text-amber-500" />Wholesaler Platform Fee
                 </p>
                 <p className="text-xs text-gray-400 mb-2">
                   {selectedWholesaler.customFeePercentage !== null
