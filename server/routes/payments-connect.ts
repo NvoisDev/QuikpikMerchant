@@ -248,16 +248,18 @@ export function registerPaymentConnectRoutes(app: Express): void {
     // Attempt to record this event. If the event_id already exists (unique
     // constraint violation) another delivery already processed it — return 200
     // immediately so Stripe stops retrying without re-running side effects.
+    // Any other DB error returns 500 so Stripe retries later.
     try {
       await db.insert(stripeProcessedEvents).values({ eventId: event.id });
-    } catch (dedupErr: any) {
-      // Unique constraint violation codes: PostgreSQL "23505", generic fallback
-      if (dedupErr?.code === '23505' || String(dedupErr?.message).includes('unique')) {
+    } catch (dedupErr: unknown) {
+      const err = dedupErr as { code?: string; message?: string };
+      if (err?.code === '23505' || String(err?.message).includes('unique')) {
         console.log(`⚡ Stripe webhook duplicate skipped: ${event.id}`);
         return res.status(200).json({ received: true, duplicate: true });
       }
-      // Any other DB error: log and fall through to process normally (fail-safe)
-      console.error('⚠️ Stripe idempotency insert failed (processing anyway):', dedupErr?.message);
+      // Unknown DB error — let Stripe retry by returning 500
+      console.error('❌ Stripe idempotency insert failed:', err?.message);
+      return res.status(500).json({ error: 'Idempotency check failed' });
     }
     // ────────────────────────────────────────────────────────────────────────
 
