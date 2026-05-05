@@ -57,6 +57,7 @@ import {
   Pencil,
   Clock,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -187,6 +188,7 @@ export default function QuickQuote() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [editNameOpen, setEditNameOpen] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [editNameForm, setEditNameForm] = useState({ firstName: '', lastName: '', businessName: '' });
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -840,7 +842,7 @@ export default function QuickQuote() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 pb-28">
       <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 pl-10 lg:pl-0">
         <Link href="/orders">
           <Button variant="ghost" size="icon" className="shrink-0">
@@ -1412,10 +1414,26 @@ export default function QuickQuote() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Invoice Summary</CardTitle>
+            <CardHeader
+              className="cursor-pointer select-none"
+              onClick={() => setSummaryExpanded(v => !v)}
+            >
+              <div className="flex items-center justify-between">
+                <CardTitle>Invoice Summary</CardTitle>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className="font-semibold text-gray-800">{formatCurrency(calculateTotal())}</span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${summaryExpanded ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </div>
+              {!summaryExpanded && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
+                </p>
+              )}
             </CardHeader>
-            <CardContent className="space-y-4">
+            {summaryExpanded && <CardContent className="space-y-4">
               {user?.enableMultiProfile && businessProfiles.length > 1 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -1753,17 +1771,14 @@ export default function QuickQuote() {
                   )}
                 </div>
               )}
-            </CardContent>
+            </CardContent>}
           </Card>
 
+          {depositPercentage > 0 && quotePaymentMethod === 'payment_link' && (
           <Card>
             <CardHeader>
               <CardTitle>Send Invoice</CardTitle>
-              <CardDescription>
-                {depositPercentage > 0 && quotePaymentMethod !== 'payment_link'
-                  ? 'How would you like to notify the customer?'
-                  : 'How would you like to share the payment link?'}
-              </CardDescription>
+              <CardDescription>How would you like to share the payment link?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
@@ -1810,7 +1825,32 @@ export default function QuickQuote() {
               </Button>
             </CardContent>
           </Card>
+          )}
         </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500 leading-tight">
+            {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
+          </p>
+          <p className="text-lg font-bold leading-tight">{formatCurrency(calculateTotal())}</p>
+        </div>
+        <Button
+          className="bg-green-600 hover:bg-green-700 shrink-0"
+          size="lg"
+          disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1) || createQuoteMutation.isPending}
+          onClick={handleCreateQuote}
+        >
+          {createQuoteMutation.isPending ? (
+            "Creating..."
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Create Invoice
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );
