@@ -255,24 +255,18 @@ export function registerQuoteRoutes(app: Express): void {
       // AND decrement stock immediately (field sales - products given in person)
       for (const item of items) {
         const sellingType = item.sellingType || 'units';
-        await db.insert(orderItems).values({
-          orderId: quoteOrder.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.customPrice.toFixed(2),
-          total: (item.customPrice * item.quantity).toFixed(2),
-          sellingType: sellingType,
-        });
-        
-        // CRITICAL: Decrement stock at quote creation (products handed over in person)
+
+        // CRITICAL: Fetch product and validate stock BEFORE inserting the order item.
+        // Inserting first and checking after causes partial saves — items end up in the
+        // DB without stock being decremented, and later items are silently dropped.
         const [product] = await db.select().from(products).where(eq(products.id, item.productId));
         if (product) {
           const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
           packDescLines.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
 
           const quantity = item.quantity;
-          
-          // Use InventoryCalculator for proper stock tracking
+
+          // Use InventoryCalculator for proper stock tracking — check BEFORE inserting
           let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
           try {
             orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
@@ -289,17 +283,27 @@ export function registerQuoteRoutes(app: Express): void {
             throw e;
           }
 
+          // Stock check passed — now safe to insert the order item
+          await db.insert(orderItems).values({
+            orderId: quoteOrder.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.customPrice.toFixed(2),
+            total: (item.customPrice * item.quantity).toFixed(2),
+            sellingType: sellingType,
+          });
+
           const { newUnitStock, newPalletStock } = orderResult;
-          
+
           // Update stock fields
           await db.update(products)
-            .set({ 
+            .set({
               stock: newUnitStock,
               palletStock: newPalletStock,
               updatedAt: new Date()
             })
             .where(eq(products.id, item.productId));
-          
+
           // Record stock movement
           await db.insert(stockMovements).values({
             productId: item.productId,
@@ -314,7 +318,6 @@ export function registerQuoteRoutes(app: Express): void {
             customerName: quoteOrder.customerName ?? null,
             businessProfileId: quoteOrder.businessProfileId ?? null,
           });
-          
         }
       }
 

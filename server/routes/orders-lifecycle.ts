@@ -875,6 +875,25 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           const product = await storage.getProduct(item.productId!);
           if (product) {
             if (!skipRestock) {
+              // Only restore stock if a purchase movement was actually recorded for this item.
+              // Partial-save bugs can leave items in order_items without stock ever being taken;
+              // restoring stock in that case would incorrectly inflate inventory.
+              const [purchaseMovement] = await db
+                .select({ id: stockMovements.id })
+                .from(stockMovements)
+                .where(
+                  and(
+                    eq(stockMovements.orderId, id),
+                    eq(stockMovements.productId, item.productId!),
+                    eq(stockMovements.movementType, 'purchase')
+                  )
+                )
+                .limit(1);
+
+              if (!purchaseMovement) {
+                continue;
+              }
+
               if (item.sellingType === 'pallets') {
                 const stockBefore = product.palletStock || 0;
                 const stockAfter = stockBefore + item.quantity;
