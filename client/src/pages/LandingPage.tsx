@@ -31,13 +31,11 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-primary">Quikpik</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={handleCustomerLogin} className="text-sm text-gray-600">
-              <span className="hidden sm:inline">Customer Login</span>
-              <span className="sm:hidden">Customer</span>
+            <Button variant="ghost" onClick={handleCustomerLogin} className="hidden sm:inline-flex text-sm text-gray-600">
+              Customer Login
             </Button>
-            <Button variant="ghost" onClick={handleLogin} className="text-sm text-gray-600">
-              <span className="hidden sm:inline">Wholesaler Login</span>
-              <span className="sm:hidden">Wholesale</span>
+            <Button variant="ghost" onClick={handleLogin} className="hidden sm:inline-flex text-sm text-gray-600">
+              Wholesaler Login
             </Button>
             <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-4">
               Start Free <ArrowRight className="ml-1 h-4 w-4" />
