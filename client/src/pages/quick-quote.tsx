@@ -191,6 +191,7 @@ export default function QuickQuote() {
   const [summaryExpanded, setSummaryExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [deliveryExpanded, setDeliveryExpanded] = useState(false);
   const [paymentSetupExpanded, setPaymentSetupExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [balanceDueExpanded, setBalanceDueExpanded] = useState(false);
   const [editNameForm, setEditNameForm] = useState({ firstName: '', lastName: '', businessName: '' });
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -761,6 +762,12 @@ export default function QuickQuote() {
   };
 
   const totalWeight = calculateTotalWeight();
+
+  useEffect(() => {
+    if (fulfillmentType === 'delivery' && !deliveryAddressId && !customAddressFields.addressLine1) {
+      setDeliveryExpanded(true);
+    }
+  }, [fulfillmentType]);
 
   if (createdQuote) {
     return (
@@ -1521,7 +1528,7 @@ export default function QuickQuote() {
                     {fulfillmentType === 'pickup' ? (
                       <><MapPin className="h-3.5 w-3.5" />{activeCollectionAddresses.find(a => a.id === collectionAddressId)?.name || (activeCollectionAddresses.length > 0 ? 'Select location' : 'Collection')}</>
                     ) : (
-                      <><Truck className="h-3.5 w-3.5" />Delivery</>
+                      <><Truck className="h-3.5 w-3.5" />{deliveryAddressId ? (customerAddresses.find((a: DeliveryAddress) => a.id === deliveryAddressId)?.addressLine1 || 'Delivery') : customAddressFields.addressLine1 ? customAddressFields.addressLine1 : 'No address set'}</>
                     )}
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${deliveryExpanded ? 'rotate-180' : ''}`} />
                   </span>
@@ -1781,32 +1788,48 @@ export default function QuickQuote() {
 
               {depositPercentage > 0 && (
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Balance Due In</Label>
-                  <div className="grid grid-cols-5 gap-1">
-                    {[
-                      { value: 0, label: 'Now' },
-                      { value: 7, label: '7 days' },
-                      { value: 14, label: '14 days' },
-                      { value: 30, label: '30 days' },
-                      { value: 60, label: '60 days' },
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        variant={balanceDueDays === option.value ? 'default' : 'outline'}
-                        className={balanceDueDays === option.value ? 'bg-green-600 hover:bg-green-700' : ''}
-                        size="sm"
-                        onClick={() => setBalanceDueDays(option.value as 0 | 7 | 14 | 30 | 60)}
-                      >
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                  {balanceDueDays > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      {depositPercentage === 100
-                        ? `Customer will be reminded to pay ${formatCurrency(calculateTotal())} within ${balanceDueDays} days`
-                        : `Customer will be reminded to pay the remaining ${formatCurrency(calculateRemainingBalance())} within ${balanceDueDays} days`}
-                    </p>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between py-1"
+                    onClick={() => setBalanceDueExpanded(v => !v)}
+                  >
+                    <span className="text-sm font-medium text-gray-700">Balance Due In</span>
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="px-2 py-0.5 rounded-full bg-gray-100 font-medium">
+                        {({ 0: 'Now', 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days' } as Record<number, string>)[balanceDueDays]}
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${balanceDueExpanded ? 'rotate-180' : ''}`} />
+                    </span>
+                  </button>
+                  {balanceDueExpanded && (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-5 gap-1">
+                        {[
+                          { value: 0, label: 'Now' },
+                          { value: 7, label: '7 days' },
+                          { value: 14, label: '14 days' },
+                          { value: 30, label: '30 days' },
+                          { value: 60, label: '60 days' },
+                        ].map((option) => (
+                          <Button
+                            key={option.value}
+                            variant={balanceDueDays === option.value ? 'default' : 'outline'}
+                            className={balanceDueDays === option.value ? 'bg-green-600 hover:bg-green-700' : ''}
+                            size="sm"
+                            onClick={() => { setBalanceDueDays(option.value as 0 | 7 | 14 | 30 | 60); setBalanceDueExpanded(false); }}
+                          >
+                            {option.label}
+                          </Button>
+                        ))}
+                      </div>
+                      {balanceDueDays > 0 && (
+                        <p className="text-xs text-gray-500">
+                          {depositPercentage === 100
+                            ? `Customer will be reminded to pay ${formatCurrency(calculateTotal())} within ${balanceDueDays} days`
+                            : `Customer will be reminded to pay the remaining ${formatCurrency(calculateRemainingBalance())} within ${balanceDueDays} days`}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
