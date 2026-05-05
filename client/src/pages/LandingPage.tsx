@@ -31,12 +31,13 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-primary">Quikpik</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={handleCustomerLogin} className="text-sm text-gray-600 hidden sm:inline-flex">
-              Customer Login
+            <Button variant="ghost" onClick={handleCustomerLogin} className="text-sm text-gray-600">
+              <span className="hidden sm:inline">Customer Login</span>
+              <span className="sm:hidden">Customer</span>
             </Button>
             <Button variant="ghost" onClick={handleLogin} className="text-sm text-gray-600">
               <span className="hidden sm:inline">Wholesaler Login</span>
-              <span className="sm:hidden">Login</span>
+              <span className="sm:hidden">Wholesale</span>
             </Button>
             <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-4">
               Start Free <ArrowRight className="ml-1 h-4 w-4" />
@@ -63,7 +64,7 @@ export default function LandingPage() {
             No calls. No spreadsheets. No chasing payments.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
             <Button
               onClick={handleGetStarted}
               size="lg"
@@ -80,6 +81,15 @@ export default function LandingPage() {
               Log in to your account
             </Button>
           </div>
+          <p className="text-sm text-gray-500 mb-10">
+            Are you a customer?{" "}
+            <button
+              onClick={handleCustomerLogin}
+              className="text-primary font-medium hover:underline inline-flex items-center gap-1"
+            >
+              Access your portal <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </p>
 
           <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
             <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> No monthly fees to start</span>
