@@ -5,7 +5,7 @@ import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-con
 import { calculateOrderPricing } from "../services/orderPricingService";
 import { formatDateTime } from "../../shared/utils/date";
 import {
-  InventoryCalculator, and, db, emailButton, emailCard, emailHeading, eq,
+  InventoryCalculator, and, asc, db, emailButton, emailCard, emailHeading, eq,
   formatPackDescriptor, generateOrderNumber, getEmailLogoUrl, getWholesalerFeeRate,
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
@@ -251,29 +251,99 @@ export function registerQuoteRoutes(app: Express): void {
       // Collect pack descriptors for Stripe line item descriptions
       const packDescLines: string[] = [];
 
-      // Create order items with custom prices (supporting both units and pallets)
-      // AND decrement stock immediately (field sales - products given in person)
+      // Create order items with custom prices, decrement stock via FEFO batch allocation
+      // (same approach as marketplace orders — keeps batch quantities and product.stock in sync)
       for (const item of items) {
         const sellingType = item.sellingType || 'units';
 
-        // CRITICAL: Fetch product and validate stock BEFORE inserting the order item.
-        // Inserting first and checking after causes partial saves — items end up in the
-        // DB without stock being decremented, and later items are silently dropped.
         const [product] = await db.select().from(products).where(eq(products.id, item.productId));
-        if (product) {
-          const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
-          packDescLines.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
+        if (!product) continue;
 
-          const quantity = item.quantity;
+        const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
+        packDescLines.push(packDescriptor ? `${product.name} (${packDescriptor})` : product.name);
 
-          // For unit sales, prefer batch stock over the denormalized product.stock field.
-          // The pre-validation uses batch stock; the insertion loop must use the same source
-          // or items will be blocked by a stale product.stock = 0 even when batches have stock.
-          let effectiveUnitStock = product.stock ?? 0;
-          if (sellingType === 'units') {
-            const today = new Date().toISOString().split('T')[0];
-            const [batchRow] = await db
-              .select({ totalBatchStock: sum(productBatches.quantity) })
+        const quantity = item.quantity;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (sellingType === 'units') {
+          // ── FEFO batch path ─────────────────────────────────────────────────
+          const activeBatches = await db
+            .select()
+            .from(productBatches)
+            .where(
+              and(
+                eq(productBatches.productId, item.productId),
+                eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+              )
+            )
+            .orderBy(
+              sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`,
+              asc(productBatches.expiryDate),
+              asc(productBatches.createdAt)
+            );
+
+          if (activeBatches.length > 0) {
+            // Batch-tracked product: validate then deduct FEFO
+            const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
+            if (quantity > totalAvailable) {
+              const e = new Error(
+                `Insufficient batch stock for "${product.name}": ${totalAvailable} available, ${quantity} requested.`
+              ) as Error & { productName?: string; available?: number; requested?: number };
+              e.productName = product.name;
+              e.available = totalAvailable;
+              e.requested = quantity;
+              throw e;
+            }
+
+            // Plan deductions across batches (FEFO)
+            let remaining = quantity;
+            let primaryBatchId: number | null = null;
+            const deductions: { id: number; qty: number; deduct: number; newQty: number; newStatus: string; batchNumber: string | null }[] = [];
+            for (const batch of activeBatches) {
+              if (remaining <= 0) break;
+              const deduct = Math.min(remaining, batch.quantity);
+              const newQty = batch.quantity - deduct;
+              deductions.push({ id: batch.id, qty: batch.quantity, deduct, newQty, newStatus: newQty === 0 ? 'depleted' : 'active', batchNumber: batch.batchNumber });
+              if (primaryBatchId === null) primaryBatchId = batch.id;
+              remaining -= deduct;
+            }
+
+            // Insert order item (stock check passed)
+            await db.insert(orderItems).values({
+              orderId: quoteOrder.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.customPrice.toFixed(2),
+              total: (item.customPrice * item.quantity).toFixed(2),
+              sellingType,
+              batchId: primaryBatchId,
+            });
+
+            // Apply batch deductions + stock movements
+            for (const d of deductions) {
+              await db.update(productBatches)
+                .set({ quantity: d.newQty, status: d.newStatus as any, updatedAt: new Date() })
+                .where(eq(productBatches.id, d.id));
+
+              await db.insert(stockMovements).values({
+                productId: item.productId,
+                wholesalerId,
+                movementType: 'purchase',
+                quantity: -d.deduct,
+                unitType: 'units',
+                stockBefore: d.qty,
+                stockAfter: d.newQty,
+                reason: `Invoice order sale (batch #${d.batchNumber || d.id}) - ${d.deduct} units`,
+                orderId: quoteOrder.id,
+                customerName: quoteOrder.customerName ?? null,
+                businessProfileId: quoteOrder.businessProfileId ?? null,
+              });
+            }
+
+            // Sync product.stock from remaining active batch totals (source of truth)
+            const [batchSumRow] = await db
+              .select({ total: sum(productBatches.quantity) })
               .from(productBatches)
               .where(
                 and(
@@ -282,61 +352,106 @@ export function registerQuoteRoutes(app: Express): void {
                   or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
                 )
               );
-            const batchStock = batchRow?.totalBatchStock != null ? Number(batchRow.totalBatchStock) : null;
-            if (batchStock !== null) {
-              effectiveUnitStock = batchStock;
+            const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+            const qip = product.quantityInPack ?? 1;
+            const upp = product.unitsPerPallet ?? 1;
+            const newPalletStock = (qip > 0 && upp > 0)
+              ? Math.floor(Math.floor(newUnitStock / qip) / upp)
+              : 0;
+            await db.update(products)
+              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
+              .where(eq(products.id, item.productId));
+
+          } else {
+            // ── No batches: fall back to product.stock ────────────────────────
+            let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
+            try {
+              orderResult = InventoryCalculator.processOrder(quantity, 'units', {
+                stock: product.stock ?? 0,
+                palletStock: product.palletStock ?? 0,
+                quantityInPack: product.quantityInPack ?? 1,
+                unitsPerPallet: product.unitsPerPallet ?? 1,
+              });
+            } catch (stockErr: unknown) {
+              const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
+              e.productName = product.name;
+              e.available = product.stock ?? 0;
+              e.requested = quantity;
+              throw e;
             }
+
+            const { newUnitStock, newPalletStock } = orderResult;
+
+            await db.insert(orderItems).values({
+              orderId: quoteOrder.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.customPrice.toFixed(2),
+              total: (item.customPrice * item.quantity).toFixed(2),
+              sellingType,
+            });
+
+            await db.update(products)
+              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
+              .where(eq(products.id, item.productId));
+
+            await db.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId,
+              movementType: 'purchase',
+              quantity: -quantity,
+              unitType: 'units',
+              stockBefore: product.stock || 0,
+              stockAfter: newUnitStock,
+              reason: `Invoice order sale - ${quantity} units`,
+              orderId: quoteOrder.id,
+              customerName: quoteOrder.customerName ?? null,
+              businessProfileId: quoteOrder.businessProfileId ?? null,
+            });
           }
 
-          // Use InventoryCalculator for proper stock tracking — check BEFORE inserting
+        } else if (sellingType === 'pallets') {
+          // ── Pallet path ──────────────────────────────────────────────────────
           let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
           try {
-            orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
-              stock: effectiveUnitStock,
+            orderResult = InventoryCalculator.processOrder(quantity, 'pallets', {
+              stock: product.stock ?? 0,
               palletStock: product.palletStock ?? 0,
               quantityInPack: product.quantityInPack ?? 1,
-              unitsPerPallet: product.unitsPerPallet ?? 1
+              unitsPerPallet: product.unitsPerPallet ?? 1,
             });
           } catch (stockErr: unknown) {
             const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
             e.productName = product.name;
-            e.available = sellingType === 'pallets' ? (product.palletStock ?? 0) : effectiveUnitStock;
+            e.available = product.palletStock ?? 0;
             e.requested = quantity;
             throw e;
           }
 
-          // Stock check passed — now safe to insert the order item
+          const { newUnitStock, newPalletStock } = orderResult;
+
           await db.insert(orderItems).values({
             orderId: quoteOrder.id,
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.customPrice.toFixed(2),
             total: (item.customPrice * item.quantity).toFixed(2),
-            sellingType: sellingType,
+            sellingType,
           });
 
-          const { newUnitStock, newPalletStock } = orderResult;
-
-          // Update stock fields — newUnitStock is derived from effectiveUnitStock so it
-          // correctly reflects the remaining stock (whether batch-based or direct).
           await db.update(products)
-            .set({
-              stock: newUnitStock,
-              palletStock: newPalletStock,
-              updatedAt: new Date()
-            })
+            .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
             .where(eq(products.id, item.productId));
 
-          // Record stock movement
           await db.insert(stockMovements).values({
             productId: item.productId,
-            wholesalerId: wholesalerId,
+            wholesalerId,
             movementType: 'purchase',
             quantity: -quantity,
-            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-            stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : effectiveUnitStock,
-            stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
-            reason: `Invoice order sale - ${quantity} ${sellingType}`,
+            unitType: 'pallets',
+            stockBefore: product.palletStock || 0,
+            stockAfter: newPalletStock,
+            reason: `Invoice order sale - ${quantity} pallets`,
             orderId: quoteOrder.id,
             customerName: quoteOrder.customerName ?? null,
             businessProfileId: quoteOrder.businessProfileId ?? null,
