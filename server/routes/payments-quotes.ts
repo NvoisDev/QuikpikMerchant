@@ -585,8 +585,8 @@ export function registerQuoteRoutes(app: Express): void {
         }
       }
 
-      // Send SMS notification
-      if (sendVia === 'sms' && customer.phoneNumber) {
+      // Send SMS notification — only when the checkbox is explicitly ticked
+      if (sendSmsNotification && customer.phoneNumber) {
         const isDeposit = validDepositPercentage > 0 && validDepositPercentage < 100;
         const isPayLater = validDepositPercentage === 0;
         const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
