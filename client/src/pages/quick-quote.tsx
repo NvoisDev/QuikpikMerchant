@@ -189,6 +189,8 @@ export default function QuickQuote() {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [deliveryExpanded, setDeliveryExpanded] = useState(false);
+  const [paymentSetupExpanded, setPaymentSetupExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [editNameForm, setEditNameForm] = useState({ firstName: '', lastName: '', businessName: '' });
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -1509,158 +1511,195 @@ export default function QuickQuote() {
               <Separator />
 
               <div>
-                <Label className="text-sm font-medium mb-2 block">Delivery Method</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={fulfillmentType === 'pickup' ? 'default' : 'outline'}
-                    className={fulfillmentType === 'pickup' ? 'bg-green-600 hover:bg-green-700' : ''}
-                    size="sm"
-                    onClick={() => setFulfillmentType('pickup')}
-                  >
-                    <MapPin className="w-3 h-3 mr-1" />
-                    Collection
-                  </Button>
-                  <Button
-                    variant={fulfillmentType === 'delivery' ? 'default' : 'outline'}
-                    className={fulfillmentType === 'delivery' ? 'bg-green-600 hover:bg-green-700' : ''}
-                    size="sm"
-                    onClick={() => setFulfillmentType('delivery')}
-                  >
-                    <Truck className="w-3 h-3 mr-1" />
-                    Delivery
-                  </Button>
-                </div>
-              </div>
-
-              {fulfillmentType === 'pickup' && activeCollectionAddresses.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium mb-1 block">Pickup Location</Label>
-                  <select
-                    className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
-                    value={collectionAddressId ?? ''}
-                    onChange={(e) => setCollectionAddressId(e.target.value ? parseInt(e.target.value, 10) : null)}
-                  >
-                    <option value="">-- Select pickup location --</option>
-                    {activeCollectionAddresses.map((a: CollectionAddress) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
-                        {a.isDefault ? ' (Default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {fulfillmentType === 'delivery' && (
-                <div>
-                  <Label className="text-sm font-medium mb-1 block">Delivery Charge</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">£</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={deliveryCharge}
-                      onChange={(e) => setDeliveryCharge(e.target.value)}
-                      className="w-28 text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
-                    />
-                    <span className="text-xs text-gray-400">editable per invoice</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {user?.deliveryFlatRate ? `Default rate: ${formatCurrency(user.deliveryFlatRate)}` : 'No default rate set in settings'}
-                  </p>
-                </div>
-              )}
-
-              {fulfillmentType === 'delivery' && selectedCustomer && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                  <Label className="text-sm font-medium block text-blue-900">Delivery Address</Label>
-                  {customerAddresses.length > 0 && !useCustomAddress ? (
-                    <div className="space-y-2">
-                      {customerAddresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          onClick={() => setDeliveryAddressId(addr.id)}
-                          className={`p-2 rounded border cursor-pointer text-xs ${
-                            deliveryAddressId === addr.id
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          {addr.label && <span className="font-medium">{addr.label}: </span>}
-                          {addr.addressLine1}, {addr.city}, {addr.postalCode}
-                        </div>
-                      ))}
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between py-1"
+                  onClick={() => setDeliveryExpanded(v => !v)}
+                >
+                  <span className="text-sm font-medium text-gray-700">Delivery Method</span>
+                  <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                    {fulfillmentType === 'pickup' ? (
+                      <><MapPin className="h-3.5 w-3.5" />{activeCollectionAddresses.find(a => a.id === collectionAddressId)?.name || (activeCollectionAddresses.length > 0 ? 'Select location' : 'Collection')}</>
+                    ) : (
+                      <><Truck className="h-3.5 w-3.5" />Delivery</>
+                    )}
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${deliveryExpanded ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {deliveryExpanded && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
-                        variant="ghost"
+                        variant={fulfillmentType === 'pickup' ? 'default' : 'outline'}
+                        className={fulfillmentType === 'pickup' ? 'bg-green-600 hover:bg-green-700' : ''}
                         size="sm"
-                        className="text-xs text-blue-600"
-                        onClick={() => { setUseCustomAddress(true); setDeliveryAddressId(null); }}
+                        onClick={() => setFulfillmentType('pickup')}
                       >
-                        + Enter a different address
+                        <MapPin className="w-3 h-3 mr-1" />
+                        Collection
+                      </Button>
+                      <Button
+                        variant={fulfillmentType === 'delivery' ? 'default' : 'outline'}
+                        className={fulfillmentType === 'delivery' ? 'bg-green-600 hover:bg-green-700' : ''}
+                        size="sm"
+                        onClick={() => setFulfillmentType('delivery')}
+                      >
+                        <Truck className="w-3 h-3 mr-1" />
+                        Delivery
                       </Button>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Label (e.g. Home, Office)"
-                        value={customAddressFields.label}
-                        onChange={(e) => setCustomAddressFields({ ...customAddressFields, label: e.target.value })}
-                        className="text-xs h-8"
-                      />
-                      <Input
-                        placeholder="Address line *"
-                        value={customAddressFields.addressLine1}
-                        onChange={(e) => setCustomAddressFields({ ...customAddressFields, addressLine1: e.target.value })}
-                        className="text-xs h-8"
-                        required
-                      />
-                      <div className="grid grid-cols-3 gap-1">
-                        <Input
-                          placeholder="City *"
-                          value={customAddressFields.city}
-                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, city: e.target.value })}
-                          className="text-xs h-8"
-                          required
-                        />
-                        <Input
-                          placeholder="County"
-                          value={customAddressFields.state}
-                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, state: e.target.value })}
-                          className="text-xs h-8"
-                        />
-                        <Input
-                          placeholder="Postcode *"
-                          value={customAddressFields.postalCode}
-                          onChange={(e) => setCustomAddressFields({ ...customAddressFields, postalCode: e.target.value })}
-                          className="text-xs h-8"
-                          required
-                        />
-                      </div>
-                      {customerAddresses.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-blue-600"
-                          onClick={() => { setUseCustomAddress(false); setDeliveryAddressText(''); setCustomAddressFields({ addressLine1: '', city: '', postalCode: '', state: '', label: '' }); setDeliveryAddressId(customerAddresses[0]?.id || null); }}
+
+                    {fulfillmentType === 'pickup' && activeCollectionAddresses.length > 0 && (
+                      <div>
+                        <Label className="text-sm font-medium mb-1 block">Pickup Location</Label>
+                        <select
+                          className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
+                          value={collectionAddressId ?? ''}
+                          onChange={(e) => setCollectionAddressId(e.target.value ? parseInt(e.target.value, 10) : null)}
                         >
-                          Use saved address instead
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                          <option value="">-- Select pickup location --</option>
+                          {activeCollectionAddresses.map((a: CollectionAddress) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} — {[a.addressLine1, a.city, a.postcode].filter(Boolean).join(', ')}
+                              {a.isDefault ? ' (Default)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {fulfillmentType === 'delivery' && (
+                      <div>
+                        <Label className="text-sm font-medium mb-1 block">Delivery Charge</Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">£</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={deliveryCharge}
+                            onChange={(e) => setDeliveryCharge(e.target.value)}
+                            className="w-28 text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-green-500"
+                          />
+                          <span className="text-xs text-gray-400">editable per invoice</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {user?.deliveryFlatRate ? `Default rate: ${formatCurrency(user.deliveryFlatRate)}` : 'No default rate set in settings'}
+                        </p>
+                      </div>
+                    )}
+
+                    {fulfillmentType === 'delivery' && selectedCustomer && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                        <Label className="text-sm font-medium block text-blue-900">Delivery Address</Label>
+                        {customerAddresses.length > 0 && !useCustomAddress ? (
+                          <div className="space-y-2">
+                            {customerAddresses.map((addr) => (
+                              <div
+                                key={addr.id}
+                                onClick={() => setDeliveryAddressId(addr.id)}
+                                className={`p-2 rounded border cursor-pointer text-xs ${
+                                  deliveryAddressId === addr.id
+                                    ? 'border-green-500 bg-green-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                {addr.label && <span className="font-medium">{addr.label}: </span>}
+                                {addr.addressLine1}, {addr.city}, {addr.postalCode}
+                              </div>
+                            ))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-blue-600"
+                              onClick={() => { setUseCustomAddress(true); setDeliveryAddressId(null); }}
+                            >
+                              + Enter a different address
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Label (e.g. Home, Office)"
+                              value={customAddressFields.label}
+                              onChange={(e) => setCustomAddressFields({ ...customAddressFields, label: e.target.value })}
+                              className="text-xs h-8"
+                            />
+                            <Input
+                              placeholder="Address line *"
+                              value={customAddressFields.addressLine1}
+                              onChange={(e) => setCustomAddressFields({ ...customAddressFields, addressLine1: e.target.value })}
+                              className="text-xs h-8"
+                              required
+                            />
+                            <div className="grid grid-cols-3 gap-1">
+                              <Input
+                                placeholder="City *"
+                                value={customAddressFields.city}
+                                onChange={(e) => setCustomAddressFields({ ...customAddressFields, city: e.target.value })}
+                                className="text-xs h-8"
+                                required
+                              />
+                              <Input
+                                placeholder="County"
+                                value={customAddressFields.state}
+                                onChange={(e) => setCustomAddressFields({ ...customAddressFields, state: e.target.value })}
+                                className="text-xs h-8"
+                              />
+                              <Input
+                                placeholder="Postcode *"
+                                value={customAddressFields.postalCode}
+                                onChange={(e) => setCustomAddressFields({ ...customAddressFields, postalCode: e.target.value })}
+                                className="text-xs h-8"
+                                required
+                              />
+                            </div>
+                            {customerAddresses.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-blue-600"
+                                onClick={() => { setUseCustomAddress(false); setDeliveryAddressText(''); setCustomAddressFields({ addressLine1: '', city: '', postalCode: '', state: '', label: '' }); setDeliveryAddressId(customerAddresses[0]?.id || null); }}
+                              >
+                                Use saved address instead
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {fulfillmentType === 'delivery' && !selectedCustomer && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p className="text-xs text-amber-700">Select a customer first to set the delivery address</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            </CardContent>}
+          </Card>
+
+          <Card>
+            <CardHeader
+              className="cursor-pointer select-none"
+              onClick={() => setPaymentSetupExpanded(v => !v)}
+            >
+              <div className="flex items-center justify-between">
+                <CardTitle>Payment Setup</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    {depositPercentage === 0 ? 'Pay Later' : depositPercentage === 100 ? 'Full' : `${depositPercentage}% deposit`}
+                    {depositPercentage > 0 && ` · ${({ payment_link: 'Payment Link', cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque' } as Record<string, string>)[quotePaymentMethod]}`}
+                    {depositPercentage > 0 && ` · Due: ${({ 0: 'Now', 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days' } as Record<number, string>)[balanceDueDays]}`}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${paymentSetupExpanded ? 'rotate-180' : ''}`} />
                 </div>
-              )}
-
-              {fulfillmentType === 'delivery' && !selectedCustomer && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <p className="text-xs text-amber-700">Select a customer first to set the delivery address</p>
-                </div>
-              )}
-
-              <Separator />
-
+              </div>
+            </CardHeader>
+            {paymentSetupExpanded && <CardContent className="space-y-4">
               <div>
                 <Label className="text-sm font-medium mb-2 block">Payment Type</Label>
                 <div className="grid grid-cols-5 gap-1.5">
