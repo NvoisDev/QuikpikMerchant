@@ -184,6 +184,7 @@ export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
+  const [mobileDraft, setMobileDraft] = useState<{ selectedCustomer?: { businessName?: string; firstName?: string }; savedAt?: number } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +211,29 @@ export default function OrdersFresh() {
   const ordersPerPage = 20;
   const { toast } = useToast();
   
+  // Mobile draft banner
+  useEffect(() => {
+    if (!user?.id) {
+      setMobileDraft(null);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(`quikpik_qq_draft_${user.id}`);
+      if (!raw) {
+        setMobileDraft(null);
+        return;
+      }
+      const draft = JSON.parse(raw);
+      if (draft.selectedCustomer || draft.quoteItems?.length > 0) {
+        setMobileDraft(draft);
+      } else {
+        setMobileDraft(null);
+      }
+    } catch {
+      setMobileDraft(null);
+    }
+  }, [user?.id]);
+
   // Mark as Paid (offline) dialog state
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
   const [markAsPaidOrder, setMarkAsPaidOrder] = useState<Order | null>(null);
@@ -841,6 +865,26 @@ export default function OrdersFresh() {
         </Link>
       )}
     </div>
+    {/* Mobile-only unsaved draft banner */}
+    {mobileDraft && (
+      <div className="lg:hidden mx-4 mt-2 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+        <p className="text-sm text-amber-800 flex-1">
+          You have an unsent invoice{mobileDraft.selectedCustomer?.businessName || mobileDraft.selectedCustomer?.firstName
+            ? ` for ${mobileDraft.selectedCustomer.businessName || mobileDraft.selectedCustomer.firstName}`
+            : ''} saved {mobileDraft.savedAt ? `on ${new Date(mobileDraft.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'earlier'}.
+        </p>
+        <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={() => navigate('/quick-quote')}>
+          Resume
+        </Button>
+        <Button size="sm" variant="ghost" className="text-amber-600 hover:bg-amber-100 shrink-0 p-1" onClick={() => {
+          if (user?.id) localStorage.removeItem(`quikpik_qq_draft_${user.id}`);
+          setMobileDraft(null);
+        }}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    )}
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
       {/* Archive Tabs */}
