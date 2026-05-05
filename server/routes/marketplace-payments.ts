@@ -369,7 +369,10 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
         .map(i => `${i.product.id}:${i.quantity}:${i.unitPrice}`)
         .sort()
         .join('|');
-      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${normalizedEmail}-${stripeAmountFinal}-${sortedItemsStr}`;
+      // Include stripeWholesalerAmountFinal so that a change in the platform fee rate
+      // (which alters transfer_data.amount but not the customer-pays total) always produces
+      // a fresh key rather than conflicting with a prior Stripe payment intent.
+      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${normalizedEmail}-${stripeAmountFinal}-${stripeWholesalerAmountFinal}-${sortedItemsStr}`;
       const idempotencyKey = `pay_${createHash('sha256').update(idempotencyInput).digest('hex').slice(0, 32)}`;
 
       // Additional validation specifically for Stripe amount (VAT-inclusive)
@@ -500,6 +503,14 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
           return res.status(400).json({ 
             message: "Invalid payment amount calculation. Please refresh and try again.",
             error: 'calculation_error'
+          });
+        } else if (stripeError.type === 'StripeIdempotencyError' || stripeError.code === 'idempotency_key_in_use') {
+          // A prior payment intent was created with the same key but different parameters
+          // (e.g. platform fee rate changed). Return a clear user-facing message so the
+          // customer can refresh and retry with a new payment intent.
+          return res.status(409).json({
+            message: "Your previous payment session expired. Please refresh the page and try again.",
+            error: 'idempotency_conflict'
           });
         } else {
           // Re-throw other errors to be caught by outer catch block

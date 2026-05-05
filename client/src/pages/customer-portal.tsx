@@ -1055,6 +1055,8 @@ export default function CustomerPortal() {
           userMessage = "There's an issue with the payment setup. Please contact the business owner.";
         } else if (response.status === 400 && errorText.includes('calculation_error')) {
           userMessage = "Payment amount calculation error. Please refresh and try again.";
+        } else if (response.status === 409 && errorText.includes('idempotency_conflict')) {
+          userMessage = "Your previous payment session expired. Please refresh the page and try again.";
         }
         
         toast({
