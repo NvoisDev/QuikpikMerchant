@@ -423,6 +423,7 @@ export default function QuickQuote() {
       });
       if (draftKey) localStorage.removeItem(draftKey);
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({
         title: "Invoice Created",
         description: sendMethod === 'link' 
