@@ -1,0 +1,143 @@
+🧠 Prompt: Mobile Optimisation — Invoice Creation (NON-BREAKING)
+
+Improve the mobile experience of the full invoice creation flow to reduce cognitive load, improve hierarchy, and enable faster completion. The UI should feel lightweight, guided, and optimised for thumb-based interaction.
+
+🚨 CRITICAL REQUIREMENT — DO NOT BREAK ANYTHING
+
+This is a strictly non-breaking, UI-only enhancement.
+
+Under no circumstances should this work:
+
+Modify or rewrite any business logic
+Change any fee calculations
+Alter order creation flow
+Impact payment logic (Stripe, Pay Later, etc.)
+Change API contracts or request/response structures
+Affect existing database writes or reads
+Break invoice generation or totals
+Introduce regressions in existing functionality
+
+All existing behaviours must remain 100% identical.
+
+If any change risks altering behaviour, do not implement it.
+
+🎯 Core Principles
+Prioritise the primary task: adding items and creating invoice
+Reduce visible complexity using progressive disclosure
+Optimise all interactions for mobile (thumb-first)
+Improve speed without changing logic
+1. Section Hierarchy (High Priority)
+
+Reorganise the page into priority levels:
+
+Primary (always visible)
+Invoice Items
+Total (£)
+Create Invoice CTA
+Secondary (compact)
+Delivery Method
+Payment Setup (merged section)
+Tertiary (collapsible)
+Trading As
+Pickup Location
+Balance Due In
+Send Invoice options
+2. Collapse Invoice Summary
+
+Convert “Invoice Summary” into a compact, collapsible block.
+
+Collapsed view:
+
+Total (£X)
+Item count
+Delivery method
+
+Tap to expand:
+
+Trading As
+Quantity
+Product subtotal breakdown
+3. Make Sections Collapsible
+
+Apply collapsible behaviour to:
+
+Delivery Method
+Payment Setup
+Balance Due In
+
+Each collapsed state should show a clear selected summary, e.g.:
+
+“Delivery: Collection”
+“Payment: Full • Payment Link”
+“Due: Now”
+4. Merge Payment Type + Method
+
+Combine into a single “Payment Setup” section.
+
+Collapsed:
+
+Shows selected combination
+
+Expanded:
+
+Step 1: select payment percentage (Later / 25% / 50% / etc.)
+Step 2: select payment method (Link / Cash / Bank / Cheque)
+5. Conditional Display — Send Invoice
+
+Only show “Send Invoice” section when:
+
+Payment method = Payment Link
+
+Hide it for:
+
+Cash
+Bank transfer
+Cheque
+6. Sticky Bottom Action Bar (Critical)
+
+Add a fixed bottom bar with:
+
+Total amount (£)
+Primary CTA: “Create Invoice”
+
+Ensure:
+
+It updates in real time
+It does not overlap content (add bottom spacing)
+It is always visible without scrolling
+7. Reduce Visual Noise
+Combine “Original price” + “Stock” into one subtle line
+Reduce prominence of secondary text
+Simplify borders and spacing
+8. Interaction Improvements
+Increase tap targets (especially Qty and buttons)
+Ensure buttons wrap properly on mobile
+Maintain clear selected states
+Keep interactions fast and responsive
+9. Performance & Behaviour Safety
+No changes to:
+State management
+Data flow
+Existing hooks or API calls
+All calculations must continue to behave exactly as before
+UI changes must only affect presentation layer
+✅ Acceptance Criteria
+Page is faster and easier to use on mobile
+Reduced scrolling and clutter
+No regression in any existing flow
+All calculations, payments, and invoice logic remain unchanged
+Fully backward compatible
+🔒 Final Safeguard
+
+If any part of this implementation introduces uncertainty around:
+
+totals
+fees
+payments
+order creation
+
+👉 Do not proceed with that change
+
+This version makes it crystal clear to your dev/agent:
+
+👉 “Improve the experience — but don’t touch the engine.”
