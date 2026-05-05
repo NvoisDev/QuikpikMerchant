@@ -19,6 +19,7 @@ import {
   db, getUserPlanLimits, inArray, sql, storage, priceListItems, requireAuth,
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
+import { getFeeConfigForWholesaler } from "../utils/fee-config";
 
 interface RawProductRow {
   id: unknown;
@@ -421,7 +422,17 @@ export function registerBrowsingRoutes(app: Express): void {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
 
-      res.json(wholesaler);
+      // Include the effective fee config so the checkout dialog can display the
+      // correct fee without a separate /api/config/customer-fee round-trip.
+      const effectiveFeeConfig = await getFeeConfigForWholesaler(id);
+
+      res.json({
+        ...wholesaler,
+        effectiveFeeConfig: {
+          percentage: effectiveFeeConfig.percentage,
+          fixed: effectiveFeeConfig.fixed,
+        },
+      });
     } catch (error) {
       console.error("=== Error in wholesaler profile route ===");
       console.error("Error type:", error instanceof Error ? error.constructor?.name : typeof error);

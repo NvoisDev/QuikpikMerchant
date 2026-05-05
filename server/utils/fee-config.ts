@@ -80,10 +80,18 @@ export async function getFeeConfigForWholesaler(
 
     if (!hasPct && !hasFixed) return systemConfig;
 
+    const effectivePct   = hasPct   ? parseFloat(wholesaler.customerFeePercentage!) : systemConfig.percentage;
+    const effectiveFixed = hasFixed ? parseFloat(wholesaler.customerFixedFee!)      : systemConfig.fixed;
+
+    // When the percentage override is explicitly 0 and no fixed override was set,
+    // treat the entire fee as zero. A 0% rate means "no fee" — applying the
+    // system's fixed component would still charge the customer despite the intent.
+    const resolvedFixed = (hasPct && effectivePct === 0 && !hasFixed) ? 0 : effectiveFixed;
+
     return {
       id: null,
-      percentage: hasPct   ? parseFloat(wholesaler.customerFeePercentage!) : systemConfig.percentage,
-      fixed:      hasFixed ? parseFloat(wholesaler.customerFixedFee!)      : systemConfig.fixed,
+      percentage: effectivePct,
+      fixed:      resolvedFixed,
       createdAt: null,
       createdBy: null,
     };

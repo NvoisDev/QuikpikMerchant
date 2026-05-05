@@ -95,11 +95,11 @@ describe('getFeeConfigForWholesaler', () => {
     expect(cfg.fixed).toBeCloseTo(1.00, 2);
   });
 
-  it('handles zero percentage override (0% fee)', async () => {
+  it('handles zero percentage override (0% fee) — fixed is also zeroed so the total fee is £0', async () => {
     mockUserRow = { customerFeePercentage: '0.0000', customerFixedFee: null };
     const cfg = await getFeeConfigForWholesaler('ws-005');
     expect(cfg.percentage).toBe(0);
-    expect(cfg.fixed).toBeCloseTo(0.70, 2);  // system fixed unchanged
+    expect(cfg.fixed).toBe(0);  // 0% means zero total fee; system fixed must NOT bleed in
   });
 
   it('handles zero fixed fee override', async () => {

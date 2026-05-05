@@ -102,12 +102,17 @@ export function CheckoutDialog({
     queryFn: async () => {
       const params = wholesalerId ? `?wholesalerId=${encodeURIComponent(wholesalerId)}` : "";
       const r = await fetch(`/api/config/customer-fee${params}`);
-      if (!r.ok) return { percentage: 0.055, fixed: 0.50, feesEnabled: false };
+      if (!r.ok) return { percentage: 0.02, fixed: 0.70, feesEnabled: false };
       return r.json();
     },
     staleTime: 0,
   });
-  const feeConfig = liveFeeConfig ?? { percentage: 0.055, fixed: 0.50, feesEnabled: false };
+  // For fee rate values (percentage + fixed), prefer the config embedded in the wholesaler
+  // store data — it's wholesaler-specific and available immediately, preventing any brief
+  // window where a stale global rate is displayed. The `feesEnabled` flag (whether Stripe
+  // is active) still comes from liveFeeConfig because the store endpoint doesn't check
+  // Stripe account status.
+  const feeConfig = wholesaler?.effectiveFeeConfig ?? liveFeeConfig ?? { percentage: 0.02, fixed: 0.70, feesEnabled: false };
   const feesEnabled = liveFeeConfig?.feesEnabled ?? false;
 
   const defaultCollectionAddress = collectionAddresses.find((a) => a.isDefault) || collectionAddresses[0];

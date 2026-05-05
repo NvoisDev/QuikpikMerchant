@@ -103,6 +103,7 @@ export interface WholesalerPortal {
   city?: string;
   postalCode?: string;
   enableDelivery?: boolean;
+  effectiveFeeConfig?: { percentage: number; fixed: number };
 }
 
 export interface AuthenticatedCustomer {
