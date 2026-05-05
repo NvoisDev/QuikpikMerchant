@@ -47,8 +47,20 @@ function buildItemsMetadata(
       break;
     }
     const splitAt = remaining.lastIndexOf('|', 490);
-    result[key] = remaining.slice(0, splitAt === -1 ? 490 : splitAt);
-    remaining = remaining.slice(splitAt === -1 ? 490 : splitAt + 1);
+    if (splitAt === -1) {
+      // Single item token is wider than 490 chars — store it whole in its own
+      // key rather than splitting mid-token, which would corrupt parsing.
+      const nextPipe = remaining.indexOf('|');
+      if (nextPipe === -1) {
+        result[key] = remaining;
+        break;
+      }
+      result[key] = remaining.slice(0, nextPipe);
+      remaining = remaining.slice(nextPipe + 1);
+    } else {
+      result[key] = remaining.slice(0, splitAt);
+      remaining = remaining.slice(splitAt + 1);
+    }
     chunkIdx++;
   }
 

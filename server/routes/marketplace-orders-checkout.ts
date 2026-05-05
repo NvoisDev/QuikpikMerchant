@@ -37,14 +37,19 @@ function parseItemsFromMetadata(
       compact += '|' + metadata[`items_v2_${i}`];
       i++;
     }
-    return compact.split('|').map(chunk => {
+    return compact.split('|').flatMap(chunk => {
       const [productId, quantity, unitPrice, sellingType] = chunk.split(':');
-      return {
+      const parsed = {
         productId: parseInt(productId, 10),
         quantity: parseInt(quantity, 10),
         unitPrice: parseFloat(unitPrice),
         sellingType: sellingType || 'units',
       };
+      if (isNaN(parsed.productId) || isNaN(parsed.quantity) || isNaN(parsed.unitPrice)) {
+        console.warn(`[parseItemsFromMetadata] Skipping malformed item chunk: "${chunk}"`);
+        return [];
+      }
+      return [parsed];
     });
   }
   return JSON.parse(metadata.items || '[]');
