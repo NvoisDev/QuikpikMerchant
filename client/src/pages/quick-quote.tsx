@@ -55,6 +55,8 @@ import {
   Share2,
   Loader2,
   Pencil,
+  Clock,
+  X,
 } from "lucide-react";
 import { Link } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
@@ -144,6 +146,7 @@ export default function QuickQuote() {
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [savedDraft, setSavedDraft] = useState<any>(null);
   const [createdQuote, setCreatedQuote] = useState<{
     id: number;
     orderNumber: string;
@@ -250,6 +253,74 @@ export default function QuickQuote() {
     setEditNameOpen(false);
   }, [selectedCustomer?.id]);
 
+  // ── Draft auto-save ──────────────────────────────────────────────────────
+  const draftKey = user?.id ? `quikpik_qq_draft_${user.id}` : null;
+
+  useEffect(() => {
+    if (!draftKey) return;
+    if (!selectedCustomer && quoteItems.length === 0) return;
+    const draft = {
+      selectedCustomer, quoteItems, depositPercentage, balanceDueDays,
+      quotePaymentMethod, fulfillmentType, collectionAddressId,
+      deliveryCharge, deliveryAddressId, deliveryAddressText,
+      useCustomAddress, customAddressFields, sendMethod,
+      sendSmsNotification, selectedProfileId, savedAt: Date.now(),
+    };
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [selectedCustomer, quoteItems, depositPercentage, balanceDueDays,
+    quotePaymentMethod, fulfillmentType, collectionAddressId,
+    deliveryCharge, deliveryAddressId, deliveryAddressText,
+    useCustomAddress, customAddressFields, sendMethod,
+    sendSmsNotification, selectedProfileId, draftKey]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.selectedCustomer || draft.quoteItems?.length > 0) {
+        setSavedDraft(draft);
+      }
+    } catch {
+      // ignore malformed data
+    }
+  }, [draftKey]);
+
+  const resumeDraft = () => {
+    if (!savedDraft) return;
+    if (savedDraft.selectedCustomer) setSelectedCustomer(savedDraft.selectedCustomer);
+    if (savedDraft.quoteItems?.length > 0) {
+      setQuoteItems(savedDraft.quoteItems);
+      const restored: Record<string, { price: string; qty: string }> = {};
+      savedDraft.quoteItems.forEach((item: QuoteItem) => {
+        restored[String(item.productId)] = { price: String(item.customPrice), qty: String(item.quantity) };
+      });
+      setInputValues(restored);
+    }
+    if (savedDraft.depositPercentage !== undefined) setDepositPercentage(savedDraft.depositPercentage);
+    if (savedDraft.balanceDueDays !== undefined) setBalanceDueDays(savedDraft.balanceDueDays);
+    if (savedDraft.quotePaymentMethod) setQuotePaymentMethod(savedDraft.quotePaymentMethod);
+    if (savedDraft.fulfillmentType) setFulfillmentType(savedDraft.fulfillmentType);
+    if (savedDraft.collectionAddressId !== undefined) setCollectionAddressId(savedDraft.collectionAddressId);
+    if (savedDraft.deliveryCharge !== undefined) setDeliveryCharge(savedDraft.deliveryCharge);
+    if (savedDraft.deliveryAddressId !== undefined) setDeliveryAddressId(savedDraft.deliveryAddressId);
+    if (savedDraft.deliveryAddressText) setDeliveryAddressText(savedDraft.deliveryAddressText);
+    if (savedDraft.useCustomAddress !== undefined) setUseCustomAddress(savedDraft.useCustomAddress);
+    if (savedDraft.customAddressFields) setCustomAddressFields(savedDraft.customAddressFields);
+    if (savedDraft.sendMethod) setSendMethod(savedDraft.sendMethod);
+    if (savedDraft.sendSmsNotification !== undefined) setSendSmsNotification(savedDraft.sendSmsNotification);
+    if (savedDraft.selectedProfileId !== undefined) setSelectedProfileId(savedDraft.selectedProfileId);
+    setSavedDraft(null);
+    toast({ title: "Draft resumed", description: "Your saved invoice has been restored." });
+  };
+
+  const clearDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setSavedDraft(null);
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   const addCustomerMutation = useMutation({
     mutationFn: async (data: typeof newCustomer) => {
       const response = await apiRequest('POST', '/api/customers', data);
@@ -350,6 +421,7 @@ export default function QuickQuote() {
         orderNumber: data.orderNumber,
         paymentLink: data.paymentLink
       });
+      if (draftKey) localStorage.removeItem(draftKey);
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
         title: "Invoice Created",
@@ -779,6 +851,23 @@ export default function QuickQuote() {
           <p className="text-sm md:text-base text-gray-600 truncate">Create invoices with custom prices</p>
         </div>
       </div>
+
+      {savedDraft && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-800 flex-1">
+            You have an unsent invoice{savedDraft.selectedCustomer?.businessName || savedDraft.selectedCustomer?.firstName
+              ? ` for ${savedDraft.selectedCustomer.businessName || savedDraft.selectedCustomer.firstName}`
+              : ''} saved {savedDraft.savedAt ? `on ${new Date(savedDraft.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'earlier'}.
+          </p>
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={resumeDraft}>
+            Resume
+          </Button>
+          <Button size="sm" variant="ghost" className="text-amber-600 hover:bg-amber-100 shrink-0 p-1" onClick={clearDraft}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2 space-y-6">

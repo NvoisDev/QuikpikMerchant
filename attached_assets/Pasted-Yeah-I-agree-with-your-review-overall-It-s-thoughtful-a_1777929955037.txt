@@ -1,0 +1,96 @@
+Yeah — I agree with your review overall. It’s thoughtful, and more importantly, it’s grounded in how your system actually behaves (not theoretical “perfect architecture” stuff).
+
+But I’d tighten a few things so you don’t accidentally over-engineer or slow yourself down.
+
+Where you’re spot on ✅
+Strictly additive approach — this is exactly right for your codebase
+You’ve got a lot of moving parts (fees, stock, Stripe, notifications). Touching existing flows = risk. Extending instead = safe.
+Separate draft + approve flows
+This is the cleanest mental model:
+Draft = no side effects
+Approve = full existing pipeline
+Drafts excluded from analytics
+This is critical and easy to mess up. Good catch.
+Idempotency on approve
+Especially with Stripe + retries — this saves you from weird duplicate behaviour.
+Where I’d push back slightly ⚠️
+1. The modal idea
+
+You already clocked it — it will slow users down.
+
+Your instinct to replace it with:
+
+Primary: “Create Invoice” (existing flow)
+Secondary: “Save as Draft”
+
+👉 That’s the better UX. No debate.
+
+Modal = friction for everyone
+Second button = power for those who need it
+
+2. Draft editing needs a hard rule
+
+Right now it’s a bit vague, and this is where bugs creep in.
+
+You need to explicitly enforce:
+
+Draft editing is a pure data update — no stock logic, no Stripe, no audit side effects.
+
+If you don’t lock that down, someone later will reuse “edit quote” logic and accidentally:
+
+restore stock
+recreate Stripe sessions
+trigger notifications
+
+That’s where things break.
+
+3. Stock on approval (this is the big one)
+
+You called it out — but this is not optional to define.
+
+Right now:
+
+Draft → no stock reserved
+Approval → stock deducted
+
+So what happens if stock is gone?
+
+You must define:
+
+Approval fails with a clear error if stock is insufficient.
+
+Otherwise you’ll get:
+
+negative stock bugs
+inconsistent inventory
+support headaches
+4. The time estimate
+
+Your revised thinking is right.
+
+This is not a 2-day feature unless you go heavy on testing + polish.
+
+Realistically:
+
+Part	Time
+Schema + backend paths	1.5–2.5 hrs
+Approve endpoint	~45 mins
+UI changes (button + tab)	~1 hr
+Basic tests	~1–2 hrs
+
+👉 Total: ~4–6 hours (clean execution)
+
+The only thing that pushes it to a day+ is:
+
+deep regression tests
+PDF watermark
+edge-case hardening
+Final verdict
+
+Yes — I agree with your spec.
+
+But I’d summarise it like this:
+
+“This is a well-designed feature with the right architecture. The only real risks are UX friction (modal), unclear draft editing rules, and undefined stock behavior at approval.”
+
+Fix those 3 things, and this becomes a clean, low-risk, high-value feature.

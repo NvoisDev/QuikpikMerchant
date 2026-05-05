@@ -1,0 +1,152 @@
+Prompt: Draft Invoice Flow + Orders Summary Draft Tab (Non-Breaking, Production Safe)
+
+Implement a draft invoice workflow that allows wholesalers to either:
+
+Save an invoice as Draft
+Approve & Send immediately
+
+This must be a strictly additive, non-breaking change. No existing order, payment, fee, or notification logic should be broken or altered unintentionally.
+
+1. Status Model (Non-Breaking)
+Extend existing order/invoice status:
+Add: draft
+Do NOT modify existing statuses or flows
+Default behaviour must remain:
+“Create Invoice” = Approve & Send (unless user selects draft)
+2. UI — Create Invoice Modal
+
+When user clicks Create Invoice:
+
+Show modal with:
+Save as Draft
+Approve & Send
+Behaviour:
+
+Save as Draft
+
+Creates invoice with status = draft
+NO side effects:
+❌ No Stripe session
+❌ No notifications
+❌ No stock updates (if tied to confirmation)
+
+Approve & Send
+
+Runs existing full flow unchanged
+3. Backend Separation (Critical)
+
+Refactor into two clear paths:
+
+createDraftInvoice()
+Creates invoice + items
+Stores pricing snapshot (or prepares for it)
+Sets status = draft
+No side effects
+approveAndSendInvoice()
+Handles:
+Fee calculation (via existing service)
+Stock updates
+Stripe session creation
+Notifications
+Can:
+create fresh OR
+approve an existing draft
+4. Draft → Approval Endpoint
+
+Add endpoint:
+
+POST /api/invoices/:id/approve
+
+Rules:
+
+Only works if status = draft
+Must be idempotent (no duplicate sends)
+Transitions:
+draft → sent/pending
+5. Orders Summary — Draft Tab
+
+Add a new tab in Orders page:
+
+Drafts
+Behaviour:
+Shows only status = draft
+Same table structure as orders list
+Include:
+customer
+items
+total
+last updated
+Actions per draft:
+Edit Draft
+Approve & Send
+(Optional) Delete
+Backend:
+Add filter:
+GET /api/orders?status=draft
+MUST:
+filter by wholesalerId
+include pagination (no unbounded queries)
+6. Data Integrity Rules
+Drafts:
+Editable
+Non-financial
+Approved invoices:
+Lock pricing + fees
+Follow existing behaviour
+Drafts must NOT:
+affect analytics
+affect revenue calculations
+appear in financial reporting
+7. Invoice PDF Behaviour
+Draft invoices:
+Label clearly: DRAFT
+No payment links
+Approved invoices:
+Use existing PDF logic unchanged
+8. Fee Calculation Protection (Do Not Break)
+ALL fee logic must continue to use:
+existing central pricing logic (e.g. OrderPricingService)
+Draft creation:
+may defer final fee locking
+Approval:
+must calculate and store final fee snapshot
+DO NOT:
+duplicate fee logic
+modify existing fee calculations
+9. Backwards Compatibility (Strict)
+
+Do NOT break:
+
+Existing invoice creation flow
+Stripe integration
+Notifications
+Order schema (only extend)
+API responses
+
+If user does not use drafts:
+👉 system must behave exactly as before
+
+10. Testing Requirements
+Draft Flow
+Create draft → status = draft
+No side effects triggered
+Approval Flow
+Draft → approve → triggers:
+Stripe
+notifications
+stock updates
+Regression
+Existing “Approve & Send” flow unchanged
+No duplicate sends (idempotency)
+Edge Cases
+Approving already approved invoice
+Editing draft before approval
+Multiple rapid clicks (race condition safety)
+11. Definition of Done
+Modal with Draft vs Approve implemented
+Draft invoices persist correctly
+Draft tab visible and functional
+Approval flow triggers all required actions
+No duplication of logic
+No regression in existing flows
+Full test coverage for new paths
