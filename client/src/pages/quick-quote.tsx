@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSidebarContext } from "@/contexts/sidebar-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
@@ -138,6 +139,7 @@ interface CollectionAddress {
 
 export default function QuickQuote() {
   const { user } = useAuth();
+  const { isDesktopCollapsed } = useSidebarContext();
   const { toast } = useToast();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
@@ -1876,7 +1878,7 @@ export default function QuickQuote() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+      <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
         <div className="min-w-0">
           <p className="text-xs text-gray-500 leading-tight">
             {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
