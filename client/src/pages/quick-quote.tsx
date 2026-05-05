@@ -188,7 +188,7 @@ export default function QuickQuote() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [editNameOpen, setEditNameOpen] = useState(false);
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [editNameForm, setEditNameForm] = useState({ firstName: '', lastName: '', businessName: '' });
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -1808,21 +1808,6 @@ export default function QuickQuote() {
                 <span className="text-sm text-gray-600">Also send SMS notification to customer</span>
               </label>
 
-              <Button
-                className="w-full bg-green-600 hover:bg-green-700"
-                size="lg"
-                disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1) || createQuoteMutation.isPending}
-                onClick={handleCreateQuote}
-              >
-                {createQuoteMutation.isPending ? (
-                  "Creating Invoice..."
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Create Invoice
-                  </>
-                )}
-              </Button>
             </CardContent>
           </Card>
           )}
