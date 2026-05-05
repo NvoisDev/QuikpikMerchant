@@ -13,8 +13,8 @@
  *   POST /api/customer/orders/:orderId/reorder/:phoneNumber
  */
 import type { Express, RequestHandler } from "express";
-import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { calculateCustomerFee } from "../../shared/utils/fees";
+import { getCurrentFeeConfig, getWholesalerPlatformFeeRate } from "../utils/fee-config";
 import { calculateOrderPricing } from "../services/orderPricingService";
 import {
   and, db, eq, formatNumber, formatPackDescriptor, formatPhoneToInternational,
@@ -249,9 +249,10 @@ export function registerOrderActionsRoutes(
         }
       }
 
-      // Calculate platform fee (4.6% of total)
+      // Calculate platform fee (per-wholesaler rate, defaulting to 4.6%)
       const subtotalNum = parseFloat(totalAmount);
-      const platformFee = calculatePlatformFee(subtotalNum).toFixed(2);
+      const singleProductPlatformFeeRate = await getWholesalerPlatformFeeRate(product.wholesalerId);
+      const platformFee = (subtotalNum * singleProductPlatformFeeRate).toFixed(2);
 
       // VAT calculation — look up wholesaler VAT settings
       const singleProductWholesalerForVat = await storage.getUser(product.wholesalerId);
@@ -437,9 +438,10 @@ Please contact the customer to confirm this order.
         return res.status(500).json({ message: "Failed to create customer record" });
       }
 
-      // Calculate platform fee (4.6%)
+      // Calculate platform fee (per-wholesaler rate, defaulting to 4.6%)
       const subtotal = parseFloat(totalAmount);
-      const platformFee = calculatePlatformFee(subtotal);
+      const portalPlatformFeeRate = await getWholesalerPlatformFeeRate(firstProduct.wholesalerId);
+      const platformFee = subtotal * portalPlatformFeeRate;
 
       // VAT calculation — look up wholesaler VAT settings
       const portalWholesalerForVat = await storage.getUser(firstProduct.wholesalerId);

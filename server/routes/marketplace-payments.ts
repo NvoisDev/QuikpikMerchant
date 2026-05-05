@@ -10,7 +10,7 @@
  */
 import { createHash } from "crypto";
 import type { Express, RequestHandler } from "express";
-import { getFeeConfigForWholesaler } from "../utils/fee-config";
+import { getFeeConfigForWholesaler, getWholesalerPlatformFeeRate } from "../utils/fee-config";
 import { calculateCheckoutTotals } from "./checkout-fee-calculations";
 import {
   and, db, eq, formatPhoneToInternational, getPublishableKey, getStripeClient,
@@ -272,8 +272,11 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
         ? parseFloat(shippingInfo.flatDeliveryRate) || 0
         : parseFloat(shippingInfo?.service?.price || '0') || 0;
 
-      const feeConfig = await getFeeConfigForWholesaler(expectedWholesalerId!);
-      const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost, feeConfig });
+      const [feeConfig, platformFeeRate] = await Promise.all([
+        getFeeConfigForWholesaler(expectedWholesalerId!),
+        getWholesalerPlatformFeeRate(expectedWholesalerId!),
+      ]);
+      const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost, feeConfig, platformFeeRate });
       const {
         amountBeforeFees,
         customerTransactionFee,

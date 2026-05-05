@@ -36,6 +36,7 @@ vi.mock('../server/utils/fee-config', () => ({
     id: 1, percentage: 0.055, fixed: 0.50,
     createdAt: new Date('2026-01-01'), createdBy: 'test',
   }),
+  getWholesalerPlatformFeeRate: vi.fn().mockResolvedValue(0.046),
 }));
 
 vi.mock('../server/stripeConfig', () => ({

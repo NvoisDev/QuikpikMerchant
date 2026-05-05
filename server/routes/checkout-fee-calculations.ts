@@ -18,6 +18,8 @@ export type CheckoutInput = {
   couponDiscount?: number;
   /** Live fee config fetched from DB — uses hardcoded defaults when omitted. */
   feeConfig?: CustomerFeeConfig;
+  /** Per-wholesaler platform fee rate override (e.g. 0.02 for 2%). Falls back to PLATFORM_FEE_RATE (4.6%) when omitted. */
+  platformFeeRate?: number;
 };
 
 export type CheckoutCalculation = {
@@ -47,14 +49,16 @@ export type CheckoutCalculation = {
  * product subtotal through to the two integers required by Stripe.
  */
 export function calculateCheckoutTotals(input: CheckoutInput): CheckoutCalculation {
-  const { productSubtotal, deliveryCost, couponDiscount = 0, feeConfig } = input;
+  const { productSubtotal, deliveryCost, couponDiscount = 0, feeConfig, platformFeeRate } = input;
 
   const amountBeforeFees = Math.max(0, productSubtotal + deliveryCost - couponDiscount);
 
   const customerTransactionFee = calculateCustomerFee(amountBeforeFees, 0, feeConfig);
   const totalCustomerPays = amountBeforeFees + customerTransactionFee;
 
-  const wholesalerPlatformFee = calculatePlatformFee(amountBeforeFees);
+  const wholesalerPlatformFee = platformFeeRate !== undefined
+    ? amountBeforeFees * platformFeeRate
+    : calculatePlatformFee(amountBeforeFees);
   const wholesalerReceives = amountBeforeFees - wholesalerPlatformFee;
 
   const stripeAmountPence = Math.round(totalCustomerPays * 100);

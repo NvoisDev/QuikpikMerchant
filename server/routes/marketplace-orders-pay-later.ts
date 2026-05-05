@@ -8,8 +8,8 @@
  *   POST /api/marketplace/create-order-pay-later
  */
 import type { Express, RequestHandler } from "express";
-import { calculateCustomerFee, calculatePlatformFee } from "../../shared/utils/fees";
-import { getFeeConfigForWholesaler } from "../utils/fee-config";
+import { calculateCustomerFee } from "../../shared/utils/fees";
+import { getFeeConfigForWholesaler, getWholesalerPlatformFeeRate } from "../utils/fee-config";
 import {
   db, formatPackDescriptor, generateOrderNumber,
   generateWholesalerOrderNotificationEmail,
@@ -229,9 +229,12 @@ export function registerOrderPayLaterRoutes(
       }
 
       // Pay Later orders: apply customer transaction fee (matches Pay Now behaviour)
-      const payLaterFeeConfig = await getFeeConfigForWholesaler(wholesalerId);
+      const [payLaterFeeConfig, payLaterPlatformFeeRate] = await Promise.all([
+        getFeeConfigForWholesaler(wholesalerId),
+        getWholesalerPlatformFeeRate(wholesalerId),
+      ]);
       const transactionFee = calculateCustomerFee(subtotal, shippingCost, payLaterFeeConfig);
-      const platformFee = calculatePlatformFee(subtotal).toFixed(2);
+      const platformFee = (subtotal * payLaterPlatformFeeRate).toFixed(2);
 
       // VAT calculation — look up wholesaler VAT settings
       const payLaterWholesalerForVat = await storage.getUser(wholesalerId);

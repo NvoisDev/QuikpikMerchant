@@ -7,7 +7,7 @@
 import { db } from "../db";
 import { platformFeeConfigs, users } from "../../shared/schema";
 import { desc, eq } from "drizzle-orm";
-import { CUSTOMER_FEE_RATE, CUSTOMER_FEE_FIXED, type CustomerFeeConfig } from "../../shared/utils/fees";
+import { CUSTOMER_FEE_RATE, CUSTOMER_FEE_FIXED, PLATFORM_FEE_RATE, type CustomerFeeConfig } from "../../shared/utils/fees";
 
 /** Always returns a valid fee config. Never throws. */
 export async function getCurrentFeeConfig(): Promise<CustomerFeeConfig & { id: number | null; createdAt: Date | null; createdBy: string | null }> {
@@ -99,6 +99,33 @@ export async function getFeeConfigForWholesaler(
     console.error("[fee-config] getFeeConfigForWholesaler error, falling back to system config:", err);
     return getCurrentFeeConfig();
   }
+}
+
+/**
+ * Returns the effective platform fee rate for a specific wholesaler.
+ * Uses the per-wholesaler `customFeePercentage` override when set (stored as raw %,
+ * e.g. "2.00" = 2% → returned as 0.02 decimal rate).
+ * Falls back to the hardcoded PLATFORM_FEE_RATE (4.6%) when no override is set.
+ * Never throws.
+ */
+export async function getWholesalerPlatformFeeRate(wholesalerId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ customFeePercentage: users.customFeePercentage })
+      .from(users)
+      .where(eq(users.id, wholesalerId))
+      .limit(1);
+
+    if (row?.customFeePercentage !== null && row?.customFeePercentage !== undefined) {
+      const raw = parseFloat(row.customFeePercentage);
+      if (!isNaN(raw) && raw >= 0) {
+        return raw / 100; // stored as "2.00" for 2% — convert to 0.02
+      }
+    }
+  } catch (err) {
+    console.error("[fee-config] getWholesalerPlatformFeeRate error, using default:", err);
+  }
+  return PLATFORM_FEE_RATE;
 }
 
 /** Return last N fee config rows, newest first. */
