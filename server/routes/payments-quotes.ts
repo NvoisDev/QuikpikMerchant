@@ -266,11 +266,33 @@ export function registerQuoteRoutes(app: Express): void {
 
           const quantity = item.quantity;
 
+          // For unit sales, prefer batch stock over the denormalized product.stock field.
+          // The pre-validation uses batch stock; the insertion loop must use the same source
+          // or items will be blocked by a stale product.stock = 0 even when batches have stock.
+          let effectiveUnitStock = product.stock ?? 0;
+          if (sellingType === 'units') {
+            const today = new Date().toISOString().split('T')[0];
+            const [batchRow] = await db
+              .select({ totalBatchStock: sum(productBatches.quantity) })
+              .from(productBatches)
+              .where(
+                and(
+                  eq(productBatches.productId, item.productId),
+                  eq(productBatches.status, 'active'),
+                  or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+                )
+              );
+            const batchStock = batchRow?.totalBatchStock != null ? Number(batchRow.totalBatchStock) : null;
+            if (batchStock !== null) {
+              effectiveUnitStock = batchStock;
+            }
+          }
+
           // Use InventoryCalculator for proper stock tracking — check BEFORE inserting
           let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
           try {
             orderResult = InventoryCalculator.processOrder(quantity, sellingType as 'units' | 'pallets', {
-              stock: product.stock ?? 0,
+              stock: effectiveUnitStock,
               palletStock: product.palletStock ?? 0,
               quantityInPack: product.quantityInPack ?? 1,
               unitsPerPallet: product.unitsPerPallet ?? 1
@@ -278,7 +300,7 @@ export function registerQuoteRoutes(app: Express): void {
           } catch (stockErr: unknown) {
             const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
             e.productName = product.name;
-            e.available = sellingType === 'pallets' ? (product.palletStock ?? 0) : (product.stock ?? 0);
+            e.available = sellingType === 'pallets' ? (product.palletStock ?? 0) : effectiveUnitStock;
             e.requested = quantity;
             throw e;
           }
@@ -295,7 +317,8 @@ export function registerQuoteRoutes(app: Express): void {
 
           const { newUnitStock, newPalletStock } = orderResult;
 
-          // Update stock fields
+          // Update stock fields — newUnitStock is derived from effectiveUnitStock so it
+          // correctly reflects the remaining stock (whether batch-based or direct).
           await db.update(products)
             .set({
               stock: newUnitStock,
@@ -311,7 +334,7 @@ export function registerQuoteRoutes(app: Express): void {
             movementType: 'purchase',
             quantity: -quantity,
             unitType: sellingType === 'pallets' ? 'pallets' : 'units',
-            stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0),
+            stockBefore: sellingType === 'pallets' ? (product.palletStock || 0) : effectiveUnitStock,
             stockAfter: sellingType === 'pallets' ? newPalletStock : newUnitStock,
             reason: `Invoice order sale - ${quantity} ${sellingType}`,
             orderId: quoteOrder.id,
