@@ -1177,7 +1177,7 @@ export default function QuickQuote() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Invoice Items{quoteItems.length > 0 && <span className="text-gray-500 font-normal">({quoteItems.length})</span>}
+                  Invoice Items{quoteItems.length > 0 && <span className="text-gray-500 font-normal"> ({quoteItems.length})</span>}
                 </CardTitle>
                 <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) setProductSearch(""); }}>
                   <DialogTrigger asChild>
