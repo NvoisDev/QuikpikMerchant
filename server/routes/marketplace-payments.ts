@@ -10,7 +10,7 @@
  */
 import { createHash } from "crypto";
 import type { Express, RequestHandler } from "express";
-import { getCurrentFeeConfig } from "../utils/fee-config";
+import { getFeeConfigForWholesaler } from "../utils/fee-config";
 import { calculateCheckoutTotals } from "./checkout-fee-calculations";
 import {
   and, db, eq, formatPhoneToInternational, getPublishableKey, getStripeClient,
@@ -272,7 +272,7 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
         ? parseFloat(shippingInfo.flatDeliveryRate) || 0
         : parseFloat(shippingInfo?.service?.price || '0') || 0;
 
-      const feeConfig = await getCurrentFeeConfig();
+      const feeConfig = await getFeeConfigForWholesaler(expectedWholesalerId!);
       const checkout = calculateCheckoutTotals({ productSubtotal, deliveryCost, feeConfig });
       const {
         amountBeforeFees,
@@ -353,17 +353,20 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
       
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      // Deterministic idempotency key: SHA-256 of wholesalerId + normalised phone + final Stripe
-      // amount (pence, includes delivery + VAT) + sorted items. Including stripeAmountFinal ensures
-      // the key changes whenever the total changes (e.g. customer switches delivery method), which
-      // prevents Stripe from rejecting the request with an idempotency conflict. True retries with
-      // the same cart and same total still reuse the same key and payment intent.
+      // Deterministic idempotency key: SHA-256 of wholesalerId + normalised phone + normalised email
+      // + final Stripe amount (pence, includes delivery + VAT) + sorted items. Including email
+      // prevents idempotency conflicts when a customer edits their email between checkout attempts
+      // (Stripe validates receipt_email against the original key, so the key must include it).
+      // Including stripeAmountFinal ensures the key changes whenever the total changes (e.g. customer
+      // switches delivery method). True retries with the same cart, total, and email still reuse the
+      // same key and payment intent.
       const normalizedPhone = (customerPhone || 'guest').replace(/[^0-9]/g, '');
+      const normalizedEmail = (customerEmail || '').toLowerCase().trim();
       const sortedItemsStr = validatedItems
         .map(i => `${i.product.id}:${i.quantity}:${i.unitPrice}`)
         .sort()
         .join('|');
-      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${stripeAmountFinal}-${sortedItemsStr}`;
+      const idempotencyInput = `${firstProduct.wholesalerId}-${normalizedPhone}-${normalizedEmail}-${stripeAmountFinal}-${sortedItemsStr}`;
       const idempotencyKey = `pay_${createHash('sha256').update(idempotencyInput).digest('hex').slice(0, 32)}`;
 
       // Additional validation specifically for Stripe amount (VAT-inclusive)

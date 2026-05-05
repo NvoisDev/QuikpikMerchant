@@ -26,13 +26,15 @@ vi.mock('../server/storage', () => ({
 
 // Pin the fee config so tests are deterministic regardless of DB state.
 // The test fixture uses the original default rate: 5.5% + £0.50.
+// NOTE: vi.mock factories are hoisted — no references to outer variables allowed.
 vi.mock('../server/utils/fee-config', () => ({
   getCurrentFeeConfig: vi.fn().mockResolvedValue({
-    id: 1,
-    percentage: 0.055,
-    fixed: 0.50,
-    createdAt: new Date('2026-01-01'),
-    createdBy: 'test',
+    id: 1, percentage: 0.055, fixed: 0.50,
+    createdAt: new Date('2026-01-01'), createdBy: 'test',
+  }),
+  getFeeConfigForWholesaler: vi.fn().mockResolvedValue({
+    id: 1, percentage: 0.055, fixed: 0.50,
+    createdAt: new Date('2026-01-01'), createdBy: 'test',
   }),
 }));
 
