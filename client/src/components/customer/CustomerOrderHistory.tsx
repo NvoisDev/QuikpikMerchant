@@ -482,13 +482,17 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                 <span className="text-gray-600">Subtotal</span>
                 <span>{fmt(preview.subtotal)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Service Fee</span>
-                <span>{fmt(preview.customerTransactionFee)}</span>
-              </div>
-              <p className="text-xs text-gray-400 leading-tight">
-                Service fee reflects current rates and may differ from your original order.
-              </p>
+              {parseFloat(preview.customerTransactionFee || '0') > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Service Fee</span>
+                    <span>{fmt(preview.customerTransactionFee)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-tight">
+                    Service fee reflects current rates and may differ from your original order.
+                  </p>
+                </>
+              )}
               {parseFloat(preview.deliveryCost) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Delivery</span>
