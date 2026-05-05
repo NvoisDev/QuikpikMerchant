@@ -19,6 +19,37 @@ import {
   type OrderEmailData,
 } from "./shared";
 
+/**
+ * Parses cart items from Stripe payment-intent metadata.
+ * Supports the new compact items_v2 format (and its chunks) as well as the
+ * legacy JSON items field for backward compatibility with in-flight intents.
+ *
+ * New format (items_v2): "productId:quantity:unitPrice:sellingType" joined by "|"
+ * Chunks: items_v2, items_v2_1, items_v2_2, …
+ */
+function parseItemsFromMetadata(
+  metadata: Record<string, string>
+): Array<{ productId: number; quantity: number; unitPrice: number; sellingType: string }> {
+  if (metadata.items_v2) {
+    let compact = metadata.items_v2;
+    let i = 1;
+    while (metadata[`items_v2_${i}`]) {
+      compact += '|' + metadata[`items_v2_${i}`];
+      i++;
+    }
+    return compact.split('|').map(chunk => {
+      const [productId, quantity, unitPrice, sellingType] = chunk.split(':');
+      return {
+        productId: parseInt(productId, 10),
+        quantity: parseInt(quantity, 10),
+        unitPrice: parseFloat(unitPrice),
+        sellingType: sellingType || 'units',
+      };
+    });
+  }
+  return JSON.parse(metadata.items || '[]');
+}
+
 export function registerOrderCheckoutRoutes(
   app: Express,
   orderCreateLimiter: RequestHandler
@@ -63,7 +94,6 @@ export function registerOrderCheckoutRoutes(
         platformFee,
         wholesalerId,
         orderType,
-        items: itemsJson,
         connectAccountUsed,
         productSubtotal,
         customerTransactionFee,
@@ -94,7 +124,7 @@ export function registerOrderCheckoutRoutes(
       }
 
       if (orderType === 'customer_portal') {
-        const items = JSON.parse(itemsJson);
+        const items = parseItemsFromMetadata(paymentIntent.metadata);
 
         // Create customer if doesn't exist or update existing one
         let customer = await storage.getUserByPhone(customerPhone);

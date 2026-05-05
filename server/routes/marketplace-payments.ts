@@ -18,6 +18,43 @@ import {
 } from "./shared";
 import { resolveCustomerProductPrice } from "./marketplace-price-lists";
 
+/**
+ * Converts cart items to a compact pipe-delimited metadata string and splits it
+ * into ≤490-char chunks so each Stripe metadata value stays within the 500-char limit.
+ *
+ * Format per item: "productId:quantity:unitPrice:sellingType"
+ * Keys: items_v2, items_v2_1, items_v2_2, … (first chunk has no numeric suffix)
+ */
+function buildItemsMetadata(
+  items: Array<{ productId: number; quantity: number; unitPrice: number; sellingType: string }>
+): Record<string, string> {
+  const compact = items
+    .map(i => `${i.productId}:${i.quantity}:${i.unitPrice}:${i.sellingType || 'units'}`)
+    .join('|');
+
+  if (compact.length <= 490) {
+    return { items_v2: compact };
+  }
+
+  const result: Record<string, string> = {};
+  let remaining = compact;
+  let chunkIdx = 0;
+
+  while (remaining.length > 0) {
+    const key = chunkIdx === 0 ? 'items_v2' : `items_v2_${chunkIdx}`;
+    if (remaining.length <= 490) {
+      result[key] = remaining;
+      break;
+    }
+    const splitAt = remaining.lastIndexOf('|', 490);
+    result[key] = remaining.slice(0, splitAt === -1 ? 490 : splitAt);
+    remaining = remaining.slice(splitAt === -1 ? 490 : splitAt + 1);
+    chunkIdx++;
+  }
+
+  return result;
+}
+
 export function registerPaymentRoutes(app: Express, customerActionLimiter: RequestHandler): void {
 
   // POST /api/customer/create-payment
@@ -432,11 +469,12 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
           connectAccountUsed: useConnect ? 'true' : 'false',
           // CRITICAL FIX: Store shipping info to determine delivery vs pickup
           shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
-          items: JSON.stringify(validatedItems.map(item => ({
+          // Compact format — stays within Stripe's 500-char-per-value limit for any cart size
+          ...buildItemsMetadata(validatedItems.map(item => ({
             productId: item.product.id,
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice),
-            sellingType: item.sellingType || 'units'
+            sellingType: item.sellingType || 'units',
           })))
         }
       }, {
@@ -480,11 +518,12 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
                 orderType: 'customer_portal',
                 connectAccountUsed: 'false', // Mark as direct payment
                 shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
-                items: JSON.stringify(validatedItems.map(item => ({
+                // Compact format — stays within Stripe's 500-char-per-value limit for any cart size
+                ...buildItemsMetadata(validatedItems.map(item => ({
                   productId: item.product.id,
                   quantity: item.quantity,
                   unitPrice: parseFloat(item.unitPrice),
-                  sellingType: item.sellingType || 'units'
+                  sellingType: item.sellingType || 'units',
                 })))
               }
             };
