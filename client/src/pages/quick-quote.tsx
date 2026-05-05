@@ -1199,7 +1199,9 @@ export default function QuickQuote() {
                       />
                     </div>
                     {(() => {
+                      const addedProductIds = new Set(quoteItems.map(qi => qi.productId));
                       const filteredProducts = products.filter((p) =>
+                        !addedProductIds.has(p.id) &&
                         p.name.toLowerCase().includes(productSearch.toLowerCase())
                       );
                       return (
