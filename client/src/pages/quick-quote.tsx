@@ -1434,7 +1434,7 @@ export default function QuickQuote() {
                 </div>
               )}
               <div className="flex justify-between text-sm">
-                <span>Items</span>
+                <span>Quantity</span>
                 <span>{quoteItems.reduce((sum, item) => sum + item.quantity, 0)}</span>
               </div>
               {calculateSavings() > 0 && (
