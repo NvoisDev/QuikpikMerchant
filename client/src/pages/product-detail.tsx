@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
-  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays,
+  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -615,11 +615,18 @@ export default function ProductDetail() {
                                       title="Click to edit cost price"
                                     >
                                       {updateCostPriceMutation.isPending && updateCostPriceMutation.variables?.batchId === batch.id ? (
-                                        <span className="inline-flex items-center gap-1 text-gray-400"><Loader2 className="h-3 w-3 animate-spin" /></span>
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border border-gray-200 text-gray-400 bg-gray-50">
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        </span>
                                       ) : batch.costPrice != null && batch.costPrice !== "" ? (
-                                        <span className="cursor-pointer hover:text-green-700 hover:underline transition-colors">{fmt(batch.costPrice, currency)}</span>
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border border-green-200 bg-green-50 text-green-800 cursor-pointer hover:bg-green-100 hover:border-green-300 transition-colors">
+                                          {fmt(batch.costPrice, currency)}
+                                          <Pencil className="h-2.5 w-2.5 opacity-60" />
+                                        </span>
                                       ) : (
-                                        <span className="text-gray-400 cursor-pointer hover:text-green-600 transition-colors">— <span className="text-xs">(add)</span></span>
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border border-dashed border-gray-300 text-gray-400 cursor-pointer hover:border-green-400 hover:text-green-600 transition-colors">
+                                          + Add cost
+                                        </span>
                                       )}
                                     </button>
                                     {!isMobile && costPriceEditBatchId === batch.id && (
