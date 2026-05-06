@@ -179,6 +179,21 @@ export function registerProductRoutes(app: Express): void {
           .where(eq(products.id, id))
           .returning();
 
+        // Sync: when cost_price is updated on the product, mirror it to the
+        // "Initial Stock" batch so batch-level cost stays consistent.
+        if (req.body.costPrice !== undefined) {
+          const newCostStr = productData.costPrice ? String(productData.costPrice) : null;
+          await tx
+            .update(productBatches)
+            .set({ costPrice: newCostStr })
+            .where(
+              and(
+                eq(productBatches.productId, id),
+                eq(productBatches.batchNumber, 'Initial Stock')
+              )
+            );
+        }
+
         if (req.body.stock !== undefined) {
           const newStock = Number(req.body.stock) || 0;
           const today = new Date().toISOString().split('T')[0];

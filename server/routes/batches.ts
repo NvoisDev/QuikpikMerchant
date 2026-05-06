@@ -111,6 +111,16 @@ export function registerBatchRoutes(app: Express): void {
       }
 
       const batch = await storage.createProductBatch(parsed.data, wholesalerId);
+
+      // Sync: when a new batch is created with a cost, promote it to the product-level field
+      // so the invoice margin calculator always reflects the latest batch cost.
+      if (parsed.data.costPrice != null && parsed.data.costPrice !== '') {
+        await db
+          .update(products)
+          .set({ costPrice: String(parsed.data.costPrice), updatedAt: new Date() })
+          .where(eq(products.id, productId));
+      }
+
       res.status(201).json(batch);
     } catch (error) {
       console.error('Error creating batch:', error);
@@ -166,6 +176,16 @@ export function registerBatchRoutes(app: Express): void {
       }
 
       const updated = await storage.updateProductBatch(batchId, updates, wholesalerId);
+
+      // Sync: when a batch's cost is changed, mirror it to the product-level cost_price
+      // so the invoice margin calculator stays current.
+      if ('costPrice' in updates) {
+        await db
+          .update(products)
+          .set({ costPrice: updates.costPrice ?? null, updatedAt: new Date() })
+          .where(eq(products.id, productId));
+      }
+
       res.json(updated);
     } catch (error) {
       console.error('Error updating batch:', error);
