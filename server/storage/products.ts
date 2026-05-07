@@ -576,8 +576,8 @@ export class ProductStorage extends UserStorageBase {
     };
     const [newBatch] = await db.insert(productBatches).values(batchWithOriginal).returning();
 
-    // Keep product.stock in sync (sum of all active non-expired batches)
-    await this._syncProductStockFromBatches(batch.productId);
+    // Keep product.stock in sync — movement recorded separately below, so skip auto-movement here
+    await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
 
     // Log a stock movement so the history panel shows the restock event
     if (wholesalerId) {
@@ -655,7 +655,8 @@ export class ProductStorage extends UserStorageBase {
           .where(eq(products.id, before.productId));
         const productStockBefore = Number(prodBefore?.stock ?? 0);
 
-        await this._syncProductStockFromBatches(updated.productId);
+        // Caller (this block) records the movement — sync must not double-record
+        await this._syncProductStockFromBatches(updated.productId, { skipMovement: true });
 
         const [prodAfter] = await db
           .select({ stock: products.stock })
@@ -671,14 +672,20 @@ export class ProductStorage extends UserStorageBase {
           unitType: 'units',
           stockBefore: productStockBefore,
           stockAfter: productStockAfter,
-          reason: `Direct batch quantity update (batch #${before.batchNumber || batchId})`,
+          reason: `Batch quantity updated (batch #${before.batchNumber || batchId})`,
           batchId,
         });
         return updated;
       }
     }
 
-    await this._syncProductStockFromBatches(updated.productId);
+    // No quantity change (e.g. status/expiry/notes edit) — sync and record a movement
+    // if products.stock actually shifts (e.g. batch marked expired silently drops stock).
+    await this._syncProductStockFromBatches(updated.productId, {
+      wholesalerId,
+      reason: `Batch updated (batch #${before.batchNumber || batchId})`,
+      batchId,
+    });
     return updated;
   }
 
@@ -719,7 +726,8 @@ export class ProductStorage extends UserStorageBase {
         .where(eq(products.id, batch.productId));
       const productStockBefore = Number(prodBefore?.stock ?? 0);
 
-      await this._syncProductStockFromBatches(batch.productId);
+      // Caller records the movement — sync must not double-record
+      await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
 
       const [prodAfter] = await db
         .select({ stock: products.stock })
@@ -743,7 +751,8 @@ export class ProductStorage extends UserStorageBase {
       return;
     }
 
-    await this._syncProductStockFromBatches(batch.productId);
+    // Delta was zero — no movement needed, just keep stock in sync
+    await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
   }
 
   /** Sum of active non-expired batch quantities for a product. */
@@ -778,10 +787,18 @@ export class ProductStorage extends UserStorageBase {
       ))
       .returning({ productId: productBatches.productId });
 
-    // Sync product.stock for every affected product
+    // Sync product.stock for every affected product, recording a movement for each
     const affectedProductIds = Array.from(new Set(expired.map(r => r.productId)));
     for (const productId of affectedProductIds) {
-      await this._syncProductStockFromBatches(productId);
+      // Look up wholesaler so the movement appears in their history
+      const [prod] = await db
+        .select({ wholesalerId: products.wholesalerId, name: products.name })
+        .from(products)
+        .where(eq(products.id, productId));
+      await this._syncProductStockFromBatches(productId, {
+        wholesalerId: prod?.wholesalerId ?? undefined,
+        reason: 'Batch expired — removed from available stock',
+      });
     }
     return expired.length;
   }
@@ -789,10 +806,17 @@ export class ProductStorage extends UserStorageBase {
   /**
    * Internal helper: set products.stock AND products.palletStock from the SUM
    * of active non-expired batch quantities.
-   * palletStock = floor(floor(stock / quantityInPack) / unitsPerPallet), matching the FEFO order path.
-   * (unitsPerPallet = packs per pallet; quantityInPack = base units per pack)
+   *
+   * ctx options:
+   *   skipMovement — caller already records its own movement; suppress auto-recording.
+   *   wholesalerId — when provided and stock actually changes, a movement is recorded.
+   *   reason       — movement reason text (defaults to generic message).
+   *   batchId      — optional batch reference for the movement.
    */
-  private async _syncProductStockFromBatches(productId: number): Promise<void> {
+  private async _syncProductStockFromBatches(
+    productId: number,
+    ctx?: { skipMovement?: boolean; wholesalerId?: string; reason?: string; batchId?: number }
+  ): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 
     const [{ total }] = await db
@@ -809,13 +833,13 @@ export class ProductStorage extends UserStorageBase {
 
     const newStock = Number(total ?? 0);
 
-    // Derive palletStock so both fields stay in sync.
-    // unitsPerPallet = packs per pallet; quantityInPack = base units per pack.
-    // palletStock = floor( floor(baseUnits / quantityInPack) / unitsPerPallet )
+    // Read current stock before update so we can detect a silent change
     const [prod] = await db
-      .select({ unitsPerPallet: products.unitsPerPallet, quantityInPack: products.quantityInPack })
+      .select({ stock: products.stock, unitsPerPallet: products.unitsPerPallet, quantityInPack: products.quantityInPack })
       .from(products)
       .where(eq(products.id, productId));
+    const currentStock = Number(prod?.stock ?? 0);
+
     const unitsPerPallet = prod?.unitsPerPallet ?? 1;
     const quantityInPack = prod?.quantityInPack ?? 1;
     const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0)
@@ -825,6 +849,22 @@ export class ProductStorage extends UserStorageBase {
     await db.update(products)
       .set({ stock: newStock, palletStock: newPalletStock })
       .where(eq(products.id, productId));
+
+    // Record a movement whenever stock visibly changed AND the caller hasn't already
+    // recorded its own movement AND we have a wholesalerId to attribute it to.
+    if (!ctx?.skipMovement && ctx?.wholesalerId && newStock !== currentStock) {
+      await db.insert(stockMovements).values({
+        productId,
+        wholesalerId: ctx.wholesalerId,
+        movementType: newStock > currentStock ? 'manual_increase' : 'manual_decrease',
+        quantity: newStock - currentStock,
+        unitType: 'units',
+        stockBefore: currentStock,
+        stockAfter: newStock,
+        reason: ctx.reason ?? 'Stock recalculated from batch quantities',
+        batchId: ctx.batchId ?? null,
+      });
+    }
   }
 
   // Order operations - Optimized with joins to reduce database calls
