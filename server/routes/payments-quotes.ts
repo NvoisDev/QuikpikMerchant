@@ -212,8 +212,7 @@ export function registerQuoteRoutes(app: Express): void {
       // Create the quote order AND all stock operations atomically.
       // A single transaction prevents orphaned orders if any stock step fails mid-way.
       const packDescLines: string[] = [];
-      let quoteOrder: any;
-      await db.transaction(async (trx) => {
+      const quoteOrder = await db.transaction(async (trx) => {
         const [quoteOrderRow] = await trx.insert(orders).values({
           orderNumber,
           wholesalerId,
@@ -249,8 +248,6 @@ export function registerQuoteRoutes(app: Express): void {
           ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
           ...(resolvedBusinessProfileId ? { businessProfileId: resolvedBusinessProfileId } : {}),
         }).returning();
-        quoteOrder = quoteOrderRow;
-
         // Create order items with custom prices, decrement stock via FEFO batch allocation
         for (const item of items) {
           const sellingType = item.sellingType || 'units';
@@ -296,7 +293,7 @@ export function registerQuoteRoutes(app: Express): void {
               // Plan FEFO deductions across batches
               let remaining = quantity;
               let primaryBatchId: number | null = null;
-              const deductions: { id: number; qty: number; deduct: number; newQty: number; newStatus: string; batchNumber: string | null }[] = [];
+              const deductions: { id: number; qty: number; deduct: number; newQty: number; newStatus: 'active' | 'depleted'; batchNumber: string | null }[] = [];
               for (const batch of activeBatches) {
                 if (remaining <= 0) break;
                 const deduct = Math.min(remaining, batch.quantity);
@@ -321,7 +318,7 @@ export function registerQuoteRoutes(app: Express): void {
               const batchLabels: string[] = [];
               for (const d of deductions) {
                 await trx.update(productBatches)
-                  .set({ quantity: d.newQty, status: d.newStatus as any, updatedAt: new Date() })
+                  .set({ quantity: d.newQty, status: d.newStatus, updatedAt: new Date() })
                   .where(eq(productBatches.id, d.id));
                 batchLabels.push(`batch #${d.batchNumber || d.id}: ${d.deduct} units`);
               }
@@ -460,6 +457,7 @@ export function registerQuoteRoutes(app: Express): void {
             });
           }
         }
+        return quoteOrderRow;
       });
 
       // Create Stripe Payment Link (skip for pay-later, offline payment methods, or inactive Connect accounts)
@@ -1227,14 +1225,10 @@ export function registerQuoteRoutes(app: Express): void {
           }
         }
 
-        // 7b. Delete old order items and insert new ones
+        // 7b. Delete old order items (items are re-inserted with batchId in step 7c)
         await trx.delete(orderItems).where(eq(orderItems.orderId, quoteId));
-        for (const item of items) {
-          const sellingType = item.sellingType || 'units';
-          await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
-        }
 
-        // 7c. Allocate stock for new items (FEFO batch-aware for unit products)
+        // 7c. Allocate stock for new items and insert them with their allocated batchId
         for (const item of items) {
           const sellingType = item.sellingType || 'units';
           const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
@@ -1242,14 +1236,17 @@ export function registerQuoteRoutes(app: Express): void {
 
           if (sellingType === 'pallets') {
             if ((product.palletStock || 0) < item.quantity) {
-              const err: any = new Error(`Insufficient pallet stock for "${product.name}" after concurrent update. ${product.palletStock || 0} available, ${item.quantity} requested.`);
-              err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = product.palletStock || 0; err.requested = item.quantity;
-              throw err;
+              const e = new Error(`Insufficient pallet stock for "${product.name}" after concurrent update. ${product.palletStock || 0} available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+              e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = product.palletStock || 0; e.requested = item.quantity;
+              throw e;
             }
             const orderResult = InventoryCalculator.processOrder(item.quantity, 'pallets', { stock: product.stock ?? 0, palletStock: product.palletStock ?? 0, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
             const { newUnitStock, newPalletStock } = orderResult;
+            await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
             await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — allocating ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+            // idempotency: skip if movement for this order+type+product already exists
+            const [existingPalletMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
+            if (!existingPalletMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — allocating ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           } else {
             // Units: prefer FEFO batch deduction
             const today = new Date().toISOString().split('T')[0];
@@ -1261,9 +1258,9 @@ export function registerQuoteRoutes(app: Express): void {
             if (activeBatches.length > 0) {
               const totalAvailable = activeBatches.reduce((acc, b) => acc + b.quantity, 0);
               if (totalAvailable < item.quantity) {
-                const err: any = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${totalAvailable} available, ${item.quantity} requested.`);
-                err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = totalAvailable; err.requested = item.quantity;
-                throw err;
+                const e = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${totalAvailable} available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = totalAvailable; e.requested = item.quantity;
+                throw e;
               }
               const productStockBefore = totalAvailable;
               let remaining = item.quantity;
@@ -1287,19 +1284,26 @@ export function registerQuoteRoutes(app: Express): void {
               const qip = product.quantityInPack ?? 1;
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
+              // Insert order item with allocated batchId so future edits/cancellations can reverse correctly
+              await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchId });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: productStockBefore, stockAfter: newUnitStock, reason: batchLabels.length === 1 ? `Invoice edit — allocating (${batchLabels[0]})` : `Invoice edit — allocating — ${batchLabels.join(', ')}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: primaryBatchId });
+              // idempotency: skip if movement for this order+type+product already exists
+              const [existingUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
+              if (!existingUnitMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: productStockBefore, stockAfter: newUnitStock, reason: batchLabels.length === 1 ? `Invoice edit — allocating (${batchLabels[0]})` : `Invoice edit — allocating — ${batchLabels.join(', ')}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: primaryBatchId });
             } else {
               // Legacy: no batches — direct stock deduction
               if ((product.stock || 0) < item.quantity) {
-                const err: any = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${product.stock || 0} available, ${item.quantity} requested.`);
-                err.code = 'OUT_OF_STOCK'; err.productName = product.name; err.available = product.stock || 0; err.requested = item.quantity;
-                throw err;
+                const e = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${product.stock || 0} available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = product.stock || 0; e.requested = item.quantity;
+                throw e;
               }
               const orderResult = InventoryCalculator.processOrder(item.quantity, 'units', { stock: product.stock ?? 0, palletStock: product.palletStock ?? 0, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
               const { newUnitStock, newPalletStock } = orderResult;
+              await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — allocating ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+              // idempotency: skip if movement for this order+type+product already exists
+              const [existingLegacyMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
+              if (!existingLegacyMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — allocating ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
             }
           }
         }

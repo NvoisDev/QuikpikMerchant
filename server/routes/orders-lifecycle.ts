@@ -15,7 +15,7 @@ import {
   storage, db,
   requireAuth, requireNotViewer, requireMemberPermission,
   orders, orderItems, orderCancellationRequests, stockMovements, products, campaignOrders,
-  sql, eq, and, inArray, lt,
+  sql, eq, and, or, inArray, lt, isNull, sum, asc,
   getStripeClient, refundAcrossPaymentIntents,
   sendWhatsAppMessage, sendEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, getEmailLogoUrl,
@@ -1380,22 +1380,57 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const isFullRefund = refundedAmount >= orderTotal - 0.01;
       let updatedOrder;
       if (isFullRefund) {
-        updatedOrder = await storage.updateOrderStatus(id, 'refunded');
+        // Restore stock and mark as refunded atomically so partial failures roll back
+        await db.transaction(async (trx) => {
+          await trx.update(orders).set({ status: 'refunded' }).where(eq(orders.id, id));
 
-        const orderItemsList = await storage.getOrderItems(id);
-        for (const item of orderItemsList) {
-          const product = await storage.getProduct(item.productId!);
-          if (product) {
+          const orderItemsList = await trx.select().from(orderItems).where(eq(orderItems.orderId, id));
+          const today = new Date().toISOString().split('T')[0];
+
+          for (const item of orderItemsList) {
+            if (!item.productId) continue;
+            const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
+            if (!product) continue;
+
             if (item.sellingType === 'pallets') {
-              const stockBefore = product.palletStock || 0;
-              const stockAfter = stockBefore + (item.quantity ?? 0);
-              await db.update(products).set({ palletStock: stockAfter }).where(eq(products.id, product.id));
-              await db.insert(stockMovements).values({ productId: product.id, wholesalerId: order.wholesalerId, movementType: 'return', quantity: item.quantity ?? 0, unitType: 'pallets', stockBefore, stockAfter, reason: `Full refund — ${item.quantity} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              // Restore both pallet and unit stock
+              const palletStockBefore = product.palletStock || 0;
+              const newPalletStock = palletStockBefore + (item.quantity ?? 0);
+              const qip = product.quantityInPack ?? 1;
+              const upp = product.unitsPerPallet ?? 1;
+              const unitsRestored = (item.quantity ?? 0) * qip * upp;
+              const newUnitStock = (product.stock ?? 0) + unitsRestored;
+              await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, product.id));
+              await trx.insert(stockMovements).values({ productId: product.id, wholesalerId: order.wholesalerId, movementType: 'return', quantity: item.quantity ?? 0, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${item.quantity} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
-              await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity ?? 0, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
+              // Batch-aware unit restore: return to original batch, then recalc stock from sum
+              const origBatchId = item.batchId ?? null;
+              const unitStockBefore = product.stock || 0;
+              if (origBatchId) {
+                const [origBatch] = await trx.select().from(productBatches).where(eq(productBatches.id, origBatchId)).limit(1);
+                if (origBatch && origBatch.productId === item.productId) {
+                  const newBatchQty = origBatch.quantity + (item.quantity ?? 0);
+                  await trx.update(productBatches).set({ quantity: newBatchQty, status: 'active', updatedAt: new Date() }).where(eq(productBatches.id, origBatchId));
+                }
+                const [batchSumRow] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+                  .where(and(eq(productBatches.productId, item.productId), eq(productBatches.status, 'active'),
+                    or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
+                const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+                const qip = product.quantityInPack ?? 1;
+                const upp = product.unitsPerPallet ?? 1;
+                const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
+                await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, item.productId));
+                await trx.insert(stockMovements).values({ productId: product.id, wholesalerId: order.wholesalerId, movementType: 'return', quantity: item.quantity ?? 0, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${item.quantity} units returned to batch #${origBatchId}`, orderId: id, businessProfileId: order.businessProfileId ?? null, batchId: origBatchId });
+              } else {
+                // Legacy: no batch recorded — direct counter restore
+                const newUnitStock = unitStockBefore + (item.quantity ?? 0);
+                await trx.update(products).set({ stock: newUnitStock }).where(eq(products.id, item.productId));
+                await trx.insert(stockMovements).values({ productId: product.id, wholesalerId: order.wholesalerId, movementType: 'return', quantity: item.quantity ?? 0, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${item.quantity} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              }
             }
           }
-        }
+        });
+        updatedOrder = await storage.getOrder(id);
       } else {
         const currentNotes = order.notes || '';
         const refundNote = `Partial refund of £${refundedAmount.toFixed(2)} processed. Reason: ${reason || 'N/A'}`;
