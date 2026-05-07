@@ -436,7 +436,7 @@ export function registerQuoteRoutes(app: Express): void {
           }
         }
         // Write exactly one consolidated purchase movement per (product, sellingType)
-        for (const [, psum] of createPurchaseSummary) {
+        for (const psum of Array.from(createPurchaseSummary.values())) {
           const { productId: psProductId, sellingType: psSt, qty: psQty, primaryBatchId: psBid } = psum;
           const stockBefore = psSt === 'pallets' ? (stockBeforeCreate.get(psProductId)?.pallets ?? 0) : (stockBeforeCreate.get(psProductId)?.units ?? 0);
           const [productNow] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, psProductId)).limit(1);
@@ -1176,7 +1176,7 @@ export function registerQuoteRoutes(app: Express): void {
           if (existingGroup) { existingGroup.qty += item.quantity; existingGroup.batches.push({ batchId: item.batchId ?? null, qty: item.quantity }); }
           else restoreGroups.set(key, { productId: item.productId, qty: item.quantity, sellingType, batches: [{ batchId: item.batchId ?? null, qty: item.quantity }] });
         }
-        for (const [, group] of restoreGroups) {
+        for (const group of Array.from(restoreGroups.values())) {
           const { productId } = group;
           const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
           if (!product) {
@@ -1314,7 +1314,7 @@ export function registerQuoteRoutes(app: Express): void {
           }
         }
         // Write exactly one consolidated purchase movement per (product, sellingType) after step-7c allocation
-        for (const [, epsum] of editPurchaseSummary) {
+        for (const epsum of Array.from(editPurchaseSummary.values())) {
           const { productId: epPid, sellingType: epSt, qty: epQty, primaryBatchId: epBid } = epsum;
           const stockBefore7c = epSt === 'pallets' ? (stockBeforeEdit7c.get(epPid)?.pallets ?? 0) : (stockBeforeEdit7c.get(epPid)?.units ?? 0);
           const [productNow7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, epPid)).limit(1);

@@ -888,7 +888,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           }
 
           let restored = 0;
-          for (const [, group] of productGroups) {
+          for (const group of Array.from(productGroups.values())) {
             const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
@@ -1208,7 +1208,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                 if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
                 else custGroups.set(key, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeC, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
               }
-              for (const [, group] of custGroups) {
+              for (const group of Array.from(custGroups.values())) {
                 const { productId } = group;
                 const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
                 if (!product) continue;
@@ -1428,7 +1428,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             else refundGroups.set(key, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeR, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
           }
 
-          for (const [, group] of refundGroups) {
+          for (const group of Array.from(refundGroups.values())) {
             const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
@@ -1570,7 +1570,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
             else delGroups.set(keyD, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeD, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
           }
-          for (const [, group] of delGroups) {
+          for (const group of Array.from(delGroups.values())) {
             const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
