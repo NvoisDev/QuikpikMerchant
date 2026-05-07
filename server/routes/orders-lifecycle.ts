@@ -821,6 +821,17 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const orderItemsList = await storage.getOrderItems(id);
       const skipRestock = order.restockStatus === 'completed';
 
+      // Compute cancellation scope up-front so newStatus is available inside the stock-restore transaction
+      let isFullCancellation = !returnedItems || returnedItems.length === 0;
+      if (!isFullCancellation && returnedItems && returnedItems.length > 0) {
+        const allItemsFullyReturned = orderItemsList.every(orderItem => {
+          const returnItem = returnedItems.find((ri: any) => ri.productId === orderItem.productId);
+          return returnItem && returnItem.quantity >= orderItem.quantity;
+        });
+        if (allItemsFullyReturned && returnedItems.length >= orderItemsList.length) isFullCancellation = true;
+      }
+      const newStatus = isFullCancellation ? 'cancelled' : order.status;
+
       // Pre-compute refundAmount (pure arithmetic — no extra DB calls needed)
       let refundAmount = 0;
       if (returnedItems && returnedItems.length > 0) {
@@ -887,7 +898,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              // Pre-insert guard: skip if a return movement already exists for this order+product
+              const [existingPalletMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+                .where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'))).limit(1);
+              if (!existingPalletMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; fall back to a return batch if original not found
@@ -911,25 +925,17 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              // ONE consolidated movement per product
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              // ONE consolidated movement per product — guarded against duplicate writes
+              const [existingUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+                .where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'))).limit(1);
+              if (!existingUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
             restored += group.qty;
           }
+          // Set order status atomically with stock restoration
+          await trx.update(orders).set({ status: newStatus, restockStatus: 'completed', cancelledAt: isFullCancellation ? new Date() : undefined, refundReason: reason || 'Customer requested cancellation' }).where(eq(orders.id, id));
           return restored;
         });
-      }
-
-      let isFullCancellation = !returnedItems || returnedItems.length === 0;
-
-      if (!isFullCancellation && returnedItems && returnedItems.length > 0) {
-        const allItemsFullyReturned = orderItemsList.every(orderItem => {
-          const returnItem = returnedItems.find((ri: any) => ri.productId === orderItem.productId);
-          return returnItem && returnItem.quantity >= orderItem.quantity;
-        });
-        if (allItemsFullyReturned && returnedItems.length >= orderItemsList.length) {
-          isFullCancellation = true;
-        }
       }
 
       let stripeRefundTotalPounds = 0;
@@ -962,8 +968,6 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           }
         }
       }
-
-      const newStatus = isFullCancellation ? 'cancelled' : order.status;
 
       const amountPaidNum = parseFloat(order.amountPaid || '0');
       let totalRefunded = currentRefunded + stripeRefundTotalPounds;
@@ -1424,7 +1428,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              // Pre-insert guard: skip if a return movement already exists for this order+product
+              const [existingRefundPalletMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+                .where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'))).limit(1);
+              if (!existingRefundPalletMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; create a return batch if the original is missing
@@ -1449,8 +1456,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              // ONE consolidated movement per product
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              // ONE consolidated movement per product — guarded against duplicate writes
+              const [existingRefundUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+                .where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'))).limit(1);
+              if (!existingRefundUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
           }
         });
@@ -1523,71 +1532,63 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const orderIdsToDelete = ordersToDelete.map(order => order.id);
 
-      // Restore batch stock for orders that have purchase movements but no return movements yet
-      // (guards against deleting active orders without restoring inventory)
+      // Delete campaign orders first (optional link — failures are intentionally tolerated)
+      try {
+        await db.delete(campaignOrders).where(inArray(campaignOrders.orderId, orderIdsToDelete));
+      } catch (_) { /* campaignOrders rows may not exist for every order */ }
+
+      // Restore stock + delete order data in one atomic transaction to prevent partial state
       const ordersFullData = await db.select().from(orders).where(inArray(orders.id, orderIdsToDelete));
-      for (const ord of ordersFullData) {
-        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, ord.id));
+      await db.transaction(async (trx) => {
         const today = new Date().toISOString().split('T')[0];
-        // Group by product for one movement per product
-        type DelGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-        const delGroups = new Map<number, DelGroup>();
-        for (const item of items) {
-          if (!item.productId) continue;
-          const [purchMov] = await db.select({ id: stockMovements.id }).from(stockMovements)
-            .where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, item.productId), eq(stockMovements.movementType, 'purchase'))).limit(1);
-          const [retMov] = await db.select({ id: stockMovements.id }).from(stockMovements)
-            .where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, item.productId), eq(stockMovements.movementType, 'return'))).limit(1);
-          if (!purchMov || retMov) continue; // no purchase recorded, or stock already restored
-          const existing = delGroups.get(item.productId);
-          if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
-          else delGroups.set(item.productId, { qty: item.quantity ?? 0, sellingType: item.sellingType ?? 'units', batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
-        }
-        for (const [productId, group] of delGroups) {
-          const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
-          if (!product) continue;
-          if (group.sellingType === 'pallets') {
-            const newPalletStock = (product.palletStock || 0) + group.qty;
-            const newUnitStock = (product.stock ?? 0) + group.qty * (product.quantityInPack ?? 1) * (product.unitsPerPallet ?? 1);
-            await db.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-          } else {
-            for (const b of group.batches) {
-              if (b.batchId) {
-                const [origBatch] = await db.select().from(productBatches).where(eq(productBatches.id, b.batchId)).limit(1);
-                if (origBatch && origBatch.productId === productId) {
-                  await db.update(productBatches).set({ quantity: origBatch.quantity + b.qty, status: 'active', updatedAt: new Date() }).where(eq(productBatches.id, b.batchId));
+        for (const ord of ordersFullData) {
+          const items = await trx.select().from(orderItems).where(eq(orderItems.orderId, ord.id));
+          // Group by product for one movement per product
+          type DelGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+          const delGroups = new Map<number, DelGroup>();
+          for (const item of items) {
+            if (!item.productId) continue;
+            const [purchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+              .where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, item.productId), eq(stockMovements.movementType, 'purchase'))).limit(1);
+            const [retMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
+              .where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, item.productId), eq(stockMovements.movementType, 'return'))).limit(1);
+            if (!purchMov || retMov) continue; // no purchase recorded, or stock already restored
+            const existing = delGroups.get(item.productId);
+            if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
+            else delGroups.set(item.productId, { qty: item.quantity ?? 0, sellingType: item.sellingType ?? 'units', batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
+          }
+          for (const [productId, group] of delGroups) {
+            const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
+            if (!product) continue;
+            if (group.sellingType === 'pallets') {
+              const newPalletStock = (product.palletStock || 0) + group.qty;
+              const newUnitStock = (product.stock ?? 0) + group.qty * (product.quantityInPack ?? 1) * (product.unitsPerPallet ?? 1);
+              await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
+            } else {
+              for (const b of group.batches) {
+                if (b.batchId) {
+                  const [origBatch] = await trx.select().from(productBatches).where(eq(productBatches.id, b.batchId)).limit(1);
+                  if (origBatch && origBatch.productId === productId) {
+                    await trx.update(productBatches).set({ quantity: origBatch.quantity + b.qty, status: 'active', updatedAt: new Date() }).where(eq(productBatches.id, b.batchId));
+                  } else {
+                    await trx.insert(productBatches).values({ productId, batchNumber: `RETURN-${ord.orderNumber}`, quantity: b.qty, status: 'active', notes: `Return restock from deletion of order ${ord.orderNumber}` });
+                  }
                 } else {
-                  await db.insert(productBatches).values({ productId, batchNumber: `RETURN-${ord.orderNumber}`, quantity: b.qty, status: 'active', notes: `Return restock from deletion of order ${ord.orderNumber}` });
+                  await trx.insert(productBatches).values({ productId, batchNumber: `RETURN-${ord.orderNumber}`, quantity: b.qty, status: 'active', notes: `Legacy return restock from deletion of order ${ord.orderNumber}` });
                 }
-              } else {
-                await db.insert(productBatches).values({ productId, batchNumber: `RETURN-${ord.orderNumber}`, quantity: b.qty, status: 'active', notes: `Legacy return restock from deletion of order ${ord.orderNumber}` });
               }
+              const [batchSumRow] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+                .where(and(eq(productBatches.productId, productId), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
+              const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+              const qip = product.quantityInPack ?? 1;
+              const upp = product.unitsPerPallet ?? 1;
+              await trx.update(products).set({ stock: newUnitStock, palletStock: (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0 }).where(eq(products.id, productId));
             }
-            const [batchSumRow] = await db.select({ total: sum(productBatches.quantity) }).from(productBatches)
-              .where(and(eq(productBatches.productId, productId), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
-            const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
-            const qip = product.quantityInPack ?? 1;
-            const upp = product.unitsPerPallet ?? 1;
-            await db.update(products).set({ stock: newUnitStock, palletStock: (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0 }).where(eq(products.id, productId));
           }
         }
-      }
-
-      try {
-        await db
-          .delete(campaignOrders)
-          .where(inArray(campaignOrders.orderId, orderIdsToDelete));
-      } catch (error) {
-        // campaignOrders may not exist for all orders — ignore
-      }
-
-      await db
-        .delete(orderItems)
-        .where(inArray(orderItems.orderId, orderIdsToDelete));
-
-      await db
-        .delete(orders)
-        .where(and(...whereConditions));
+        await trx.delete(orderItems).where(inArray(orderItems.orderId, orderIdsToDelete));
+        await trx.delete(orders).where(and(...whereConditions));
+      });
 
       res.json({
         message: `Successfully deleted ${orderIdsToDelete.length} orders and related data`,
