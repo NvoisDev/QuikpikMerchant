@@ -288,6 +288,20 @@ async function runStartupMigrations() {
     // Task #1032: Link stock movements to the batch they came from for better audit trails
     `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS batch_id INTEGER`,
     `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_batch_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_batch_id_fkey FOREIGN KEY (batch_id) REFERENCES product_batches(id) ON DELETE SET NULL; END IF; END $$`,
+    // Task #1044: Backfill missing 'initial' stock movement for products whose "Initial Stock"
+    // batch has no corresponding movement record. INSERT ... WHERE NOT EXISTS is fully idempotent
+    // — becomes a no-op on every startup once the rows exist.
+    `INSERT INTO stock_movements (product_id, wholesaler_id, movement_type, quantity, unit_type, stock_before, stock_after, reason, batch_id, created_at)
+     SELECT pb.product_id, p.wholesaler_id, 'initial', pb.quantity, 'units', 0, pb.quantity, 'Initial stock', pb.id, pb.created_at
+     FROM product_batches pb
+     JOIN products p ON p.id = pb.product_id
+     WHERE pb.batch_number = 'Initial Stock'
+       AND pb.quantity > 0
+       AND NOT EXISTS (
+         SELECT 1 FROM stock_movements sm
+         WHERE sm.product_id = pb.product_id
+           AND sm.movement_type = 'initial'
+       )`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

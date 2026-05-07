@@ -3,7 +3,7 @@ import {
   and, asc, count, db, eq, generateProductImage, insertProductSchema, isNull, openai, or,
   products, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
-import { productBatches } from "@shared/schema";
+import { productBatches, stockMovements } from "@shared/schema";
 import { isImpersonating } from "../utils/isImpersonating";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 
@@ -108,12 +108,26 @@ export function registerProductRoutes(app: Express): void {
 
         // Auto-create an initial batch so the product is immediately FEFO-trackable
         if (initialStock > 0) {
-          await tx.insert(productBatches).values({
+          const [initialBatch] = await tx.insert(productBatches).values({
             productId: newProduct.id,
             batchNumber: 'Initial Stock',
             quantity: initialStock,
             status: 'active',
             notes: 'Initial stock batch (auto-created on product creation)',
+          }).returning();
+
+          // Write the matching stock movement so history starts from 0 with a
+          // clear "Initial stock" entry — no unexplained stock ever.
+          await tx.insert(stockMovements).values({
+            productId: newProduct.id,
+            wholesalerId: targetUserId,
+            movementType: 'initial',
+            quantity: initialStock,
+            unitType: 'units',
+            stockBefore: 0,
+            stockAfter: initialStock,
+            reason: 'Initial stock',
+            batchId: initialBatch.id,
           });
         }
         return newProduct;
