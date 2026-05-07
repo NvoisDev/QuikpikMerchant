@@ -324,13 +324,11 @@ export function registerQuoteRoutes(app: Express): void {
                 batchId: primaryBatchId,
               });
 
-              // Apply batch deductions; collect labels for the single consolidated movement
-              const batchLabels: string[] = [];
+              // Apply batch deductions
               for (const d of deductions) {
                 await trx.update(productBatches)
                   .set({ quantity: d.newQty, status: d.newStatus, updatedAt: new Date() })
                   .where(eq(productBatches.id, d.id));
-                batchLabels.push(`batch #${d.batchNumber || d.id}: ${d.deduct} units`);
               }
 
               // Sync product.stock from batch sum (single source of truth)
@@ -1271,10 +1269,8 @@ export function registerQuoteRoutes(app: Express): void {
                 e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = totalAvailable; e.requested = item.quantity;
                 throw e;
               }
-              const productStockBefore = totalAvailable;
               let remaining = item.quantity;
               let primaryBatchId: number | null = null;
-              const batchLabels: string[] = [];
               for (const batch of activeBatches) {
                 if (remaining <= 0) break;
                 const deduct = Math.min(remaining, batch.quantity);
@@ -1282,7 +1278,6 @@ export function registerQuoteRoutes(app: Express): void {
                 await trx.update(productBatches)
                   .set({ quantity: newQty, status: newQty === 0 ? 'depleted' : 'active', updatedAt: new Date() })
                   .where(eq(productBatches.id, batch.id));
-                batchLabels.push(`batch #${batch.batchNumber || batch.id}: ${deduct} units`);
                 if (primaryBatchId === null) primaryBatchId = batch.id;
                 remaining -= deduct;
               }
