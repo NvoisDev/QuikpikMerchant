@@ -443,10 +443,7 @@ export function registerQuoteRoutes(app: Express): void {
           const stockBefore = psSt === 'pallets' ? (stockBeforeCreate.get(psProductId)?.pallets ?? 0) : (stockBeforeCreate.get(psProductId)?.units ?? 0);
           const [productNow] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, psProductId)).limit(1);
           const stockAfter = psSt === 'pallets' ? (productNow?.palletStock ?? 0) : (productNow?.stock ?? 0);
-          const [existingCreatePurchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteOrderRow.id), eq(stockMovements.productId, psProductId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.unitType, psSt === 'pallets' ? 'pallets' : 'units'))).limit(1);
-          if (!existingCreatePurchMov) {
-            await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: psSt === 'pallets' ? 'pallets' : 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} ${psSt}`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
-          }
+          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: psSt === 'pallets' ? 'pallets' : 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} ${psSt}`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
         }
         return quoteOrderRow;
       });
@@ -1327,10 +1324,7 @@ export function registerQuoteRoutes(app: Express): void {
           const stockBefore7c = epSt === 'pallets' ? (stockBeforeEdit7c.get(epPid)?.pallets ?? 0) : (stockBeforeEdit7c.get(epPid)?.units ?? 0);
           const [productNow7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, epPid)).limit(1);
           const stockAfter7c = epSt === 'pallets' ? (productNow7c?.palletStock ?? 0) : (productNow7c?.stock ?? 0);
-          const [existingEditPurchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.productId, epPid), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.unitType, epSt === 'pallets' ? 'pallets' : 'units'), sql`${stockMovements.reason} LIKE 'Invoice edit — allocating%'`)).limit(1);
-          if (!existingEditPurchMov) {
-            await trx.insert(stockMovements).values({ productId: epPid, wholesalerId, movementType: 'purchase', quantity: -epQty, unitType: epSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7c, stockAfter: stockAfter7c, reason: `Invoice edit — allocating ${epQty} ${epSt}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: epBid });
-          }
+          await trx.insert(stockMovements).values({ productId: epPid, wholesalerId, movementType: 'purchase', quantity: -epQty, unitType: epSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7c, stockAfter: stockAfter7c, reason: `Invoice edit — allocating ${epQty} ${epSt}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: epBid });
         }
 
         // 7d. Update order totals and payment link

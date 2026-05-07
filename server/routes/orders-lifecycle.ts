@@ -902,8 +902,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              const [exCancelPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Order cancellation —%'`)).limit(1);
-              if (!exCancelPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; fall back to a return batch if original not found
@@ -927,8 +926,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              const [exCancelUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Order cancellation —%'`)).limit(1);
-              if (!exCancelUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
             restored += group.qty;
           }
@@ -1220,8 +1218,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                   const upp = product.unitsPerPallet ?? 1;
                   const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
                   await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-                  const [exCustPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, order.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Order cancellation (customer request)%'`)).limit(1);
-                  if (!exCustPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation (customer request) — ${group.qty} pallets returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
+                  await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation (customer request) — ${group.qty} pallets returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
                 } else {
                   const unitStockBefore = product.stock || 0;
                   for (const batchInfo of group.batches) {
@@ -1243,8 +1240,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                   const upp = product.unitsPerPallet ?? 1;
                   const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
                   await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-                  const [exCustUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, order.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Order cancellation (customer request)%'`)).limit(1);
-                  if (!exCustUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation (customer request) — ${group.qty} units returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
+                  await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation (customer request) — ${group.qty} units returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
                 }
               }
             });
@@ -1440,8 +1436,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              const [exRefundPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Full refund%'`)).limit(1);
-              if (!exRefundPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; create a return batch if the original is missing
@@ -1466,8 +1461,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              const [exRefundUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Full refund%'`)).limit(1);
-              if (!exRefundUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
           }
         });
@@ -1580,8 +1574,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              const [exDelPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Bulk delete%'`)).limit(1);
-              if (!exDelPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Bulk delete — ${group.qty} pallets returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Bulk delete — ${group.qty} pallets returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               for (const b of group.batches) {
@@ -1603,8 +1596,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              const [exDelUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Bulk delete%'`)).limit(1);
-              if (!exDelUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Bulk delete — ${group.qty} units returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Bulk delete — ${group.qty} units returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
             }
           }
         }
