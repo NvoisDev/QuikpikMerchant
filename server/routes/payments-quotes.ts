@@ -248,6 +248,16 @@ export function registerQuoteRoutes(app: Express): void {
           ...(req.user.role === 'team_member' ? { placedByName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Team Member' } : {}),
           ...(resolvedBusinessProfileId ? { businessProfileId: resolvedBusinessProfileId } : {}),
         }).returning();
+        // Capture stock levels before any allocation (for accurate movement stockBefore)
+        const stockBeforeCreate = new Map<number, { units: number; pallets: number }>();
+        for (const preItem of items) {
+          if (!stockBeforeCreate.has(preItem.productId)) {
+            const [preP] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, preItem.productId)).limit(1);
+            if (preP) stockBeforeCreate.set(preItem.productId, { units: preP.stock ?? 0, pallets: preP.palletStock ?? 0 });
+          }
+        }
+        // Accumulate purchase totals per (product, sellingType); one movement written after the loop
+        const createPurchaseSummary = new Map<string, { productId: number; sellingType: string; qty: number; primaryBatchId: number | null }>();
         // Create order items with custom prices, decrement stock via FEFO batch allocation
         for (const item of items) {
           const sellingType = item.sellingType || 'units';
@@ -344,23 +354,11 @@ export function registerQuoteRoutes(app: Express): void {
                 .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
                 .where(eq(products.id, item.productId));
 
-              // ONE consolidated movement per product (not one per batch)
-              await trx.insert(stockMovements).values({
-                productId: item.productId,
-                wholesalerId,
-                movementType: 'purchase',
-                quantity: -quantity,
-                unitType: 'units',
-                stockBefore: totalAvailable,
-                stockAfter: newUnitStock,
-                reason: batchLabels.length === 1
-                  ? `Invoice order sale (${batchLabels[0]})`
-                  : `Invoice order sale — ${batchLabels.join(', ')}`,
-                orderId: quoteOrderRow.id,
-                customerName: quoteOrderRow.customerName ?? null,
-                businessProfileId: quoteOrderRow.businessProfileId ?? null,
-                batchId: primaryBatchId,
-              });
+              // Accumulate for post-loop consolidated movement (one per product per operation)
+              const cskey1 = `${item.productId}_units`;
+              const csum1 = createPurchaseSummary.get(cskey1);
+              if (csum1) { csum1.qty += quantity; if (csum1.primaryBatchId === null) csum1.primaryBatchId = primaryBatchId; }
+              else createPurchaseSummary.set(cskey1, { productId: item.productId, sellingType: 'units', qty: quantity, primaryBatchId });
 
             } else {
               // No batches: fall back to product.stock direct counter
@@ -395,19 +393,10 @@ export function registerQuoteRoutes(app: Express): void {
                 .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
                 .where(eq(products.id, item.productId));
 
-              await trx.insert(stockMovements).values({
-                productId: item.productId,
-                wholesalerId,
-                movementType: 'purchase',
-                quantity: -quantity,
-                unitType: 'units',
-                stockBefore: product.stock || 0,
-                stockAfter: newUnitStock,
-                reason: `Invoice order sale - ${quantity} units`,
-                orderId: quoteOrderRow.id,
-                customerName: quoteOrderRow.customerName ?? null,
-                businessProfileId: quoteOrderRow.businessProfileId ?? null,
-              });
+              const cskey2 = `${item.productId}_units`;
+              const csum2 = createPurchaseSummary.get(cskey2);
+              if (csum2) { csum2.qty += quantity; }
+              else createPurchaseSummary.set(cskey2, { productId: item.productId, sellingType: 'units', qty: quantity, primaryBatchId: null });
             }
 
           } else if (sellingType === 'pallets') {
@@ -442,19 +431,21 @@ export function registerQuoteRoutes(app: Express): void {
               .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
               .where(eq(products.id, item.productId));
 
-            await trx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId,
-              movementType: 'purchase',
-              quantity: -quantity,
-              unitType: 'pallets',
-              stockBefore: product.palletStock || 0,
-              stockAfter: newPalletStock,
-              reason: `Invoice order sale - ${quantity} pallets`,
-              orderId: quoteOrderRow.id,
-              customerName: quoteOrderRow.customerName ?? null,
-              businessProfileId: quoteOrderRow.businessProfileId ?? null,
-            });
+            const cskey3 = `${item.productId}_pallets`;
+            const csum3 = createPurchaseSummary.get(cskey3);
+            if (csum3) { csum3.qty += quantity; }
+            else createPurchaseSummary.set(cskey3, { productId: item.productId, sellingType: 'pallets', qty: quantity, primaryBatchId: null });
+          }
+        }
+        // Write exactly one consolidated purchase movement per (product, sellingType)
+        for (const [, psum] of createPurchaseSummary) {
+          const { productId: psProductId, sellingType: psSt, qty: psQty, primaryBatchId: psBid } = psum;
+          const stockBefore = psSt === 'pallets' ? (stockBeforeCreate.get(psProductId)?.pallets ?? 0) : (stockBeforeCreate.get(psProductId)?.units ?? 0);
+          const [productNow] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, psProductId)).limit(1);
+          const stockAfter = psSt === 'pallets' ? (productNow?.palletStock ?? 0) : (productNow?.stock ?? 0);
+          const [existingCreatePurchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteOrderRow.id), eq(stockMovements.productId, psProductId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.unitType, psSt === 'pallets' ? 'pallets' : 'units'))).limit(1);
+          if (!existingCreatePurchMov) {
+            await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: psSt === 'pallets' ? 'pallets' : 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} ${psSt}`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
           }
         }
         return quoteOrderRow;
@@ -1180,16 +1171,18 @@ export function registerQuoteRoutes(app: Express): void {
       await db.transaction(async (trx) => {
         // 7a. Restore stock from old items — aggregate by product for exactly one movement per product
         const editRestoreToday = new Date().toISOString().split('T')[0];
-        type RestoreGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-        const restoreGroups = new Map<number, RestoreGroup>();
+        type RestoreGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+        const restoreGroups = new Map<string, RestoreGroup>();
         for (const item of existingItems) {
           if (item.productId === null) continue;
           const sellingType = item.sellingType || 'units';
-          const existingGroup = restoreGroups.get(item.productId);
+          const key = `${item.productId}_${sellingType}`;
+          const existingGroup = restoreGroups.get(key);
           if (existingGroup) { existingGroup.qty += item.quantity; existingGroup.batches.push({ batchId: item.batchId ?? null, qty: item.quantity }); }
-          else restoreGroups.set(item.productId, { qty: item.quantity, sellingType, batches: [{ batchId: item.batchId ?? null, qty: item.quantity }] });
+          else restoreGroups.set(key, { productId: item.productId, qty: item.quantity, sellingType, batches: [{ batchId: item.batchId ?? null, qty: item.quantity }] });
         }
-        for (const [productId, group] of restoreGroups) {
+        for (const [, group] of restoreGroups) {
+          const { productId } = group;
           const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
           if (!product) {
             restoredProductWarnings.push(`Product #${productId} no longer exists — its stock could not be restored.`);
@@ -1237,6 +1230,16 @@ export function registerQuoteRoutes(app: Express): void {
         await trx.delete(orderItems).where(eq(orderItems.orderId, quoteId));
 
         // 7c. Allocate stock for new items and insert them with their allocated batchId
+        // Capture stock levels before step-7c allocation (for accurate movement records)
+        const stockBeforeEdit7c = new Map<number, { units: number; pallets: number }>();
+        for (const preItem7c of items) {
+          if (!stockBeforeEdit7c.has(preItem7c.productId)) {
+            const [preP7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, preItem7c.productId)).limit(1);
+            if (preP7c) stockBeforeEdit7c.set(preItem7c.productId, { units: preP7c.stock ?? 0, pallets: preP7c.palletStock ?? 0 });
+          }
+        }
+        // Accumulate purchase totals per (product, sellingType); one movement written after the loop
+        const editPurchaseSummary = new Map<string, { productId: number; sellingType: string; qty: number; primaryBatchId: number | null }>();
         for (const item of items) {
           const sellingType = item.sellingType || 'units';
           const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
@@ -1252,7 +1255,10 @@ export function registerQuoteRoutes(app: Express): void {
             const { newUnitStock, newPalletStock } = orderResult;
             await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
             await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — allocating ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+            const epkey1 = `${item.productId}_pallets`;
+            const epsum1 = editPurchaseSummary.get(epkey1);
+            if (epsum1) { epsum1.qty += item.quantity; }
+            else editPurchaseSummary.set(epkey1, { productId: item.productId, sellingType: 'pallets', qty: item.quantity, primaryBatchId: null });
           } else {
             // Units: prefer FEFO batch deduction
             const today = new Date().toISOString().split('T')[0];
@@ -1293,7 +1299,10 @@ export function registerQuoteRoutes(app: Express): void {
               // Insert order item with allocated batchId so future edits/cancellations can reverse correctly
               await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchId });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: productStockBefore, stockAfter: newUnitStock, reason: batchLabels.length === 1 ? `Invoice edit — allocating (${batchLabels[0]})` : `Invoice edit — allocating — ${batchLabels.join(', ')}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: primaryBatchId });
+              const epkey2 = `${item.productId}_units`;
+              const epsum2 = editPurchaseSummary.get(epkey2);
+              if (epsum2) { epsum2.qty += item.quantity; if (epsum2.primaryBatchId === null) epsum2.primaryBatchId = primaryBatchId; }
+              else editPurchaseSummary.set(epkey2, { productId: item.productId, sellingType: 'units', qty: item.quantity, primaryBatchId });
             } else {
               // Legacy: no batches — direct stock deduction
               if ((product.stock || 0) < item.quantity) {
@@ -1305,8 +1314,22 @@ export function registerQuoteRoutes(app: Express): void {
               const { newUnitStock, newPalletStock } = orderResult;
               await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — allocating ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+              const epkey3 = `${item.productId}_units`;
+              const epsum3 = editPurchaseSummary.get(epkey3);
+              if (epsum3) { epsum3.qty += item.quantity; }
+              else editPurchaseSummary.set(epkey3, { productId: item.productId, sellingType: 'units', qty: item.quantity, primaryBatchId: null });
             }
+          }
+        }
+        // Write exactly one consolidated purchase movement per (product, sellingType) after step-7c allocation
+        for (const [, epsum] of editPurchaseSummary) {
+          const { productId: epPid, sellingType: epSt, qty: epQty, primaryBatchId: epBid } = epsum;
+          const stockBefore7c = epSt === 'pallets' ? (stockBeforeEdit7c.get(epPid)?.pallets ?? 0) : (stockBeforeEdit7c.get(epPid)?.units ?? 0);
+          const [productNow7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, epPid)).limit(1);
+          const stockAfter7c = epSt === 'pallets' ? (productNow7c?.palletStock ?? 0) : (productNow7c?.stock ?? 0);
+          const [existingEditPurchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.productId, epPid), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.unitType, epSt === 'pallets' ? 'pallets' : 'units'), sql`${stockMovements.reason} LIKE 'Invoice edit — allocating%'`)).limit(1);
+          if (!existingEditPurchMov) {
+            await trx.insert(stockMovements).values({ productId: epPid, wholesalerId, movementType: 'purchase', quantity: -epQty, unitType: epSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7c, stockAfter: stockAfter7c, reason: `Invoice edit — allocating ${epQty} ${epSt}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: epBid });
           }
         }
 

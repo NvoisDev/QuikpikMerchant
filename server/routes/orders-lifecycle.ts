@@ -877,17 +877,19 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             }
           }
 
-          // Aggregate by product for exactly one movement per product per operation
-          type ProductGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-          const productGroups = new Map<number, ProductGroup>();
+          // Aggregate by (product, sellingType) for exactly one movement per (product, sellingType) per operation
+          type ProductGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+          const productGroups = new Map<string, ProductGroup>();
           for (const r of itemsToRestore) {
-            const existing = productGroups.get(r.productId);
+            const key = `${r.productId}_${r.sellingType}`;
+            const existing = productGroups.get(key);
             if (existing) { existing.qty += r.qty; existing.batches.push({ batchId: r.batchId, qty: r.qty }); }
-            else productGroups.set(r.productId, { qty: r.qty, sellingType: r.sellingType, batches: [{ batchId: r.batchId, qty: r.qty }] });
+            else productGroups.set(key, { productId: r.productId, qty: r.qty, sellingType: r.sellingType, batches: [{ batchId: r.batchId, qty: r.qty }] });
           }
 
           let restored = 0;
-          for (const [productId, group] of productGroups) {
+          for (const [, group] of productGroups) {
+            const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
 
@@ -900,7 +902,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              const [exCancelPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Order cancellation —%'`)).limit(1);
+              if (!exCancelPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; fall back to a return batch if original not found
@@ -924,7 +927,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              const [exCancelUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Order cancellation —%'`)).limit(1);
+              if (!exCancelUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
             restored += group.qty;
           }
@@ -1192,20 +1196,23 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           if (!skipCustRestock) {
             await db.transaction(async (trx) => {
               const today = new Date().toISOString().split('T')[0];
-              // Aggregate by product for exactly one movement per product per operation
-              type CustGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-              const custGroups = new Map<number, CustGroup>();
+              // Aggregate by (product, sellingType) for exactly one movement per (product, sellingType) per operation
+              type CustGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+              const custGroups = new Map<string, CustGroup>();
               for (const item of orderItemsList) {
                 if (!item.productId) continue;
-                const existing = custGroups.get(item.productId);
+                const sellingTypeC = item.sellingType ?? 'units';
+                const key = `${item.productId}_${sellingTypeC}`;
+                const existing = custGroups.get(key);
                 if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
-                else custGroups.set(item.productId, { qty: item.quantity ?? 0, sellingType: item.sellingType ?? 'units', batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
+                else custGroups.set(key, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeC, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
               }
-              for (const [productId, group] of custGroups) {
+              for (const [, group] of custGroups) {
+                const { productId } = group;
                 const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
                 if (!product) continue;
-                // Idempotency is handled at the outer level via skipCustRestock (restockStatus gate).
-                // Each productId appears exactly once per call (Map), so one movement per product is guaranteed.
+                // Idempotency via outer skipCustRestock gate + reason-scoped per-movement guard below.
+                // Each (product, sellingType) appears once per call (Map), so one movement per combination is guaranteed.
                 if (group.sellingType === 'pallets') {
                   const palletStockBefore = product.palletStock || 0;
                   const newPalletStock = palletStockBefore + group.qty;
@@ -1213,7 +1220,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                   const upp = product.unitsPerPallet ?? 1;
                   const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
                   await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-                  await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation (customer request) — ${group.qty} pallets returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
+                  const [exCustPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, order.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Order cancellation (customer request)%'`)).limit(1);
+                  if (!exCustPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Order cancellation (customer request) — ${group.qty} pallets returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
                 } else {
                   const unitStockBefore = product.stock || 0;
                   for (const batchInfo of group.batches) {
@@ -1235,7 +1243,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                   const upp = product.unitsPerPallet ?? 1;
                   const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
                   await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-                  await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation (customer request) — ${group.qty} units returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
+                  const [exCustUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, order.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Order cancellation (customer request)%'`)).limit(1);
+                  if (!exCustUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Order cancellation (customer request) — ${group.qty} units returned`, orderId: order.id, businessProfileId: order.businessProfileId ?? null });
                 }
               }
             });
@@ -1405,22 +1414,25 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           const refundItemsList = await trx.select().from(orderItems).where(eq(orderItems.orderId, id));
           const today = new Date().toISOString().split('T')[0];
 
-          // Aggregate by product for exactly one movement per product per operation
-          type RefundGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-          const refundGroups = new Map<number, RefundGroup>();
+          // Aggregate by (product, sellingType) for exactly one movement per (product, sellingType) per operation
+          type RefundGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+          const refundGroups = new Map<string, RefundGroup>();
           for (const item of refundItemsList) {
             if (!item.productId) continue;
-            const existing = refundGroups.get(item.productId);
+            const sellingTypeR = item.sellingType ?? 'units';
+            const key = `${item.productId}_${sellingTypeR}`;
+            const existing = refundGroups.get(key);
             if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
-            else refundGroups.set(item.productId, { qty: item.quantity ?? 0, sellingType: item.sellingType ?? 'units', batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
+            else refundGroups.set(key, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeR, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
           }
 
-          for (const [productId, group] of refundGroups) {
+          for (const [, group] of refundGroups) {
+            const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
 
-            // Idempotency is handled at the outer level (order.status !== 'refunded' gate before the transaction).
-            // Each productId appears exactly once per call (Map), so one movement per product is guaranteed.
+            // Idempotency via outer status gate + reason-scoped per-movement guard below.
+            // Each (product, sellingType) appears once per call (Map), so one movement per combination is guaranteed.
             if (group.sellingType === 'pallets') {
               const palletStockBefore = product.palletStock || 0;
               const newPalletStock = palletStockBefore + group.qty;
@@ -1428,7 +1440,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              const [exRefundPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Full refund%'`)).limit(1);
+              if (!exRefundPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Full refund — ${group.qty} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               // Restore each batch individually; create a return batch if the original is missing
@@ -1453,7 +1466,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+              const [exRefundUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Full refund%'`)).limit(1);
+              if (!exRefundUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: order.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Full refund — ${group.qty} units returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
             }
           }
         });
@@ -1537,9 +1551,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         const today = new Date().toISOString().split('T')[0];
         for (const ord of ordersFullData) {
           const items = await trx.select().from(orderItems).where(eq(orderItems.orderId, ord.id));
-          // Group by product for one movement per product
-          type DelGroup = { qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
-          const delGroups = new Map<number, DelGroup>();
+          // Group by (product, sellingType) for one movement per (product, sellingType)
+          type DelGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
+          const delGroups = new Map<string, DelGroup>();
           for (const item of items) {
             if (!item.productId) continue;
             const [purchMov] = await trx.select({ id: stockMovements.id }).from(stockMovements)
@@ -1547,11 +1561,14 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             // Use restockStatus (business state) rather than retMov existence to detect already-restocked orders.
             // retMov would also match invoice-edit 'return' movements, causing false skips.
             if (!purchMov || ord.restockStatus === 'completed') continue; // no purchase, or already restocked via cancel/refund
-            const existing = delGroups.get(item.productId);
+            const sellingTypeD = item.sellingType ?? 'units';
+            const keyD = `${item.productId}_${sellingTypeD}`;
+            const existing = delGroups.get(keyD);
             if (existing) { existing.qty += item.quantity ?? 0; existing.batches.push({ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }); }
-            else delGroups.set(item.productId, { qty: item.quantity ?? 0, sellingType: item.sellingType ?? 'units', batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
+            else delGroups.set(keyD, { productId: item.productId, qty: item.quantity ?? 0, sellingType: sellingTypeD, batches: [{ batchId: item.batchId ?? null, qty: item.quantity ?? 0 }] });
           }
-          for (const [productId, group] of delGroups) {
+          for (const [, group] of delGroups) {
+            const { productId } = group;
             const [product] = await trx.select().from(products).where(eq(products.id, productId)).limit(1);
             if (!product) continue;
             // Idempotency for bulk delete is handled by the restockStatus guard above.
@@ -1563,7 +1580,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
               await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Bulk delete — ${group.qty} pallets returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
+              const [exDelPalMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'pallets'), sql`${stockMovements.reason} LIKE 'Bulk delete%'`)).limit(1);
+              if (!exDelPalMov) await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Bulk delete — ${group.qty} pallets returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
             } else {
               const unitStockBefore = product.stock || 0;
               for (const b of group.batches) {
@@ -1585,7 +1603,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const upp = product.unitsPerPallet ?? 1;
               const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock }).where(eq(products.id, productId));
-              await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Bulk delete — ${group.qty} units returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
+              const [exDelUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, ord.id), eq(stockMovements.productId, productId), eq(stockMovements.movementType, 'return'), eq(stockMovements.unitType, 'units'), sql`${stockMovements.reason} LIKE 'Bulk delete%'`)).limit(1);
+              if (!exDelUnitMov) await trx.insert(stockMovements).values({ productId, wholesalerId: ord.wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Bulk delete — ${group.qty} units returned from order ${ord.orderNumber}`, orderId: ord.id, businessProfileId: ord.businessProfileId ?? null });
             }
           }
         }
