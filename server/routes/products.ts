@@ -228,12 +228,25 @@ export function registerProductRoutes(app: Express): void {
 
           if (delta > 0) {
             // Stock increase: create an adjustment batch for the additional units
-            await tx.insert(productBatches).values({
+            const [adjBatch] = await tx.insert(productBatches).values({
               productId: id,
               batchNumber: `ADJ-${Date.now()}`,
               quantity: delta,
               status: 'active',
               notes: `Stock adjustment batch (manual stock edit +${delta} units)`,
+            }).returning();
+
+            // Record the manual increase in movement history
+            await tx.insert(stockMovements).values({
+              productId: id,
+              wholesalerId: targetUserId,
+              movementType: 'manual_increase',
+              quantity: delta,
+              unitType: 'units',
+              stockBefore: currentBatchTotal,
+              stockAfter: newStock,
+              reason: `Manual stock edit (+${delta} units)`,
+              batchId: adjBatch.id,
             });
           } else if (delta < 0) {
             // Stock decrease: deduct from batches in FEFO order
@@ -284,6 +297,18 @@ export function registerProductRoutes(app: Express): void {
             if (toDeduct > 0) {
               console.warn(`⚠️ Batch pool exhausted for product ${id}: ${toDeduct} units unaccounted. products.stock synced to actual batch total: ${actualStock}.`);
             }
+
+            // Record the manual decrease in movement history
+            await tx.insert(stockMovements).values({
+              productId: id,
+              wholesalerId: targetUserId,
+              movementType: 'manual_decrease',
+              quantity: -(currentBatchTotal - actualStock),
+              unitType: 'units',
+              stockBefore: currentBatchTotal,
+              stockAfter: actualStock,
+              reason: `Manual stock edit (-${currentBatchTotal - actualStock} units)`,
+            });
           }
         }
 
