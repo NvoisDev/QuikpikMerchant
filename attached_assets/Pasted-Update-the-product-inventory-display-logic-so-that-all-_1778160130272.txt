@@ -1,0 +1,71 @@
+Update the product inventory display logic so that all product cards, product detail pages, exports, and downloads always reflect the latest real inventory unit count derived from the current active batches/inventory source of truth.
+
+Current issue:
+The product card view and Excel export/download are showing inconsistent or stale stock/unit counts compared to the actual inventory totals shown inside the product inventory detail page.
+
+Requirements:
+
+1. Product card inventory accuracy
+- Update the product cards/grid/list view so the displayed stock/unit count always reflects the latest calculated inventory total
+- The displayed stock value must match the live inventory total shown inside the product detail/inventory page
+- Use the same inventory calculation source everywhere
+- Do not rely on cached/stale/manual values if the platform already derives inventory dynamically from batches
+- Ensure batch updates, stock additions, invoice deductions, and stock adjustments immediately reflect on product cards
+
+2. Excel / CSV export accuracy
+- Update all product exports/downloads (Excel, CSV, bulk export, download button exports) so exported stock/unit counts use the latest real inventory totals
+- Exported stock must exactly match:
+  - Product cards
+  - Product detail inventory totals
+  - Inventory/batch calculations
+- Ensure no stale snapshot values are exported
+
+3. Single source of truth
+- Inventory calculations must come from one consistent source only
+- Avoid duplicate stock calculation logic across:
+  - Product cards
+  - Product detail pages
+  - Exports
+  - Marketplace displays
+  - Invoice/product selectors
+- If an inventory calculation helper/service already exists, reuse it everywhere
+
+4. Performance + safety
+- Do not introduce N+1 inventory queries on product lists
+- Batch/calculate efficiently
+- Avoid loading unnecessary rows into memory
+- Preserve existing pagination, filters, search, and sorting behaviour
+
+5. Regression protection
+- Do not break:
+  - Existing inventory deduction logic
+  - Batch tracking
+  - Invoice flows
+  - Marketplace product visibility
+  - Product search
+  - CSV/Excel formatting
+  - Admin impersonation
+  - Analytics
+- Keep this strictly additive and corrective
+
+6. Validation/testing
+Add regression tests to verify:
+- Product card stock equals inventory detail stock
+- Excel/CSV exports match live inventory totals
+- Batch additions immediately update displayed/exported counts
+- Invoice deductions correctly reduce exported/displayed stock
+- Multi-batch products calculate totals correctly
+- No discrepancies exist between UI and exports
+
+7. Final verification
+After implementation:
+- Compare a sample product across:
+  - Product card
+  - Product detail page
+  - Exported Excel row
+  - Inventory batches
+- Confirm all values match exactly
+- Produce a short report of what was changed and where stale values previously originated
+
+Critical requirement:
+This must NOT break any existing inventory, invoice, batch, analytics, export, or marketplace logic. Maintain full backwards compatibility and preserve all current workflows while correcting stock consistency everywhere.
