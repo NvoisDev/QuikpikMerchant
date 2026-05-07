@@ -165,6 +165,7 @@ export default function ProductDetail() {
   const expiryPopoverRef = useRef<HTMLDivElement>(null);
   const [costPriceEditBatchId, setCostPriceEditBatchId] = useState<number | null>(null);
   const [costPriceInputValue, setCostPriceInputValue] = useState<string>("");
+  const [movementHistoryOpen, setMovementHistoryOpen] = useState(false);
   const costPricePopoverRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -830,69 +831,86 @@ export default function ProductDetail() {
 
           {/* ── Stock Movement History ── */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Stock Movement History</CardTitle>
+            <CardHeader
+              className="pb-3 cursor-pointer select-none"
+              onClick={() => setMovementHistoryOpen(o => !o)}
+            >
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  Stock Movement History
+                  {stockMovements.length > 0 && (
+                    <span className="ml-2 text-xs font-normal text-gray-400 normal-case tracking-normal">
+                      ({stockMovements.length})
+                    </span>
+                  )}
+                </CardTitle>
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${movementHistoryOpen ? "rotate-180" : ""}`}
+                />
+              </div>
             </CardHeader>
-            <CardContent>
-              {movementsLoading ? (
-                <div className="space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-                  ))}
-                </div>
-              ) : stockMovements.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No stock movements yet</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {stockMovements.slice(0, 20).map((m) => {
-                    const isIncrease = m.quantity > 0;
-                    const typeLabels: Record<string, string> = {
-                      purchase: "Sale",
-                      manual_increase: "Stock in",
-                      manual_decrease: "Adjustment",
-                      initial: "Initial stock",
-                      return: "Return",
-                    };
-                    const label = typeLabels[m.movementType] ?? m.movementType;
-                    const batchLabel = m.batchId
-                      ? m.batchNumber ? `Batch ${m.batchNumber}` : `Batch #${m.batchId}`
-                      : null;
-                    return (
-                      <div key={m.id} className="flex items-start justify-between gap-2 py-2 border-b border-gray-50 last:border-0">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                              {isIncrease ? "+" : ""}{m.quantity} {m.unitType}
-                            </span>
-                            <span className="text-xs text-gray-600 font-medium">{label}</span>
-                            {batchLabel && (
-                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5">
-                                {batchLabel}
+            {movementHistoryOpen && (
+              <CardContent>
+                {movementsLoading ? (
+                  <div className="space-y-2">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : stockMovements.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No stock movements yet</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {stockMovements.map((m) => {
+                      const isIncrease = m.quantity > 0;
+                      const typeLabels: Record<string, string> = {
+                        purchase: "Sale",
+                        manual_increase: "Stock in",
+                        manual_decrease: "Adjustment",
+                        initial: "Initial stock",
+                        return: "Return",
+                      };
+                      const label = typeLabels[m.movementType] ?? m.movementType;
+                      const batchLabel = m.batchId
+                        ? m.batchNumber ? `Batch ${m.batchNumber}` : `Batch #${m.batchId}`
+                        : null;
+                      return (
+                        <div key={m.id} className="flex items-start justify-between gap-2 py-2 border-b border-gray-50 last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                {isIncrease ? "+" : ""}{m.quantity} {m.unitType}
                               </span>
-                            )}
-                            {m.customerName && (
-                              <span className="text-xs text-gray-500 truncate">{m.customerName}</span>
-                            )}
-                            {m.orderNumber && (
-                              <span className="text-xs text-gray-400">#{m.orderNumber}</span>
+                              <span className="text-xs text-gray-600 font-medium">{label}</span>
+                              {batchLabel && (
+                                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5">
+                                  {batchLabel}
+                                </span>
+                              )}
+                              {m.customerName && (
+                                <span className="text-xs text-gray-500 truncate">{m.customerName}</span>
+                              )}
+                              {m.orderNumber && (
+                                <span className="text-xs text-gray-400">#{m.orderNumber}</span>
+                              )}
+                            </div>
+                            {m.reason && (
+                              <p className="text-xs text-gray-400 mt-0.5 truncate">{m.reason}</p>
                             )}
                           </div>
-                          {m.reason && (
-                            <p className="text-xs text-gray-400 mt-0.5 truncate">{m.reason}</p>
-                          )}
+                          <div className="text-right shrink-0">
+                            <p className="text-xs text-gray-500">{m.stockAfter} left</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(m.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-xs text-gray-500">{m.stockAfter} left</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(m.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            )}
           </Card>
 
           {/* ── Logistics ── */}
