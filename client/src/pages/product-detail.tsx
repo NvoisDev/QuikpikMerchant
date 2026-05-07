@@ -582,7 +582,7 @@ export default function ProductDetail() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="text-left px-3 py-2 text-gray-500 font-medium">Batch</th>
-                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Qty</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Units left</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Cost</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Expiry</th>
                           <th className="hidden md:table-cell text-right px-3 py-2 text-gray-500 font-medium">Status</th>
