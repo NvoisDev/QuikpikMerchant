@@ -576,8 +576,9 @@ export class ProductStorage extends UserStorageBase {
     };
     const [newBatch] = await db.insert(productBatches).values(batchWithOriginal).returning();
 
-    // Keep product.stock in sync — movement recorded separately below, so skip auto-movement here
-    await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
+    // Keep product.stock in sync — movement recorded separately below, so use
+    // the silent recalc (no extra movement recorded).
+    await this.recalcProductStock(batch.productId);
 
     // Log a stock movement so the history panel shows the restock event
     if (wholesalerId) {
@@ -655,8 +656,8 @@ export class ProductStorage extends UserStorageBase {
           .where(eq(products.id, before.productId));
         const productStockBefore = Number(prodBefore?.stock ?? 0);
 
-        // Caller (this block) records the movement — sync must not double-record
-        await this._syncProductStockFromBatches(updated.productId, { skipMovement: true });
+        // Caller (this block) records the movement — use silent recalc.
+        await this.recalcProductStock(updated.productId);
 
         const [prodAfter] = await db
           .select({ stock: products.stock })
@@ -726,8 +727,8 @@ export class ProductStorage extends UserStorageBase {
         .where(eq(products.id, batch.productId));
       const productStockBefore = Number(prodBefore?.stock ?? 0);
 
-      // Caller records the movement — sync must not double-record
-      await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
+      // Caller records the movement — use silent recalc.
+      await this.recalcProductStock(batch.productId);
 
       const [prodAfter] = await db
         .select({ stock: products.stock })
@@ -752,7 +753,7 @@ export class ProductStorage extends UserStorageBase {
     }
 
     // Delta was zero — no movement needed, just keep stock in sync
-    await this._syncProductStockFromBatches(batch.productId, { skipMovement: true });
+    await this.recalcProductStock(batch.productId);
   }
 
   /** Sum of active non-expired batch quantities for a product. */
@@ -808,6 +809,17 @@ export class ProductStorage extends UserStorageBase {
    * batch quantities and persist it.  Use this wherever a batch is mutated
    * outside the normal storage methods (e.g. admin scripts, one-off fixes).
    * No stock movement is recorded — this is a silent sync.
+   *
+   * Canonical stock counting rule:
+   *   products.stock = SUM(product_batches.quantity)
+   *     WHERE status = 'active'
+   *       AND (expiry_date IS NULL OR expiry_date >= today)
+   *
+   * Why not simply `status != 'depleted'`?
+   *   - 'depleted' batches have quantity = 0 (fully consumed) — excluded.
+   *   - 'expired' batches have passed their expiry date — they should NOT count
+   *     toward available sellable stock even if they still have a quantity recorded.
+   *   Using `active + non-expired` is therefore the correct and more restrictive rule.
    */
   async recalcProductStock(productId: number): Promise<void> {
     await this._syncProductStockFromBatches(productId, { skipMovement: true });
