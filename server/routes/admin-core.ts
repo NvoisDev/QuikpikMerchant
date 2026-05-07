@@ -848,4 +848,79 @@ export function registerAdminCoreRoutes(app: Express): void {
       res.status(500).json({ error: 'Failed to sync subscription' });
     }
   });
+
+  // GET /api/admin/stock-reconcile
+  // Read-only drift report: products where products.stock != SUM of active batch quantities.
+  // Returns an array sorted by drift magnitude (worst first). No auto-repair — reporting only.
+  app.get('/api/admin/stock-reconcile', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || '')) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+
+      const rows = await db.execute(sql`
+        SELECT
+          p.id                                      AS product_id,
+          p.name                                    AS product_name,
+          p.wholesaler_id,
+          u.business_name                           AS wholesaler_name,
+          p.stock                                   AS product_stock,
+          COALESCE(
+            SUM(pb.quantity) FILTER (
+              WHERE pb.status = 'active'
+                AND (pb.expiry_date IS NULL OR pb.expiry_date >= ${today})
+            ), 0
+          )::int                                    AS batch_total,
+          (
+            p.stock - COALESCE(
+              SUM(pb.quantity) FILTER (
+                WHERE pb.status = 'active'
+                  AND (pb.expiry_date IS NULL OR pb.expiry_date >= ${today})
+              ), 0
+            )
+          )::int                                    AS drift
+        FROM products p
+        LEFT JOIN product_batches pb ON pb.product_id = p.id
+        LEFT JOIN users u ON u.id = p.wholesaler_id
+        WHERE p.status IN ('active', 'inactive', 'locked')
+        GROUP BY p.id, p.name, p.wholesaler_id, p.stock, u.business_name
+        HAVING p.stock != COALESCE(
+          SUM(pb.quantity) FILTER (
+            WHERE pb.status = 'active'
+              AND (pb.expiry_date IS NULL OR pb.expiry_date >= ${today})
+          ), 0
+        )
+        ORDER BY ABS(
+          p.stock - COALESCE(
+            SUM(pb.quantity) FILTER (
+              WHERE pb.status = 'active'
+                AND (pb.expiry_date IS NULL OR pb.expiry_date >= ${today})
+            ), 0
+          )
+        ) DESC
+        LIMIT 500
+      `);
+
+      const driftItems = rows.rows.map(r => ({
+        productId: Number(r.product_id),
+        productName: String(r.product_name),
+        wholesalerId: String(r.wholesaler_id),
+        wholesalerName: r.wholesaler_name ? String(r.wholesaler_name) : null,
+        productStock: Number(r.product_stock),
+        batchTotal: Number(r.batch_total),
+        drift: Number(r.drift),
+      }));
+
+      res.json({
+        checkedAt: new Date().toISOString(),
+        driftCount: driftItems.length,
+        items: driftItems,
+      });
+    } catch (error) {
+      console.error('❌ Admin stock-reconcile error:', error);
+      res.status(500).json({ error: 'Failed to run stock reconciliation report' });
+    }
+  });
 }

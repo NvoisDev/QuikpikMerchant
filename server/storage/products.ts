@@ -804,6 +804,16 @@ export class ProductStorage extends UserStorageBase {
   }
 
   /**
+   * Public utility: recompute products.stock from the SUM of active non-expired
+   * batch quantities and persist it.  Use this wherever a batch is mutated
+   * outside the normal storage methods (e.g. admin scripts, one-off fixes).
+   * No stock movement is recorded — this is a silent sync.
+   */
+  async recalcProductStock(productId: number): Promise<void> {
+    await this._syncProductStockFromBatches(productId, { skipMovement: true });
+  }
+
+  /**
    * Internal helper: set products.stock AND products.palletStock from the SUM
    * of active non-expired batch quantities.
    *

@@ -236,6 +236,7 @@ export interface IStorage {
   // Order item operations
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateProductStock(productId: number, newStock: number): Promise<void>;
+  recalcProductStock(productId: number): Promise<void>;
   updateOrderNotes(orderId: number, notes: string): Promise<void>;
   
   // Analytics operations
