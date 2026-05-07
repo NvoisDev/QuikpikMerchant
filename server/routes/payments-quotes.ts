@@ -1244,9 +1244,7 @@ export function registerQuoteRoutes(app: Express): void {
             const { newUnitStock, newPalletStock } = orderResult;
             await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
             await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            // idempotency: skip if movement for this order+type+product already exists
-            const [existingPalletMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
-            if (!existingPalletMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — allocating ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+            await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'pallets', stockBefore: product.palletStock || 0, stockAfter: newPalletStock, reason: `Invoice edit — allocating ${item.quantity} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           } else {
             // Units: prefer FEFO batch deduction
             const today = new Date().toISOString().split('T')[0];
@@ -1287,9 +1285,7 @@ export function registerQuoteRoutes(app: Express): void {
               // Insert order item with allocated batchId so future edits/cancellations can reverse correctly
               await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchId });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              // idempotency: skip if movement for this order+type+product already exists
-              const [existingUnitMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
-              if (!existingUnitMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: productStockBefore, stockAfter: newUnitStock, reason: batchLabels.length === 1 ? `Invoice edit — allocating (${batchLabels[0]})` : `Invoice edit — allocating — ${batchLabels.join(', ')}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: primaryBatchId });
+              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: productStockBefore, stockAfter: newUnitStock, reason: batchLabels.length === 1 ? `Invoice edit — allocating (${batchLabels[0]})` : `Invoice edit — allocating — ${batchLabels.join(', ')}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: primaryBatchId });
             } else {
               // Legacy: no batches — direct stock deduction
               if ((product.stock || 0) < item.quantity) {
@@ -1301,9 +1297,7 @@ export function registerQuoteRoutes(app: Express): void {
               const { newUnitStock, newPalletStock } = orderResult;
               await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
               await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-              // idempotency: skip if movement for this order+type+product already exists
-              const [existingLegacyMov] = await trx.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.orderId, quoteId), eq(stockMovements.movementType, 'purchase'), eq(stockMovements.productId, item.productId))).limit(1);
-              if (!existingLegacyMov) await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — allocating ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+              await trx.insert(stockMovements).values({ productId: item.productId, wholesalerId, movementType: 'purchase', quantity: -item.quantity, unitType: 'units', stockBefore: product.stock || 0, stockAfter: newUnitStock, reason: `Invoice edit — allocating ${item.quantity} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
             }
           }
         }
